@@ -1,38 +1,136 @@
-.App {
-  text-align: center;
+body {
+  margin: 0;
+  overflow: hidden;
+  background-color: #181818;
+  
 }
 
-.App-logo {
-  height: 40vmin;
-  pointer-events: none;
+.container {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
-  }
+.cabinet-container {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
-.App-header {
-  background-color: #282c34;
-  min-height: 100vh;
+.status {
+  background-color: black;
+  border-radius: 0.8vh;
+  border: 3px solid #444444;
+  position: absolute;
+  top: 78.5vh;
+  width: 50vh;
+  padding: 0.2vw;
+  color: #dddddd;
+  font-size: 1.4vh;
+}
+
+.pushable {
+  background: hsl(211.9deg 45.0% 45%);
+  border: none;
+  border-radius: 0.5vw;
+  padding: 0;
+  cursor: pointer;
+}
+.front {
+  display: block;
+  padding: 0.5vw 1.5vw;
+  border-radius: 0.5vw;
+  font-size: 2vh;
+  background: hsl(216.9deg 45.0% 67.1%);
+  color: white;
+  transform: translateY(-4px);
+}
+
+.pushable:active .front {
+  transform: translateY(-2px);
+}
+
+.pushable:focus:not(:focus-visible) {
+  outline: none;
+}
+
+.front {
+  transition:
+    transform
+    600ms
+    cubic-bezier(.3, .7, .4, 1);
+}
+
+.pushable:hover .front {
+  transform: translateY(-6px);
+  transition:
+    transform
+    250ms
+    cubic-bezier(.3, .7, .4, 1.5);
+}
+
+.pushable:active .front {
+  transform: translateY(-2px);
+  transition: transform 34ms;
+}
+
+.screen {
+  position: absolute;
+  top: 39.8vh;
+  width: 68.6%;
+  height: 37.65vh;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  font-size: calc(10px + 2vmin);
-  color: white;
 }
 
-.App-link {
-  color: #61dafb;
+.pull-down {
+  width: 10vh;
+  height: 2.5vh;
+  font-size: 1.7vh;
+  border: none;
+  border-bottom-left-radius: 0.5vh;
+  border-bottom-right-radius: 0.5vh;
+  background-color: #646464;
+  border: 3px solid #444444;
+  border-top: none;
 }
 
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+.control-container {
+  position: absolute;
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: center;
+  overflow: hidden;
+  top: 21.5vh;
+  transition: height 0.5s;
+  height: 2.5vh;
+}
+
+.control-container-open {
+  position: absolute;
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: center;
+  overflow: hidden;
+  top: 21.5vh;
+  transition: height 0.5s;
+  height: 40vh;
+}
+
+.control-group {
+  position: relative;
+  background-color: black;
+  width: 58.3vh;
+  height: 47.5vh;
+  border-bottom-left-radius: 0.5vh;
+  border-bottom-right-radius: 0.5vh;
+  border: 3px solid #444444;
+  border-top: none;
+  color: #dddddd;
+  padding: 2vh;
 }
