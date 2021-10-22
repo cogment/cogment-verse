@@ -68,7 +68,7 @@ function App() {
 
   // cogment stuff
 
-  const grpcURL = process.env.REACT_APP_GRPCWEBPROXY_URL;
+  const grpcURL = process.env.REACT_APP_GRPCWEBPROXY_URL || "http://localhost:8081";
 
   type ObservationT = data_pb.Observation.AsObject;
   type ActionT = data_pb.AgentAction;

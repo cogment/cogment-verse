@@ -136,3 +136,27 @@ body {
   color: #dddddd;
   padding: 2vh;
 }
+
+.control-container-open {
+  position: absolute;
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: center;
+  overflow: hidden;
+  top: 21.5vh;
+  transition: height 0.5s;
+  height: 40vh;
+}
+
+.control-group {
+  position: relative;
+  background-color: black;
+  width: 58.3vh;
+  height: 47.5vh;
+  border-bottom-left-radius: 0.5vh;
+  border-bottom-right-radius: 0.5vh;
+  border: 3px solid #444444;
+  border-top: none;
+  color: #dddddd;
+  padding: 2vh;
+}
