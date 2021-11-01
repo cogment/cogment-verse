@@ -155,16 +155,16 @@ export const get_keymap = (envType: string, envName: string): KeyMapT | undefine
 export const useControls = (): [string[], (event: any) => void, (event: any) => void] => {
   const [pressedKeys, setPressedKeys] = useState<string[]>([]);
   const onKeyDown = (event: any): void => {
-    if (pressedKeys.includes(event.code)) return
+    if (pressedKeys.includes(event.code)) return;
 
     const keys = [...pressedKeys, event.code];
     setPressedKeys(keys);
   };
 
   const onKeyUp = (event: any): void => {
-    if (!pressedKeys.includes(event.code)) return
+    if (!pressedKeys.includes(event.code)) return;
 
-    const keys = pressedKeys.filter(key => key !== event.code);
+    const keys = pressedKeys.filter((key) => key !== event.code);
     setPressedKeys(keys);
   };
 

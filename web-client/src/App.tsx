@@ -23,8 +23,6 @@ import { useActions } from "./hooks/useActions";
 import { get_keymap, useControls } from "./hooks/useControls";
 import { useWindowSize } from "./hooks/useWindowSize";
 
-
-
 const setContains = <T extends unknown>(A: Set<T>, B: Set<T>): boolean => {
   if (A.size > B.size) {
     return false;
@@ -51,7 +49,6 @@ const setIsEndOfArray = <T extends unknown>(A: Set<T>, B: T[]): boolean => {
 };
 
 function App() {
-
   const [canStartTrial, setCanStartTrial] = useState(true);
   const [pixelData, setPixelData] = useState<string | undefined>();
   const [trialStatus, setTrialStatus] = useState("no trial started");
@@ -243,9 +240,8 @@ function App() {
     };
   });
 
-  const windowSize = useWindowSize() as unknown as { width: number, height: number };
-  const [expanded, setExpanded] = useState(false)
-
+  const windowSize = useWindowSize() as unknown as { width: number; height: number };
+  const [expanded, setExpanded] = useState(false);
 
   return (
     <div className="container" onKeyDown={onKeyDown} onKeyUp={onKeyUp}>
@@ -255,9 +251,7 @@ function App() {
           {pixelData && <img ref={imgRef} className="display" tabIndex={0} alt="current trial observation" />}
         </div>
         <button onClick={triggerJoinTrial} className="pushable">
-          <span className="front">
-            Join Trial
-          </span>
+          <span className="front">Join Trial</span>
         </button>
         <div className="status">
           Status: {trialStatus}
@@ -265,7 +259,9 @@ function App() {
           Trial ID: {currentTrialId}
         </div>
         <div id="expand" className={expanded ? "control-container-open" : "control-container"}>
-          <button className="pull-down" onClick={() => setExpanded(expanded => !expanded)}>Controls ≡</button>
+          <button className="pull-down" onClick={() => setExpanded((expanded) => !expanded)}>
+            Controls ≡
+          </button>
           <div className="control-group">
             <ControlList envType={envType} envName={envName} />
           </div>
