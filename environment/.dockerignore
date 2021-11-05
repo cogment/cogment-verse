@@ -1,0 +1,14 @@
+# Generated files
+*_pb2.py
+cog_settings.py
+
+# Atari roms
+.atari_roms
+
+# Caches
+__pycache__
+.pytest_cache
+
+# Test outputs
+.coverage
+/htmlcov

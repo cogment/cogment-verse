@@ -1,0 +1,41 @@
+[tool.poetry]
+name = "cogment-verse-torch-agents"
+version = "0.1.0"
+description = ""
+authors = ["AI Redefined Inc. <dev+cogment@ai-r.com>"]
+license = "Apache-2.0"
+
+[tool.poetry.dependencies]
+python = ">=3.7,<3.10"
+cffi = "^1.15.0"
+torch = {version="1.8.1", optional = true}
+cogment-verse = {path = "../base_python", develop = true}
+cogment-verse-environment = {path = "../environment", develop = true, optional = true}
+opencv-python-headless = "^4.5.4"
+python-dotenv = "^0.19.1"
+
+[tool.poetry.extras]
+with_torch = ["torch"]
+test = ["cogment-verse-environment"]
+
+[tool.poetry.dev-dependencies]
+pytest = "^6.2.5"
+pytest-cov = "^3.0.0"
+coverage = "^6.0.2"
+taskipy = "^1.9.0"
+
+[tool.taskipy.tasks]
+generate_protos = "./scripts/generate_protos.sh"
+build = "task generate_protos"
+unit_tests = "python -m pytest --cov=. --cov-report term-missing tests"
+coverage = "coverage html -i"
+test="task unit_tests && task coverage"
+start="python -m main"
+
+[tool.black]
+line-length = 120
+target-version = ["py37"]
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"

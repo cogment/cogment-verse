@@ -1,3 +1,20 @@
+ignore:
+  - "?eggs"
+  - "**/__pycache__"
+  - "**/cogment_*.yaml"
+  - "**/*_pb2*.py"
+  - "**/*.pb.go"
+  - "**/*_pb*.js"
+  - "**/*_pb*.ts"
+  - "**/data.ts"
+  - "**/cog_settings.py"
+  - "**/CogSettings.d.ts"
+  - "**/CogSettings.js"
+  - "**/third_party"
+  - "*/cogment/api"
+  - "**/htmlcov"
+  - "**/node_modules"
+  - "web-client/build"
 license:
   CopyrightYear: 2021
   Author: "AI Redefined Inc. <dev+cogment@ai-r.com>"

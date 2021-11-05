@@ -1,0 +1,128 @@
+// Copyright 2021 AI Redefined Inc. <dev+cogment@ai-r.com>
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax = "proto3";
+
+package cogment_verse;
+
+message NDArray {
+    string dtype = 1;
+    repeated uint32 shape = 2;
+    bytes data = 3;
+}
+
+
+message EnvConfig {
+    string run_id = 1;
+    int32 player_count = 2;
+    string env_type = 3;
+    string env_name = 4;
+    bool render = 5;
+    bool flatten = 6;
+    int32 render_width = 7;
+    uint32 framestack = 8;
+
+}
+
+message ActorConfig {
+    string run_id = 1;
+    string model_id = 2;
+    int32 model_version = 13;
+    string mlflow_run_id = 3;
+    float epsilon = 4;
+    int32 num_input = 6;
+    int32 num_action = 7;
+    string env_type = 8;
+    string env_name = 9;
+    float fps_limit = 10;
+}
+
+message TrialActor {
+    string name = 1;
+    string actor_class = 2;
+    string implementation = 3;
+    ActorConfig config = 4;
+}
+
+message TrialConfig {
+    string run_id = 1;
+    EnvConfig environment_config = 3;
+    repeated TrialActor actors = 4;
+    string mlflow_run_id = 5;
+    int32 distinguished_actor = 6;
+}
+
+message Observation {
+    NDArray vectorized = 1;
+    bytes pixel_data = 2;
+    repeated int32 legal_moves_as_int = 3;
+    int32 current_player = 4; // active player for multi-agent turn-based environments
+    int32 player_override = 5;  // player that _actually_ acted (in case of override/intervention)
+}
+
+message ContinuousAction {
+    repeated float data = 1;
+}
+
+message AgentAction {
+    oneof action {
+        ContinuousAction continuous_action = 1;
+        int32 discrete_action = 2;
+    };
+}
+
+message ModelArgs {
+  float v_min = 1;
+  float v_max = 2;
+  uint32 start_timesteps = 4;
+  repeated int32 high_action = 5;
+  repeated int32 low_action = 6;
+  float expl_noise = 7;
+  bool target_net_soft_update = 8;
+}
+
+message ReplayBufferConfig {
+    string action_dtype = 1;
+    string observation_dtype = 2;
+}
+
+message RunConfig {
+  string name = 1;
+  uint32 num_input = 2;
+  uint32 num_action = 3;
+  string agent_implementation = 4;
+  string environment_type = 5;
+  string environment_name = 6;
+  uint32 fps_limit = 7;
+  uint32 player_count = 8;
+  float epsilon_min = 9;
+  uint32 epsilon_steps = 10;
+  uint32 target_net_update_schedule = 11;
+  float learning_rate = 12;
+  uint32 lr_warmup_steps = 13;
+  uint32 demonstration_count = 14;
+  uint32 total_trial_count = 15;
+  uint32 model_publication_interval = 16;
+  uint32 model_archive_interval_multiplier = 17; // Archive every fourth published model
+  uint32 render_width = 18;
+  uint32 batch_size = 19;
+  uint32 min_replay_buffer_size = 20;
+  uint32 max_parallel_trials = 21;
+  ModelArgs model_kwargs = 22;
+  uint32 max_replay_buffer_size = 23;
+  bool flatten = 24;
+  bool aggregate_by_actor = 26;
+  uint32 framestack = 27;
+  ReplayBufferConfig replay_buffer_config = 28;
+}

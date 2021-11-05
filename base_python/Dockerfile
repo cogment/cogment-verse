@@ -1,0 +1,25 @@
+FROM python:3.7-slim
+
+WORKDIR /base_python
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y curl
+
+# Install poetry
+ENV POETRY_VERSION=1.1.11
+ENV POETRY_HOME="/opt/poetry"
+ENV POETRY_VIRTUALENVS_CREATE=false
+ENV POETRY_NO_INTERACTION=1
+ENV PATH="$POETRY_HOME/bin:$PATH"
+RUN curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/install-poetry.py | python -
+
+# Install dependencies
+COPY pyproject.toml poetry.lock ./
+RUN poetry install --no-root
+
+# Install the cogment-verse package
+COPY . ./
+RUN poetry run task build
+
+# Install the package
+RUN poetry install

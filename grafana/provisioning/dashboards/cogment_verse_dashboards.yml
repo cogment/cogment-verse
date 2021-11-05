@@ -1,0 +1,10 @@
+apiVersion: 1
+
+providers:
+  - name: "cogment verse dashboards"
+    type: file
+    updateIntervalSeconds: 30
+    allowUiUpdates: false
+    options:
+      path: $COGMENT_VERSE_GRAFANA_DASHBOARDS_DIR
+      foldersFromFilesStructure: true

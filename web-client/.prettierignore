@@ -1,0 +1,4 @@
+build/
+src/CogSettings.*
+src/data.*
+src/data_pb.*

@@ -1,0 +1,32 @@
+# Generated code
+/*/*.proto
+/*/cogment.yaml
+cog_settings.py
+*_pb2.py
+*_pb2_grpc.py
+
+# Python stuffs
+__pycache__/
+*.pyc
+.pytest_cache/
+htmlcov/
+.coverage
+
+# Atari roms
+.atari_roms/
+
+.vscode
+
+docker-compose.override.yaml
+py_service.override.dockerfile
+
+base_python/cogment_verse/api
+
+node_modules/
+
+# Runtime data
+/data
+./data
+
+# Environment variables definition files
+.env

@@ -1,0 +1,533 @@
+
+cartpole_rainbow: &default_params
+  implementation: "cogment_verse_run_impl"
+  config: &default_config
+    fps_limit: 30
+    player_count: 1
+    epsilon_min: 0.1
+    epsilon_steps: 100000
+    target_net_update_schedule: 1000
+    learning_rate: 1.0e-4
+    lr_warmup_steps: 10000
+    demonstration_count: 0
+    total_trial_count: 10000
+    model_publication_interval: 1000
+    model_archive_interval_multiplier: 4 # Archive every fourth published model
+    render_width: 256
+    batch_size: 256
+    min_replay_buffer_size: 1000
+    max_parallel_trials: 4
+    model_kwargs: {}
+    max_replay_buffer_size: 100000
+    flatten: True
+    aggregate_by_actor: False
+    framestack: 1
+    replay_buffer_config:
+      observation_dtype: float32
+      action_dtype: int8
+    num_input: 4
+    num_action: 2
+    agent_implementation: rainbowtorch
+    environment_type: gym
+    environment_name: CartPole-v0
+
+cartpole_dqn:
+  <<: *default_params
+  config:
+    <<: *default_config
+    num_input: 4
+    num_action: 2
+    agent_implementation: dqn
+    environment_type: gym
+    environment_name: CartPole-v0
+
+cartpole_REINFORCE:
+  implementation: "reinforce_training"
+  config:
+    <<: *default_config
+    agent_implementation: reinforce
+    aggregate_by_actor: True
+    min_replay_buffer_size: 100000
+    max_parallel_trials: 1
+
+pendulum_td3:
+  <<: *default_params
+  config:
+    <<: *default_config
+    num_input: 3
+    num_action: 1
+    agent_implementation: td3
+    environment_type: gym
+    environment_name: Pendulum-v0
+    epsilon_min: 0.0
+    epsilon_steps: 1
+    target_net_update_schedule: 2
+    learning_rate: 3.0e-4
+    lr_warmup_steps: 100
+    demonstration_count: 0
+    #total_trial_count: 1000
+    total_trial_count: 1000
+    model_publication_interval: 2500
+    min_replay_buffer_size: 256
+    batch_size: 256
+    replay_buffer_config:
+      observation_dtype: float32
+      action_dtype: float32
+
+minatar_breakout_rainbow:
+  <<: *default_params
+  config:
+    <<: *default_config
+    num_input: 400
+    num_action: 6
+    agent_implementation: rainbowtorch
+    environment_type: minatar
+    environment_name: breakout
+
+atari_pitfall_rainbow:
+  <<: *default_params
+  config:
+    <<: *default_config
+    num_input: 7056
+    num_action: 18
+    agent_implementation: rainbowtorch
+    environment_type: atari
+    environment_name: Pitfall
+
+atari_breakout_cnn:
+  <<: *default_params
+  config:
+    <<: *default_config
+    num_input: 7056
+    num_action: 4
+    agent_implementation: atari_cnn
+    environment_type: atari
+    environment_name: Breakout
+    demonstration_count: 0
+    total_trial_count: 10000
+    model_publication_interval: 1000
+    model_archive_interval_multiplier: 100
+    max_parallel_trials: 2
+    render_width: 256
+    flatten: false
+    batch_size: 1024
+    min_replay_buffer_size: 10000
+    max_replay_buffer_size: 350000
+    target_net_update_schedule: 100
+    epsilon_steps: 100000
+    learning_rate: 1.0e-4
+    lr_warmup_steps: 10000
+    framestack: 4
+    model_kwargs:
+      target_net_soft_update: False
+    replay_buffer_config:
+      observation_dtype: uint8
+      action_dtype: int8
+
+minatar_breakout_demo:
+  <<: *default_params
+  config:
+    <<: *default_config
+    num_input: 400
+    num_action: 6
+    agent_implementation: rainbowtorch
+    environment_type: minatar
+    environment_name: breakout
+    demonstration_count: 0
+    fps_limit: 0.5
+
+atari_breakout_demo:
+  <<: *default_params
+  config:
+    <<: *default_config
+    num_input: 7056
+    num_action: 4
+    agent_implementation: rainbowtorch
+    environment_type: atari
+    environment_name: Breakout
+    demonstration_count: 0
+    fps_limit: 15
+    framestack: 4
+
+atari_pitfall_demo:
+  <<: *default_params
+  config:
+    <<: *default_config
+    num_input: 7056
+    num_action: 18
+    agent_implementation: rainbowtorch
+    environment_type: atari
+    environment_name: Pitfall
+    demonstration_count: 10
+    fps_limit: 15
+
+lander_rainbow_demo: &lander_rainbow_demo
+  <<: *default_params
+  config: &lander_rainbow_config
+    <<: *default_config
+    num_input: 8
+    num_action: 4
+    agent_implementation: rainbowtorch
+    environment_type: gym
+    environment_name: LunarLander-v2
+    demonstration_count: 20000 #100
+    total_trial_count: 20000
+    epsilon_min: 0.1
+    epsilon_steps: 10 #1
+    fps_limit: 30.0
+    target_net_update_schedule: 10
+    learning_rate: 1.0e-4
+    lr_warmup_steps: 100
+    model_publication_interval: 200
+    render_width: 1000
+    batch_size: 32
+    min_replay_buffer_size: 32
+
+lander_rainbow_demo_gpu:
+  <<: *lander_rainbow_demo
+  config:
+    <<: *lander_rainbow_config
+    agent_implementation: rainbowtorch
+    model_kwargs:
+      v_min: -200.0
+      v_max: 200.0
+
+tetris_rainbow_demo:
+  <<: *default_params
+  config:
+    <<: *default_config
+    num_input: 7056
+    num_action: 12
+    agent_implementation: atari_cnn
+    environment_type: tetris
+    environment_name: TetrisA-v0
+    demonstration_count: 1000 #100
+    total_trial_count: 10000
+    epsilon_min: 0.1
+    epsilon_steps: 10 #1
+    fps_limit: 15.0
+    target_net_update_schedule: 10
+    learning_rate: 1.0e-4
+    lr_warmup_steps: 100
+    model_publication_interval: 2000
+    render_width: 1000
+    batch_size: 32
+    min_replay_buffer_size: 32
+    max_replay_buffer_size: 10000
+    flatten: False
+
+connect_four_rainbow:
+  <<: *default_params
+  config:
+    <<: *default_config
+    num_input: 84
+    num_action: 7
+    player_count: 2
+    agent_implementation: rainbowtorch
+    environment_type: pettingzoo
+    environment_name: connect_four_v3
+    demonstration_count: 0 #100
+    total_trial_count: 10000
+    fps_limit: 1000.0
+    epsilon_steps: 5000
+    model_publication_interval: 100
+    aggregate_by_actor: True
+    model_kwargs:
+      v_min: -1.0
+      v_max: 1.0
+
+backgammon_rainbow:
+  <<: *default_params
+  config:
+    <<: *default_config
+    num_input: 198
+    num_action: 1353
+    player_count: 2
+    agent_implementation: rainbowtorch
+    environment_type: pettingzoo
+    environment_name: backgammon_v3
+    demonstration_count: 0 #100
+    total_trial_count: 10
+    model_publication_interval: 100
+    fps_limit: 5.0
+
+benchmark_lander:
+  <<: *default_params
+  config:
+    <<: *default_config
+    num_input: 8
+    num_action: 4
+    agent_implementation: rainbowtorch
+    environment_type: gym
+    environment_name: LunarLander-v2
+    demonstration_count: 0
+    total_trial_count: 250
+    epsilon_min: 0.10
+    epsilon_steps: 10000 #1
+    fps_limit: 30.0
+    target_net_update_schedule: 10
+    learning_rate: 1.0e-4
+    lr_warmup_steps: 100
+    model_publication_interval: 250
+    render_width: 1000
+    batch_size: 32
+    min_replay_buffer_size: 32
+    model_kwargs:
+      v_min: -200.0
+      v_max: 200.0
+
+benchmark_lander_hill:
+  <<: *default_params
+  config:
+    <<: *default_config
+    num_input: 8
+    num_action: 4
+    agent_implementation: rainbowtorch
+    environment_type: gym
+    environment_name: LunarLander-v2
+    demonstration_count: 1000
+    total_trial_count: 1000
+    epsilon_min: 0.1
+    epsilon_steps: 1000 #1
+    fps_limit: 30.0
+    target_net_update_schedule: 10
+    learning_rate: 1.0e-4
+    lr_warmup_steps: 100
+    model_publication_interval: 250
+    render_width: 1000
+    batch_size: 256
+    min_replay_buffer_size: 256
+    model_kwargs:
+      v_min: -200.0
+      v_max: 200.0
+
+lander_continuous_td3:
+  <<: *default_params
+  config:
+    <<: *default_config
+    num_input: 8
+    num_action: 2
+    agent_implementation: td3
+    environment_type: gym
+    environment_name: LunarLanderContinuous-v2
+    demonstration_count: 0
+    total_trial_count: 1000
+    epsilon_min: 0.0
+    epsilon_steps: 1
+    fps_limit: 30.0
+    target_net_update_schedule: 2
+    learning_rate: 1.0e-4
+    lr_warmup_steps: 100
+    model_publication_interval: 250
+    render_width: 1000
+    batch_size: 256
+    min_replay_buffer_size: 256
+    max_replay_buffer_size: 100000
+    max_parallel_trials: 8
+    replay_buffer_config:
+      observation_dtype: float32
+      action_dtype: float32
+    model_kwargs:
+      start_timesteps: 25000
+      high_action: [1, 1]
+      low_action: [-1, -1]
+      expl_noise: 0.1
+
+lander_continuous_ddpg:
+  <<: *default_params
+  config:
+    <<: *default_config
+    num_input: 8
+    num_action: 2
+    agent_implementation: ddpg
+    environment_type: gym
+    environment_name: LunarLanderContinuous-v2
+    demonstration_count: 0
+    total_trial_count: 1000
+    epsilon_min: 0.1
+    epsilon_steps: 30000
+    fps_limit: 30.0
+    target_net_update_schedule: 2
+    learning_rate: 1.0e-4
+    lr_warmup_steps: 100
+    model_publication_interval: 250
+    render_width: 1000
+    batch_size: 64
+    min_replay_buffer_size: 64
+    max_replay_buffer_size: 100000
+    max_parallel_trials: 8
+    replay_buffer_config:
+      observation_dtype: float32
+      action_dtype: float32
+    model_kwargs:
+      start_timesteps: 25000
+      high_action: [1, 1]
+      low_action: [-1, -1]
+      expl_noise: 0.1
+
+walker_td3:
+  <<: *default_params
+  config:
+    <<: *default_config
+    num_input: 8
+    num_action: 2
+    agent_implementation: td3
+    environment_type: gym
+    environment_name: BipedalWalker-v3
+    demonstration_count: 0
+    total_trial_count: 1000
+    epsilon_min: 0.0
+    epsilon_steps: 1
+    fps_limit: 30.0
+    target_net_update_schedule: 2
+    learning_rate: 1.0e-4
+    lr_warmup_steps: 100
+    model_publication_interval: 250
+    render_width: 1000
+    batch_size: 256
+    min_replay_buffer_size: 256
+    max_replay_buffer_size: 100000
+    max_parallel_trials: 8
+    replay_buffer_config:
+      observation_dtype: float32
+      action_dtype: float32
+    model_kwargs:
+      start_timesteps: 25000
+      high_action: [1, 1, 1, 1]
+      low_action: [-1, -1, -1, -1]
+      expl_noise: 0.1
+
+walker_ddpg:
+  <<: *default_params
+  config:
+    <<: *default_config
+    num_input: 24
+    num_action: 4
+    agent_implementation: ddpg
+    environment_type: gym
+    environment_name: BipedalWalker-v3
+    demonstration_count: 0
+    total_trial_count: 1000
+    epsilon_min: 0.1
+    epsilon_steps: 50000
+    fps_limit: 30.0
+    target_net_update_schedule: 2
+    learning_rate: 1.0e-4
+    model_publication_interval: 250
+    render_width: 1000
+    batch_size: 64
+    min_replay_buffer_size: 64
+    max_replay_buffer_size: 100000
+    replay_buffer_config:
+      observation_dtype: float32
+      action_dtype: float32
+    model_kwargs:
+      start_timesteps: 25000
+      high_action: [1, 1, 1, 1]
+      low_action: [-1, -1, -1, -1]
+      expl_noise: 0.1
+
+
+pendulum_td3:
+  <<: *default_params
+  config:
+    <<: *default_config
+    num_input: 3
+    num_action: 1
+    agent_implementation: td3
+    environment_type: gym
+    environment_name: Pendulum-v0
+    demonstration_count: 0 #100
+    total_trial_count: 250
+    epsilon_min: 0.0
+    epsilon_steps: 1
+    fps_limit: 30.0
+    target_net_update_schedule: 2
+    #learning_rate: 3.0e-4
+    learning_rate: 1.0e-4
+    lr_warmup_steps: 100
+    model_publication_interval: 1000
+    render_width: 1000
+    batch_size: 64
+    min_replay_buffer_size: 64
+    replay_buffer_config:
+      observation_dtype: float32
+      action_dtype: float32
+    model_kwargs:
+      start_timesteps: 5000
+      high_action: [2]
+      low_action: [-2]
+      expl_noise: 0.1
+
+pendulum_ddpg:
+  <<: *default_params
+  config:
+    <<: *default_config
+    num_input: 3
+    num_action: 1
+    agent_implementation: ddpg
+    environment_type: gym
+    environment_name: Pendulum-v0
+    demonstration_count: 0 #100
+    total_trial_count: 250
+    epsilon_min: 0.0
+    epsilon_steps: 1
+    fps_limit: 30.0
+    target_net_update_schedule: 2
+    #learning_rate: 3.0e-4
+    learning_rate: 1.0e-4
+    lr_warmup_steps: 100
+    model_publication_interval: 1000
+    render_width: 1000
+    batch_size: 64
+    min_replay_buffer_size: 64
+    max_replay_buffer_size: 10000
+    replay_buffer_config:
+      observation_dtype: float32
+      action_dtype: float32
+    model_kwargs:
+      start_timesteps: 5000
+      high_action: [2]
+      low_action: [-2]
+      expl_noise: 0.1
+
+benchmark_breakout:
+  <<: *default_params
+  config:
+    <<: *default_config
+    num_input: 400
+    num_action: 6
+    agent_implementation: rainbowtorch
+    environment_type: minatar
+    environment_name: breakout
+    demonstration_count: 0
+    total_trial_count: 1000
+    model_publication_interval: 100
+    fps_limit: 0.5
+    model_kwargs:
+      v_min: -1.0
+      v_max: 1.0
+    batch_size: 32
+    min_replay_buffer_size: 32
+
+benchmark_connect_four:
+  <<: *default_params
+  config:
+    <<: *default_config
+    num_input: 84
+    num_action: 7
+    player_count: 2
+    agent_implementation: rainbowtorch
+    environment_type: pettingzoo
+    environment_name: connect_four_v3
+    demonstration_count: 0 #100
+    total_trial_count: 10
+    fps_limit: 1000.0
+    epsilon_steps: 5000
+    model_publication_interval: 100
+    aggregate_by_actor: True
+    model_kwargs:
+      v_min: -1.0
+      v_max: 1.0
+    batch_size: 32
+    min_replay_buffer_size: 32

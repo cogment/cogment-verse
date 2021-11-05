@@ -1,0 +1,27 @@
+[tool.poetry]
+name = "cogment-verse"
+version = "0.1.0"
+description = "cogment verse python SDK"
+authors = ["AI Redefined Inc. <dev+cogment@ai-r.com>"]
+license = "Apache-2.0"
+
+[tool.poetry.dependencies]
+python = "^3.7"
+cogment = {extras = ["generate"], version = "^1.3.0"}
+names-generator = "^0.1.0"
+mlflow = "^1.21.0"
+
+[tool.poetry.dev-dependencies]
+taskipy = "^1.8.1"
+
+[tool.taskipy.tasks]
+generate_protos = "./scripts/generate_protos.sh"
+build = "task generate_protos"
+
+[tool.black]
+line-length = 120
+target-version = ["py37"]
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
