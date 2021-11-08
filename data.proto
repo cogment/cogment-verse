@@ -32,7 +32,7 @@ message EnvConfig {
     bool flatten = 6;
     int32 render_width = 7;
     uint32 framestack = 8;
-
+    uint32 seed = 9;
 }
 
 message ActorConfig {
