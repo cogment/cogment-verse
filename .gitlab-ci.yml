@@ -92,6 +92,10 @@ test_torch_agents:
   stage: test
   script:
     - apt-get update && apt-get install -y python3-opencv
+    - cd base_python
+    - poetry install
+    - poetry run task build
+    - cd ..
     - cd torch_agents
     - poetry install -E test
     - poetry run task build

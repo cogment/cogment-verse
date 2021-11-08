@@ -15,6 +15,7 @@
 import cog_settings
 
 from cogment_verse_torch_agents.hive_adapter.hive_agent_adapter import HiveAgentAdapter
+from cogment_verse_torch_agents.simple_a2c.simple_a2c_agent import SimpleA2CAgentAdapter
 
 from dotenv import load_dotenv
 import cogment
@@ -24,6 +25,7 @@ import asyncio
 import json
 import logging
 import os
+import sys
 
 load_dotenv()
 
@@ -54,6 +56,9 @@ async def main():
 
     hive_adapter = HiveAgentAdapter()
     hive_adapter.register_implementations(context)
+
+    simple_a2c_adapter = SimpleA2CAgentAdapter()
+    simple_a2c_adapter.register_implementations(context)
 
     log.info(f"Torch agents service starts on {PORT}...")
 

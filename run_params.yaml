@@ -514,3 +514,30 @@ benchmark_connect_four:
       v_max: 1.0
     batch_size: 32
     min_replay_buffer_size: 32
+
+simple_a2c_cartpole:
+  implementation: simple_a2c_training
+  config:
+    class_name: data_pb2.SimpleA2CTrainingRunConfig
+    environment:
+      env_type: "gym"
+      env_name: "CartPole-v0"
+      seed: 12
+    actor:
+      num_input: 4
+      num_action: 2
+    training:
+      epoch_count: 80
+      epoch_trial_count: 15
+      max_parallel_trials: 8
+      discount_factor: 0.95
+      entropy_coef: 0.001
+      critic_coef: 1.0
+      a2c_coef: 0.1
+      learning_rate: 0.01
+    actor_network:
+      hidden_size: 128
+    critic_network:
+      hidden_size: 512
+
+
