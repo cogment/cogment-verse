@@ -13,7 +13,6 @@
 # limitations under the License.
 
 from run_controller import RunController, RunStatus
-from data_pb2 import RunConfig
 
 import click
 import yaml
@@ -25,9 +24,18 @@ import os
 import functools
 import json
 
-# pylint: disable=too-many-arguments
 
-RUN_ENDPOINTS = json.loads(os.getenv("COGMENT_VERSE_RUN_ENDPOINTS"))
+# pylint: disable=too-many-arguments,import-outside-toplevel
+
+RUN_ENDPOINTS = json.loads(os.getenv("COGMENT_VERSE_RUN_ENDPOINTS", "{}"))
+
+
+def import_class(class_name):
+    from importlib import import_module
+
+    module_path, class_name = class_name.rsplit(".", 1)
+    module = import_module(module_path)
+    return getattr(module, class_name)
 
 
 def load_run_params(params_path, params_name):
@@ -38,8 +46,11 @@ def load_run_params(params_path, params_name):
         raise Exception(f"Undefined run '{params_name}'")
 
     run_implementation = run_params[params_name]["implementation"]
-    run_config = ParseDict(run_params[params_name]["config"], RunConfig())
-
+    run_config_kwargs = run_params[params_name]["config"]
+    run_config_class_name = run_config_kwargs["class_name"]
+    del run_config_kwargs["class_name"]
+    run_config_class = import_class(run_config_class_name)
+    run_config = ParseDict(run_config_kwargs, run_config_class())
     return run_implementation, run_config
 
 

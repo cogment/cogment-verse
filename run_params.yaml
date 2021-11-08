@@ -2,6 +2,7 @@
 cartpole_rainbow: &default_params
   implementation: "cogment_verse_run_impl"
   config: &default_config
+    class_name: data_pb2.RunConfig
     player_count: 1
     epsilon_min: 0.1
     epsilon_steps: 100000
