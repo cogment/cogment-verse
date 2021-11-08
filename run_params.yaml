@@ -2,7 +2,6 @@
 cartpole_rainbow: &default_params
   implementation: "cogment_verse_run_impl"
   config: &default_config
-    fps_limit: 30
     player_count: 1
     epsilon_min: 0.1
     epsilon_steps: 100000
@@ -134,7 +133,6 @@ minatar_breakout_demo:
     environment_type: minatar
     environment_name: breakout
     demonstration_count: 0
-    fps_limit: 0.5
 
 atari_breakout_demo:
   <<: *default_params
@@ -146,7 +144,6 @@ atari_breakout_demo:
     environment_type: atari
     environment_name: Breakout
     demonstration_count: 0
-    fps_limit: 15
     framestack: 4
 
 atari_pitfall_demo:
@@ -159,7 +156,6 @@ atari_pitfall_demo:
     environment_type: atari
     environment_name: Pitfall
     demonstration_count: 10
-    fps_limit: 15
 
 lander_rainbow_demo: &lander_rainbow_demo
   <<: *default_params
@@ -174,7 +170,6 @@ lander_rainbow_demo: &lander_rainbow_demo
     total_trial_count: 20000
     epsilon_min: 0.1
     epsilon_steps: 10 #1
-    fps_limit: 30.0
     target_net_update_schedule: 10
     learning_rate: 1.0e-4
     lr_warmup_steps: 100
@@ -205,7 +200,6 @@ tetris_rainbow_demo:
     total_trial_count: 10000
     epsilon_min: 0.1
     epsilon_steps: 10 #1
-    fps_limit: 15.0
     target_net_update_schedule: 10
     learning_rate: 1.0e-4
     lr_warmup_steps: 100
@@ -228,7 +222,6 @@ connect_four_rainbow:
     environment_name: connect_four_v3
     demonstration_count: 0 #100
     total_trial_count: 10000
-    fps_limit: 1000.0
     epsilon_steps: 5000
     model_publication_interval: 100
     aggregate_by_actor: True
@@ -249,7 +242,6 @@ backgammon_rainbow:
     demonstration_count: 0 #100
     total_trial_count: 10
     model_publication_interval: 100
-    fps_limit: 5.0
 
 benchmark_lander:
   <<: *default_params
@@ -264,7 +256,6 @@ benchmark_lander:
     total_trial_count: 250
     epsilon_min: 0.10
     epsilon_steps: 10000 #1
-    fps_limit: 30.0
     target_net_update_schedule: 10
     learning_rate: 1.0e-4
     lr_warmup_steps: 100
@@ -289,7 +280,6 @@ benchmark_lander_hill:
     total_trial_count: 1000
     epsilon_min: 0.1
     epsilon_steps: 1000 #1
-    fps_limit: 30.0
     target_net_update_schedule: 10
     learning_rate: 1.0e-4
     lr_warmup_steps: 100
@@ -314,7 +304,6 @@ lander_continuous_td3:
     total_trial_count: 1000
     epsilon_min: 0.0
     epsilon_steps: 1
-    fps_limit: 30.0
     target_net_update_schedule: 2
     learning_rate: 1.0e-4
     lr_warmup_steps: 100
@@ -346,7 +335,6 @@ lander_continuous_ddpg:
     total_trial_count: 1000
     epsilon_min: 0.1
     epsilon_steps: 30000
-    fps_limit: 30.0
     target_net_update_schedule: 2
     learning_rate: 1.0e-4
     lr_warmup_steps: 100
@@ -378,7 +366,6 @@ walker_td3:
     total_trial_count: 1000
     epsilon_min: 0.0
     epsilon_steps: 1
-    fps_limit: 30.0
     target_net_update_schedule: 2
     learning_rate: 1.0e-4
     lr_warmup_steps: 100
@@ -410,7 +397,6 @@ walker_ddpg:
     total_trial_count: 1000
     epsilon_min: 0.1
     epsilon_steps: 50000
-    fps_limit: 30.0
     target_net_update_schedule: 2
     learning_rate: 1.0e-4
     model_publication_interval: 250
@@ -441,7 +427,6 @@ pendulum_td3:
     total_trial_count: 250
     epsilon_min: 0.0
     epsilon_steps: 1
-    fps_limit: 30.0
     target_net_update_schedule: 2
     #learning_rate: 3.0e-4
     learning_rate: 1.0e-4
@@ -472,7 +457,6 @@ pendulum_ddpg:
     total_trial_count: 250
     epsilon_min: 0.0
     epsilon_steps: 1
-    fps_limit: 30.0
     target_net_update_schedule: 2
     #learning_rate: 3.0e-4
     learning_rate: 1.0e-4
@@ -503,7 +487,6 @@ benchmark_breakout:
     demonstration_count: 0
     total_trial_count: 1000
     model_publication_interval: 100
-    fps_limit: 0.5
     model_kwargs:
       v_min: -1.0
       v_max: 1.0
@@ -522,7 +505,6 @@ benchmark_connect_four:
     environment_name: connect_four_v3
     demonstration_count: 0 #100
     total_trial_count: 10
-    fps_limit: 1000.0
     epsilon_steps: 5000
     model_publication_interval: 100
     aggregate_by_actor: True

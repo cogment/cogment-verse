@@ -28,7 +28,6 @@ from cogment_verse_torch_agents.utils.flatten_dict import flatten_dict
 @pytest.fixture
 def config_dict():
     config_str = """
-fps_limit: 30
 player_count: 1
 epsilon_min: 0.1
 epsilon_steps: 100000

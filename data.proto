@@ -38,14 +38,11 @@ message EnvConfig {
 message ActorConfig {
     string run_id = 1;
     string model_id = 2;
-    int32 model_version = 13;
-    string mlflow_run_id = 3;
-    float epsilon = 4;
-    int32 num_input = 6;
-    int32 num_action = 7;
-    string env_type = 8;
-    string env_name = 9;
-    float fps_limit = 10;
+    int32 model_version = 3;
+    int32 num_input = 4;
+    int32 num_action = 5;
+    string env_type = 6; // TODO Remove those by retrieving info from the environment instead
+    string env_name = 7;
 }
 
 message TrialActor {
@@ -59,7 +56,6 @@ message TrialConfig {
     string run_id = 1;
     EnvConfig environment_config = 3;
     repeated TrialActor actors = 4;
-    string mlflow_run_id = 5;
     int32 distinguished_actor = 6;
 }
 
@@ -104,7 +100,6 @@ message RunConfig {
   string agent_implementation = 4;
   string environment_type = 5;
   string environment_name = 6;
-  uint32 fps_limit = 7;
   uint32 player_count = 8;
   float epsilon_min = 9;
   uint32 epsilon_steps = 10;

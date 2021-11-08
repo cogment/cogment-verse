@@ -127,7 +127,6 @@ def create_training_run(agent_adapter):
                         env_name=config.environment_name,
                         num_input=config.num_input,
                         num_action=config.num_action,
-                        fps_limit=config.fps_limit,
                     ),
                 )
                 for player_idx in range(config.player_count)
@@ -169,7 +168,6 @@ def create_training_run(agent_adapter):
                         env_name=config.environment_name,
                         num_input=config.num_input,
                         num_action=config.num_action,
-                        fps_limit=config.fps_limit,
                     ),
                 )
                 demonstration_trial_configs = [
