@@ -101,6 +101,31 @@ test_torch_agents:
       - torch_agents/htmlcov
     expire_in: 1 week
 
+validation_test:on-schedule:
+  timeout: 7h 30m
+  rules:
+    - if: $NIGHTLY_BUILD == "ENABLED"
+  image: docker:19.03.1
+  services:
+    - docker:19.03.1-dind
+  variables:
+    # Use TLS https://docs.gitlab.com/ee/ci/docker/using_docker_build.html#tls-enabled
+    DOCKER_HOST: tcp://docker:2376
+    DOCKER_TLS_CERTDIR: "/certs"
+  stage: validation_test
+  before_script:
+    - apk update
+    - apk add curl bash docker-compose=2.0 make automake gcc g++ subversion python3-dev musl-dev postgresql-dev nginx gettext apache2-utils
+    - python3 -m pip install --upgrade pip
+    - pip3 install boto3 psycopg2 mlflow 
+    - curl --silent -L https://raw.githubusercontent.com/cogment/cogment-cli/main/install.sh | bash
+    - cogment run sync
+    - cogment run build
+    - docker-compose build validation_test
+  script:
+    - docker-compose up --detach orchestrator model_registry trial_datastore environment torch_agents
+    - python3 validation_test/validation.py
+
 npm_build:
   extends: .base_node
   stage: build
