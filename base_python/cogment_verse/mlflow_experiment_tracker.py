@@ -17,8 +17,11 @@ from mlflow.utils.mlflow_tags import MLFLOW_RUN_NAME
 from mlflow.entities import Metric, RunStatus, Param
 
 from prometheus_client import Counter, Summary
+from google.protobuf.json_format import MessageToDict
+from google.protobuf.message import Message
 
 import asyncio
+import numbers
 import logging
 import os
 
@@ -36,8 +39,27 @@ MAX_METRICS_BATCH_SIZE = 1000  # MLFlow only accepts at most 1000 metrics per ba
 MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI")
 
 
+def make_dict(ignore_non_numbers, *args, **kwargs):
+    res = dict(kwargs)
+    for arg in args:
+        if isinstance(arg, Message):
+            arg = MessageToDict(arg, preserving_proto_field_name=True, including_default_value_fields=False)
+        if isinstance(arg, dict):
+            for key, value in arg.items():
+                if ignore_non_numbers and not isinstance(value, numbers.Number):
+                    break
+                if key in res:
+                    raise RuntimeError(
+                        f"Trying to set duplicate key [{key}] to [{value}], while already set to [{res[key]}]"
+                    )
+                res[key] = value
+        else:
+            raise RuntimeError(f"Unsupported argument of type [{type(arg)}]")
+    return res
+
+
 class MlflowExperimentTracker:
-    def __init__(self, experiment_id, run_id, flush_frequency=15):
+    def __init__(self, experiment_id, run_id, flush_frequency=5):
         self._experiment_id = experiment_id
         self._run_id = run_id
         self._mlflow_exp_id = None
@@ -100,15 +122,18 @@ class MlflowExperimentTracker:
         # We don't really need to await for the termination here
         self._flush_metrics_worker = None
 
-    def log_params(self, **kwargs):
+    def log_params(self, *args, **kwargs):
+
         self._get_mlflow_client().log_batch(
             run_id=self._mlflow_run_id,
-            params=[Param(key, str(value)) for key, value in kwargs.items()],
+            params=[Param(key, str(value)) for key, value in make_dict(False, *args, **kwargs).items()],
         )
 
-    def log_metrics(self, step_timestamp, step_idx, **kwargs):
+    def log_metrics(self, step_timestamp, step_idx, *args, **kwargs):
         EXPERIMENT_TRACKER_METRICS_LOGGED_COUNTER.inc(len(kwargs))
-        self._metrics_buffer.extend([Metric(key, value, step_timestamp, step_idx) for key, value in kwargs.items()])
+        self._metrics_buffer.extend(
+            [Metric(key, value, step_timestamp, step_idx) for key, value in make_dict(True, *args, **kwargs).items()]
+        )
         self._start_flush_metrics_worker()
 
     def terminate_failure(self):
