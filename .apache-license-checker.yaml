@@ -14,7 +14,7 @@ ignore:
   - "*/cogment/api"
   - "**/htmlcov"
   - "**/node_modules"
-  - "web-client/build"
+  - "web_client/build"
 license:
   CopyrightYear: 2021
   Author: "AI Redefined Inc. <dev+cogment@ai-r.com>"

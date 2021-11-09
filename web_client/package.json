@@ -1,9 +1,9 @@
 {
-  "name": "web-client",
+  "name": "web_client",
   "version": "0.1.0",
   "private": true,
   "dependencies": {
-    "@cogment/cogment-js-sdk": "^1.26.0",
+    "@cogment/cogment-js-sdk": "^1.26.1",
     "@testing-library/jest-dom": "^5.14.1",
     "@testing-library/react": "^11.2.7",
     "@testing-library/user-event": "^12.8.3",
@@ -18,7 +18,7 @@
     "web-vitals": "^1.1.2"
   },
   "scripts": {
-    "cogment_generate": "cogment-js-sdk-generate",
+    "cogment_generate": "npx cogment-js-sdk-generate",
     "start": "npm run cogment_generate && react-scripts start",
     "build": "npm run cogment_generate && react-scripts build",
     "test": "react-scripts test",

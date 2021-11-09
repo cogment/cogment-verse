@@ -183,6 +183,7 @@ def create_training_run(agent_adapter):
                             env_type=config.environment_type,
                             env_name=config.environment_name,
                             flatten=config.flatten,
+                            framestack=config.framestack,
                         ),
                         actors=[*player_actor_configs, teacher_actor_config],
                         distinguished_actor=distinguished_actor,
