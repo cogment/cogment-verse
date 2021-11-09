@@ -27,8 +27,6 @@ node_modules/
 # Runtime data
 /data
 ./data
-/metrics
-./metrics
 
 # Environment variables definition files
 .env

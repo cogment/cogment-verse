@@ -144,8 +144,8 @@ services:
     volumes:
       - ./data/mlflow:/data
 
-  web-client:
-    build: web-client
+  web_client:
+    build: web_client
     environment:
       - NODE_ENV=development
       - CHOKIDAR_USEPOLLING=true

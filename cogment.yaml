@@ -4,7 +4,7 @@ import:
 
 commands:
   sync: >
-    cogment sync environment torch_agents tf_agents client web-client &&
+    cogment sync environment torch_agents tf_agents client web_client &&
     cp ./run_api.proto ./base_python/cogment_verse/api/ &&
     cp ./run_api.proto ./client/
   build: docker-compose build base_python && docker-compose build
@@ -35,7 +35,7 @@ commands:
   list_runs: docker-compose run client list
   start_run: docker-compose run client start $RUN_PARAMS
   terminate_run: docker-compose run client terminate $RUN_ID
-  web_client: docker-compose up --abort-on-container-exit web-client
+  web_client: docker-compose up --abort-on-container-exit web_client
   test: cogment run test_torch_agents && cogment run test_environment
   test_torch_agents: >
     docker-compose build base_python &&

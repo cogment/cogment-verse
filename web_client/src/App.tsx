@@ -93,8 +93,6 @@ function App() {
     RewardT,
     ActorConfigT
   >(
-    // TODO remove that once the issue is fixed in the js SDK
-    // @ts-ignore
     cogSettings,
     "web_actor", // actor name
     "teacher_agent", // actor class
