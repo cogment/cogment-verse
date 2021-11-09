@@ -34,10 +34,10 @@ class ReinforceAgent:
         obs_dim,
         act_dim,
         epsilon=0.01,
-        gamma=0.95,
+        gamma=0.99,
         lr=3e-4,
         max_replay_buffer_size=50000,
-        seed=42,
+        seed=21,
         epsilon_schedule=None,
         lr_schedule=None,
     ):
@@ -69,7 +69,7 @@ class ReinforceAgent:
     def act(self, observation, legal_moves_as_int=None, update_schedule=True):
 
         policy = self._model.model(tf.expand_dims(observation, axis=0), training=False)
-        policy = self.regularize_dist(policy)
+        # policy = self.regularize_dist(policy)
         dist = tfp.distributions.Categorical(probs=policy, dtype=tf.float32)
         action = dist.sample()
         return int(action.numpy()[0])
@@ -82,7 +82,9 @@ class ReinforceAgent:
             sum_rewards = r + self._params["gamma"] * sum_rewards
             discounted_rewards.append(sum_rewards)
 
-        return np.array(discounted_rewards[::-1])
+        discounted_rewards = np.array(discounted_rewards[::-1])
+        discounted_rewards = (discounted_rewards - discounted_rewards.mean()) / (discounted_rewards.std() + np.finfo(np.float32).eps.item())
+        return discounted_rewards
 
     @staticmethod
     def __loss(prob, actions, Q):
@@ -96,7 +98,7 @@ class ReinforceAgent:
         Q = self.get_discounted_rewards(batch["rewards"])
         with tf.GradientTape() as tape:
             prob = self._model.model(batch["observations"], training=True)
-            prob = self.regularize_dist(prob)
+            # prob = self.regularize_dist(prob)
             loss = self.__loss(prob, batch["actions"], Q)
         gradients = tape.gradient(loss, self._model.trainable_variables)
 
