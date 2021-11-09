@@ -48,7 +48,6 @@ class ReinforceAgentAdapter(AgentAdapter):
         agent_params = {}
         agent_params["id"] = model.id
         agent_params["_params"] = model._params
-        agent_params["_epsilon_schedule"] = model._epsilon_schedule
         agent_params["_lr_schedule"] = model._lr_schedule
         agent_params["model_params"] = model._model.get_weights()
         return agent_params
@@ -57,12 +56,9 @@ class ReinforceAgentAdapter(AgentAdapter):
 
         agent_params = torch.load(model_data_f)
         reinforce_agent = ReinforceAgent(id=agent_params["id"], obs_dim=agent_params["_params"]["obs_dim"],
-                        act_dim=agent_params["_params"]["act_dim"], epsilon_schedule=agent_params["_epsilon_schedule"],
-                        lr_schedule=agent_params["_lr_schedule"], gamma=agent_params["_params"]["gamma"],
-                        max_replay_buffer_size=agent_params["_params"]["max_replay_buffer_size"],
-                        seed=agent_params["_params"]["seed"])
-
-        reinforce_agent.init_params(agent_params["model_params"])
+                        act_dim=agent_params["_params"]["act_dim"],lr_schedule=agent_params["_lr_schedule"],
+                        gamma=agent_params["_params"]["gamma"],max_replay_buffer_size=agent_params["_params"]["max_replay_buffer_size"],
+                        seed=agent_params["_params"]["seed"], model_params=agent_params["model_params"])
 
         return reinforce_agent
 

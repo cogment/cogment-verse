@@ -33,13 +33,12 @@ class ReinforceAgent:
         id,
         obs_dim,
         act_dim,
-        epsilon=0.01,
         gamma=0.99,
         lr=3e-4,
         max_replay_buffer_size=50000,
         seed=21,
-        epsilon_schedule=None,
         lr_schedule=None,
+        model_params=None
     ):
         self.id = id
         self._params = {}
@@ -49,16 +48,16 @@ class ReinforceAgent:
         self._params["max_replay_buffer_size"] = max_replay_buffer_size
         self._params["gamma"] = gamma
 
-        self._epsilon_schedule = epsilon_schedule
-        if epsilon_schedule is None:
-            self._epsilon_schedule = ConstantSchedule(epsilon)
-
         self._lr_schedule = lr_schedule
         if lr_schedule is None:
             self._lr_schedule = ConstantSchedule(lr)
 
         self._model = PolicyNetwork(self._params["obs_dim"], self._params["act_dim"])
         self._optimizer = tf.keras.optimizers.Adam(learning_rate=self._lr_schedule.get_value())
+
+        self._model_params = model_params
+        if self._model_params is not None:
+            self._init_params()
 
         self._replay_buffer = CircularReplayBuffer(seed=self._params["seed"], size=self._params["max_replay_buffer_size"])
 
@@ -125,8 +124,8 @@ class ReinforceAgent:
         self._replay_buffer._write_index = -1
         self._replay_buffer._n = 0
 
-    def init_params(self, model_parms):
-        self._model.set_weights(model_parms)
+    def _init_params(self):
+        self._model.set_weights(self._model_params)
         self._model.trainable = True
 
     def get_replay_buffer_size(self):
