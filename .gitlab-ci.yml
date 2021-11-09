@@ -3,7 +3,6 @@ stages:
   - build
   - test
   - publish
-  - validation_test
 
 .base_poetry:
   image: python:3.7
@@ -38,6 +37,8 @@ stages:
     - chmod 644 ~/.ssh/known_hosts
 
 shellcheck:
+  rules:
+    - if: $NIGHTLY_BUILD != "ENABLED"
   image: koalaman/shellcheck-alpine:stable
   stage: lint
   before_script:
@@ -46,6 +47,8 @@ shellcheck:
     - shellcheck $(find . -name '*.sh' | xargs)
 
 shfmt:
+  rules:
+    - if: $NIGHTLY_BUILD != "ENABLED"
   image: mvdan/shfmt:v3.1.0-alpine
   stage: lint
   before_script:
@@ -54,12 +57,16 @@ shfmt:
     - shfmt -i 2 -ci -d .
 
 apache_licenses_check:
+  rules:
+    - if: $NIGHTLY_BUILD != "ENABLED"
   stage: lint
   image: registry.gitlab.com/ai-r/apache-license-checker:latest
   script:
     - apache-license-checker
 
 python_lint:
+  rules:
+    - if: $NIGHTLY_BUILD != "ENABLED"
   extends: .base_poetry
   stage: lint
   script:
@@ -67,6 +74,8 @@ python_lint:
     - poetry run task lint
 
 npm_lint:
+  rules:
+    - if: $NIGHTLY_BUILD != "ENABLED"
   extends: .base_node
   stage: lint
   script:
@@ -75,6 +84,8 @@ npm_lint:
     - npx prettier --check .
 
 test_environment:
+  rules:
+    - if: $NIGHTLY_BUILD != "ENABLED"
   extends: .base_poetry
   stage: test
   script:
@@ -89,6 +100,8 @@ test_environment:
     expire_in: 1 week
 
 test_torch_agents:
+  rules:
+    - if: $NIGHTLY_BUILD != "ENABLED"
   extends: .base_poetry
   stage: test
   script:
@@ -128,6 +141,8 @@ validation_test:on-schedule:
     - python3 validation_test/validation.py
 
 npm_build:
+  rules:
+    - if: $NIGHTLY_BUILD != "ENABLED"
   extends: .base_node
   stage: build
   script:
