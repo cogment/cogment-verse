@@ -3,6 +3,7 @@ stages:
   - build
   - test
   - publish
+  - validation_test
 
 .base_poetry:
   image: python:3.7
