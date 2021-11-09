@@ -88,8 +88,9 @@ class ReinforceAgent:
         loss = -log_prob * Q
         return tf.reduce_mean(loss)
 
-    def learn(self, batch, update_schedule=True):
+    def learn(self):
 
+        batch = self.sample_training_batch()
         Q = self.get_discounted_rewards(batch["rewards"])
         with tf.GradientTape() as tape:
             prob = self._model.model(batch["observations"], training=True)
@@ -106,12 +107,9 @@ class ReinforceAgent:
         """
         self._replay_buffer.add(sample)
 
-    def sample_training_batch(self, batch_size=32):
+    def sample_training_batch(self, batch_size=64):
         """
         sample last trial SARSD
-
-        Args:
-            batch_size (int): .
         """
         indices = range(self._replay_buffer._n)
         rval = {}

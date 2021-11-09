@@ -185,7 +185,7 @@ def create_training_run(agent_adapter):
                     training_batch = model.sample_training_batch(batch_size)
 
                 with TRAINING_LEARN_TIME.time():
-                    info = model.learn(training_batch, update_schedule=True)
+                    info = model.learn()
                 return info, training_batch
 
             def get_samples_seen(training_batch):
@@ -285,22 +285,22 @@ def create_training_run(agent_adapter):
                             info,
                         )
 
-                    elif (
-                        model.get_replay_buffer_size() > config.min_replay_buffer_size
-                        and model.get_replay_buffer_size() > batch_size
-                    ):
-                        info, training_batch = train_model()
-                        samples_seen += get_samples_seen(training_batch)
-                        training_step += 1
-
-                        await archive_model(
-                            model_archive_schedule,
-                            model_publication_schedule,
-                            step_timestamp,
-                            step_idx,
-                            training_batch,
-                            info,
-                        )
+                    # elif (
+                    #     model.get_replay_buffer_size() > config.min_replay_buffer_size
+                    #     and model.get_replay_buffer_size() > batch_size
+                    # ):
+                    #     info, training_batch = train_model()
+                    #     samples_seen += get_samples_seen(training_batch)
+                    #     training_step += 1
+                    #
+                    #     await archive_model(
+                    #         model_archive_schedule,
+                    #         model_publication_schedule,
+                    #         step_timestamp,
+                    #         step_idx,
+                    #         training_batch,
+                    #         info,
+                    #     )
 
                 log.info(
                     f"[{run_session.params_name}/{run_id}] done, {model.get_replay_buffer_size()} samples gathered over {run_session.count_steps()} steps"
