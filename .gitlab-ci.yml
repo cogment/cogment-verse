@@ -3,6 +3,7 @@ stages:
   - build
   - test
   - publish
+  - validation
 
 .base_poetry:
   image: python:3.7
@@ -126,7 +127,7 @@ validation_test:on-schedule:
     # Use TLS https://docs.gitlab.com/ee/ci/docker/using_docker_build.html#tls-enabled
     DOCKER_HOST: tcp://docker:2376
     DOCKER_TLS_CERTDIR: "/certs"
-  stage: validation_test
+  stage: validation
   before_script:
     - apk update
     - apk add curl bash docker-compose=2.0 make automake gcc g++ subversion python3-dev musl-dev postgresql-dev nginx gettext apache2-utils
