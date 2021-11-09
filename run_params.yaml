@@ -182,6 +182,9 @@ lander_rainbow_demo: &lander_rainbow_demo
     render_width: 1000
     batch_size: 32
     min_replay_buffer_size: 32
+    model_kwargs:
+      v_min: -200.0
+      v_max: 200.0
 
 lander_rainbow_demo_gpu:
   <<: *lander_rainbow_demo
@@ -250,31 +253,6 @@ backgammon_rainbow:
     total_trial_count: 10
     model_publication_interval: 100
     fps_limit: 5.0
-
-benchmark_lander:
-  <<: *default_params
-  config:
-    <<: *default_config
-    num_input: 8
-    num_action: 4
-    agent_implementation: rainbowtorch
-    environment_type: gym
-    environment_name: LunarLander-v2
-    demonstration_count: 0
-    total_trial_count: 250
-    epsilon_min: 0.10
-    epsilon_steps: 10000 #1
-    fps_limit: 30.0
-    target_net_update_schedule: 10
-    learning_rate: 1.0e-4
-    lr_warmup_steps: 100
-    model_publication_interval: 250
-    render_width: 1000
-    batch_size: 32
-    min_replay_buffer_size: 32
-    model_kwargs:
-      v_min: -200.0
-      v_max: 200.0
 
 benchmark_lander_hill:
   <<: *default_params
