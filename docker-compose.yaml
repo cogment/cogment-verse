@@ -108,6 +108,14 @@ services:
     volumes:
       - ./run_params.yaml:/cogment-verse/client/run_params.yaml
 
+  validation_test:
+    build:
+      context: validation_test
+      dockerfile: Dockerfile
+    environment:
+      - COGMENT_GRPC_REFLECTION=1
+      - PYTHONUNBUFFERED=1
+
   grafana:
     image: cogment/cogment-verse-grafana:${IMAGE_TAG:-local}
     build: ./grafana
