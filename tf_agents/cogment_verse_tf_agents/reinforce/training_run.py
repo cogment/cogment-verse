@@ -179,27 +179,11 @@ def create_training_run(agent_adapter):
                     for _ in range(config.demonstration_count)
                 ]
 
-            def train_model():
-                training_batch = None
-                with TRAINING_SAMPLE_BATCH_TIME.time():
-                    training_batch = model.sample_training_batch(batch_size)
-
-                with TRAINING_LEARN_TIME.time():
-                    info = model.learn()
-                return info, training_batch
-
-            def get_samples_seen(training_batch):
-                for key in training_batch.keys():
-                    num_samples_seen = training_batch[key].shape[0]
-                    break
-                return num_samples_seen
-
             async def archive_model(
                 model_archive_schedule,
                 model_publication_schedule,
                 step_timestamp,
                 step_idx,
-                training_batch,
                 info,
             ):
 
@@ -216,8 +200,8 @@ def create_training_run(agent_adapter):
                         step_idx,
                         epsilon=model._epsilon_schedule.get_value(),
                         replay_buffer_size=model.get_replay_buffer_size(),
-                        batch_reward=training_batch["rewards"].mean(),
-                        batch_done=training_batch["done"].mean(),
+                        batch_reward=info["rewards_mean"],
+                        batch_done=info["done_mean"],
                         model_published_version=version_number,
                         training_step=training_step,
                         training_samples_seen=samples_seen,
@@ -271,8 +255,10 @@ def create_training_run(agent_adapter):
                     TRAINING_REPLAY_BUFFER_SIZE.set(model.get_replay_buffer_size())
 
                     if sample.current_player_sample[-1] and model.get_replay_buffer_size() > batch_size:
-                        info, training_batch = train_model()
-                        samples_seen += get_samples_seen(training_batch)
+
+                        with TRAINING_LEARN_TIME.time():
+                            info = model.learn()
+                        samples_seen += info["num_samples_seen"]
                         training_step += 1
                         model.reset_replay_buffer()
 
@@ -281,26 +267,8 @@ def create_training_run(agent_adapter):
                             model_publication_schedule,
                             step_timestamp,
                             step_idx,
-                            training_batch,
-                            info,
+                            info
                         )
-
-                    # elif (
-                    #     model.get_replay_buffer_size() > config.min_replay_buffer_size
-                    #     and model.get_replay_buffer_size() > batch_size
-                    # ):
-                    #     info, training_batch = train_model()
-                    #     samples_seen += get_samples_seen(training_batch)
-                    #     training_step += 1
-                    #
-                    #     await archive_model(
-                    #         model_archive_schedule,
-                    #         model_publication_schedule,
-                    #         step_timestamp,
-                    #         step_idx,
-                    #         training_batch,
-                    #         info,
-                    #     )
 
                 log.info(
                     f"[{run_session.params_name}/{run_id}] done, {model.get_replay_buffer_size()} samples gathered over {run_session.count_steps()} steps"
