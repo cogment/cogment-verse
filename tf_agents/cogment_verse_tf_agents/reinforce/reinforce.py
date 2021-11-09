@@ -62,14 +62,9 @@ class ReinforceAgent:
 
         self._replay_buffer = CircularReplayBuffer(seed=self._params["seed"], size=self._params["max_replay_buffer_size"])
 
-    def regularize_dist(self, prob):
-        prob = prob + self._epsilon_schedule.get_value()
-        return prob / tf.reduce_sum(prob, axis=1)[:, tf.newaxis]
-
     def act(self, observation, legal_moves_as_int=None, update_schedule=True):
 
         policy = self._model.model(tf.expand_dims(observation, axis=0), training=False)
-        # policy = self.regularize_dist(policy)
         dist = tfp.distributions.Categorical(probs=policy, dtype=tf.float32)
         action = dist.sample()
         return int(action.numpy()[0])
@@ -98,7 +93,6 @@ class ReinforceAgent:
         Q = self.get_discounted_rewards(batch["rewards"])
         with tf.GradientTape() as tape:
             prob = self._model.model(batch["observations"], training=True)
-            # prob = self.regularize_dist(prob)
             loss = self.__loss(prob, batch["actions"], Q)
         gradients = tape.gradient(loss, self._model.trainable_variables)
 
