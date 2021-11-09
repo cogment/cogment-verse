@@ -130,7 +130,8 @@ validation_test:on-schedule:
   stage: validation
   before_script:
     - apk update
-    - apk add curl bash docker-compose=2.0 make automake gcc g++ subversion python3-dev musl-dev postgresql-dev nginx gettext apache2-utils
+    - apk add curl bash docker-compose make automake gcc g++ subversion python3-dev musl-dev postgresql-dev nginx gettext apache2-utils
+    - curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
     - python3 -m pip install --upgrade pip
     - pip3 install boto3 psycopg2 mlflow 
     - curl --silent -L https://raw.githubusercontent.com/cogment/cogment-cli/main/install.sh | bash
