@@ -112,6 +112,7 @@ async def environment(environment_session):
         "framestack": env_config.framestack,
     }
     env = make_environment(env_config.env_type, env_config.env_name, **env_kwargs)
+    env.seed(env_config.seed)
 
     max_size = env_config.render_width or 256
 

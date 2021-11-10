@@ -186,7 +186,7 @@ class RunSession:
         try:
             await self._task
         except Exception:
-            # We don't want terminate to fail, exeception handling is dealt with in get_status().
+            # We don't want terminate to fail, exception handling is dealt with in get_status().
             pass
 
         return self.get_status()

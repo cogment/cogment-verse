@@ -15,6 +15,7 @@
 import cog_settings
 
 from cogment_verse_torch_agents.hive_adapter.hive_agent_adapter import HiveAgentAdapter
+from cogment_verse_torch_agents.simple_a2c.simple_a2c_agent import SimpleA2CAgentAdapter
 
 from dotenv import load_dotenv
 import cogment
@@ -24,6 +25,7 @@ import asyncio
 import json
 import logging
 import os
+import sys
 
 load_dotenv()
 
@@ -55,10 +57,18 @@ async def main():
     hive_adapter = HiveAgentAdapter()
     hive_adapter.register_implementations(context)
 
+    simple_a2c_adapter = SimpleA2CAgentAdapter()
+    simple_a2c_adapter.register_implementations(context)
+
     log.info(f"Torch agents service starts on {PORT}...")
 
     await context.serve_all_registered(cogment.ServedEndpoint(port=PORT), prometheus_port=PROMETHEUS_PORT)
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    loop = asyncio.get_event_loop()
+    try:
+        loop.run_until_complete(main())
+    except KeyboardInterrupt:
+        print("process interrupted")
+        sys.exit(-1)

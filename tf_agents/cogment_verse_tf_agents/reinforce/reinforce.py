@@ -60,7 +60,9 @@ class ReinforceAgent:
         self._model = PolicyNetwork(self._params["obs_dim"], self._params["act_dim"])
         self._optimizer = tf.keras.optimizers.Adam(learning_rate=self._lr_schedule.get_value())
 
-        self._replay_buffer = CircularReplayBuffer(seed=self._params["seed"], size=self._params["max_replay_buffer_size"])
+        self._replay_buffer = CircularReplayBuffer(
+            seed=self._params["seed"], size=self._params["max_replay_buffer_size"]
+        )
 
     def regularize_dist(self, prob):
         prob = prob + self._epsilon_schedule.get_value()
