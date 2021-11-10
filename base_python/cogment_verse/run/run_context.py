@@ -175,4 +175,10 @@ class RunContext(cogment.Context):
             self._grpc_server,
         )
 
-        await serve_all_registered_task
+        try:
+            await serve_all_registered_task
+        except Exception as error:
+            log.info(f"Properly canceling the server task after {error} ...")
+            serve_all_registered_task.cancel()
+            await serve_all_registered_task
+            raise error

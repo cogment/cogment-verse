@@ -67,7 +67,7 @@ services:
       - COGMENT_VERSE_ENVIRONMENT_ENDPOINT
       - COGMENT_VERSE_ORCHESTRATOR_ENDPOINT
       - COGMENT_VERSE_ACTOR_ENDPOINTS
-      - MLFLOW_TRACKING_URI=${COGMENT_VERSE_MLFLOW_TRACKING_URI}
+      - MLFLOW_TRACKING_URI
       - MPLBACKEND=Agg
     depends_on:
       - orchestrator
@@ -91,7 +91,7 @@ services:
       - COGMENT_VERSE_ENVIRONMENT_ENDPOINT
       - COGMENT_VERSE_ORCHESTRATOR_ENDPOINT
       - COGMENT_VERSE_ACTOR_ENDPOINTS
-      - MLFLOW_TRACKING_URI=${COGMENT_VERSE_MLFLOW_TRACKING_URI}
+      - MLFLOW_TRACKING_URI
       - MPLBACKEND=Agg
     depends_on:
       - orchestrator
@@ -144,8 +144,8 @@ services:
     volumes:
       - ./data/mlflow:/data
 
-  web-client:
-    build: web-client
+  web_client:
+    build: web_client
     environment:
       - NODE_ENV=development
       - CHOKIDAR_USEPOLLING=true

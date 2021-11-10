@@ -13,16 +13,15 @@
 // limitations under the License.
 
 import { Message } from "google-protobuf";
-
-import { useState, useEffect, useRef } from "react";
-
+import { useEffect, useRef, useState } from "react";
+import "./App.css";
 //import Canvas from './Canvas'
 import { cogSettings } from "./CogSettings";
+import { ControlList } from "./ControlList";
 import * as data_pb from "./data_pb";
 import { useActions } from "./hooks/useActions";
-
 import { get_keymap, useControls } from "./hooks/useControls";
-import { ControlList } from "./ControlList";
+import { useWindowSize } from "./hooks/useWindowSize";
 
 const setContains = <T extends unknown>(A: Set<T>, B: Set<T>): boolean => {
   if (A.size > B.size) {
@@ -39,6 +38,14 @@ const setContains = <T extends unknown>(A: Set<T>, B: Set<T>): boolean => {
 
 const setEquals = <T extends unknown>(A: Set<T>, B: Set<T>): boolean => {
   return setContains(A, B) && setContains(B, A);
+};
+
+const setIsEndOfArray = <T extends unknown>(A: Set<T>, B: T[]): boolean => {
+  for (let i = 1; i <= B.length; i++) {
+    const testSet = new Set(B.slice(i * -1));
+    if (setEquals(A, testSet)) return true;
+  }
+  return false;
 };
 
 function App() {
@@ -61,7 +68,7 @@ function App() {
 
   // cogment stuff
 
-  const grpcURL = process.env.REACT_APP_GRPCWEBPROXY_URL;
+  const grpcURL = process.env.REACT_APP_GRPCWEBPROXY_URL || "http://localhost:8081";
 
   type ObservationT = data_pb.Observation.AsObject;
   type ActionT = data_pb.AgentAction;
@@ -86,8 +93,6 @@ function App() {
     RewardT,
     ActorConfigT
   >(
-    // TODO remove that once the issue is fixed in the js SDK
-    // @ts-ignore
     cogSettings,
     "web_actor", // actor name
     "teacher_agent", // actor class
@@ -117,13 +122,17 @@ function App() {
         } else {
           for (let item of keymap.action_map) {
             const keySet = new Set<string>(item.keys);
-            if (setEquals(keySet, pressedKeys)) {
+            if (setIsEndOfArray(keySet, pressedKeys)) {
               action_int = item.id;
+              break;
             }
           }
         }
 
         action.setDiscreteAction(action_int);
+        if (sendAction) {
+          sendAction(action);
+        }
 
         const minDelta = 1000.0 / 30.0; // 30 fps
         const currentTime = new Date().getTime();
@@ -229,20 +238,33 @@ function App() {
     };
   });
 
+  const windowSize = useWindowSize() as unknown as { width: number; height: number };
+  const [expanded, setExpanded] = useState(false);
+
   return (
-    <div onKeyDown={onKeyDown} onKeyUp={onKeyUp} tabIndex={0}>
-      <h1>Cogverse Web Client</h1>
-      {pixelData && <img ref={imgRef} width="50%" alt="current trial observation" />}
-      <br></br>
-      <button onClick={triggerJoinTrial}>Join Trial</button>
-      <br></br>
-      Status: {trialStatus}
-      <br></br>
-      Trial ID: {currentTrialId}
-      <br></br>
-      <ControlList envType={envType} envName={envName} />
-      <br></br>
-      FPS: {`${emaFps.toFixed(1)}`}
+    <div className="container" onKeyDown={onKeyDown} onKeyUp={onKeyUp}>
+      <div className="cabinet-container">
+        <img height={windowSize.height * 2} src={`${process.env.PUBLIC_URL}/assets/Arcade.png`} alt="arcade machine" />
+        <div id="screen" className="screen">
+          {pixelData && <img ref={imgRef} className="display" tabIndex={0} alt="current trial observation" />}
+        </div>
+        <button onClick={triggerJoinTrial} className="pushable">
+          <span className="front">Join Trial</span>
+        </button>
+        <div className="status">
+          Status: {trialStatus}
+          <br></br>
+          Trial ID: {currentTrialId}
+        </div>
+        <div id="expand" className={expanded ? "control-container-open" : "control-container"}>
+          <button className="pull-down" onClick={() => setExpanded((expanded) => !expanded)}>
+            Controls ≡
+          </button>
+          <div className="control-group">
+            <ControlList envType={envType} envName={envName} />
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

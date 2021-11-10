@@ -69,7 +69,7 @@ npm_lint:
   extends: .base_node
   stage: lint
   script:
-    - cd web-client
+    - cd web_client
     - npm install
     - npx prettier --check .
 
@@ -92,6 +92,10 @@ test_torch_agents:
   stage: test
   script:
     - apt-get update && apt-get install -y python3-opencv
+    - cd base_python
+    - poetry install
+    - poetry run task build
+    - cd ..
     - cd torch_agents
     - poetry install -E test
     - poetry run task build
@@ -105,7 +109,7 @@ npm_build:
   extends: .base_node
   stage: build
   script:
-    - cd web-client
+    - cd web_client
     - npm install
     - npx cogment-js-sdk-generate
     - npm run build

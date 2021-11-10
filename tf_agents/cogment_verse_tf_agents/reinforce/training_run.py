@@ -78,6 +78,7 @@ def create_training_run(agent_adapter):
                 },
                 **model_kwargs,
             )
+
             run_xp_tracker.log_params(
                 player_count=config.player_count,
                 batch_size=batch_size,
@@ -87,7 +88,6 @@ def create_training_run(agent_adapter):
                 agent_implmentation=config.agent_implementation,
                 **{k: v for k, v in model._params.items() if k != 'model_params'},
             )
-
 
             model_publication_schedule = PeriodicSchedule(False, True, config.model_publication_interval)
             model_archive_schedule = PeriodicSchedule(
@@ -117,7 +117,6 @@ def create_training_run(agent_adapter):
                         env_name=config.environment_name,
                         num_input=config.num_input,
                         num_action=config.num_action,
-                        fps_limit=config.fps_limit,
                     ),
                 )
                 for player_idx in range(config.player_count)
@@ -159,7 +158,6 @@ def create_training_run(agent_adapter):
                         env_name=config.environment_name,
                         num_input=config.num_input,
                         num_action=config.num_action,
-                        fps_limit=config.fps_limit,
                     ),
                 )
                 demonstration_trial_configs = [
@@ -173,6 +171,7 @@ def create_training_run(agent_adapter):
                             env_type=config.environment_type,
                             env_name=config.environment_name,
                             flatten=config.flatten,
+                            framestack=config.framestack,
                         ),
                         actors=[*player_actor_configs, teacher_actor_config],
                         distinguished_actor=distinguished_actor,
@@ -199,6 +198,7 @@ def create_training_run(agent_adapter):
                     run_xp_tracker.log_metrics(
                         step_timestamp,
                         step_idx,
+                        info,
                         epsilon=model._epsilon_schedule.get_value(),
                         replay_buffer_size=model.get_replay_buffer_size(),
                         batch_reward=info["rewards_mean"],
@@ -208,7 +208,6 @@ def create_training_run(agent_adapter):
                         training_samples_seen=samples_seen,
                         samples_generated=samples_generated,
                         episodes_per_sec=trials_completed / (time.time() - start_time),
-                        **info,
                     )
                     verb = "archived" if archive else "published"
                     log.info(

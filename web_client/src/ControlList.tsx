@@ -22,7 +22,8 @@ export const ControlList = (props: any) => {
   if (keymap === undefined) {
     return (
       <div>
-        No control scheme available for `{envType}` environment `{envName}`
+        {/* No control scheme available for `{envType}` environment `{envName}` */}
+        No trial in progress
       </div>
     );
   }
