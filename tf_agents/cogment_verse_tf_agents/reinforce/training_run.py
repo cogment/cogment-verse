@@ -85,8 +85,9 @@ def create_training_run(agent_adapter):
                 model_archive_interval_multiplier=config.model_archive_interval_multiplier,
                 environment=config.environment_name,
                 agent_implmentation=config.agent_implementation,
-                **model._params,
+                **{k: v for k, v in model._params.items() if k != 'model_params'},
             )
+
 
             model_publication_schedule = PeriodicSchedule(False, True, config.model_publication_interval)
             model_archive_schedule = PeriodicSchedule(
@@ -254,13 +255,11 @@ def create_training_run(agent_adapter):
 
                     TRAINING_REPLAY_BUFFER_SIZE.set(model.get_replay_buffer_size())
 
-                    if sample.current_player_sample[-1] and model.get_replay_buffer_size() > batch_size:
-
+                    if sample.current_player_sample[-1]:
                         with TRAINING_LEARN_TIME.time():
                             info = model.learn()
                         samples_seen += info["num_samples_seen"]
                         training_step += 1
-                        model.reset_replay_buffer()
 
                         await archive_model(
                             model_archive_schedule,

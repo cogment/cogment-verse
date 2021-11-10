@@ -19,6 +19,7 @@ from cogment_verse_tf_agents.third_party.hive.utils.schedule import ConstantSche
 import numpy as np
 import tensorflow as tf
 import tensorflow_probability as tfp
+import torch
 
 
 # pylint: disable=C0103
@@ -30,9 +31,9 @@ class ReinforceAgent:
     # pylint: disable=too-many-instance-attributes
     def __init__(
         self,
-        id,
-        obs_dim,
-        act_dim,
+        id="*",
+        obs_dim=4,
+        act_dim=2,
         gamma=0.99,
         lr=3e-4,
         max_replay_buffer_size=50000,
@@ -40,24 +41,31 @@ class ReinforceAgent:
         lr_schedule=None,
         model_params=None
     ):
-        self.id = id
+
         self._params = {}
+        self._params["id"] = id
         self._params["obs_dim"] = obs_dim
         self._params["act_dim"] = act_dim
         self._params["seed"] = seed
         self._params["max_replay_buffer_size"] = max_replay_buffer_size
         self._params["gamma"] = gamma
+        self._params["lr"] = lr
+        self._params["_lr_schedule"] = lr_schedule
+        self._params["model_params"] = model_params
 
-        self._lr_schedule = lr_schedule
-        if lr_schedule is None:
-            self._lr_schedule = ConstantSchedule(lr)
+        self.init_agent()
+
+    def init_agent(self):
+
+        if self._params["_lr_schedule"] is None:
+            self._params["_lr_schedule"] = ConstantSchedule(self._params["lr"])
 
         self._model = PolicyNetwork(self._params["obs_dim"], self._params["act_dim"])
-        self._optimizer = tf.keras.optimizers.Adam(learning_rate=self._lr_schedule.get_value())
+        self._optimizer = tf.keras.optimizers.Adam(learning_rate=self._params["_lr_schedule"].get_value())
 
-        self._model_params = model_params
-        if self._model_params is not None:
-            self._init_params()
+        if self._params["model_params"] is not None:
+            self._model.set_weights(self._params["model_params"])
+        self._model.trainable = True
 
         self._replay_buffer = CircularReplayBuffer(seed=self._params["seed"], size=self._params["max_replay_buffer_size"])
 
@@ -97,6 +105,7 @@ class ReinforceAgent:
         gradients = tape.gradient(loss, self._model.trainable_variables)
 
         self._optimizer.apply_gradients(zip(gradients, self._model.trainable_variables))
+        self.reset_replay_buffer()
         return {"loss": loss, "num_samples_seen": batch["observations"].shape[0],
                 "rewards_mean": batch["rewards"].mean(), "done_mean": batch["done"].mean()}
 
@@ -124,12 +133,17 @@ class ReinforceAgent:
         self._replay_buffer._write_index = -1
         self._replay_buffer._n = 0
 
-    def _init_params(self):
-        self._model.set_weights(self._model_params)
-        self._model.trainable = True
-
     def get_replay_buffer_size(self):
         """
         Return the size of the internal replay buffer
         """
         return self._replay_buffer.size()
+
+    def save(self, f):
+        self._params["model_params"] = self._model.get_weights()
+        torch.save(self._params, f)
+        return {}
+
+    def load(self, f):
+        self._params = torch.load(f)
+        self.init_agent()

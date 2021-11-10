@@ -20,11 +20,9 @@ from cogment_verse_tf_agents.reinforce.training_run import create_training_run
 from cogment_verse_tf_agents.wrapper import format_legal_moves, cog_action_from_tf_action, tf_obs_from_cog_obs
 
 from cogment_verse import AgentAdapter
-
 import cogment
 
 from prometheus_client import Summary
-import torch
 
 import logging
 
@@ -43,29 +41,13 @@ class ReinforceAgentAdapter(AgentAdapter):
     def _create(self, model_id, **kwargs):
         return ReinforceAgent(id=model_id, **kwargs)
 
-    @staticmethod
-    def extract_agent_params(model):
-        agent_params = {}
-        agent_params["id"] = model.id
-        agent_params["_params"] = model._params
-        agent_params["_lr_schedule"] = model._lr_schedule
-        agent_params["model_params"] = model._model.get_weights()
-        return agent_params
-
     def _load(self, model_id, version_number, version_user_data, model_data_f):
-
-        agent_params = torch.load(model_data_f)
-        reinforce_agent = ReinforceAgent(id=agent_params["id"], obs_dim=agent_params["_params"]["obs_dim"],
-                        act_dim=agent_params["_params"]["act_dim"],lr_schedule=agent_params["_lr_schedule"],
-                        gamma=agent_params["_params"]["gamma"],max_replay_buffer_size=agent_params["_params"]["max_replay_buffer_size"],
-                        seed=agent_params["_params"]["seed"], model_params=agent_params["model_params"])
-
+        reinforce_agent = ReinforceAgent(id=model_id)
+        reinforce_agent.load(model_data_f)
         return reinforce_agent
 
     def _save(self, model, model_data_f):
-        agent_params = self.extract_agent_params(model)
-        torch.save(agent_params, model_data_f)
-        return {}
+        return model.save(model_data_f)
 
     def _create_actor_implementations(self):
         async def impl(actor_session):
