@@ -515,9 +515,9 @@ benchmark_connect_four:
     batch_size: 32
     min_replay_buffer_size: 32
 
-simple_a2c_cartpole:
+simple_a2c_cartpole: &default_simple_a2c_params
   implementation: simple_a2c_training
-  config:
+  config: &default_simple_a2c_config
     class_name: data_pb2.SimpleA2CTrainingRunConfig
     environment:
       env_type: "gym"
@@ -527,17 +527,16 @@ simple_a2c_cartpole:
       num_input: 4
       num_action: 2
     training:
-      epoch_count: 80
+      epoch_count: 100
       epoch_trial_count: 15
       max_parallel_trials: 8
       discount_factor: 0.95
-      entropy_coef: 0.001
-      critic_coef: 1.0
-      a2c_coef: 0.1
+      entropy_coef: 0.01
+      value_loss_coef: 0.5
+      action_loss_coef: 1.0
       learning_rate: 0.01
     actor_network:
-      hidden_size: 128
+      hidden_size: 64
     critic_network:
-      hidden_size: 512
-
+      hidden_size: 64
 

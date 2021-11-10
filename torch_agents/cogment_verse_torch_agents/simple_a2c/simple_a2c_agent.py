@@ -20,7 +20,7 @@ from data_pb2 import (
     TrialActor,
     EnvConfig,
     ActorConfig,
-    NetworkConfig,
+    MLPNetworkConfig,
 )
 
 from cogment_verse import AgentAdapter
@@ -64,8 +64,8 @@ class SimpleA2CAgentAdapter(AgentAdapter):
         model_id,
         observation_size,
         action_count,
-        actor_network_hidden_size=128,
-        critic_network_hidden_size=512,
+        actor_network_hidden_size=64,
+        critic_network_hidden_size=64,
         **kwargs,
     ):
         return SimpleA2CModel(
@@ -73,12 +73,16 @@ class SimpleA2CAgentAdapter(AgentAdapter):
             version_number=1,
             actor_network=torch.nn.Sequential(
                 torch.nn.Linear(observation_size, actor_network_hidden_size),
-                torch.nn.ReLU(),
+                torch.nn.Tanh(),
+                torch.nn.Linear(actor_network_hidden_size, actor_network_hidden_size),
+                torch.nn.Tanh(),
                 torch.nn.Linear(actor_network_hidden_size, action_count),
             ).to(self._dtype),
             critic_network=torch.nn.Sequential(
                 torch.nn.Linear(observation_size, critic_network_hidden_size),
-                torch.nn.ReLU(),
+                torch.nn.Tanh(),
+                torch.nn.Linear(critic_network_hidden_size, critic_network_hidden_size),
+                torch.nn.Tanh(),
                 torch.nn.Linear(critic_network_hidden_size, 1),
             ).to(self._dtype),
         )
@@ -236,21 +240,20 @@ class SimpleA2CAgentAdapter(AgentAdapter):
                 )
 
                 # Compute critic loss
-                critic_loss = (advantage ** 2).mean()
+                value_loss = advantage.pow(2).mean()
 
                 # Compute entropy loss
                 entropy_loss = torch.distributions.Categorical(action_probs).entropy().mean()
 
                 # Compute A2C loss
-                action_logp = torch.gather(action_probs, -1, action.long()).log()
-                a2c_loss = action_logp[:-1] * advantage.detach()
-                a2c_loss = a2c_loss.mean()
+                action_log_probs = torch.gather(action_probs, -1, action.long()).log()
+                action_loss = -(action_log_probs[:-1] * advantage.detach()).mean()
 
                 # Compute the complete loss
                 loss = (
                     -config.training.entropy_coef * entropy_loss
-                    + config.training.critic_coef * critic_loss
-                    - config.training.a2c_coef * a2c_loss
+                    + config.training.value_loss_coef * value_loss
+                    + config.training.action_loss_coef * action_loss
                 )
 
                 # Backprop!
@@ -267,8 +270,8 @@ class SimpleA2CAgentAdapter(AgentAdapter):
                     model_version_number=model_version_number,
                     epoch=epoch,
                     entropy_loss=entropy_loss.item(),
-                    critic_loss=critic_loss.item(),
-                    a2c_loss=a2c_loss.item(),
+                    value_loss=value_loss.item(),
+                    action_loss=action_loss.item(),
                     loss=loss.item(),
                     total_samples=total_samples,
                 )
@@ -287,14 +290,15 @@ class SimpleA2CAgentAdapter(AgentAdapter):
                     training=SimpleA2CTrainingConfig(
                         epoch_count=100,
                         epoch_trial_count=15,
+                        max_parallel_trials=8,
                         discount_factor=0.95,
-                        entropy_coef=0.001,
-                        critic_coef=1.0,
-                        a2c_coef=0.1,
+                        entropy_coef=0.01,
+                        value_loss_coef=0.5,
+                        action_loss_coef=1.0,
                         learning_rate=0.01,
                     ),
-                    actor_network=NetworkConfig(hidden_size=128),
-                    critic_network=NetworkConfig(hidden_size=512),
+                    actor_network=MLPNetworkConfig(hidden_size=64),
+                    critic_network=MLPNetworkConfig(hidden_size=64),
                 ),
             )
         }

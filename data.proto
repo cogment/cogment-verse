@@ -122,7 +122,7 @@ message RunConfig {
   ReplayBufferConfig replay_buffer_config = 28;
 }
 
-message NetworkConfig {
+message MLPNetworkConfig {
   uint32 hidden_size = 1;
 }
 
@@ -132,8 +132,8 @@ message SimpleA2CTrainingConfig {
   uint32 max_parallel_trials = 3;
   float discount_factor = 4;
   float entropy_coef = 5;
-  float critic_coef = 6;
-  float a2c_coef = 7;
+  float value_loss_coef = 6;
+  float action_loss_coef = 7;
   float learning_rate = 8;
 }
 
@@ -141,6 +141,6 @@ message SimpleA2CTrainingRunConfig {
   EnvConfig environment = 1;
   ActorConfig actor = 2;
   SimpleA2CTrainingConfig training = 3;
-  NetworkConfig actor_network = 4;
-  NetworkConfig critic_network = 5;
+  MLPNetworkConfig actor_network = 4;
+  MLPNetworkConfig critic_network = 5;
 }
