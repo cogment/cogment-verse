@@ -37,6 +37,8 @@ class ReinforceAgent:
         self._params = {}
         for k, v in params.items():
             self._params[k] = v
+
+        self._replay_buffer = CircularReplayBuffer(size=self._params["max_replay_buffer_size"])
         self._lr_schedule = None
         self.model_params = None
 
@@ -53,8 +55,6 @@ class ReinforceAgent:
         if self.model_params is not None:
             self._model.set_weights(self.model_params)
         self._model.trainable = True
-
-        self._replay_buffer = CircularReplayBuffer(size=self._params["max_replay_buffer_size"])
 
     def act(self, observation, legal_moves_as_int=None, update_schedule=True):
 
@@ -137,4 +137,3 @@ class ReinforceAgent:
         self._lr_schedule = agent_params["_lr_schedule"]
         self.model_params = agent_params["model_params"]
         self.init_agent()
-
