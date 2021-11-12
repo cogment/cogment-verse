@@ -38,19 +38,19 @@ class ReinforceAgent:
         for k, v in params.items():
             self._params[k] = v
 
-        self._replay_buffer = CircularReplayBuffer(size=self._params["max_replay_buffer_size"])
         self._lr_schedule = None
         self.model_params = None
 
-        self.init_agent()
+        self._model = PolicyNetwork(self._params["obs_dim"], self._params["act_dim"])
+        self._optimizer = tf.keras.optimizers.Adam(learning_rate=self._params["lr"])
+        self._replay_buffer = CircularReplayBuffer(size=self._params["max_replay_buffer_size"])
 
-    def init_agent(self):
+    def update_agent(self):
 
         if self._lr_schedule is None:
             self._lr_schedule = ConstantSchedule(self._params["lr"])
-
-        self._model = PolicyNetwork(self._params["obs_dim"], self._params["act_dim"])
-        self._optimizer = tf.keras.optimizers.Adam(learning_rate=self._lr_schedule.get_value())
+        else:
+            self._optimizer._lr = self._lr_schedule.get_value()
 
         if self.model_params is not None:
             self._model.set_weights(self.model_params)
@@ -136,4 +136,4 @@ class ReinforceAgent:
         agent_params = torch.load(f)
         self._lr_schedule = agent_params["_lr_schedule"]
         self.model_params = agent_params["model_params"]
-        self.init_agent()
+        self.update_agent()

@@ -58,7 +58,6 @@ def create_progress_logger(params_name, run_id, total_trial_count):
 def create_training_run(agent_adapter):
     async def training_run(run_session):
         run_id = run_session.run_id
-
         config = run_session.config
 
         run_xp_tracker = MlflowExperimentTracker(run_session.params_name, run_id)
@@ -66,8 +65,6 @@ def create_training_run(agent_adapter):
         try:
             # Initializing a model
             model_id = f"{run_id}_model"
-            batch_size = config.batch_size
-
             model_kwargs = MessageToDict(config.model_kwargs, preserving_proto_field_name=True)
             model, _ = await agent_adapter.create_and_publish_initial_version(
                 model_id,
@@ -82,16 +79,6 @@ def create_training_run(agent_adapter):
             )
 
             run_xp_tracker.log_params(model._params)
-            # run_xp_tracker.log_params(**{k: v for k, v in model._params.items() if k != 'model_params'})
-            # run_xp_tracker.log_params(
-            #     player_count=config.player_count,
-            #     batch_size=batch_size,
-            #     model_publication_interval=config.model_publication_interval,
-            #     model_archive_interval_multiplier=config.model_archive_interval_multiplier,
-            #     environment=config.environment_name,
-            #     agent_implmentation=config.agent_implementation,
-            #     **{k: v for k, v in model._params.items() if k != 'model_params'},
-            # )
 
             model_publication_schedule = PeriodicSchedule(False, True, config.model_publication_interval)
             model_archive_schedule = PeriodicSchedule(
