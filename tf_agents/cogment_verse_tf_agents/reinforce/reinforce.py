@@ -39,6 +39,7 @@ class ReinforceAgent:
         max_replay_buffer_size=50000,
         seed=21,
         lr_schedule=None,
+        model_params=None
     ):
 
         self._params = {}
@@ -49,20 +50,21 @@ class ReinforceAgent:
         self._params["max_replay_buffer_size"] = max_replay_buffer_size
         self._params["gamma"] = gamma
         self._params["lr"] = lr
-        self._params["_lr_schedule"] = lr_schedule
+        self._lr_schedule = lr_schedule
+        self.model_params = model_params
 
         self.init_agent()
 
     def init_agent(self):
 
-        if self._params["_lr_schedule"] is None:
-            self._params["_lr_schedule"] = ConstantSchedule(self._params["lr"])
+        if self._lr_schedule is None:
+            self._lr_schedule = ConstantSchedule(self._params["lr"])
 
         self._model = PolicyNetwork(self._params["obs_dim"], self._params["act_dim"])
-        self._optimizer = tf.keras.optimizers.Adam(learning_rate=self._params["_lr_schedule"].get_value())
+        self._optimizer = tf.keras.optimizers.Adam(learning_rate=self._lr_schedule.get_value())
 
-        if "model_params" in self._params:
-            self._model.set_weights(self._params["model_params"])
+        if self.model_params is not None:
+            self._model.set_weights(self.model_params)
         self._model.trainable = True
 
         self._replay_buffer = CircularReplayBuffer(seed=self._params["seed"], size=self._params["max_replay_buffer_size"])
@@ -138,11 +140,16 @@ class ReinforceAgent:
         return self._replay_buffer.size()
 
     def save(self, f):
-        self._params["model_params"] = self._model.get_weights()
-        torch.save(self._params, f)
+        self.model_params = self._model.get_weights()
+        torch.save({"params": self._params,
+                    "_lr_schedule": self._lr_schedule,
+                    "model_params": self.model_params}, f)
         return {}
 
     def load(self, f):
-        self._params = torch.load(f)
+        agent_params = torch.load(f)
+        self._params = agent_params["params"]
+        self._lr_schedule = agent_params["_lr_schedule"]
+        self.model_params = agent_params["model_params"]
         self.init_agent()
 

@@ -78,7 +78,9 @@ def create_training_run(agent_adapter):
                 },
                 **model_kwargs,
             )
-            run_xp_tracker.log_params(**{k: v for k, v in model._params.items() if k != 'model_params'})
+
+            run_xp_tracker.log_params(model._params)
+            # run_xp_tracker.log_params(**{k: v for k, v in model._params.items() if k != 'model_params'})
             # run_xp_tracker.log_params(
             #     player_count=config.player_count,
             #     batch_size=batch_size,
