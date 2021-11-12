@@ -31,7 +31,7 @@ class ReinforceAgent:
     # pylint: disable=too-many-instance-attributes
     def __init__(
         self,
-        id="*",
+        id="reinforce_0",
         obs_dim=4,
         act_dim=2,
         gamma=0.99,
@@ -145,3 +145,4 @@ class ReinforceAgent:
     def load(self, f):
         self._params = torch.load(f)
         self.init_agent()
+
