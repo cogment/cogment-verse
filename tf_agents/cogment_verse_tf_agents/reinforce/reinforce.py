@@ -39,7 +39,6 @@ class ReinforceAgent:
         max_replay_buffer_size=50000,
         seed=21,
         lr_schedule=None,
-        model_params=None
     ):
 
         self._params = {}
@@ -51,7 +50,6 @@ class ReinforceAgent:
         self._params["gamma"] = gamma
         self._params["lr"] = lr
         self._params["_lr_schedule"] = lr_schedule
-        self._params["model_params"] = model_params
 
         self.init_agent()
 
@@ -63,7 +61,7 @@ class ReinforceAgent:
         self._model = PolicyNetwork(self._params["obs_dim"], self._params["act_dim"])
         self._optimizer = tf.keras.optimizers.Adam(learning_rate=self._params["_lr_schedule"].get_value())
 
-        if self._params["model_params"] is not None:
+        if "model_params" in self._params:
             self._model.set_weights(self._params["model_params"])
         self._model.trainable = True
 
