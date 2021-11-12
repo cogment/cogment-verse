@@ -33,15 +33,6 @@ from cogment_verse_tf_agents.third_party.hive.utils.schedule import (
 import logging
 
 # pylint: disable=protected-access
-
-TRAINING_ADD_SAMPLE_TIME = Summary("training_add_sample_seconds", "Time spent adding samples in the replay buffer")
-TRAINING_SAMPLE_BATCH_TIME = Summary(
-    "training_sample_batch_seconds",
-    "Time spent sampling the replay buffer to create a batch",
-)
-TRAINING_LEARN_TIME = Summary("training_learn_seconds", "Time spent learning")
-TRAINING_REPLAY_BUFFER_SIZE = Gauge("replay_buffer_size", "Size of the replay buffer")
-
 log = logging.getLogger(__name__)
 
 
@@ -93,7 +84,6 @@ def create_training_run(agent_adapter):
             samples_generated = 0
             trials_completed = 0
             all_trials_reward = 0
-            start_time = time.time()
 
             # Create config for the actor
             actor_configs = [
@@ -168,7 +158,6 @@ def create_training_run(agent_adapter):
                         f"[{run_session.params_name}/{run_id}] {model_id}@v{version_number} {verb} after {run_session.count_steps()} steps ({sizeof_fmt(version_data_size)})"
                     )
 
-
             async for (
                 step_idx,
                 step_timestamp,
@@ -195,15 +184,10 @@ def create_training_run(agent_adapter):
                     )
 
                 samples_generated += 1
-
-                with TRAINING_ADD_SAMPLE_TIME.time():
-                    model.consume_training_sample(sample.current_player_sample)
-
-                TRAINING_REPLAY_BUFFER_SIZE.set(model.get_replay_buffer_size())
+                model.consume_training_sample(sample.current_player_sample)
 
                 if sample.current_player_sample[-1]:
-                    with TRAINING_LEARN_TIME.time():
-                        info = model.learn()
+                    info = model.learn()
                     samples_seen += info["num_samples_seen"]
                     training_step += 1
 
@@ -216,7 +200,7 @@ def create_training_run(agent_adapter):
                     )
 
             log.info(
-                f"[{run_session.params_name}/{run_id}] done, {model.get_replay_buffer_size()} samples gathered over {run_session.count_steps()} steps"
+                f"[{run_session.params_name}/{run_id}] done, {samples_seen} samples gathered over {run_session.count_steps()} steps"
             )
 
             run_xp_tracker.terminate_success()
