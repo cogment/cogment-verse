@@ -31,27 +31,14 @@ class ReinforceAgent:
     # pylint: disable=too-many-instance-attributes
     def __init__(
         self,
-        id="reinforce_0",
-        obs_dim=4,
-        act_dim=2,
-        gamma=0.99,
-        lr=3e-4,
-        max_replay_buffer_size=50000,
-        seed=21,
-        lr_schedule=None,
-        model_params=None
+        **params
     ):
 
         self._params = {}
-        self._params["id"] = id
-        self._params["obs_dim"] = obs_dim
-        self._params["act_dim"] = act_dim
-        self._params["seed"] = seed
-        self._params["max_replay_buffer_size"] = max_replay_buffer_size
-        self._params["gamma"] = gamma
-        self._params["lr"] = lr
-        self._lr_schedule = lr_schedule
-        self.model_params = model_params
+        for k, v in params.items():
+            self._params[k] = v
+        self._lr_schedule = None
+        self.model_params = None
 
         self.init_agent()
 
@@ -67,7 +54,7 @@ class ReinforceAgent:
             self._model.set_weights(self.model_params)
         self._model.trainable = True
 
-        self._replay_buffer = CircularReplayBuffer(seed=self._params["seed"], size=self._params["max_replay_buffer_size"])
+        self._replay_buffer = CircularReplayBuffer(size=self._params["max_replay_buffer_size"])
 
     def act(self, observation, legal_moves_as_int=None, update_schedule=True):
 
@@ -141,14 +128,12 @@ class ReinforceAgent:
 
     def save(self, f):
         self.model_params = self._model.get_weights()
-        torch.save({"params": self._params,
-                    "_lr_schedule": self._lr_schedule,
+        torch.save({"_lr_schedule": self._lr_schedule,
                     "model_params": self.model_params}, f)
-        return {}
+        return self._params
 
     def load(self, f):
         agent_params = torch.load(f)
-        self._params = agent_params["params"]
         self._lr_schedule = agent_params["_lr_schedule"]
         self.model_params = agent_params["model_params"]
         self.init_agent()

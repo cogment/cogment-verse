@@ -75,6 +75,8 @@ def create_training_run(agent_adapter):
                     "obs_dim": config.num_input,
                     "act_dim": config.num_action,
                     "max_replay_buffer_size": config.max_replay_buffer_size,
+                    "lr": config.learning_rate,
+                    "gamma": config.discount_factor
                 },
                 **model_kwargs,
             )
