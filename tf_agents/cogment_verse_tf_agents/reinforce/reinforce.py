@@ -97,7 +97,7 @@ class ReinforceAgent:
 
     def learn(self):
 
-        batch = self.sample_training_batch()
+        batch = self._sample_training_batch()
         Q = self.get_discounted_rewards(batch["rewards"])
         with tf.GradientTape() as tape:
             prob = self._model.model(batch["observations"], training=True)
@@ -105,7 +105,7 @@ class ReinforceAgent:
         gradients = tape.gradient(loss, self._model.trainable_variables)
 
         self._optimizer.apply_gradients(zip(gradients, self._model.trainable_variables))
-        self.reset_replay_buffer()
+        self._reset_replay_buffer()
         return {"loss": loss, "num_samples_seen": batch["observations"].shape[0],
                 "rewards_mean": batch["rewards"].mean(), "done_mean": batch["done"].mean()}
 
@@ -115,7 +115,7 @@ class ReinforceAgent:
         """
         self._replay_buffer.add(sample)
 
-    def sample_training_batch(self, batch_size=64):
+    def _sample_training_batch(self):
         """
         sample last trial SARSD
         """
@@ -126,7 +126,7 @@ class ReinforceAgent:
 
         return rval
 
-    def reset_replay_buffer(self):
+    def _reset_replay_buffer(self):
         """
         Resets buffer
         """

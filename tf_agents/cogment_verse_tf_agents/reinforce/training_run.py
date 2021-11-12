@@ -78,16 +78,16 @@ def create_training_run(agent_adapter):
                 },
                 **model_kwargs,
             )
-
-            run_xp_tracker.log_params(
-                player_count=config.player_count,
-                batch_size=batch_size,
-                model_publication_interval=config.model_publication_interval,
-                model_archive_interval_multiplier=config.model_archive_interval_multiplier,
-                environment=config.environment_name,
-                agent_implmentation=config.agent_implementation,
-                **{k: v for k, v in model._params.items() if k != 'model_params'},
-            )
+            run_xp_tracker.log_params(**{k: v for k, v in model._params.items() if k != 'model_params'})
+            # run_xp_tracker.log_params(
+            #     player_count=config.player_count,
+            #     batch_size=batch_size,
+            #     model_publication_interval=config.model_publication_interval,
+            #     model_archive_interval_multiplier=config.model_archive_interval_multiplier,
+            #     environment=config.environment_name,
+            #     agent_implmentation=config.agent_implementation,
+            #     **{k: v for k, v in model._params.items() if k != 'model_params'},
+            # )
 
             model_publication_schedule = PeriodicSchedule(False, True, config.model_publication_interval)
             model_archive_schedule = PeriodicSchedule(
