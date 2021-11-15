@@ -4,6 +4,7 @@ FROM python:3.7-slim
 
 # Install torch as early as possible to help with cache
 RUN pip install torch==1.8.1+cpu -f https://download.pytorch.org/whl/cpu/torch_stable.html
+RUN pip install wandb
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y curl xvfb

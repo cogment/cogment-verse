@@ -33,6 +33,8 @@ from cogment_verse_torch_agents.third_party.hive.utils.schedule import (
     SwitchSchedule,
     CosineSchedule,
 )
+from cogment_verse_torch_agents.third_party.hive.agents.qnets.base import FunctionApproximator
+from cogment_verse_torch_agents.third_party.hive.agents.qnets import MLPNetwork
 
 import logging
 
@@ -90,7 +92,6 @@ def create_training_run(agent_adapter):
                 **model_kwargs,
             )
             run_xp_tracker.log_params(
-                model._params,
                 player_count=config.player_count,
                 batch_size=batch_size,
                 model_publication_interval=config.model_publication_interval,

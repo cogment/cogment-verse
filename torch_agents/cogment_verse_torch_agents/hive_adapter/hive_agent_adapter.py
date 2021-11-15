@@ -18,7 +18,7 @@ from cogment_verse import AgentAdapter
 
 from cogment_verse_torch_agents.third_party.hive.agents.dqn import DQNAgent
 from cogment_verse_torch_agents.third_party.hive.agents.rainbow import RainbowDQNAgent
-from cogment_verse_torch_agents.third_party.td3.td3 import TD3Agent
+# from cogment_verse_torch_agents.third_party.td3.td3 import TD3Agent
 from cogment_verse_torch_agents.wrapper import format_legal_moves, cog_action_from_torch_action, torch_obs_from_cog_obs
 from cogment_verse_torch_agents.hive_adapter.sample_producer import sample_producer
 from cogment_verse_torch_agents.hive_adapter.training_run import create_training_run
@@ -86,8 +86,8 @@ class HiveAgentAdapter(AgentAdapter):
         # pylint: disable=protected-access
         return {
             "impl_name": self.impl_name_from_agent_class(model.__class__),
-            "obs_dim": model._params["obs_dim"],
-            "act_dim": model._params["act_dim"],
+            "obs_dim": model._obs_dim,
+            "act_dim": model._act_dim,
         }
 
     def _create_actor_implementations(self):
@@ -129,7 +129,8 @@ class HiveAgentAdapter(AgentAdapter):
                                 # Use -1 to indicate no action, since not active player
                                 action = -1
                             else:
-                                action = model.act(obs_input, legal_moves_input)
+                                # action = model.act(obs_input, legal_moves_input)
+                                action = model.act(obs_input)
 
                             cog_action = cog_action_from_torch_action(action)
                             actor_session.do_action(cog_action)
