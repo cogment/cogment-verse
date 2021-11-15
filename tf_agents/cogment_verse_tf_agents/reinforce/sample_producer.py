@@ -64,14 +64,14 @@ def vectorized_training_sample_from_samples(
 
 TrainingSample = namedtuple(
     "TrainingSample",
-    ["player_sample", "trial_total_reward"],
+    ["player_sample", "trial_cumulative_reward"],
 )
 
 
 async def sample_producer(run_sample_producer_session):
     num_actors = run_sample_producer_session.count_actors()
     previous_sample = None
-    trial_total_reward = 0
+    trial_cumulative_reward = 0
     last_tick = False
 
     async for sample in run_sample_producer_session.get_all_samples():
@@ -79,7 +79,7 @@ async def sample_producer(run_sample_producer_session):
         if sample.get_trial_state() == common_api.TrialState.ENDED:
             last_tick = True
 
-        trial_total_reward += sum(
+        trial_cumulative_reward += sum(
             [sample.get_actor_reward(actor_idx, default=0.0) for actor_idx in range(num_actors)]
         )
 
@@ -89,7 +89,7 @@ async def sample_producer(run_sample_producer_session):
                     player_sample=vectorized_training_sample_from_samples(
                         previous_sample, sample, last_tick, run_sample_producer_session.run_config.num_action
                     ),
-                    trial_total_reward=trial_total_reward if last_tick else None,
+                    trial_cumulative_reward=trial_cumulative_reward,
                 ),
             )
 

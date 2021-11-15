@@ -113,12 +113,12 @@ def create_training_run(agent_adapter):
 
                     # Log trial reward stats
                     trials_completed += 1
-                    all_trials_reward += sample.trial_total_reward
+                    all_trials_reward += sample.trial_cumulative_reward
 
                     run_xp_tracker.log_metrics(
                         step_timestamp,
                         step_idx,
-                        trial_total_reward=sample.trial_total_reward,
+                        trial_total_reward=sample.trial_cumulative_reward,
                         trials_completed=trials_completed,
                         mean_trial_reward=all_trials_reward / trials_completed,
                     )
@@ -131,7 +131,7 @@ def create_training_run(agent_adapter):
                     run_xp_tracker.log_metrics(
                         step_timestamp,
                         step_idx,
-                        info,
+                        **info,
                         model_published_version=version_info["version_number"],
                         trials_completed=trials_completed,
                     )
