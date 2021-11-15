@@ -81,11 +81,11 @@ def create_training_run(agent_adapter):
                 **{
                     "obs_dim": config.num_input,
                     "act_dim": config.num_action,
+                    "qnet": FunctionApproximator(MLPNetwork)(hidden_units=5),
                     "epsilon_schedule": LinearSchedule(1, config.epsilon_min, config.epsilon_steps),
                     "learn_schedule": SwitchSchedule(False, True, 1),
                     "target_net_update_schedule": PeriodicSchedule(False, True, config.target_net_update_schedule),
-                    "lr_schedule": CosineSchedule(0.0, config.learning_rate, config.lr_warmup_steps),
-                    "max_replay_buffer_size": config.max_replay_buffer_size,
+                    # "max_replay_buffer_size": config.max_replay_buffer_size,
                 },
                 **model_kwargs,
             )
