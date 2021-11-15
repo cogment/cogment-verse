@@ -3,7 +3,7 @@ FROM ${BASE_PYTHON_IMAGE} as base_python
 FROM python:3.7-slim
 
 # Install tensorflow as early as possible to help with cache
-RUN pip install tensorflow==2.6.2 torch==1.8.1
+RUN pip install tensorflow==2.6.2
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y curl

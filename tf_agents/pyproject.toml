@@ -9,7 +9,6 @@ license = "Apache-2.0"
 python = ">=3.7,<3.10"
 cogment-verse = {path = "../base_python", develop = true}
 tensorflow = {version="2.6.2", optional = true}
-torch = {version="1.8.1", optional = true}
 tensorflow-probability = "^0.14.1"
 opencv-python-headless = "4.4.0.40"
 python-dotenv = "^0.19.1"
@@ -18,7 +17,7 @@ python-dotenv = "^0.19.1"
 taskipy = "^1.9.0"
 
 [tool.poetry.extras]
-with_tf = ["tensorflow", "torch"]
+with_tf = ["tensorflow"]
 
 [tool.taskipy.tasks]
 generate_protos = "./scripts/generate_protos.sh"

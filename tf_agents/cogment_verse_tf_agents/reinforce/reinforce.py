@@ -19,7 +19,7 @@ from cogment_verse_tf_agents.third_party.hive.utils.schedule import ConstantSche
 import numpy as np
 import tensorflow as tf
 import tensorflow_probability as tfp
-import torch
+import pickle as pkl
 
 
 # pylint: disable=C0103
@@ -135,12 +135,12 @@ class ReinforceAgent:
 
     def save(self, f):
         self.model_params = self._model.get_weights()
-        torch.save({"_lr_schedule": self._lr_schedule,
-                    "model_params": self.model_params}, f)
+        pkl.dump({"_lr_schedule": self._lr_schedule,
+                  "model_params": self.model_params}, f, pkl.HIGHEST_PROTOCOL)
         return self._params
 
     def load(self, f):
-        agent_params = torch.load(f)
+        agent_params = pkl.load(f)
         self._lr_schedule = agent_params["_lr_schedule"]
         self.model_params = agent_params["model_params"]
         self.update_agent()
