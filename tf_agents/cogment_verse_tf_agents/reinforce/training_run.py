@@ -169,9 +169,13 @@ def create_training_run(agent_adapter):
                 max_parallel_trials=config.max_parallel_trials,
                 on_progress=create_progress_logger(run_session.params_name, run_id, config.total_trial_count),
             ):
-                if sample.trial_total_reward is not None:
-                    # This is a sample from a end of a trial
+                samples_generated += 1
+                model.consume_training_sample(sample.current_player_sample)
 
+                # Check if last sample
+                if sample.current_player_sample[-1]:
+
+                    # Log trial reward stats
                     trials_completed += 1
                     all_trials_reward += sample.trial_total_reward
 
@@ -183,14 +187,12 @@ def create_training_run(agent_adapter):
                         mean_trial_reward=all_trials_reward / trials_completed,
                     )
 
-                samples_generated += 1
-                model.consume_training_sample(sample.current_player_sample)
-
-                if sample.current_player_sample[-1]:
+                    # Train agent
                     info = model.learn()
                     samples_seen += info["num_samples_seen"]
                     training_step += 1
 
+                    # Archive model
                     await archive_model(
                         model_archive_schedule,
                         model_publication_schedule,
