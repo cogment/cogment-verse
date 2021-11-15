@@ -24,32 +24,12 @@ from collections import namedtuple
 
 
 def vectorized_training_sample_from_samples(
-    sample, next_sample, last_tick, num_action, reward_override=None, actor_idx=None
+    sample, next_sample, last_tick, num_action
 ):
-    if actor_idx:
-        current_player_actor_idx = actor_idx
-    else:
-        # Retrieve the current player's actor_idx from any actor's observation
-        curr_obs = sample.get_actor_observation(0)
-        next_obs = next_sample.get_actor_observation(0)
-
-        # if player_override is set, it means that the previous action came from the teacher/expert
-        # instead of the true current player
-        if next_obs.player_override != -1:
-            current_player_actor_idx = next_obs.player_override
-        else:
-            current_player_actor_idx = curr_obs.current_player
-
-    vectorized_observation = tf_obs_from_cog_obs(sample.get_actor_observation(current_player_actor_idx))
-
-    vectorized_next_observation = tf_obs_from_cog_obs(next_sample.get_actor_observation(current_player_actor_idx))
-
-    action = sample.get_actor_action(current_player_actor_idx)
-
-    if reward_override:
-        reward = reward_override
-    else:
-        reward = sample.get_actor_reward(current_player_actor_idx, default=0.0)
+    vectorized_observation = tf_obs_from_cog_obs(sample.get_actor_observation(0))
+    vectorized_next_observation = tf_obs_from_cog_obs(next_sample.get_actor_observation(0))
+    action = sample.get_actor_action(0)
+    reward = sample.get_actor_reward(0, default=0.0)
 
     return (
         vectorized_observation["vectorized"],
