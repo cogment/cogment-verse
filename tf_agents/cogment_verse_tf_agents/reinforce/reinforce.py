@@ -45,6 +45,14 @@ class ReinforceAgent:
         self._optimizer = tf.keras.optimizers.Adam(learning_rate=self._params["lr"])
         self._replay_buffer = CircularReplayBuffer(size=self._params["max_replay_buffer_size"])
 
+        self._replay_buffer._dtype.pop("legal_moves_as_int")
+        self._replay_buffer._dtype.pop("next_legal_moves_as_int")
+
+        self._replay_buffer._data = {}
+        for data_key in self._replay_buffer._dtype:
+            self._replay_buffer._data[data_key] = [None] * int(self._replay_buffer._size)
+
+
     def update_agent(self):
 
         if self._lr_schedule is None:

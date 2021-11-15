@@ -28,16 +28,14 @@ def vectorized_training_sample_from_samples(
 ):
     vectorized_observation = tf_obs_from_cog_obs(sample.get_actor_observation(0))
     vectorized_next_observation = tf_obs_from_cog_obs(next_sample.get_actor_observation(0))
-    action = sample.get_actor_action(0)
+    action = tf_action_from_cog_action(sample.get_actor_action(0))
     reward = sample.get_actor_reward(0, default=0.0)
 
     return (
         vectorized_observation["vectorized"],
-        format_legal_moves(vectorized_observation["legal_moves_as_int"], num_action),
-        tf_action_from_cog_action(action),
+        action,
         reward,
         vectorized_next_observation["vectorized"],
-        format_legal_moves(vectorized_next_observation["legal_moves_as_int"], num_action),
         1 if last_tick else 0,
     )
 
