@@ -17,6 +17,7 @@ from cogment_verse_environment.atari import AtariEnv
 from cogment_verse_environment.tetris import TetrisEnv
 from cogment_verse_environment.minatarenv import MinAtarEnv
 from cogment_verse_environment.zoo_env import PettingZooEnv
+from pipe_world.pipe_world import PipeWorld
 
 ENVIRONMENT_CONSTRUCTORS = {
     "gym": GymEnv,
@@ -24,6 +25,7 @@ ENVIRONMENT_CONSTRUCTORS = {
     "minatar": MinAtarEnv,
     "tetris": TetrisEnv,
     "pettingzoo": PettingZooEnv,
+    "pipe_world": PipeWorld
 }
 
 
