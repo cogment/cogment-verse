@@ -1,170 +1,9 @@
 import os
-import abc
 import numpy as np
-import _pickle as pickle
+import pickle
 
-from .utils.utils import create_folder
-
-
-class BaseReplayBuffer(abc.ABC):
-    """Base class for replay buffers. Every implemented buffer should be a subclass of this class."""
-
-    @abc.abstractmethod
-    def add(self, data):
-        """
-        Adds data to the buffer
-
-        Args:
-            data (tuple): (state, action, reward, next_state)
-        """
-
-    @abc.abstractmethod
-    def sample(self, batch_size):
-        """
-        sample a minibatch
-
-        Args:
-            batch_size (int): .
-        """
-
-    @abc.abstractmethod
-    def size(self):
-        """
-        returns replay buffer size
-        """
-
-    @abc.abstractmethod
-    def save(self, fname):
-        """
-        Saves buffer checkpointing information to file for future loading.
-
-        Args:
-            fname (str): directory and file name where agent should save all relevant info.
-        """
-
-    @abc.abstractmethod
-    def load(self, fname):
-        """
-        Loads buffer from file.
-
-        Args:
-            fname (str): directory and file name where buffer checkpoint info is stored.
-
-        Returns:
-            True if successfully loaded the buffer. False otherwise.
-        """
-
-
-class CircularReplayBuffer(BaseReplayBuffer):
-    """A simple circular replay buffers.
-
-    Args:
-            size (int): repaly buffer capacity
-            seed (int): Seed for a pseudo-random number generator.
-    """
-
-    def __init__(self, size=1e5, seed=42, action_dtype="float32", observation_dtype="float32"):
-
-        self._numpy_rng = np.random.default_rng(seed)
-        self._size = int(size)
-
-        self._dtype = {
-            "observations": observation_dtype,
-            "legal_moves_as_int": "float32",
-            "actions": action_dtype,
-            "rewards": "float32",
-            "next_observations": observation_dtype,
-            "next_legal_moves_as_int": "float32",
-            "done": "float32",
-        }
-
-        self._data = {}
-        for data_key in self._dtype:
-            self._data[data_key] = [None] * int(size)
-
-        self._write_index = -1
-        self._n = 0
-
-    def add(self, data):
-        """
-        Adds data to the buffer
-
-        Args:
-            data (tuple): (observation, action, reward, next_observation, done)
-        """
-        self._write_index = (self._write_index + 1) % self._size
-        self._n = int(min(self._size, self._n + 1))
-        for idx, key in enumerate(self._data):
-            self._data[key][self._write_index] = np.asarray(data[idx], dtype=self._dtype[key])
-
-    def sample(self, batch_size=32):
-        """
-        sample a minibatch
-
-        Args:
-            batch_size (int): .
-        """
-        if self._n < batch_size:
-            raise IndexError("Buffer does not have batch_size=%d transitions yet." % batch_size)
-
-        indices = self._numpy_rng.choice(self._n, size=batch_size, replace=False)
-        rval = {}
-        for key in self._data:
-            rval[key] = np.asarray([self._data[key][idx] for idx in indices], dtype="float32")
-
-        return rval
-
-    def size(self):
-        """
-        returns replay buffer size
-        """
-        return self._n
-
-    def save(self, fname):
-        """
-        Saves buffer checkpointing information to file for future loading.
-
-        Args:
-            fname (str): directory and file name where agent should save all relevant info.
-        """
-        create_folder(fname)
-
-        sdict = {}
-        sdict["size"] = self._size
-        sdict["write_index"] = self._write_index
-        sdict["n"] = self._n
-
-        full_name = os.path.join(fname, "meta.ckpt")
-        with open(full_name, "wb") as f:
-            pickle.dump(sdict, f)
-
-        for key in self._data:
-            full_name = os.path.join(fname, "{}.npy".format(key))
-            with open(full_name, "wb") as f:
-                np.save(f, self._data[key])
-
-    def load(self, fname):
-        """
-        Loads buffer from file.
-
-        Args:
-            fname (str): directory and file name where buffer checkpoint info is stored.
-
-        Returns:
-            True if successfully loaded the buffer. False otherwise.
-        """
-        full_name = os.path.join(fname, "meta.ckpt")
-        with open(full_name, "rb") as f:
-            sdict = pickle.load(f)
-
-        self._size = sdict["size"]
-        self._write_index = sdict["write_index"]
-        self._n = sdict["n"]
-
-        for key in self._data:
-            full_name = os.path.join(fname, "{}.npy".format(key))
-            with open(full_name, "rb") as f:
-                self._data[key] = np.load(f, allow_pickle=True)
+from cogment_verse_torch_agents.third_party.hive.utils.utils import create_folder
+from cogment_verse_torch_agents.third_party.hive.replays.replay_buffer import BaseReplayBuffer
 
 
 class EfficientCircularBuffer(BaseReplayBuffer):
@@ -179,7 +18,7 @@ class EfficientCircularBuffer(BaseReplayBuffer):
         n_step=1,
         gamma=0.99,
         observation_shape=(),
-        observation_dtype=np.float32,
+        observation_dtype=np.uint8,
         action_shape=(),
         action_dtype=np.int8,
         reward_shape=(),
@@ -257,7 +96,8 @@ class EfficientCircularBuffer(BaseReplayBuffer):
         for key in specs:
             dtype, shape = specs[key]
             dtype = str_to_dtype(dtype)
-            shape = (capacity,) + shape
+            specs[key] = dtype, shape
+            shape = (capacity,) + tuple(shape)
             storage[key] = np.zeros(shape, dtype=dtype)
         return storage
 
@@ -273,7 +113,9 @@ class EfficientCircularBuffer(BaseReplayBuffer):
         be added to the beginning of the episode.
         """
         for _ in range(pad_length):
-            transition = {key: np.zeros_like(self._storage[key][0]) for key in self._storage}
+            transition = {
+                key: np.zeros_like(self._storage[key][0]) for key in self._storage
+            }
             self._add_transition(**transition)
 
     def add(self, observation, action, reward, done, **kwargs):
@@ -293,13 +135,16 @@ class EfficientCircularBuffer(BaseReplayBuffer):
             "done": done,
         }
         transition.update(kwargs)
-        if transition.keys() != self._specs.keys():
-            raise ValueError("Keys passed do not match replay signature")
         for key in self._specs:
-            obj_type = transition[key].dtype if hasattr(transition[key], "dtype") else type(transition[key])
+            obj_type = (
+                transition[key].dtype
+                if hasattr(transition[key], "dtype")
+                else type(transition[key])
+            )
             if not np.can_cast(obj_type, self._specs[key][0], casting="same_kind"):
                 raise ValueError(
-                    f"Key {key} has wrong dtype. Expected {self._specs[key][0]}," f"received {type(transition[key])}."
+                    f"Key {key} has wrong dtype. Expected {self._specs[key][0]},"
+                    f"received {type(transition[key])}."
                 )
         self._add_transition(**transition)
 
@@ -308,6 +153,8 @@ class EfficientCircularBuffer(BaseReplayBuffer):
 
     def _get_from_array(self, array, indices, num_to_access=1):
         """Retrieves consecutive elements in the array, wrapping around if necessary.
+        If more than 1 element is being accessed, the elements are concatenated along
+        the first dimension.
         Args:
             array: array to access from
             indices: starts of ranges to access from
@@ -317,7 +164,9 @@ class EfficientCircularBuffer(BaseReplayBuffer):
         full_indices = (full_indices + np.expand_dims(indices, axis=1)) % (
             self.size() + self._stack_size + self._n_step - 1
         )
-        return array[full_indices]
+        elements = array[full_indices]
+        elements = elements.reshape(indices.shape[0], -1, *elements.shape[3:])
+        return elements
 
     def _get_from_storage(self, key, indices, num_to_access=1):
         """Gets values from storage.
@@ -332,18 +181,37 @@ class EfficientCircularBuffer(BaseReplayBuffer):
         if num_to_access == 0:
             return np.array([])
         elif num_to_access == 1:
-            return self._storage[key][indices % (self.size() + self._stack_size + self._n_step - 1)]
+            return self._storage[key][
+                indices % (self.size() + self._stack_size + self._n_step - 1)
+            ]
         else:
-            return self._get_from_array(self._storage[key], indices, num_to_access=num_to_access)
+            return self._get_from_array(
+                self._storage[key], indices, num_to_access=num_to_access
+            )
 
     def _sample_indices(self, batch_size):
-        indices = []
+        """Samples valid indices that can be used by the replay."""
+        indices = np.array([], dtype=np.int32)
         while len(indices) < batch_size:
-            start_index = self._rng.integers(self.size()) + self._cursor
-            if self._get_from_storage("done", start_index, self._stack_size - 1).any():
-                continue
-            indices.append(start_index + self._stack_size - 1)
-        return np.array(indices)
+            start_index = (
+                self._rng.integers(self.size(), size=batch_size - len(indices))
+                + self._cursor
+            )
+            start_index = self._filter_transitions(start_index)
+            indices = np.concatenate([indices, start_index])
+        return indices + self._stack_size - 1
+
+    def _filter_transitions(self, indices):
+        """Filters invalid indices."""
+        if self._stack_size == 1:
+            return indices
+        done = self._get_from_storage("done", indices, self._stack_size - 1)
+        done = done.astype(bool)
+        if self._stack_size == 2:
+            indices = indices[~done]
+        else:
+            indices = indices[~done.any(axis=1)]
+        return indices
 
     def sample(self, batch_size):
         """Sample transitions from the buffer. For a given transition, if it's
@@ -354,16 +222,17 @@ class EfficientCircularBuffer(BaseReplayBuffer):
             raise ValueError("Not enough transitions added to the buffer to sample")
         indices = self._sample_indices(batch_size)
         batch = {}
+        batch["indices"] = indices
         terminals = self._get_from_storage("done", indices, self._n_step)
 
         if self._n_step == 1:
             is_terminal = terminals
             trajectory_lengths = np.ones(batch_size)
         else:
-            is_terminal = terminals.any(axis=1)
-            trajectory_lengths = (np.argmax(terminals.astype(bool), axis=1) + 1) * is_terminal + self._n_step * (
-                1 - is_terminal
-            )
+            is_terminal = terminals.any(axis=1).astype(int)
+            trajectory_lengths = (
+                np.argmax(terminals.astype(bool), axis=1) + 1
+            ) * is_terminal + self._n_step * (1 - is_terminal)
         trajectory_lengths = trajectory_lengths.astype(np.int64)
 
         for key in self._specs:
@@ -387,6 +256,8 @@ class EfficientCircularBuffer(BaseReplayBuffer):
                 batch["reward"] = rewards
             else:
                 batch[key] = self._get_from_storage(key, indices)
+
+        batch["trajectory_lengths"] = trajectory_lengths
         batch["next_observation"] = self._get_from_storage(
             "observation",
             indices + trajectory_lengths - self._stack_size + 1,
@@ -399,14 +270,20 @@ class EfficientCircularBuffer(BaseReplayBuffer):
         Args:
             dname: directory where to save buffer. Should already have been created.
         """
-        np.save(os.path.join(dname, "storage.npy"), self._storage)
+        storage_path = os.path.join(dname, "storage")
+        create_folder(storage_path)
+        for key in self._specs:
+            np.save(
+                os.path.join(storage_path, f"{key}"),
+                self._storage[key],
+                allow_pickle=False,
+            )
         state = {
             "episode_start": self._episode_start,
             "cursor": self._cursor,
             "num_added": self._num_added,
             "rng": self._rng,
         }
-
         with open(os.path.join(dname, "replay.pkl"), "wb") as f:
             pickle.dump(state, f)
 
@@ -415,7 +292,11 @@ class EfficientCircularBuffer(BaseReplayBuffer):
         Args:
             dname: directory where to load buffer from.
         """
-        self._storage = np.load(os.path.join(dname, "storage.npy"), allow_pickle=True).item()
+        storage_path = os.path.join(dname, "storage")
+        for key in self._specs:
+            self._storage[key] = np.load(
+                os.path.join(storage_path, f"{key}.npy"), allow_pickle=False
+            )
         with open(os.path.join(dname, "replay.pkl"), "rb") as f:
             state = pickle.load(f)
         self._episode_start = state["episode_start"]

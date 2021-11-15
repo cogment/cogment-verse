@@ -1,47 +1,9 @@
 import abc
-from typing import ValuesView
+from cogment_verse_torch_agents.third_party.hive.utils import registry
+from cogment_verse_torch_agents.third_party.hive.utils.registry import Registrable, Registry
 
-import numpy as np
-
-def create_class_constructor(base_class, class_dict):
-    """Creates a constructor function for subclasses of base_class.
-
-    The constructor function returned takes in either None, a object that is an
-    instance of base_class, or a dictionary config. If the argument is None or an
-    instance of base_class, it is returned without modification. If it is a
-    dictionary, the config should have two keys: name and kwargs. The name
-    parameter is used to lookup the correct class from class_dict and the object is
-    created using kwargs as parameters.
-
-    Args:
-        base_class (type|"callable"): If base_class is a type, it is used to verify
-            the type of the object passed to the constructor. If base_class is the
-            string "callable", the object passed to the constructor is simply checked
-            to see if it's callable.
-        class_dict: A dictionary of class names to callables that can be passed kwargs
-            to create the necessary objects.
-    """
-
-    def constructor(object_or_config):
-        if object_or_config is None:
-            return None
-        if base_class == "callable":
-            if callable(object_or_config):
-                return object_or_config
-        elif isinstance(object_or_config, base_class):
-            return object_or_config
-        name = object_or_config["name"]
-        kwargs = object_or_config["kwargs"]
-        if name in class_dict:
-            object_class = class_dict[name]
-            return object_class(**kwargs)
-        else:
-            raise ValueError(f"{name} class not found")
-
-    return constructor
-
-
-class Schedule(abc.ABC):
+registry = Registry()
+class Schedule(abc.ABC, Registrable):
     @abc.abstractmethod
     def get_value():
         """Returns the current value of the variable we are tracking"""
@@ -49,14 +11,18 @@ class Schedule(abc.ABC):
 
     @abc.abstractmethod
     def update():
-        """Update the value of the variable we are tracking and return the updated value. 
+        """Update the value of the variable we are tracking and return the updated value.
         The first call to update will return the initial value of the schedule."""
         pass
+
+    @classmethod
+    def type_name(cls):
+        return "schedule"
 
 
 class LinearSchedule(Schedule):
     """Defines a linear schedule between two values over some number of steps.
-    
+
     If updated more than the defined number of steps, the schedule stays at the
     end value.
     """
@@ -64,7 +30,7 @@ class LinearSchedule(Schedule):
     def __init__(self, init_value, end_value, steps):
         """
         Args:
-            init_value (Union[int, float]): starting value for schedule. 
+            init_value (Union[int, float]): starting value for schedule.
             end_value (Union[int, float]): end value for schedule.
             steps (int): Number of steps for schedule. Should be positive.
         """
@@ -119,13 +85,13 @@ class SwitchSchedule(Schedule):
                 value to the on value.
         """
 
-        self._steps = -1
+        self._steps = 0
         self._flip_step = steps
         self._off_value = off_value
         self._on_value = on_value
 
     def get_value(self):
-        if self._steps < self._flip_step:
+        if self._steps <= self._flip_step:
             return self._off_value
         else:
             return self._on_value
@@ -138,7 +104,7 @@ class SwitchSchedule(Schedule):
 
 class DoublePeriodicSchedule(Schedule):
     """Returns off value for off period, then switches to returning on value for on
-        period. Alternates between the two.
+    period. Alternates between the two.
     """
 
     def __init__(self, off_value, on_value, off_period, on_period):
@@ -168,7 +134,7 @@ class DoublePeriodicSchedule(Schedule):
 
 class PeriodicSchedule(DoublePeriodicSchedule):
     """Returns one value on the first step of each period of a predefined number of
-        steps. Returns another value otherwise.
+    steps. Returns another value otherwise.
     """
 
     def __init__(self, off_value, on_value, period):
@@ -181,40 +147,6 @@ class PeriodicSchedule(DoublePeriodicSchedule):
         super().__init__(off_value, on_value, period - 1, 1)
 
 
-class LinearSchedule(Schedule):
-    """Defines a linear schedule between two values over some number of steps.
-    
-    If updated more than the defined number of steps, the schedule stays at the
-    end value.
-    """
-
-    def __init__(self, init_value, end_value, steps):
-        """
-        Args:
-            init_value (Union[int, float]): starting value for schedule. 
-            end_value (Union[int, float]): end value for schedule.
-            steps (int): Number of steps for schedule. Should be positive.
-        """
-        steps = max(int(steps), 1)
-        self._delta = (end_value - init_value) / steps
-        self._end_value = end_value
-        self._value = init_value - self._delta
-
-    def get_value(self):
-        return self._value
-
-    def update(self):
-        if self._value == self._end_value:
-            return self._value
-
-        self._value += self._delta
-
-        # Check if value is over the end_value
-        if ((self._value - self._end_value) > 0) == (self._delta > 0):
-            self._value = self._end_value
-        return self._value
-
-
 class CosineSchedule(Schedule):
     """
     Cosine schedule
@@ -223,7 +155,7 @@ class CosineSchedule(Schedule):
     def __init__(self, init_value, end_value, steps):
         """
         Args:
-            init_value (Union[int, float]): starting value for schedule. 
+            init_value (Union[int, float]): starting value for schedule.
             end_value (Union[int, float]): end value for schedule.
             steps (int): Number of steps for schedule. Should be positive.
         """
@@ -243,7 +175,9 @@ class CosineSchedule(Schedule):
         self._current_step += 1
         return value
 
-get_schedule = create_class_constructor(
+
+
+registry.register_all(
     Schedule,
     {
         "LinearSchedule": LinearSchedule,
@@ -251,6 +185,8 @@ get_schedule = create_class_constructor(
         "SwitchSchedule": SwitchSchedule,
         "PeriodicSchedule": PeriodicSchedule,
         "DoublePeriodicSchedule": DoublePeriodicSchedule,
-        "CosineShedule": CosineSchedule
+        "CosineSchedule": CosineSchedule,
     },
 )
+
+get_schedule = getattr(registry, f"get_{Schedule.type_name()}")
