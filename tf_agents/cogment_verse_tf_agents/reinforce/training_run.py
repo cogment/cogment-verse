@@ -12,10 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import time
 
-import numpy as np
-from prometheus_client import Summary, Gauge
 from google.protobuf.json_format import MessageToDict
 
 from data_pb2 import (
@@ -25,25 +22,11 @@ from data_pb2 import (
     TrialConfig,
 )
 from cogment_verse import MlflowExperimentTracker
-from cogment_verse.utils import sizeof_fmt, throttle
-from cogment_verse_tf_agents.third_party.hive.utils.schedule import (
-    PeriodicSchedule,
-)
 
 import logging
 
 # pylint: disable=protected-access
 log = logging.getLogger(__name__)
-
-
-def create_progress_logger(params_name, run_id, total_trial_count):
-    @throttle(seconds=20)
-    def handle_progress(_launched_trial_count, finished_trial_count):
-        log.info(
-            f"[{params_name}/{run_id}] {finished_trial_count} ({finished_trial_count/total_trial_count:.1%}) trials finished"
-        )
-
-    return handle_progress
 
 
 def create_training_run(agent_adapter):
@@ -72,16 +55,6 @@ def create_training_run(agent_adapter):
 
             run_xp_tracker.log_params(model._params)
 
-            model_publication_schedule = PeriodicSchedule(False, True, config.model_publication_interval)
-            model_archive_schedule = PeriodicSchedule(
-                False,
-                True,
-                config.model_archive_interval_multiplier * config.model_publication_interval,
-            )
-
-            training_step = 0
-            samples_seen = 0
-            samples_generated = 0
             trials_completed = 0
             all_trials_reward = 0
 
@@ -123,41 +96,6 @@ def create_training_run(agent_adapter):
                 for _ in range(config.total_trial_count)
             ]
 
-            async def archive_model(
-                model_archive_schedule,
-                model_publication_schedule,
-                step_timestamp,
-                step_idx,
-                info,
-            ):
-
-                archive = model_archive_schedule.update()
-                publish = model_publication_schedule.update()
-                if archive or publish:
-                    version_info = await agent_adapter.publish_version(model_id, model, archived=archive)
-                    version_number = version_info["version_number"]
-                    version_data_size = int(version_info["data_size"])
-
-                    # Log metrics about the published model
-                    run_xp_tracker.log_metrics(
-                        step_timestamp,
-                        step_idx,
-                        info,
-                        epsilon=model._epsilon_schedule.get_value(),
-                        replay_buffer_size=model.get_replay_buffer_size(),
-                        batch_reward=info["rewards_mean"],
-                        batch_done=info["done_mean"],
-                        model_published_version=version_number,
-                        training_step=training_step,
-                        training_samples_seen=samples_seen,
-                        samples_generated=samples_generated,
-                        episodes_per_sec=trials_completed / (time.time() - start_time),
-                    )
-                    verb = "archived" if archive else "published"
-                    log.info(
-                        f"[{run_session.params_name}/{run_id}] {model_id}@v{version_number} {verb} after {run_session.count_steps()} steps ({sizeof_fmt(version_data_size)})"
-                    )
-
             async for (
                 step_idx,
                 step_timestamp,
@@ -167,13 +105,11 @@ def create_training_run(agent_adapter):
             ) in run_session.start_trials_and_wait_for_termination(
                 trial_configs=trial_configs,
                 max_parallel_trials=config.max_parallel_trials,
-                on_progress=create_progress_logger(run_session.params_name, run_id, config.total_trial_count),
-            ):
-                samples_generated += 1
-                model.consume_training_sample(sample.current_player_sample)
+                ):
+                model.consume_training_sample(sample.player_sample)
 
                 # Check if last sample
-                if sample.current_player_sample[-1]:
+                if sample.player_sample[-1]:
 
                     # Log trial reward stats
                     trials_completed += 1
@@ -189,21 +125,21 @@ def create_training_run(agent_adapter):
 
                     # Train agent
                     info = model.learn()
-                    samples_seen += info["num_samples_seen"]
-                    training_step += 1
 
-                    # Archive model
-                    await archive_model(
-                        model_archive_schedule,
-                        model_publication_schedule,
+                    # Log metrics about the published model
+                    version_info = await agent_adapter.publish_version(model_id, model)
+                    run_xp_tracker.log_metrics(
                         step_timestamp,
                         step_idx,
-                        info
+                        info,
+                        model_published_version=version_info["version_number"],
+                        trials_completed=trials_completed,
                     )
 
-            log.info(
-                f"[{run_session.params_name}/{run_id}] done, {samples_seen} samples gathered over {run_session.count_steps()} steps"
-            )
+                    log.info(
+                        f"[{run_session.params_name}/{run_id}] {model_id}@v{version_info['version_number']} completed;"
+                        f" {trials_completed} trials completed"
+                    )
 
             run_xp_tracker.terminate_success()
 

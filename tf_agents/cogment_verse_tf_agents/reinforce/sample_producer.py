@@ -64,86 +64,33 @@ def vectorized_training_sample_from_samples(
 
 TrainingSample = namedtuple(
     "TrainingSample",
-    ["current_player_sample", "trial_total_reward"],
+    ["player_sample", "trial_total_reward"],
 )
 
 
 async def sample_producer(run_sample_producer_session):
     num_actors = run_sample_producer_session.count_actors()
+    previous_sample = None
+    trial_total_reward = 0
+    last_tick = False
 
-    if not run_sample_producer_session.run_config.aggregate_by_actor:
-        previous_sample = None
+    async for sample in run_sample_producer_session.get_all_samples():
 
-        trial_total_reward = 0
+        if sample.get_trial_state() == common_api.TrialState.ENDED:
+            last_tick = True
 
-        last_tick = False
+        trial_total_reward += sum(
+            [sample.get_actor_reward(actor_idx, default=0.0) for actor_idx in range(num_actors)]
+        )
 
-        async for sample in run_sample_producer_session.get_all_samples():
-
-            if sample.get_trial_state() == common_api.TrialState.ENDED:
-                last_tick = True
-
-            trial_total_reward += sum(
-                [sample.get_actor_reward(actor_idx, default=0.0) for actor_idx in range(num_actors)]
+        if previous_sample:
+            run_sample_producer_session.produce_training_sample(
+                TrainingSample(
+                    player_sample=vectorized_training_sample_from_samples(
+                        previous_sample, sample, last_tick, run_sample_producer_session.run_config.num_action
+                    ),
+                    trial_total_reward=trial_total_reward if last_tick else None,
+                ),
             )
 
-            if previous_sample:
-                run_sample_producer_session.produce_training_sample(
-                    TrainingSample(
-                        current_player_sample=vectorized_training_sample_from_samples(
-                            previous_sample, sample, last_tick, run_sample_producer_session.run_config.num_action
-                        ),
-                        trial_total_reward=trial_total_reward if last_tick else None,
-                    ),
-                )
-
-            previous_sample = sample
-    else:
-        # todo: the logic below is incorrect when there is human/expert intervention
-        # and needs to be modified to support HILL with cooperative multiplayer games
-        distinguished_actor = run_sample_producer_session.get_trial_config().distinguished_actor
-
-        previous_samples = [None] * num_actors
-        actor_rewards = [0.0] * num_actors
-        actor_cumulative_rewards = [0.0] * num_actors
-
-        trial_total_reward = 0
-
-        last_tick = False
-        current_player = 0
-
-        async for sample in run_sample_producer_session.get_all_samples():
-            assert current_player == sample.get_actor_observation(0).current_player
-
-            if sample.get_trial_state() == common_api.TrialState.ENDED:
-                last_tick = True
-
-            # update the rewards for the current turn
-            for actor_idx in range(num_actors):
-                reward = sample.get_actor_reward(actor_idx, default=0.0)
-                actor_rewards[actor_idx] += reward
-                actor_cumulative_rewards[actor_idx] += reward
-
-                if distinguished_actor in (-1, actor_idx):
-                    trial_total_reward += reward
-
-            for actor_idx in range(num_actors):
-                if actor_idx == current_player or last_tick:
-                    if previous_samples[actor_idx]:
-                        run_sample_producer_session.produce_training_sample(
-                            TrainingSample(
-                                current_player_sample=vectorized_training_sample_from_samples(
-                                    previous_samples[actor_idx],
-                                    sample,
-                                    last_tick,
-                                    run_sample_producer_session.run_config.num_action,
-                                    reward_override=actor_rewards[actor_idx],
-                                    actor_idx=actor_idx,
-                                ),
-                                trial_total_reward=trial_total_reward if last_tick else None,
-                            ),
-                        )
-                        actor_rewards[actor_idx] = 0.0
-
-            previous_samples[current_player] = sample
-            current_player = (current_player + 1) % num_actors
+        previous_sample = sample

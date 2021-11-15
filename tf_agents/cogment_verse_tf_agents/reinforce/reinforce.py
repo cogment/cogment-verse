@@ -93,8 +93,7 @@ class ReinforceAgent:
 
         self._optimizer.apply_gradients(zip(gradients, self._model.trainable_variables))
         self._reset_replay_buffer()
-        return {"loss": loss, "num_samples_seen": batch["observations"].shape[0],
-                "rewards_mean": batch["rewards"].mean(), "done_mean": batch["done"].mean()}
+        return {"loss": loss, "rewards_mean": batch["rewards"].mean()}
 
     def consume_training_sample(self, sample):
         """
