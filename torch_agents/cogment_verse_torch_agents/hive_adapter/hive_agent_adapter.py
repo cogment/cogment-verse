@@ -76,7 +76,7 @@ class HiveAgentAdapter(AgentAdapter):
             id=model_id,
             obs_dim=int(version_user_data["obs_dim"]),
             act_dim=int(version_user_data["act_dim"]),
-            qnet=FunctionApproximator(MLPNetwork)(hidden_units=5),
+            qnet=FunctionApproximator(MLPNetwork)(hidden_units=256),
         )
 
         model.load(model_data_f)
