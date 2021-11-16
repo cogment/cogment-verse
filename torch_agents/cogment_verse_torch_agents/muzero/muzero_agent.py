@@ -13,8 +13,8 @@
 # limitations under the License.
 
 from data_pb2 import (
-    SimpleA2CTrainingRunConfig,
-    SimpleA2CTrainingConfig,
+    MuZeroTrainingRunConfig,
+    MuZeroTrainingConfig,
     AgentAction,
     TrialConfig,
     TrialActor,
@@ -37,12 +37,12 @@ from collections import namedtuple
 
 log = logging.getLogger(__name__)
 
-SimpleA2CModel = namedtuple("SimpleA2CModel", ["model_id", "version_number", "actor_network", "critic_network"])
+from .muzero import MuZero
 
 # pylint: disable=arguments-differ
 
 
-class SimpleA2CAgentAdapter(AgentAdapter):
+class MuZeroAgentAdapter(AgentAdapter):
     def __init__(self):
         super().__init__()
         self._dtype = torch.float
@@ -68,7 +68,7 @@ class SimpleA2CAgentAdapter(AgentAdapter):
         critic_network_hidden_size=64,
         **kwargs,
     ):
-        return SimpleA2CModel(
+        return MuZeroModel(
             model_id=model_id,
             version_number=1,
             actor_network=torch.nn.Sequential(
@@ -91,12 +91,12 @@ class SimpleA2CAgentAdapter(AgentAdapter):
         (actor_network, critic_network) = torch.load(model_data_f)
         assert isinstance(actor_network, torch.nn.Sequential)
         assert isinstance(critic_network, torch.nn.Sequential)
-        return SimpleA2CModel(
+        return MuZeroModel(
             model_id=model_id, version_number=version_number, actor_network=actor_network, critic_network=critic_network
         )
 
     def _save(self, model, model_data_f):
-        assert isinstance(model, SimpleA2CModel)
+        assert isinstance(model, MuZeroModel)
         torch.save((model.actor_network, model.critic_network), model_data_f)
         return {}
 
@@ -117,7 +117,7 @@ class SimpleA2CAgentAdapter(AgentAdapter):
                     actor_session.do_action(self.cog_action_from_tensor(action))
 
         return {
-            "simple_a2c": (impl, ["agent"]),
+            "muzero_mlp": (impl, ["agent"]),
         }
 
     def _create_run_implementations(self):
@@ -196,7 +196,7 @@ class SimpleA2CAgentAdapter(AgentAdapter):
                                 TrialActor(
                                     name="agent_1",
                                     actor_class="agent",
-                                    implementation="simple_a2c",
+                                    implementation="muzero_mlp",
                                     config=ActorConfig(
                                         model_id=model_id,
                                         model_version=model_version_number,
@@ -280,14 +280,14 @@ class SimpleA2CAgentAdapter(AgentAdapter):
                 )
 
         return {
-            "simple_a2c_training": (
+            "muzero_mlp_training": (
                 sample_producer_impl,
                 run_impl,
-                SimpleA2CTrainingRunConfig(
+                MuZeroTrainingRunConfig(
                     environment=EnvConfig(
                         seed=12, env_type="gym", env_name="CartPole-v0", player_count=1, framestack=1
                     ),
-                    training=SimpleA2CTrainingConfig(
+                    training=MuZeroTrainingConfig(
                         epoch_count=100,
                         epoch_trial_count=15,
                         max_parallel_trials=8,

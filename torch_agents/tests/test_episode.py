@@ -16,8 +16,8 @@ import pytest
 import numpy as np
 import torch
 
-from lib.env.factory import make_environment
-from lib.replay_buffer import Episode
+from cogment_verse_environment.factory import make_environment
+from cogment_verse_torch_agents.muzero.replay_buffer import Episode
 
 # pylint doesn't like test fixtures
 # pylint: disable=redefined-outer-name
@@ -35,23 +35,24 @@ def policy():
 
 def test_init(env, policy):
     state = env.reset()
-    episode = Episode(state)
+    episode = Episode(state, 0.99)
 
 
 def test_add(env):
     state = env.reset()
-    episode = Episode(state.observation)
+    episode = Episode(state.observation, 0.99)
     next_state = env.step(0)
-    episode.add_step(next_state.observation, 0, next_state.rewards, [next_state.done], policy, 0.0)
+    episode.add_step(next_state.observation, 0, next_state.rewards[0], [next_state.done], policy, 0.0)
 
 
 def test_sample(env, policy):
     state = env.reset()
-    episode = Episode(state.observation)
+    episode = Episode(state.observation, 0.99)
     for _ in range(1000):
         next_state = env.step(0)
-        episode.add_step(next_state.observation, 0, next_state.rewards, next_state.done, policy, 0.0)
+        episode.add_step(next_state.observation, 0, next_state.rewards[0], next_state.done, policy, 0.0)
         if episode.done:
+            episode.bootstrap_value(10, 0.99)
             break
 
     assert episode.done
@@ -65,7 +66,7 @@ def test_sample(env, policy):
     # check that stacking/concatenation is correct
     assert batch.state.shape == (N, 8)
     assert batch.action.shape == (N,)
-    assert batch.rewards.shape == (N, 1)
+    assert batch.rewards.shape == (N,)
     assert batch.next_state.shape == batch.state.shape
     assert batch.target_policy.shape == (N, 4)
     assert batch.target_value.shape == (N,)

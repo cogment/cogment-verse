@@ -15,7 +15,7 @@
 import pytest
 import torch
 
-from lib.mcts import MCTS
+from cogment_verse_torch_agents.muzero.mcts import MCTS
 
 # pylint doesn't like test fixtures
 # pylint: disable=redefined-outer-name

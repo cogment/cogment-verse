@@ -122,7 +122,7 @@ class Episode:
         return self.episode_slice(a, b)
 
     def episode_slice(self, a, b) -> EpisodeBatch:
-        if isinstance(self._rewards[-1], (np.ndarray, torch.Tensor, float)):
+        if isinstance(self._rewards[-1], (np.ndarray, torch.Tensor, float, int)):
             null_reward = 0.0 * self._rewards[-1]
         else:
             null_reward = [0.0 for _ in self._rewards[-1]]

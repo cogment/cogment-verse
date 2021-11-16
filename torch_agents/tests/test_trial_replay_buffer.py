@@ -16,8 +16,8 @@ import pytest
 import numpy as np
 import torch
 
-from lib.env.factory import make_environment
-from lib.replay_buffer import Episode, TrialReplayBuffer
+from cogment_verse_environment.factory import make_environment
+from cogment_verse_torch_agents.muzero.replay_buffer import Episode, TrialReplayBuffer
 
 # pylint doesn't like test fixtures
 # pylint: disable=redefined-outer-name
@@ -35,14 +35,16 @@ def policy():
 
 @pytest.fixture
 def replay_buffer(env, policy):
-    rb = TrialReplayBuffer()
+    rb = TrialReplayBuffer(max_size=1000, discount_rate=0.99, bootstrap_steps=10)
     for _ in range(10):
-        state = env.reset()
-        ep = Episode(state.observation)
-        while not state.done:
-            state = env.step(0)
-            ep.add_step(state.observation, 0, state.rewards, state.done, policy, 0.0)
-        rb.add_episode(ep)
+        obs = env.reset()
+        ep = Episode(obs.observation, 0.99)
+        while not obs.done:
+            action = 0
+            next_obs = env.step(action)
+            sample = (obs.observation, None, action, obs.rewards[0], next_obs.observation, None, next_obs.done, policy, 0.0)
+            rb.add_sample(sample)
+
     return rb
 
 

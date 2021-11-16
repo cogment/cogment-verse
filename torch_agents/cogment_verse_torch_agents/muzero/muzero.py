@@ -23,15 +23,15 @@ import torch
 import torch.multiprocessing as mp
 from torch.nn.modules.loss import SmoothL1Loss
 
-from lib.replay_buffer import ConcurrentTrialReplayBuffer, Episode, TrialReplayBuffer
-from lib.wrapper import proto_array_from_np_array
+from .replay_buffer import ConcurrentTrialReplayBuffer, Episode, TrialReplayBuffer
+from cogment_verse_torch_agents.wrapper import proto_array_from_np_array
 
-from third_party.hive.utils.schedule import LinearSchedule, get_schedule, PeriodicSchedule
-from third_party.hive.utils.utils import get_optimizer_fn
-from third_party.hive.dqn import legal_moves_adapter
-from third_party.hive.agent import Agent
+from cogment_verse_torch_agents.third_party.hive.utils.schedule import LinearSchedule, get_schedule, PeriodicSchedule
+from cogment_verse_torch_agents.third_party.hive.utils.utils import get_optimizer_fn
+from cogment_verse_torch_agents.third_party.hive.dqn import legal_moves_adapter
+from cogment_verse_torch_agents.third_party.hive.agent import Agent
 
-from lib.mcts import MCTS
+from .mcts import MCTS
 
 from data_pb2 import AgentAction
 

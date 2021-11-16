@@ -152,3 +152,22 @@ message SimpleA2CTrainingRunConfig {
   MLPNetworkConfig actor_network = 4;
   MLPNetworkConfig critic_network = 5;
 }
+
+message MuZeroTrainingConfig {
+  uint32 epoch_count = 1;
+  uint32 epoch_trial_count = 2;
+  uint32 max_parallel_trials = 3;
+  float discount_factor = 4;
+  float entropy_coef = 5;
+  float value_loss_coef = 6;
+  float action_loss_coef = 7;
+  float learning_rate = 8;
+}
+
+message MuZeroTrainingRunConfig {
+  EnvConfig environment = 1;
+  ActorConfig actor = 2;
+  MuZeroTrainingConfig training = 3;
+  MLPNetworkConfig actor_network = 4;
+  MLPNetworkConfig critic_network = 5;
+}
