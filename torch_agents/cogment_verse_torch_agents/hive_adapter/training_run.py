@@ -300,10 +300,12 @@ def create_training_run(agent_adapter):
                     with TRAINING_ADD_SAMPLE_TIME.time():
                         # model.consume_training_sample(sample.current_player_sample)
                         # model._replay_buffer.add(sample.current_player_sample)
-                        model._replay_buffer.add(sample.current_player_sample[0],
-                                                 sample.current_player_sample[2],
-                                                 sample.current_player_sample[3],
-                                                 sample.current_player_sample[6])
+                        model._replay_buffer.add(
+                            sample.current_player_sample[0],
+                            sample.current_player_sample[2],
+                            sample.current_player_sample[3],
+                            sample.current_player_sample[6],
+                        )
 
                     TRAINING_REPLAY_BUFFER_SIZE.set(model._replay_buffer.size())
 

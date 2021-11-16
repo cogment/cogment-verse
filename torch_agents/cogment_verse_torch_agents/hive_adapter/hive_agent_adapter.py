@@ -18,6 +18,7 @@ from cogment_verse import AgentAdapter
 
 from cogment_verse_torch_agents.third_party.hive.agents.dqn import DQNAgent
 from cogment_verse_torch_agents.third_party.hive.agents.rainbow import RainbowDQNAgent
+
 # from cogment_verse_torch_agents.third_party.td3.td3 import TD3Agent
 from cogment_verse_torch_agents.wrapper import format_legal_moves, cog_action_from_torch_action, torch_obs_from_cog_obs
 from cogment_verse_torch_agents.hive_adapter.sample_producer import sample_producer
@@ -75,7 +76,7 @@ class HiveAgentAdapter(AgentAdapter):
             id=model_id,
             obs_dim=int(version_user_data["obs_dim"]),
             act_dim=int(version_user_data["act_dim"]),
-            qnet=FunctionApproximator(MLPNetwork)(hidden_units=5)
+            qnet=FunctionApproximator(MLPNetwork)(hidden_units=5),
         )
 
         model.load(model_data_f)
