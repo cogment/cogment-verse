@@ -216,30 +216,38 @@ def create_training_run(agent_adapter):
                 training_batch,
                 info,
             ):
-                print("inside archive_model")
+                # print("inside archive_model")
                 archive = model_archive_schedule.update()
                 publish = model_publication_schedule.update()
-                print("archive = ", archive)
-                print("publish = ", publish)
+                # print("archive = ", archive)
+                # print("publish = ", publish)
                 if archive or publish:
                     version_info = await agent_adapter.publish_version(model_id, model, archived=archive)
                     version_number = version_info["version_number"]
                     version_data_size = int(version_info["data_size"])
+                    # print("epsilon = ", model._epsilon_schedule.get_value())
+                    # print("replay_buffer_size = ", model._replay_buffer.size())
+                    # print("batch_reward = ", training_batch["reward"].mean().detach().cpu().numpy())
+                    # print("batch_done = ", training_batch["done"].mean())
+                    # print("model_published_version = ", version_number)
+                    # print("training_step = ", training_step)
+                    # print("training_samples_seen = ", samples_seen)
+                    # print("samples_generated = ", samples_generated)
 
                     # Log metrics about the published model
                     run_xp_tracker.log_metrics(
                         step_timestamp,
                         step_idx,
-                        info,
+                        # info,
                         epsilon=model._epsilon_schedule.get_value(),
                         replay_buffer_size=model._replay_buffer.size(),
-                        batch_reward=training_batch["reward"].mean(),
-                        batch_done=training_batch["done"].mean(),
+                        batch_reward=float(training_batch["reward"].mean().detach().cpu().numpy()),
+                        # batch_done=training_batch["done"].mean(),
                         model_published_version=version_number,
                         training_step=training_step,
                         training_samples_seen=samples_seen,
                         samples_generated=samples_generated,
-                        episodes_per_sec=trials_completed / (time.time() - start_time),
+                        # episodes_per_sec=trials_completed / (time.time() - start_time),
                     )
                     verb = "archived" if archive else "published"
                     log.info(

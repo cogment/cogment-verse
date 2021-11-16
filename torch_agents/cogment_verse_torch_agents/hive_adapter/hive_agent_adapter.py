@@ -23,6 +23,8 @@ from cogment_verse_torch_agents.wrapper import format_legal_moves, cog_action_fr
 from cogment_verse_torch_agents.hive_adapter.sample_producer import sample_producer
 from cogment_verse_torch_agents.hive_adapter.training_run import create_training_run
 
+from cogment_verse_torch_agents.third_party.hive.agents.qnets.base import FunctionApproximator
+from cogment_verse_torch_agents.third_party.hive.agents.qnets import MLPNetwork
 
 import cogment
 
@@ -73,6 +75,7 @@ class HiveAgentAdapter(AgentAdapter):
             id=model_id,
             obs_dim=int(version_user_data["obs_dim"]),
             act_dim=int(version_user_data["act_dim"]),
+            qnet=FunctionApproximator(MLPNetwork)(hidden_units=5)
         )
 
         model.load(model_data_f)
