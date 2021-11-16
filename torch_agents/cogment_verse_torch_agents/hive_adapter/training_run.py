@@ -99,6 +99,7 @@ def create_training_run(agent_adapter):
                 environment=config.environment_name,
                 agent_implmentation=config.agent_implementation,
             )
+            print("logged params ")
 
             model_publication_schedule = PeriodicSchedule(False, True, config.model_publication_interval)
             model_archive_schedule = PeriodicSchedule(
@@ -193,10 +194,12 @@ def create_training_run(agent_adapter):
             def train_model():
                 training_batch = None
                 with TRAINING_SAMPLE_BATCH_TIME.time():
-                    training_batch = model.sample_training_batch(batch_size)
+                    # training_batch = model.sample_training_batch(batch_size)
+                    training_batch = model._replay_buffer.sample(batch_size)
 
                 with TRAINING_LEARN_TIME.time():
-                    info = model.learn(training_batch, update_schedule=True)
+                    # info = model.learn(training_batch, update_schedule=True)
+                    info = model.update(training_batch)
                 return info, training_batch
 
             def get_samples_seen(training_batch):
@@ -213,9 +216,11 @@ def create_training_run(agent_adapter):
                 training_batch,
                 info,
             ):
-
+                print("inside archive_model")
                 archive = model_archive_schedule.update()
                 publish = model_publication_schedule.update()
+                print("archive = ", archive)
+                print("publish = ", publish)
                 if archive or publish:
                     version_info = await agent_adapter.publish_version(model_id, model, archived=archive)
                     version_number = version_info["version_number"]
@@ -227,8 +232,8 @@ def create_training_run(agent_adapter):
                         step_idx,
                         info,
                         epsilon=model._epsilon_schedule.get_value(),
-                        replay_buffer_size=model.replay_buffer_size(),
-                        batch_reward=training_batch["rewards"].mean(),
+                        replay_buffer_size=model._replay_buffer.size(),
+                        batch_reward=training_batch["reward"].mean(),
                         batch_done=training_batch["done"].mean(),
                         model_published_version=version_number,
                         training_step=training_step,
@@ -248,6 +253,7 @@ def create_training_run(agent_adapter):
                 nonlocal trials_completed
                 nonlocal all_trials_reward
                 nonlocal start_time
+                print("inside run_trials")
 
                 async for (
                     step_idx,
@@ -260,6 +266,13 @@ def create_training_run(agent_adapter):
                     max_parallel_trials=max_parallel_trials,
                     on_progress=create_progress_logger(run_session.params_name, run_id, config.total_trial_count),
                 ):
+                    # print("sample.trial_total_Reward = ", sample.trial_total_reward)
+                    # print("sample = ", sample)
+                    # print("current player sample = ", sample.current_player_sample)
+                    # print("observation = ", sample.current_player_sample[0])
+                    # print("action = ", sample.current_player_sample[2])
+                    # print("reward = ", sample.current_player_sample[3])
+                    # print("done = ", sample.current_player_sample[6])
                     if sample.trial_total_reward is not None:
                         # This is a sample from a end of a trial
 
@@ -277,15 +290,20 @@ def create_training_run(agent_adapter):
                     samples_generated += 1
 
                     with TRAINING_ADD_SAMPLE_TIME.time():
-                        model.consume_training_sample(sample.current_player_sample)
+                        # model.consume_training_sample(sample.current_player_sample)
+                        # model._replay_buffer.add(sample.current_player_sample)
+                        model._replay_buffer.add(sample.current_player_sample[0],
+                                                 sample.current_player_sample[2],
+                                                 sample.current_player_sample[3],
+                                                 sample.current_player_sample[6])
 
-                    TRAINING_REPLAY_BUFFER_SIZE.set(model.replay_buffer_size())
+                    TRAINING_REPLAY_BUFFER_SIZE.set(model._replay_buffer.size())
 
-                    if sample.current_player_sample[-1] and model.replay_buffer_size() > batch_size:
+                    if sample.current_player_sample[-1] and model._replay_buffer.size() > batch_size:
                         info, training_batch = train_model()
                         samples_seen += get_samples_seen(training_batch)
                         training_step += 1
-                        model.reset_replay_buffer()
+                        # model.reset_replay_buffer()
 
                         await archive_model(
                             model_archive_schedule,
@@ -297,8 +315,8 @@ def create_training_run(agent_adapter):
                         )
 
                     elif (
-                        model.replay_buffer_size() > config.min_replay_buffer_size
-                        and model.replay_buffer_size() > batch_size
+                        model._replay_buffer.size() > config.min_replay_buffer_size
+                        and model._replay_buffer.size() > batch_size
                     ):
                         info, training_batch = train_model()
                         samples_seen += get_samples_seen(training_batch)
@@ -314,7 +332,7 @@ def create_training_run(agent_adapter):
                         )
 
                 log.info(
-                    f"[{run_session.params_name}/{run_id}] done, {model.replay_buffer_size()} samples gathered over {run_session.count_steps()} steps"
+                    f"[{run_session.params_name}/{run_id}] done, {model._replay_buffer.size()} samples gathered over {run_session.count_steps()} steps"
                 )
 
             if demonstration_trial_configs:
