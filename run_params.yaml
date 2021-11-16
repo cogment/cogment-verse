@@ -549,3 +549,27 @@ procgen_bigfish:
     replay_buffer_config:
       observation_dtype: uint8
       action_dtype: int8
+lander_muzero:
+  <<: *lander_rainbow_demo
+  config:
+    <<: *lander_rainbow_config
+    num_input: 8
+    num_action: 4
+    agent_implementation: muzero_mlp
+    environment_type: gym
+    environment_name: LunarLander-v2
+    demonstration_count: 0 #100
+    total_trial_count: 2000
+    epsilon_max: 0.5
+    epsilon_min: 0.1
+    epsilon_steps: 10000 #1
+    fps_limit: 30.0
+    target_net_update_schedule: 100
+    learning_rate: 1.0e-4
+    lr_warmup_steps: 1000
+    model_publication_interval: 200
+    render_width: 640
+    batch_size: 128
+    min_replay_buffer_size: 1000
+    max_replay_buffer_size: 25000
+    max_parallel_trials: 4

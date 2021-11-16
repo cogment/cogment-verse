@@ -15,13 +15,12 @@
 import numpy as np
 import cv2
 
-from data_pb2 import AgentAction, ContinuousAction, NDArray
-
-# TODO directly use torch tensors
+from data_pb2 import AgentAction, ContinuousAction, Observation, NDArray
 
 
 def np_array_from_proto_array(arr):
-    return np.frombuffer(arr.data, dtype=arr.dtype).reshape(*arr.shape)
+    dtype = arr.dtype or "int8"  # default type for empty array
+    return np.frombuffer(arr.data, dtype=dtype).reshape(*arr.shape)
 
 
 def proto_array_from_np_array(arr):
@@ -75,6 +74,17 @@ def format_legal_moves(legal_moves, action_dim):
         new_legal_moves = np.full(action_dim, 0.0)
 
     return new_legal_moves
+
+
+def cog_obs_from_gym_obs(gym_obs, pixels, current_player, legal_moves_as_int, player_override=-1):
+    cog_obs = Observation(
+        vectorized=proto_array_from_np_array(gym_obs),
+        legal_moves_as_int=legal_moves_as_int,
+        current_player=current_player,
+        player_override=player_override,
+        pixel_data=img_encode(pixels),
+    )
+    return cog_obs
 
 
 def cog_action_from_torch_action(action):

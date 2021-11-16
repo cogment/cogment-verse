@@ -45,6 +45,8 @@ message ActorConfig {
   int32 num_input = 4;
   int32 num_action = 5;
   string environment_implementation = 6; // TODO Remove by retrieving info from the environment instead
+  string env_type = 7;
+  string env_name = 8;
 }
 
 message ActorParams {
@@ -75,9 +77,11 @@ message ContinuousAction {
 
 message AgentAction {
   oneof action {
-    ContinuousAction continuous_action = 1;
-    int32 discrete_action = 2;
+      ContinuousAction continuous_action = 1;
+      int32 discrete_action = 2;
   };
+  NDArray policy = 3; // optional: policy from which action was drawn
+  float value = 4; // optional: value of the state from which the action was taken
 }
 
 message ModelArgs {
@@ -104,6 +108,7 @@ message RunConfig {
   string environment_implementation = 5;
   uint32 player_count = 8;
   float epsilon_min = 9;
+  float epsilon_max = 29;
   uint32 epsilon_steps = 10;
   uint32 target_net_update_schedule = 11;
   float learning_rate = 12;
@@ -122,7 +127,7 @@ message RunConfig {
   bool aggregate_by_actor = 26;
   uint32 framestack = 27;
   ReplayBufferConfig replay_buffer_config = 28;
-  float discount_factor = 29;
+  float discount_factor = 30;
 }
 
 message MLPNetworkConfig {
