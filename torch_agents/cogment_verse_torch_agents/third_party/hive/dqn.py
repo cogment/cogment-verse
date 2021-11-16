@@ -84,6 +84,7 @@ class DQNAgent(Agent):
             lr_schedule=lr_schedule,
             max_replay_buffer_size=max_replay_buffer_size,
         )
+        print("dqn __init___" , obs_dim, " ---  ", act_dim)
         self._params["discount_rate"] = discount_rate
         self._params["grad_clip"] = grad_clip
         self._params["target_net_soft_update"] = target_net_soft_update
@@ -109,21 +110,27 @@ class DQNAgent(Agent):
 
         self._state = {"episode_start": True}
         self._training = True
+        print("dqn END __init___" , obs_dim, " ---  ", act_dim)
 
     def train(self):
+        print("train")
         """Changes the agent to training mode."""
         super().train()
         self._qnet.train()
         self._target_qnet.train()
+        print("end train")
 
     def eval(self):
+        print("eval")
         """Changes the agent to evaluation mode."""
         super().eval()
         self._qnet.eval()
         self._target_qnet.eval()
+        print("end eval")
 
     @torch.no_grad()
     def act(self, observation, legal_moves_as_int, update_schedule=True):
+        print("dqn strart act")
         self.eval()
 
         observation = torch.tensor(observation).to(self._device).float()
@@ -140,10 +147,14 @@ class DQNAgent(Agent):
         else:
             a = self._qnet(observation, legal_moves=legal_moves_as_int).cpu()
             action = torch.argmax(a).numpy()
+            
+        
+        print("dqn end act")
 
         return action
 
     def learn(self, batch, update_schedule=True):
+        print("Learn")
         info = {}
         self.train()
 
@@ -184,9 +195,11 @@ class DQNAgent(Agent):
 
         # Return loss
         info["loss"] = loss.item()
+        print("Learn end")
         return info
 
     def _update_target(self):
+        print("_update_target")
         if self._params["target_net_soft_update"]:
             target_params = self._target_qnet.state_dict()
             current_params = self._qnet.state_dict()
@@ -199,6 +212,7 @@ class DQNAgent(Agent):
             self._target_qnet.load_state_dict(self._qnet.state_dict())
 
     def save(self, f):
+        print("save start")
         torch.save(
             {
                 "id": self._id,
@@ -214,8 +228,10 @@ class DQNAgent(Agent):
             },
             f,
         )
+        print("save end")
 
     def load(self, f):
+        print("load start")
         super().load(f)
         checkpoint = torch.load(f, map_location=self._device)
         self._id = checkpoint["id"]
@@ -228,3 +244,4 @@ class DQNAgent(Agent):
         self._target_net_update_schedule = checkpoint["target_net_update_schedule"]
         self._rng = checkpoint["rng"]
         self._lr_schedule = checkpoint["lr_schedule"]
+        print("load end")

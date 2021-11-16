@@ -85,11 +85,16 @@ class LogicalSegment:
 
 class LogicalSegments:
     def __init__(self):
+        print("In LogicalSegments init")
         self.pipeline = Pipeline()
+        print("pipeline created")
         self.pipeline.generate_pipeline()
+        print("pipeline generated")
         self.scale = 0.0
         self.logical_segments = []
+        print("Appplyting scale")
         self.apply_scale()
+        print("scale applied ...end")
 
     def step(self):
         self.pipeline.step()
@@ -147,7 +152,10 @@ class LogicalSegments:
             segment.display()
 
     def generate_observation(self):
-        observation = np.zeros((300, 4))
+        observation = np.zeros((10, 4))
         for index, segment in enumerate(self.logical_segments):
+            if index >= 10:
+                break
             observation[index] = segment.generate_observation()
+        observation = np.reshape(observation, (40))
         return observation

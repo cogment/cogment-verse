@@ -161,10 +161,10 @@ class Pipeline:
         self.city.generate_city()
 
     def generate_pipeline(self):
-        consumer_count = 30
-        provider_count = 8
-        no_consumer_count = 100
-        pipe_count = 300
+        consumer_count = 20
+        provider_count = 5
+        no_consumer_count = 30
+        pipe_count = 100
 
         node_id = 0
         for _ in range(no_consumer_count):
@@ -231,6 +231,8 @@ class Pipeline:
 
                 if len(self.pipes) >= pipe_count:
                     break
+                else:
+                    sqr_max_length_pipe *= 1.1
 
         # Check connectivity
         for node in self.nodes:

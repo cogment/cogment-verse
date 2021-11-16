@@ -37,7 +37,7 @@ ENVIRONMENT_ENDPOINT = os.getenv("COGMENT_VERSE_ENVIRONMENT_ENDPOINT")
 ORCHESTRATOR_ENDPOINT = os.getenv("COGMENT_VERSE_ORCHESTRATOR_ENDPOINT")
 ACTOR_ENDPOINTS = json.loads(os.getenv("COGMENT_VERSE_ACTOR_ENDPOINTS"))
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG)
 
 log = logging.getLogger(__name__)
 

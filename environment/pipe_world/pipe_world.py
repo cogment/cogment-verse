@@ -21,25 +21,41 @@ import numpy as np
 
 class PipeWorld(BaseEnv):
     def __init__(self, *, env_name, num_players=1, framestack=1, **kwargs):
+        print("In Constructor")
         self.logical_segments = LogicalSegments()
+        print("logicals created")
         self.score = 100000.0
         self.budget = 1000.0
         self.tick_id = 0
         self.seed_number = 0
+        print("create spec")
+        spec = self.create_env_spec(env_name, **kwargs)
+        print("Before BAsed class ")
         super().__init__(
-            env_spec=self.create_env_spec(env_name, **kwargs), num_players=num_players, framestack=1
+            env_spec=spec, num_players=1, framestack=1
         )
+        print("Created")
 
     def create_env_spec(self, env_name, **_kwargs):
-        act_dim = 600
+        act_dim = 20
         return EnvSpec(
             env_name=env_name,
-            obs_dim=(300, 4),
+            obs_dim=[40],
             act_dim=[act_dim],
-            act_shape=(300, 2),
+            act_shape=[20],
         )
 
+    def save(self, save_dir):
+        pass
+
+    def load(self, load_dir):
+        pass
+
+    def close(self):
+        pass
+
     def reset(self):
+        print("Reset")
         self.logical_segments = LogicalSegments()
         self.score = 100000.0
         self.budget = 1000.0
@@ -56,6 +72,8 @@ class PipeWorld(BaseEnv):
         )
 
     def step(self, action):
+        print("Step")
+        self._turn = (self._turn + 1) % self._num_players
         self.tick_id += 1
         if self.tick_id % 20 == 0:
             self.budget += 1000.0
@@ -64,7 +82,7 @@ class PipeWorld(BaseEnv):
 
         done = self.score < 0.0
 
-        GymObservation(
+        return GymObservation(
             observation=self.generate_observation(),
             rewards=[-cost],
             current_player=self._turn,
@@ -74,6 +92,7 @@ class PipeWorld(BaseEnv):
         )
 
     def render(self, mode="rgb_array"):
+        print("Render")
         return np.array([[[0, 0, 0]]], dtype=np.uint8)
 
     def seed(self, seed=None):
@@ -97,6 +116,7 @@ class PipeWorld(BaseEnv):
         self.logical_segments.display()
 
     def generate_observation(self):
+        print("generate_observation")
         return self.logical_segments.generate_observation()
 
 
