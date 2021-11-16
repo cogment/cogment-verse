@@ -50,7 +50,6 @@ class HiveAgentAdapter(AgentAdapter):
             # "ddpg": DDPGAgent,
             "rainbowtorch": RainbowDQNAgent,
             "dqn": DQNAgent,
-            # "atari_cnn": NatureAtariDQNModel,
         }
 
     def agent_class_from_impl_name(self, impl_name):

@@ -131,9 +131,63 @@ def create_training_run(agent_adapter):
                 )
                 for player_idx in range(config.player_count)
             ]
-
+            # for self-play, randomly select one player to use latest model version
+            # if there is only one player then it will always use the latest
             distinguished_actor = np.random.randint(0, config.player_count)
             player_actor_configs[distinguished_actor].config.model_version = -1
+
+            self_play_trial_configs = [
+                TrialConfig(
+                    run_id=run_id,
+                    environment_config=EnvConfig(
+                        player_count=config.player_count,
+                        run_id=run_id,
+                        render=False,
+                        render_width=config.render_width,
+                        env_type=config.environment_type,
+                        env_name=config.environment_name,
+                        flatten=config.flatten,
+                        framestack=config.framestack,
+                    ),
+                    actors=player_actor_configs,
+                    distinguished_actor=distinguished_actor,
+                )
+                for _ in range(config.total_trial_count - config.demonstration_count)
+            ]
+
+            demonstration_trial_configs = []
+            if config.demonstration_count > 0:
+                # create the config for the teacher agent
+                teacher_actor_config = TrialActor(
+                    name="web_actor",
+                    actor_class="teacher_agent",
+                    implementation="client",
+                    config=ActorConfig(
+                        run_id=run_id,
+                        env_type=config.environment_type,
+                        env_name=config.environment_name,
+                        num_input=config.num_input,
+                        num_action=config.num_action,
+                    ),
+                )
+                demonstration_trial_configs = [
+                    TrialConfig(
+                        run_id=run_id,
+                        environment_config=EnvConfig(
+                            player_count=config.player_count,
+                            run_id=run_id,
+                            render=True,
+                            render_width=config.render_width,
+                            env_type=config.environment_type,
+                            env_name=config.environment_name,
+                            flatten=config.flatten,
+                            framestack=config.framestack,
+                        ),
+                        actors=[*player_actor_configs, teacher_actor_config],
+                        distinguished_actor=distinguished_actor,
+                    )
+                    for _ in range(config.demonstration_count)
+                ]
 
             def train_model():
                 training_batch = None
@@ -232,6 +286,7 @@ def create_training_run(agent_adapter):
                         info, training_batch = train_model()
                         samples_seen += get_samples_seen(training_batch)
                         training_step += 1
+                        # model.reset_replay_buffer()
 
                         await archive_model(
                             model_archive_schedule,
@@ -262,6 +317,14 @@ def create_training_run(agent_adapter):
                 log.info(
                     f"[{run_session.params_name}/{run_id}] done, {model._replay_buffer.size()} samples gathered over {run_session.count_steps()} steps"
                 )
+
+            if demonstration_trial_configs:
+                await run_trials(
+                    demonstration_trial_configs,
+                    max_parallel_trials=config.max_parallel_trials,
+                )
+            if self_play_trial_configs:
+                await run_trials(self_play_trial_configs, max_parallel_trials=config.max_parallel_trials)
 
             run_xp_tracker.terminate_success()
 
