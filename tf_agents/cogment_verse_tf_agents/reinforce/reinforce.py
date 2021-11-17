@@ -12,8 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from cogment_verse_tf_agents.reinforce.model import PolicyNetwork
 from cogment_verse_tf_agents.third_party.hive.replay_buffer import CircularReplayBuffer
+from cogment_verse_tf_agents.reinforce.model import PolicyNetwork
 from cogment_verse_tf_agents.third_party.hive.utils.schedule import ConstantSchedule
 
 import numpy as np
@@ -31,15 +31,14 @@ class ReinforceAgent:
     # pylint: disable=too-many-instance-attributes
     def __init__(
         self,
+        lr_schedule=None,
+        model_params=None,
         **params
     ):
 
-        self._params = {}
-        for k, v in params.items():
-            self._params[k] = v
-
-        self._lr_schedule = None
-        self.model_params = None
+        self._params = params
+        self._lr_schedule = lr_schedule
+        self._model_params = model_params
 
         self._model = PolicyNetwork(self._params["obs_dim"], self._params["act_dim"])
         self._optimizer = tf.keras.optimizers.Adam(learning_rate=self._params["lr"])
@@ -52,16 +51,13 @@ class ReinforceAgent:
         for data_key in self._replay_buffer._dtype:
             self._replay_buffer._data[data_key] = [None] * int(self._replay_buffer._size)
 
-
-    def update_agent(self):
-
         if self._lr_schedule is None:
             self._lr_schedule = ConstantSchedule(self._params["lr"])
         else:
             self._optimizer._lr = self._lr_schedule.get_value()
 
-        if self.model_params is not None:
-            self._model.set_weights(self.model_params)
+        if self._model_params is not None:
+            self._model.set_weights(self._model_params)
         self._model.trainable = True
 
     def act(self, observation, legal_moves_as_int=None, update_schedule=True):
@@ -134,13 +130,14 @@ class ReinforceAgent:
         return self._replay_buffer.size()
 
     def save(self, f):
-        self.model_params = self._model.get_weights()
+        self._model_params = self._model.get_weights()
         pkl.dump({"_lr_schedule": self._lr_schedule,
-                  "model_params": self.model_params}, f, pkl.HIGHEST_PROTOCOL)
+                  "model_params": self._model_params}, f, pkl.HIGHEST_PROTOCOL)
         return self._params
 
-    def load(self, f):
+    @staticmethod
+    def load(f, **params):
         agent_params = pkl.load(f)
-        self._lr_schedule = agent_params["_lr_schedule"]
-        self.model_params = agent_params["model_params"]
-        self.update_agent()
+        agent = ReinforceAgent(lr_schedule=agent_params["_lr_schedule"],
+                               model_params=agent_params["model_params"], **params)
+        return agent

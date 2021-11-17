@@ -42,9 +42,7 @@ class ReinforceAgentAdapter(AgentAdapter):
         return ReinforceAgent(id=model_id, **kwargs)
 
     def _load(self, model_id, version_number, version_user_data, model_data_f):
-        reinforce_agent = ReinforceAgent(id=model_id, **version_user_data)
-        reinforce_agent.load(model_data_f)
-        return reinforce_agent
+        return ReinforceAgent.load(model_data_f, id=model_id, **version_user_data)
 
     def _save(self, model, model_data_f):
         return model.save(model_data_f)
