@@ -43,19 +43,10 @@ def replay_buffer(env, policy):
         while not obs.done:
             action = 0
             next_obs = env.step(action)
-            sample = (
-                obs.observation,
-                None,
-                action,
-                obs.rewards[0],
-                next_obs.observation,
-                None,
-                next_obs.done,
-                policy,
-                0.0,
+            rb.add_sample(
+                obs.observation, action, next_obs.rewards[0], next_obs.observation, next_obs.done, policy, 0.0
             )
             obs = next_obs
-            rb.add_sample(sample)
 
     return rb
 
@@ -68,10 +59,10 @@ def test_create(replay_buffer):
 @pytest.mark.parametrize("rollout_length", [4, 8, 12])
 def test_sample(replay_buffer, rollout_length):
     batch = replay_buffer.sample(rollout_length, 32)
-    assert batch["state"].shape == (32, rollout_length, 8)
-    assert batch["next_state"].shape == (32, rollout_length, 8)
-    assert batch["action"].shape == (32, rollout_length)
-    assert batch["rewards"].shape == (32, rollout_length)
-    assert batch["target_policy"].shape == (32, rollout_length, 4)
-    assert batch["target_value"].shape == (32, rollout_length)
-    assert batch["done"].shape == (32, rollout_length)
+    assert batch.state.shape == (32, rollout_length, 8)
+    assert batch.next_state.shape == (32, rollout_length, 8)
+    assert batch.action.shape == (32, rollout_length)
+    assert batch.rewards.shape == (32, rollout_length)
+    assert batch.target_policy.shape == (32, rollout_length, 4)
+    assert batch.target_value.shape == (32, rollout_length)
+    assert batch.done.shape == (32, rollout_length)

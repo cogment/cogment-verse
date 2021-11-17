@@ -32,17 +32,22 @@ import cogment
 import logging
 import torch
 import numpy as np
+import copy
 
 from collections import namedtuple
 
 log = logging.getLogger(__name__)
 
-from .muzero import MuZero
+from .networks import MuZero, reward_transform, reward_tansform_inverse, Distributional, DynamicsAdapter, resnet, mlp
+from .replay_buffer import ConcurrentTrialReplayBuffer, EpisodeBatch, TrialReplayBuffer
+from cogment_verse_torch_agents.wrapper import proto_array_from_np_array
+
+import itertools
 
 # pylint: disable=arguments-differ
 
 
-class LinearScheduleWithWarmup(LinearSchedule):
+class LinearScheduleWithWarmup:
     """Defines a linear schedule between two values over some number of steps.
 
     If updated more than the defined number of steps, the schedule stays at the
@@ -83,51 +88,14 @@ class MuZeroAgent:
     MuZero implementation
     """
 
-    def __init__(
-        self,
-        *,
-        obs_dim,
-        act_dim,
-        optimizer_fn=None,
-        id=0,
-        discount_rate=0.997,
-        target_net_soft_update=False,
-        target_net_update_fraction=0.05,
-        target_net_update_schedule=None,
-        epsilon_schedule=None,
-        learn_schedule=None,
-        lr_schedule=None,
-        seed=42,
-        device="cuda" if torch.cuda.is_available() else "cpu",
-        weight_decay=1e-2,
-        mcts_depth=4,
-        mcts_count=16,
-        rollout_length=4,
-        max_replay_buffer_size=50000,
-        reanalyze_fraction=0.0,
-        reanalyze_period=1e100,
-        batch_size=128,
-    ):
+    def __init__(self, *, id, obs_dim, act_dim, device):
         # debug/testing
-        lr_schedule = LinearScheduleWithWarmup(1e-3, 1e-6, 100000, 1000)
-        self._temperature_schedule = LinearSchedule(1.0, 0.25, 100000)
-        super().__init__(
+        self._params = dict(
             id=id,
-            seed=seed,
             obs_dim=obs_dim,
             act_dim=act_dim,
-            learn_schedule=learn_schedule,
-            epsilon_schedule=epsilon_schedule,
-            lr_schedule=lr_schedule,
-            max_replay_buffer_size=max_replay_buffer_size,
-            discount_rate=discount_rate,
-            target_net_soft_update=target_net_soft_update,
-            target_net_update_fraction=target_net_update_fraction,
-            weight_decay=weight_decay,
-            target_label_smoothing_factor=0.01,
-            rollout_length=rollout_length,
-            reanalyze_fraction=reanalyze_fraction,
-            reanalyze_period=reanalyze_period,
+            discount_rate=0.99,
+            weight_decay=1e-3,
             device=device,
             value_bootstrap_steps=20,
             num_latent=128,
@@ -135,12 +103,13 @@ class MuZeroAgent:
             num_hidden_layers=4,
             projector_hidden=128,
             projector_dim=64,
-            mcts_depth=mcts_depth,
-            mcts_count=mcts_count,
+            mcts_depth=3,
+            mcts_count=8,
             ucb_c1=1.25,
             ucb_c2=10000.0,
-            batch_size=batch_size,
+            batch_size=16,
             dirichlet_alpha=0.5,
+            rollout_length=4,
             rmin=-100.0,
             rmax=100.0,
             vmin=-300.0,
@@ -150,84 +119,47 @@ class MuZeroAgent:
         )
 
         self._device = torch.device(device)
-        self._id = id
-
-        self._target_net_update_schedule = get_schedule(target_net_update_schedule)
-        if self._target_net_update_schedule is None:
-            self._target_net_update_schedule = PeriodicSchedule(False, True, 10000)
-
-        self._reanalyze_schedule = PeriodicSchedule(False, True, reanalyze_period)
-
-        self._training = True
-        self._default_policy = torch.ones(act_dim, dtype=torch.float32).unsqueeze(0) / act_dim
-
         self._make_networks()
-
-        self._replay_buffer = None
-
-        self._representation.share_memory()
-        self._dynamics.share_memory()
-        self._policy.share_memory()
-        self._value.share_memory()
+        self._replay_buffer = TrialReplayBuffer(max_size=1000, discount_rate=0.99, bootstrap_steps=10)
 
     def _create_replay_buffer(self):
         # due to pickling issues for multiprocessing, we create the replay buffer lazily
         self._replay_buffer = None
 
-    def _ensure_replay_buffer(self):
-        if self._replay_buffer is None:
-            self._replay_buffer = ConcurrentTrialReplayBuffer(
-                max_size=self._params["max_replay_buffer_size"],
-                discount_rate=self._params["discount_rate"],
-                bootstrap_steps=self._params["value_bootstrap_steps"],
-                # min_size=self._params["batch_size"],
-                min_size=1000,
-                rollout_length=self._params["rollout_length"],
-                batch_size=self._params["batch_size"],
-            )
-            self._replay_buffer.start()
-        assert self._replay_buffer.is_alive()
-
-    @torch.no_grad()
-    def consume_training_sample(self, sample):
-        self._ensure_replay_buffer()
-        self._replay_buffer.add_sample(sample)
+    def consume_training_sample(self, state, action, reward, next_state, done, policy, value):
+        self._replay_buffer.add_sample(state, action, reward, next_state, done, policy, value)
 
     def sample_training_batch(self, batch_size):
-        self._ensure_replay_buffer()
-        # print("Model::sample_training_batch called")
         return self._replay_buffer.sample(self._params["rollout_length"], batch_size)
 
     def _make_networks(self):
-        self._value_distribution = Distributional(
+        value_distribution = Distributional(
             self._params["vmin"],
             self._params["vmax"],
             self._params["num_hidden"],
             self._params["v_bins"],
             reward_transform,
             reward_tansform_inverse,
-        ).to(self._device)
-        self._reward_distribution = Distributional(
+        )
+
+        reward_distribution = Distributional(
             self._params["rmin"],
             self._params["rmax"],
             self._params["num_hidden"],
             self._params["r_bins"],
             reward_transform,
             reward_tansform_inverse,
-        ).to(self._device)
+        )
 
-        self._representation = resnet(
+        representation = resnet(
             self._params["obs_dim"],
             self._params["num_hidden"],
             self._params["num_latent"],
             self._params["num_hidden_layers"],
             # final_act=torch.nn.BatchNorm1d(self._params["num_latent"]),  # normalize for input to subsequent networks
-        ).to(self._device)
+        )
 
-        # debugging
-        # self._representation = torch.nn.Identity()
-
-        self._dynamics = DynamicsAdapter(
+        dynamics = DynamicsAdapter(
             resnet(
                 self._params["num_latent"] + self._params["act_dim"],
                 self._params["num_hidden"],
@@ -238,109 +170,85 @@ class MuZeroAgent:
             self._params["act_dim"],
             self._params["num_hidden"],
             self._params["num_latent"],
-            reward_dist=self._reward_distribution,
-        ).to(self._device)
-        self._policy = resnet(
+            reward_dist=reward_distribution,
+        )
+        policy = resnet(
             self._params["num_latent"],
             self._params["num_hidden"],
             self._params["act_dim"],
             self._params["num_hidden_layers"],
             final_act=torch.nn.Softmax(dim=1),
-        ).to(self._device)
-        self._value = resnet(
+        )
+        value = resnet(
             self._params["num_latent"],
             self._params["num_hidden"],
             self._params["num_hidden"],
             self._params["num_hidden_layers"] - 1,
-            final_act=self._value_distribution,
-        ).to(self._device)
-        self._projector = mlp(
-            self._params["num_latent"], self._params["projector_hidden"], self._params["projector_dim"]
-        ).to(self._device)
-        self._predictor = mlp(
-            self._params["projector_dim"], self._params["projector_hidden"], self._params["projector_dim"]
+            final_act=value_distribution,
+        )
+        projector = mlp(self._params["num_latent"], self._params["projector_hidden"], self._params["projector_dim"])
+        predictor = mlp(self._params["projector_dim"], self._params["projector_hidden"], self._params["projector_dim"])
+
+        self._muzero = MuZero(
+            representation, dynamics, policy, value, projector, predictor, reward_distribution, value_distribution
         ).to(self._device)
 
         self._optimizer = torch.optim.AdamW(
-            itertools.chain(
-                self._representation.parameters(),
-                self._dynamics.parameters(),
-                self._policy.parameters(),
-                self._value.parameters(),
-                self._projector.parameters(),
-                self._predictor.parameters(),
-            ),
+            self._muzero.parameters(),
             lr=1e-3,
             weight_decay=self._params["weight_decay"],
         )
 
-    def train(self):
-        """Changes the agent to training mode."""
-        super().train()
-        self._representation.train()
-        self._dynamics.train()
-        self._policy.train()
-        self._value.train()
-        self._projector.train()
-        self._predictor.train()
-
-    def eval(self):
-        """Changes the agent to evaluation mode."""
-        super().eval()
-        self._representation.eval()
-        self._dynamics.eval()
-        self._policy.eval()
-        self._value.eval()
-        self._projector.eval()
-        self._predictor.eval()
-
-        action, policy, value = self.muzero.act(observation)
-
-        cog_action = AgentAction(
-            discrete_action=action, policy=proto_array_from_np_array(policy.cpu().numpy()), value=value
-        )
-        # print("acting with policy/value", policy.cpu().numpy(), value.cpu().numpy().item())
+    def act(self, cog_obs):
+        self._muzero.eval()
+        obs = torch.from_numpy(cog_obs.observation).float().unsqueeze(0).to(self._device)
+        action, policy, value = self._muzero.act(observation)
+        action = action.unsqueeze(0).cpu().numpy().item()
+        policy = policy.unsqueeze(0).cpu().numpy()
+        value = value.unsqueeze(0).cpu().numpy().item()
+        cog_action = AgentAction(discrete_action=action, policy=proto_array_from_np_array(policy), value=value)
         return cog_action
 
     def learn(self, batch, update_schedule=True):
+        self._muzero.train()
 
-        lr = self._lr_schedule.update()
+        # todo: use schedule
+        lr = 1e-3
         for grp in self._optimizer.param_groups:
             grp["lr"] = lr
 
-        # do not modify batch in-place
-        batch = copy.copy(batch)
-        for key, tensor in batch.items():
+        batch_tensors = []
+        for i, tensor in enumerate(batch):
             if isinstance(tensor, np.ndarray):
                 tensor = torch.from_numpy(tensor)
-            batch[key] = tensor.to(self._device)
+            batch_tensors.append(tensor.to(self._device))
+        batch = EpisodeBatch(*batch_tensors)
 
         #
-        priority = batch["priority"][:, 0].view(-1)
-        self._replay_buffer.update_priorities(list(zip(episode, step, priority)))
+        priority = batch.priority[:, 0].view(-1)
+        # todo: update priorities!!
+        # self._replay_buffer.update_priorities(list(zip(episode, step, priority)))
         importance_weight = 1 / (priority + 1e-6) / self._replay_buffer.size()
-        target_value = torch.clamp(target_value.view(*pred_value.shape), self._params["vmin"], self._params["vmax"])
-        target_reward = torch.clamp(reward.view(*pred_value.shape), self._params["rmin"], self._params["rmax"])
-        info = self.muzero.train_step()
+
+        target_value = torch.clamp(batch.target_value, self._params["vmin"], self._params["vmax"])
+        target_reward = torch.clamp(batch.rewards, self._params["rmin"], self._params["rmax"])
+        priority, info = self._muzero.train_step(
+            self._optimizer,
+            batch.state,
+            batch.action,
+            target_reward,
+            batch.next_state,
+            batch.target_policy,
+            target_value,
+            importance_weight,
+        )
 
         for key, val in info.items():
             if isinstance(val, torch.Tensor):
                 info[key] = val.detach().cpu().numpy().item()
 
-        # Update target network
-        if self._training and self._target_net_update_schedule.update():
-            self._update_target()
-
-        if update_schedule:
-            self.get_epsilon_schedule(update_schedule)
-            self._temperature_schedule.update()
-
-        # Reanalyze old data
-        if self._training and self._reanalyze_schedule.update():
-            self.reanalyze_replay_buffer(self._params["reanalyze_fraction"])
-
         # Return loss
-        return info
+        return priority, info
 
     @torch.no_grad()
     def reanalyze_replay_buffer(self, fraction):
@@ -434,26 +342,13 @@ class MuZeroAgent:
     def save(self, f):
         torch.save(
             {
-                "id": self._id,
                 "params": self._params,
-                "representation": self._representation.state_dict(),
-                "dynamics": self._dynamics.state_dict(),
-                "policy": self._policy.state_dict(),
-                "value": self._value.state_dict(),
-                "projector": self._projector.state_dict(),
-                "predictor": self._predictor.state_dict(),
-                "optimizer": self._optimizer.state_dict(),
-                "learn_schedule": self._learn_schedule,
-                "epsilon_schedule": self._epsilon_schedule,
-                "target_net_update_schedule": self._target_net_update_schedule,
-                "rng": self._rng,
-                "lr_schedule": self._lr_schedule,
+                "muzero": self._muzero.state_dict(),
             },
             f,
         )
 
     def load(self, f):
-        super().load(f)
         checkpoint = torch.load(f, map_location=self._device)
         checkpoint["device"] = self._params["device"]
 

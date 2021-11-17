@@ -196,15 +196,13 @@ class TrialReplayBuffer:
         probs = [self._p[i] for i in idx]
         transitions = [self._episodes[i].sample(rollout_length) for i in idx]
         batch = [torch.stack(item) for item in zip(*transitions)]
-        batch = EpisodeBatch(*batch)._asdict()
+        batch = EpisodeBatch(*batch)
         for i, prob in enumerate(probs):
-            batch["priority"][i] = batch["priority"][i] * probs[i]
+            batch.priority[i] = batch.priority[i] * probs[i]
 
         return batch
 
-    def add_sample(self, sample):
-        state, _, action, reward, next_state, _, done, policy, value = sample  # Hive sample producer
-
+    def add_sample(self, state, action, reward, next_state, done, policy, value):
         if self._current_episode is None:
             self._current_episode = Episode(state, self._discount_rate, id=len(self._episodes))
 

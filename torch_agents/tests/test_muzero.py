@@ -26,6 +26,9 @@ from cogment_verse_torch_agents.muzero.networks import (
     resnet,
     mlp,
 )
+
+from cogment_verse_torch_agents.muzero.agent import MuZeroAgent
+
 from cogment_verse_environment.factory import make_environment
 from cogment_verse_torch_agents.third_party.hive.utils.schedule import LinearSchedule
 
@@ -248,3 +251,24 @@ def test_distributional():
     t = dist.compute_target(torch.tensor(4.0, dtype=torch.float32))
     assert t[-1] == 1
     assert t[-2] == 0
+
+
+def test_agent(env):
+    agent = MuZeroAgent(id="blah", obs_dim=8, act_dim=4, device="cpu")
+    obs = env.reset()
+    done = False
+    step = 0
+    while not done:
+        action = step % 4
+        step += 1
+        next_obs = env.step(action)
+        policy = torch.ones(4)
+        value = 0.0
+        agent.consume_training_sample(
+            obs.observation, action, next_obs.rewards[0], next_obs.observation, next_obs.done, policy, value
+        )
+        done = next_obs.done
+        obs = next_obs
+
+    batch = agent.sample_training_batch(8)
+    info = agent.learn(batch)
