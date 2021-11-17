@@ -103,8 +103,6 @@ def shrink_image(pixels, max_size):
 
 
 async def environment(environment_session):
-    print("************Envronment !!! ")
-    log.info(f" LOG ************------>>>   Envronment !!! ")
     actors = environment_session.get_active_actors()
 
     env_config = environment_session.config
@@ -113,13 +111,9 @@ async def environment(environment_session):
         "flatten": env_config.flatten,  # todo: we should have env_kwargs in proto
         "framestack": env_config.framestack,
     }
-    print("env_kwargs: ", env_kwargs)
-    print("make_environment", env_config.env_name)
     log.warning(f"make_environment {env_config.env_type}  ---    {env_config.env_name} ")
     env = make_environment(env_config.env_type, env_config.env_name, **env_kwargs)
     env.seed(env_config.seed)
-
-    print("Env: ", env)
 
     max_size = env_config.render_width or 256
 
@@ -154,40 +148,29 @@ async def environment(environment_session):
 
     assert len(pixels.tobytes()) == np.prod(pixels.shape)
 
-    print("before Cog Obs ", gym_obs.observation)
     cog_obs = cog_obs_from_gym_obs(gym_obs.observation, pixels, gym_obs.current_player, gym_obs.legal_moves_as_int)
-    print("after Cog Obs ", cog_obs)
     environment_session.start([("*", cog_obs)])
-    print("start session ")
     async for event in environment_session.event_loop():
-        print("event ", event)
         if event.actions:
             player_override = -1
             # special handling of human intervention
-            print(steerable, " and ", event.actions[teacher_idx].action.discrete_action != -1)
             if steerable and event.actions[teacher_idx].action.discrete_action != -1:
                 gym_action = gym_action_from_cog_action(event.actions[teacher_idx].action)
                 player_override = teacher_idx
                 current_player = teacher_idx
             else:
-                print("Else action")
                 gym_action = gym_action_from_cog_action(event.actions[gym_obs.current_player].action)
                 current_player = gym_obs.current_player
 
-            print("gym action ", gym_action)
             gym_action = np.array(gym_action).reshape(act_shape)
-            print("gym action reshaped ", gym_action)
             gym_obs = env.step(gym_action)
-            print("gym obs ", gym_obs)
             if render:
-                print("render")
                 pixels = shrink_image(env.render(mode="rgb_array"), max_size)
                 if player_override != -1:
                     pixels = draw_border(pixels)
 
             assert len(pixels.tobytes()) == np.prod(pixels.shape)
 
-            print("sending rewards")
             for idx, reward in enumerate(gym_obs.rewards):
                 if player_override != -1 and idx == current_player:
                     environment_session.add_reward(
@@ -206,8 +189,6 @@ async def environment(environment_session):
                 player_override=player_override,
             )
             observations = [("*", cog_obs)]
-
-            print("sending cog obs ", cog_obs)
 
             if environment_session.get_tick_id() >= 1e1000 or gym_obs.done:
                 log.debug(

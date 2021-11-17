@@ -27,6 +27,7 @@ class LogicalSegment:
         self.max_pressure = 0.0
         self.condition = 10.0
         self.is_failing = False
+        self.is_inspected = False
         self.water = 0.0
 
     def add_pipe(self, pipe):
@@ -41,6 +42,7 @@ class LogicalSegment:
         self.prob_of_failure = 0.0
         self.length = 0.0
         self.is_failing = False
+        self.is_inspected = False
         self.water = 0.0
         for pipe in self.pipes:
             self.length += pipe.length
@@ -49,6 +51,7 @@ class LogicalSegment:
             self.max_pressure = max(self.max_pressure, pipe.pressure)
             self.prob_of_failure = max(self.prob_of_failure, pipe.prob_of_failure)
             self.is_failing = self.is_failing or pipe.is_failing
+            self.is_inspected = self.is_inspected or pipe.inspected
             self.water += pipe.water
 
         self.cost_of_maintnance = 100.0 + self.length * 10.0
@@ -80,21 +83,23 @@ class LogicalSegment:
         )
 
     def generate_observation(self):
-        return np.array([self.prob_of_failure, self.cost_of_failure, self.cost_of_maintnance, self.cost_of_inspection])
+        is_failing = 0.0
+        if self.is_failing:
+            is_failing = 1.0
+        is_inspected = 0.0
+        if self.is_inspected:
+            is_inspected = 1.0
+        return np.array([self.prob_of_failure, self.cost_of_failure, is_failing, is_inspected])
 
 
 class LogicalSegments:
-    def __init__(self):
-        print("In LogicalSegments init")
+    def __init__(self, expected_segment_count):
         self.pipeline = Pipeline()
-        print("pipeline created")
         self.pipeline.generate_pipeline()
-        print("pipeline generated")
         self.scale = 0.0
+        self.expected_segment_count = expected_segment_count
         self.logical_segments = []
-        print("Appplyting scale")
         self.apply_scale()
-        print("scale applied ...end")
 
     def step(self):
         self.pipeline.step()
@@ -113,11 +118,23 @@ class LogicalSegments:
             self.apply_scale()
 
     def apply_scale(self):
-        self.logical_segments.clear()
-        self.pipeline.clear_pipes_from_logic()
         assert self.scale >= 0.0
         logical_segment_length = self.scale * 400.0
+        self.compute_logical_segment(logical_segment_length)
 
+
+    def apply_logical_segment_count(self):
+        total_length = 0.0
+
+        for pipe in self.pipeline.pipes:
+            total_length += pipe.length
+
+        logical_segment_length = self.expected_segment_count / total_length
+        self.compute_logical_segment(logical_segment_length)
+
+    def compute_logical_segment(self, logical_segment_length):
+        self.logical_segments.clear()
+        self.pipeline.clear_pipes_from_logic()
         all_in_logic = False
         while not all_in_logic:
             pipe = None
@@ -152,10 +169,11 @@ class LogicalSegments:
             segment.display()
 
     def generate_observation(self):
-        observation = np.zeros((10, 4))
+        info_count = 4
+        observation = np.zeros((self.expected_segment_count, info_count))
         for index, segment in enumerate(self.logical_segments):
-            if index >= 10:
+            if index >= self.expected_segment_count:
                 break
             observation[index] = segment.generate_observation()
-        observation = np.reshape(observation, (40))
+        observation = np.reshape(observation, (self.expected_segment_count*info_count))
         return observation

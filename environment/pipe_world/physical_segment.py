@@ -44,7 +44,6 @@ class Node:
         left_water = 0.0
         if pipe_count > 0 and self.flow != 0.0:
             water_by_pipe = self.flow / pipe_count
-            # print("water_by_pipe ", water_by_pipe)
             for pipe in self.pipes:
                 left_water = pipe.add_water(water_by_pipe + left_water)
 
@@ -248,10 +247,6 @@ class Pipeline:
     def step(self):
         for node in self.nodes:
             node.step_water_flow()
-
-        # print("*************************")
-        # for index, pipe in enumerate(self.pipes):
-        #     print(index, " -> ", pipe.water)
 
         for _ in range(1):
             for node in self.nodes:

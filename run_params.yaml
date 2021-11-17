@@ -545,41 +545,18 @@ pipe_dqn:
   <<: *default_params
   config:
     <<: *default_config
-    num_input: 40
-    num_action: 20
+    num_input: 120
+    num_action: 60
     agent_implementation: dqn
     environment_type: pipe_world
     environment_name: PipeWorld
-    demonstration_count: 20000 #100
-    total_trial_count: 20000
-    epsilon_min: 0.1
-    epsilon_steps: 10 #1
-    target_net_update_schedule: 10
-    learning_rate: 1.0e-4
-    lr_warmup_steps: 100
-    model_publication_interval: 200
-    render_width: 1000
-    batch_size: 32
-    min_replay_buffer_size: 32
-
 
 pipe_rainbow: 
   <<: *default_params
   config:
     <<: *default_config
-    num_input: 40
-    num_action: 20
+    num_input: 120
+    num_action: 60
     agent_implementation: rainbowtorch
     environment_type: pipe_world
     environment_name: PipeWorld
-    demonstration_count: 20000 #100
-    total_trial_count: 20000
-    epsilon_min: 0.1
-    epsilon_steps: 10 #1
-    target_net_update_schedule: 10
-    learning_rate: 1.0e-4
-    lr_warmup_steps: 100
-    model_publication_interval: 200
-    render_width: 1000
-    batch_size: 32
-    min_replay_buffer_size: 32

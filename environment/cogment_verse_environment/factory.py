@@ -30,5 +30,4 @@ ENVIRONMENT_CONSTRUCTORS = {
 
 
 def make_environment(env_type, env_name, **kwargs):
-    print("In make_environment")
     return ENVIRONMENT_CONSTRUCTORS[env_type](env_name=env_name, **kwargs)

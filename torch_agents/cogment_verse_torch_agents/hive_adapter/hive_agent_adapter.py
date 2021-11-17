@@ -112,25 +112,19 @@ class HiveAgentAdapter(AgentAdapter):
 
                 total_reward = 0
 
-                print("before for")
                 async for event in actor_session.event_loop():
-                    print("after for ", event)
                     for reward in event.rewards:
                         total_reward += reward.value
 
                     if event.observation and event.type == cogment.EventType.ACTIVE:
                         with COMPUTE_NEXT_ACTION_TIME.labels(impl_name=impl_name).time():
                             obs = event.observation.snapshot
-                            print("obs", obs)
                             obs = torch_obs_from_cog_obs(obs)
-                            print("obs", obs)
                             obs_input = obs["vectorized"]
                             
-                            print("obs", obs_input)
                             legal_moves_input = format_legal_moves(
                                 obs["legal_moves_as_int"], actor_session.config.num_action
                             )
-                            print("obs", legal_moves_input)
 
                             if obs["current_player"] != actor_index:
                                 # Use -1 to indicate no action, since not active player
