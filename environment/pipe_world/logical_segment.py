@@ -99,7 +99,7 @@ class LogicalSegments:
         self.scale = 0.0
         self.expected_segment_count = expected_segment_count
         self.logical_segments = []
-        self.apply_scale()
+        self.apply_logical_segment_count()
 
     def step(self):
         self.pipeline.step()
@@ -129,7 +129,7 @@ class LogicalSegments:
         for pipe in self.pipeline.pipes:
             total_length += pipe.length
 
-        logical_segment_length = self.expected_segment_count / total_length
+        logical_segment_length = total_length / self.expected_segment_count
         self.compute_logical_segment(logical_segment_length)
 
     def compute_logical_segment(self, logical_segment_length):

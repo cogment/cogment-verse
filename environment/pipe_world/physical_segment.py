@@ -125,8 +125,8 @@ class City:
         self.city_size = city_size
         self.district_side_count = district_side_count
         self.cost_of_failures = []
-        self.min_cost = 100
-        self.max_cost = 10000
+        self.min_cost = 10
+        self.max_cost = 1000
         self.district_size = 0
 
     def generate_city(self):

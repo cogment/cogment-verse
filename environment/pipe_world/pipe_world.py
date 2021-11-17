@@ -22,7 +22,7 @@ import numpy as np
 class PipeWorld(BaseEnv):
     def __init__(self, *, env_name, num_players=1, framestack=1, **kwargs):
         self. expected_segment_count = 30
-        self.logical_segments = LogicalSegments(self. expected_segment_count)
+        self.logical_segments = LogicalSegments(self.expected_segment_count)
         self.score = 100000.0
         self.budget = 1000.0
         self.tick_id = 0
@@ -52,7 +52,7 @@ class PipeWorld(BaseEnv):
         pass
 
     def reset(self):
-        self.logical_segments = LogicalSegments(self. expected_segment_count)
+        self.logical_segments = LogicalSegments(self.expected_segment_count)
         self.score = 100000.0
         self.budget = 1000.0
         self.tick_id = 0
@@ -75,11 +75,12 @@ class PipeWorld(BaseEnv):
         cost = self.logical_segments.step()
         self.score -= cost
 
+        reward = 1000.0
         done = self.score < 0.0
 
         return GymObservation(
             observation=self.generate_observation(),
-            rewards=[-cost],
+            rewards=[reward-cost],
             current_player=self._turn,
             legal_moves_as_int=[],
             done=done,
