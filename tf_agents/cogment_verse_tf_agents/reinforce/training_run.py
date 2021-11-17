@@ -124,14 +124,14 @@ def create_training_run(agent_adapter):
                     )
 
                     # Train agent
-                    info = model.learn()
+                    hyperparams = model.learn()
 
                     # Log metrics about the published model
                     version_info = await agent_adapter.publish_version(model_id, model)
                     run_xp_tracker.log_metrics(
                         step_timestamp,
                         step_idx,
-                        **info,
+                        **hyperparams,
                         model_published_version=version_info["version_number"],
                         trials_completed=trials_completed,
                     )

@@ -14,8 +14,6 @@
 
 from cogment_verse_tf_agents.third_party.hive.replay_buffer import CircularReplayBuffer
 from cogment_verse_tf_agents.reinforce.model import PolicyNetwork
-from cogment_verse_tf_agents.third_party.hive.utils.schedule import ConstantSchedule
-
 import numpy as np
 import tensorflow as tf
 import tensorflow_probability as tfp
@@ -31,13 +29,11 @@ class ReinforceAgent:
     # pylint: disable=too-many-instance-attributes
     def __init__(
         self,
-        lr_schedule=None,
         model_params=None,
         **params
     ):
 
         self._params = params
-        self._lr_schedule = lr_schedule
         self._model_params = model_params
 
         self._model = PolicyNetwork(self._params["obs_dim"], self._params["act_dim"])
@@ -50,11 +46,6 @@ class ReinforceAgent:
         self._replay_buffer._data = {}
         for data_key in self._replay_buffer._dtype:
             self._replay_buffer._data[data_key] = [None] * int(self._replay_buffer._size)
-
-        if self._lr_schedule is None:
-            self._lr_schedule = ConstantSchedule(self._params["lr"])
-        else:
-            self._optimizer._lr = self._lr_schedule.get_value()
 
         if self._model_params is not None:
             self._model.set_weights(self._model_params)
@@ -131,13 +122,11 @@ class ReinforceAgent:
 
     def save(self, f):
         self._model_params = self._model.get_weights()
-        pkl.dump({"_lr_schedule": self._lr_schedule,
-                  "model_params": self._model_params}, f, pkl.HIGHEST_PROTOCOL)
+        pkl.dump({"model_params": self._model_params}, f, pkl.HIGHEST_PROTOCOL)
         return self._params
 
     @staticmethod
     def load(f, **params):
         agent_params = pkl.load(f)
-        agent = ReinforceAgent(lr_schedule=agent_params["_lr_schedule"],
-                               model_params=agent_params["model_params"], **params)
+        agent = ReinforceAgent(model_params=agent_params["model_params"], **params)
         return agent
