@@ -13,9 +13,7 @@
 # limitations under the License.
 
 import cogment.api.common_pb2 as common_api
-
 from cogment_verse_tf_agents.wrapper import (
-    format_legal_moves,
     tf_obs_from_cog_obs,
     tf_action_from_cog_action,
 )
@@ -33,11 +31,9 @@ def vectorized_training_sample_from_samples(
 
     return (
         vectorized_observation["vectorized"],
-        [],
         action,
         reward,
         vectorized_next_observation["vectorized"],
-        [],
         1 if last_tick else 0,
     )
 

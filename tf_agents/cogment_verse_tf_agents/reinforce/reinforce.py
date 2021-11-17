@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from cogment_verse_tf_agents.third_party.hive.replay_buffer import CircularReplayBuffer
+from cogment_verse_tf_agents.reinforce.replaybuffer import Memory
 from cogment_verse_tf_agents.reinforce.model import PolicyNetwork
 import numpy as np
 import tensorflow as tf
@@ -26,7 +26,6 @@ import pickle as pkl
 # pylint: disable=W0212
 # pylint: disable=W0622
 class ReinforceAgent:
-    # pylint: disable=too-many-instance-attributes
     def __init__(
         self,
         model_params=None,
@@ -36,7 +35,7 @@ class ReinforceAgent:
         self._params = params
         self._model = PolicyNetwork(self._params["obs_dim"], self._params["act_dim"])
         self._optimizer = tf.keras.optimizers.Adam(learning_rate=self._params["lr"])
-        self._replay_buffer = CircularReplayBuffer(size=self._params["max_replay_buffer_size"])
+        self._replay_buffer = Memory(self._params["obs_dim"], self._params["act_dim"], self._params["max_replay_buffer_size"])
 
         if model_params is not None:
             self._model.set_weights(model_params)
@@ -70,7 +69,7 @@ class ReinforceAgent:
 
     def learn(self):
 
-        batch = self._sample_training_batch()
+        batch = self._replay_buffer.sample()
         Q = self.get_discounted_rewards(batch["rewards"])
         with tf.GradientTape() as tape:
             prob = self._model.model(batch["observations"], training=True)
@@ -78,7 +77,7 @@ class ReinforceAgent:
         gradients = tape.gradient(loss, self._model.trainable_variables)
 
         self._optimizer.apply_gradients(zip(gradients, self._model.trainable_variables))
-        self._reset_replay_buffer()
+        self._replay_buffer.reset_replay_buffer()
         return {"loss": loss.numpy(), "rewards_mean": batch["rewards"].mean()}
 
     def consume_training_sample(self, sample):
@@ -86,30 +85,6 @@ class ReinforceAgent:
         Consume a training sample, e.g. store in an internal replay buffer
         """
         self._replay_buffer.add(sample)
-
-    def _sample_training_batch(self):
-        """
-        sample last trial SARSD
-        """
-        indices = range(self._replay_buffer._n)
-        rval = {}
-        for key, _ in self._replay_buffer._data.items():
-            rval[key] = np.asarray([self._replay_buffer._data[key][idx] for idx in indices], dtype="float32")
-
-        return rval
-
-    def _reset_replay_buffer(self):
-        """
-        Resets buffer
-        """
-        self._replay_buffer._write_index = -1
-        self._replay_buffer._n = 0
-
-    def get_replay_buffer_size(self):
-        """
-        Return the size of the internal replay buffer
-        """
-        return self._replay_buffer.size()
 
     def save(self, f):
         pkl.dump({"model_params": self._model.get_weights()}, f, pkl.HIGHEST_PROTOCOL)
