@@ -17,7 +17,15 @@ from tempfile import TemporaryDirectory
 import pytest
 import torch
 
-from cogment_verse_torch_agents.muzero.muzero import MuZeroMLP, Distributional
+from cogment_verse_torch_agents.muzero.muzero import (
+    MuZero,
+    Distributional,
+    DynamicsAdapter,
+    reward_transform,
+    reward_tansform_inverse,
+    resnet,
+    mlp,
+)
 from cogment_verse_environment.factory import make_environment
 from cogment_verse_torch_agents.third_party.hive.utils.schedule import LinearSchedule
 
@@ -50,149 +58,184 @@ def act_dim():
     return 4
 
 
-@pytest.mark.skip
+@pytest.fixture
+def num_hidden():
+    return 8
+
+
+@pytest.fixture
+def num_latent():
+    return 4
+
+
+@pytest.fixture
+def value_distribution(num_hidden):
+    return Distributional(
+        -10.0,
+        10.0,
+        num_hidden,
+        10,
+        reward_transform,
+        reward_tansform_inverse,
+    )
+
+
+@pytest.fixture
+def reward_distribution(num_hidden):
+    return Distributional(
+        -2.0,
+        2.0,
+        num_hidden,
+        10,
+        reward_transform,
+        reward_tansform_inverse,
+    )
+
+
+@pytest.fixture
+def representation(obs_dim, num_hidden, num_latent):
+    return resnet(
+        obs_dim,
+        num_hidden,
+        num_latent,
+        2,
+        # final_act=torch.nn.BatchNorm1d(self._params["num_latent"]),  # normalize for input to subsequent networks
+    )
+
+
+@pytest.fixture
+def dynamics(num_latent, act_dim, num_hidden, reward_distribution):
+    # debugging
+    # self._representation = torch.nn.Identity()
+
+    return DynamicsAdapter(
+        resnet(
+            num_latent + act_dim,
+            num_hidden,
+            num_hidden,
+            2,
+            final_act=torch.nn.LeakyReLU(),
+        ),
+        act_dim,
+        num_hidden,
+        num_latent,
+        reward_dist=reward_distribution,
+    )
+
+
+@pytest.fixture
+def policy(num_latent, num_hidden, act_dim):
+    return resnet(
+        num_latent,
+        num_hidden,
+        act_dim,
+        2,
+        final_act=torch.nn.Softmax(dim=1),
+    )
+
+
+@pytest.fixture
+def value(num_latent, num_hidden, value_distribution):
+    return resnet(
+        num_latent,
+        num_hidden,
+        num_hidden,
+        2,
+        final_act=value_distribution,
+    )
+
+
+@pytest.fixture
+def projector_dim():
+    return 2
+
+
+@pytest.fixture
+def projector(num_latent, projector_dim):
+    return mlp(num_latent, 16, projector_dim)
+
+
+@pytest.fixture
+def predictor(projector_dim):
+    return mlp(
+        projector_dim,
+        16,
+        projector_dim,
+    )
+
+
 @pytest.mark.parametrize("device", ["cpu", "cuda"])
-def test_create(obs_dim, act_dim, device):
+def test_create(
+    representation, dynamics, policy, value, projector, predictor, device, reward_distribution, value_distribution
+):
     if device == "cuda" and not torch.cuda.is_available():
         pytest.skip()
 
-    agent = MuZeroMLP(obs_dim=obs_dim, act_dim=act_dim, device=device)
+    model = MuZero(
+        representation, dynamics, policy, value, projector, predictor, reward_distribution, value_distribution
+    )
 
-@pytest.mark.skip
+
 @pytest.mark.parametrize("device", ["cpu", "cuda"])
-def test_serialize(obs_dim, act_dim, device):
+def test_act(
+    representation, dynamics, policy, value, projector, predictor, device, env, reward_distribution, value_distribution
+):
     if device == "cuda" and not torch.cuda.is_available():
         pytest.skip()
 
-    agent = MuZeroMLP(obs_dim=obs_dim, act_dim=act_dim, device=device)
-
-    with TemporaryDirectory() as tmpdir:
-        filepath = os.path.join(tmpdir, "agent.dat")
-        agent.save(filepath)
-
-@pytest.mark.skip
-@pytest.mark.parametrize("device", ["cpu", "cuda"])
-def test_deserialize(obs_dim, act_dim, device):
-    if device == "cuda" and not torch.cuda.is_available():
-        pytest.skip()
-
-    agent = MuZeroMLP(obs_dim=obs_dim, act_dim=act_dim, device=device)
-
-    with TemporaryDirectory() as tmpdir:
-        filepath = os.path.join(tmpdir, "agent.dat")
-        agent.save(filepath)
-
-        params = agent._params
-        print("PARAMS", params.keys())
-
-        # check that we correctly change the NN architecture from the loaded params
-        agent2 = MuZeroMLP(obs_dim=obs_dim + 1, act_dim=act_dim + 1, device="cpu")
-        agent2.load(filepath)
-
-@pytest.mark.skip
-@pytest.mark.parametrize("device", ["cpu", "cuda"])
-def test_act(obs_dim, act_dim, env, device):
-    if device == "cuda" and not torch.cuda.is_available():
-        pytest.skip()
-
-    agent = MuZeroMLP(obs_dim=obs_dim, act_dim=act_dim, epsilon_schedule=LinearSchedule(0.0, 0.0, 1), device=device)
+    model = MuZero(
+        representation, dynamics, policy, value, projector, predictor, reward_distribution, value_distribution
+    )
+    model.eval()
     state = env.reset()
 
     for i in range(100):
-        action = agent.act(state.observation, [0, 0, 0, 0])
+        observation = torch.from_numpy(state.observation).to(device).float()
+        action, policy, value = model.act(observation, 0.1, 0.3, 0.75)
         state = env.step(action)
+        if state.done:
+            state = env.reset()
 
-@pytest.mark.skip
-@pytest.mark.parametrize("device", ["cpu", "cuda"])
-def test_replay_buffer(obs_dim, act_dim, env, batch_size, rollout_length, device):
-    if device == "cuda" and not torch.cuda.is_available():
-        pytest.skip()
 
-    agent = MuZeroMLP(
-        obs_dim=obs_dim,
-        act_dim=act_dim,
-        epsilon_schedule=LinearSchedule(0.5, 0.0, 1000),
-        mcts_depth=2,
-        mcts_count=4,
-        rollout_length=rollout_length,
-        device=device,
-    )
-    state = env.reset()
-    legal_moves = [1, 2, 3, 4]
-
-    for episode in range(2):
-        for step in range(10000):
-            action = (episode + step) % act_dim
-            next_state = env.step(action)
-            sample = (
-                state.observation,
-                legal_moves,
-                action,
-                next_state.rewards,
-                next_state.observation,
-                legal_moves,
-                next_state.done,
-            )
-            agent.consume_training_sample(sample)
-            if next_state.done:
-                state = env.reset()
-                break
-            state = next_state
-
-    batch = agent.sample_training_batch(batch_size)
-    assert batch["state"].shape == (batch_size, rollout_length, obs_dim)
-    assert batch["action"].shape == (batch_size, rollout_length)
-    assert batch["rewards"].shape == (batch_size, rollout_length, 1)
-    assert batch["next_state"].shape == (batch_size, rollout_length, obs_dim)
-    assert batch["target_policy"].shape == (batch_size, rollout_length, act_dim)
-    assert batch["target_value"].shape == (batch_size, rollout_length)
-
-@pytest.mark.skip
 @pytest.mark.parametrize("device", ["cpu", "cuda"])
 @pytest.mark.parametrize("reanalyze_fraction", [0.0])  # , 1.0])
-def test_learn(obs_dim, act_dim, env, batch_size, device, reanalyze_fraction):
+def test_learn(
+    obs_dim,
+    act_dim,
+    representation,
+    dynamics,
+    policy,
+    value,
+    projector,
+    predictor,
+    env,
+    batch_size,
+    device,
+    reanalyze_fraction,
+    reward_distribution,
+    value_distribution,
+):
     if device == "cuda" and not torch.cuda.is_available():
         pytest.skip()
 
-    agent = MuZeroMLP(
-        obs_dim=obs_dim,
-        act_dim=act_dim,
-        epsilon_schedule=LinearSchedule(0.5, 0.0, 1000),
-        mcts_depth=2,
-        mcts_count=4,
-        rollout_length=3,
-        device=device,
-        reanalyze_fraction=reanalyze_fraction,
-        reanalyze_period=1,
+    model = MuZero(
+        representation, dynamics, policy, value, projector, predictor, reward_distribution, value_distribution
     )
-    state = env.reset()
-    legal_moves = [1, 2, 3, 4]
+    optimizer = torch.optim.Adam(model.parameters())
+    observation = torch.rand((4, 3, obs_dim))
+    next_observation = torch.rand((4, 3, obs_dim))
+    reward = torch.rand((4, 3))
+    target_policy = torch.rand((4, 3, act_dim))
+    target_value = torch.rand((4, 3))
+    action = torch.randint(low=0, high=act_dim, size=(4, 3))
+    importance_weight = 1 / (1 + torch.rand(4) ** 2)
+    info = model.train_step(
+        optimizer, observation, action, reward, next_observation, target_policy, target_value, importance_weight
+    )
 
-    for episode in range(2):
-        for step in range(10000):
-            action = (episode + step) % act_dim
-            next_state = env.step(action)
-            sample = (
-                state.observation,
-                legal_moves,
-                action,
-                next_state.rewards,
-                next_state.observation,
-                legal_moves,
-                next_state.done,
-            )
-            agent.consume_training_sample(sample)
-            if next_state.done:
-                state = env.reset()
-                break
-            state = next_state
 
-    batch = agent.sample_training_batch(batch_size)
-    info = agent.learn(batch)
-
-@pytest.mark.skip
 def test_distributional():
-    dist = Distributional(-2.0, 3.0, 11)
+    dist = Distributional(-2.0, 3.0, 8, 11)
     v = torch.tensor(1.738).to(torch.float32)
     t = dist.compute_target(v)
     assert torch.allclose(torch.sum(t * dist._bins), v)
