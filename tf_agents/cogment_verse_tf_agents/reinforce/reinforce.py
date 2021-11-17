@@ -34,14 +34,12 @@ class ReinforceAgent:
     ):
 
         self._params = params
-        self._model_params = model_params
-
         self._model = PolicyNetwork(self._params["obs_dim"], self._params["act_dim"])
         self._optimizer = tf.keras.optimizers.Adam(learning_rate=self._params["lr"])
         self._replay_buffer = CircularReplayBuffer(size=self._params["max_replay_buffer_size"])
 
-        if self._model_params is not None:
-            self._model.set_weights(self._model_params)
+        if model_params is not None:
+            self._model.set_weights(model_params)
         self._model.trainable = True
 
     def act(self, observation):
@@ -114,8 +112,7 @@ class ReinforceAgent:
         return self._replay_buffer.size()
 
     def save(self, f):
-        self._model_params = self._model.get_weights()
-        pkl.dump({"model_params": self._model_params}, f, pkl.HIGHEST_PROTOCOL)
+        pkl.dump({"model_params": self._model.get_weights()}, f, pkl.HIGHEST_PROTOCOL)
         return self._params
 
     @staticmethod
