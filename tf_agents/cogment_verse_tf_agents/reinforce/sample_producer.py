@@ -24,7 +24,7 @@ from collections import namedtuple
 
 
 def vectorized_training_sample_from_samples(
-    sample, next_sample, last_tick, num_action
+    sample, next_sample, last_tick
 ):
     vectorized_observation = tf_obs_from_cog_obs(sample.get_actor_observation(0))
     vectorized_next_observation = tf_obs_from_cog_obs(next_sample.get_actor_observation(0))
@@ -33,9 +33,11 @@ def vectorized_training_sample_from_samples(
 
     return (
         vectorized_observation["vectorized"],
+        [],
         action,
         reward,
         vectorized_next_observation["vectorized"],
+        [],
         1 if last_tick else 0,
     )
 
@@ -65,7 +67,7 @@ async def sample_producer(run_sample_producer_session):
             run_sample_producer_session.produce_training_sample(
                 TrainingSample(
                     player_sample=vectorized_training_sample_from_samples(
-                        previous_sample, sample, last_tick, run_sample_producer_session.run_config.num_action
+                        previous_sample, sample, last_tick
                     ),
                     trial_cumulative_reward=trial_cumulative_reward,
                 ),
