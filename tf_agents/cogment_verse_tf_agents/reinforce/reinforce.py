@@ -51,7 +51,7 @@ class ReinforceAgent:
             self._model.set_weights(self._model_params)
         self._model.trainable = True
 
-    def act(self, observation, legal_moves_as_int=None, update_schedule=True):
+    def act(self, observation):
 
         policy = self._model.model(tf.expand_dims(observation, axis=0), training=False)
         dist = tfp.distributions.Categorical(probs=policy, dtype=tf.float32)

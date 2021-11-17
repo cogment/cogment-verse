@@ -17,7 +17,7 @@ from data_pb2 import RunConfig
 from cogment_verse_tf_agents.reinforce.reinforce import ReinforceAgent
 from cogment_verse_tf_agents.reinforce.sample_producer import sample_producer
 from cogment_verse_tf_agents.reinforce.training_run import create_training_run
-from cogment_verse_tf_agents.wrapper import format_legal_moves, cog_action_from_tf_action, tf_obs_from_cog_obs
+from cogment_verse_tf_agents.wrapper import cog_action_from_tf_action, tf_obs_from_cog_obs
 
 from cogment_verse import AgentAdapter
 import cogment
@@ -77,15 +77,12 @@ class ReinforceAgentAdapter(AgentAdapter):
                         obs = tf_obs_from_cog_obs(obs)
 
                         obs_input = obs["vectorized"]
-                        legal_moves_input = format_legal_moves(
-                            obs["legal_moves_as_int"], actor_session.config.num_action
-                        )
 
                         if obs["current_player"] != actor_index:
                             # Use -1 to indicate no action, since not active player
                             action = -1
                         else:
-                            action = model.act(obs_input, legal_moves_input)
+                            action = model.act(obs_input)
 
                         cog_action = cog_action_from_tf_action(action)
                         actor_session.do_action(cog_action)
