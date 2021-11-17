@@ -15,7 +15,7 @@
 import numpy as np
 import cv2
 
-from data_pb2 import AgentAction, ContinuousAction, NDArray
+from data_pb2 import AgentAction, ContinuousAction
 
 # TODO directly use tf tensors
 
