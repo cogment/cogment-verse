@@ -233,8 +233,6 @@ class MuZero(torch.nn.Module):
         self, optimizer, observation, action, reward, next_observation, target_policy, target_value, importance_weight
     ):
         """ """
-        lr = 1e-3
-        temperature = 0.75
         target_label_smoothing_factor = 0.01
         batch_size, rollout_length = observation.shape[:2]
         observation_shape = observation.shape[2:]
@@ -315,7 +313,6 @@ class MuZero(torch.nn.Module):
         optimizer.step()
 
         info = dict(
-            lr=lr,
             loss_r=loss_r,
             loss_v=loss_v,
             loss_p=loss_p,
@@ -338,9 +335,8 @@ class MuZero(torch.nn.Module):
             value_l2=parameters_l2(self._value),
             projector_l2=parameters_l2(self._projector),
             predictor_l2=parameters_l2(self._predictor),
-            temperature=temperature,
         )
-        return info
+        return priority, info
 
     @torch.no_grad()
     def reanalyze(self, state, epsilon, alpha):

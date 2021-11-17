@@ -17,7 +17,7 @@ from tempfile import TemporaryDirectory
 import pytest
 import torch
 
-from cogment_verse_torch_agents.muzero.muzero import (
+from cogment_verse_torch_agents.muzero.networks import (
     MuZero,
     Distributional,
     DynamicsAdapter,
@@ -229,7 +229,7 @@ def test_learn(
     target_value = torch.rand((4, 3))
     action = torch.randint(low=0, high=act_dim, size=(4, 3))
     importance_weight = 1 / (1 + torch.rand(4) ** 2)
-    info = model.train_step(
+    priority, info = model.train_step(
         optimizer, observation, action, reward, next_observation, target_policy, target_value, importance_weight
     )
 
