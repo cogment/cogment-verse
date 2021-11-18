@@ -551,6 +551,18 @@ pipe_dqn:
     environment_type: pipe_world
     environment_name: PipeWorld
 
+pipe_human_dqn: 
+  implementation: "human_dqn"
+  config:
+    <<: *default_config
+    # class_name: data_pb2.PipeGameRunConfig
+    num_input: 120
+    num_action: 60
+    agent_implementation: dqn
+    environment_type: pipe_world
+    environment_name: PipeWorld
+
+
 pipe_rainbow: 
   <<: *default_params
   config:
@@ -560,3 +572,6 @@ pipe_rainbow:
     agent_implementation: rainbowtorch
     environment_type: pipe_world
     environment_name: PipeWorld
+
+
+    

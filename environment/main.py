@@ -123,14 +123,19 @@ async def environment(environment_session):
     # If there is an extra player, it must be the teacher/expert
     # and it must be the _last_ player this is only supported form of HILL at the moment)
     # todo: Make this more general and configurable (via TrialConfig)
+    print(len(actors), " != ", env_kwargs["num_players"])
+    for idx, actor in enumerate(actors):
+        print(idx, "  ", actor.actor_name, " -> ",actor.actor_class_name)
     if len(actors) != env_kwargs["num_players"]:
         log.debug(len(actors), env_kwargs["num_players"])
         assert len(actors) == env_kwargs["num_players"] + 1
         for idx, actor in enumerate(actors):
+            print(idx, "  ", actor.actor_name, " -> ",actor.actor_class_name)
             log.debug(idx, actor.actor_name, actor.actor_class_name)
         steerable = True
         teacher_idx = len(actors) - 1
-        assert actors[teacher_idx].actor_class_name == "teacher_agent"
+        print(teacher_idx, " -> ", actors[teacher_idx].actor_class_name)
+        assert actors[teacher_idx].actor_class_name == "teacher_agent" or actors[teacher_idx].actor_class_name == "agent"
 
     env_spec = env.env_spec
     assert len(env_spec.act_dim) == 1, "only a single action space is currently supported"
