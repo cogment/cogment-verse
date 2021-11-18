@@ -71,7 +71,6 @@ def create_training_run(agent_adapter):
 
         try:
             # Initializing a model
-            print("initializing a model")
             model_id = f"{run_id}_model"
             batch_size = config.batch_size
 
@@ -136,45 +135,48 @@ def create_training_run(agent_adapter):
             distinguished_actor = np.random.randint(0, config.player_count)
             player_actor_configs[distinguished_actor].config.model_version = -1
 
-            def get_samples_seen(training_batch):
-                for key in training_batch.keys():
-                    num_samples_seen = training_batch[key].shape[0]
-                    break
-                return num_samples_seen
+            self_play_trial_configs = [
+                TrialConfig(
+                    run_id=run_id,
+                    environment_config=EnvConfig(
+                        player_count=config.player_count,
+                        run_id=run_id,
+                        render=False,
+                        render_width=config.render_width,
+                        env_type=config.environment_type,
+                        env_name=config.environment_name,
+                        flatten=config.flatten,
+                        framestack=config.framestack,
+                    ),
+                    actors=player_actor_configs,
+                    distinguished_actor=distinguished_actor,
+                )
+                for _ in range(config.total_trial_count - config.demonstration_count)
+            ]
 
             async def archive_model(
                 model_archive_schedule,
                 model_publication_schedule,
                 step_timestamp,
                 step_idx,
-                training_batch,
-                info,
             ):
-                print("inside def archive_model")
                 archive = model_archive_schedule.update()
                 publish = model_publication_schedule.update()
-                print("arhcive = ", archive)
-                print("publish = ", publish)
                 if archive or publish:
                     version_info = await agent_adapter.publish_version(model_id, model, archived=archive)
                     version_number = version_info["version_number"]
                     version_data_size = int(version_info["data_size"])
 
                     # Log metrics about the published model
-                    print("loggin metrics")
                     run_xp_tracker.log_metrics(
                         step_timestamp,
                         step_idx,
                         epsilon=model._epsilon_schedule.get_value(),
                         replay_buffer_size=model._replay_buffer.size(),
-                        batch_reward=float(training_batch["reward"].mean().detach().cpu().numpy()),
                         model_published_version=version_number,
                         training_step=training_step,
-                        # training_samples_seen=samples_seen,
                         samples_generated=samples_generated,
-                        # episodes_per_sec=trials_completed / (time.time() - start_time),
                     )
-                    print("logged metrics")
                     verb = "archived" if archive else "published"
                     log.info(
                         f"[{run_session.params_name}/{run_id}] {model_id}@v{version_number} {verb} after {run_session.count_steps()} steps ({sizeof_fmt(version_data_size)})"
@@ -187,7 +189,6 @@ def create_training_run(agent_adapter):
                 nonlocal trials_completed
                 nonlocal all_trials_reward
                 nonlocal start_time
-                print("inside run_trials")
 
                 async for (
                     step_idx,
@@ -200,14 +201,12 @@ def create_training_run(agent_adapter):
                     max_parallel_trials=max_parallel_trials,
                     on_progress=create_progress_logger(run_session.params_name, run_id, config.total_trial_count),
                 ):
-                    print("sample.trial_total_reward = ", sample.trial_total_reward)
                     if sample.trial_total_reward is not None:
                         # This is a sample from a end of a trial
 
                         trials_completed += 1
                         all_trials_reward += sample.trial_total_reward
 
-                        print("inside log metrics")
                         run_xp_tracker.log_metrics(
                             step_timestamp,
                             step_idx,
@@ -215,12 +214,10 @@ def create_training_run(agent_adapter):
                             trials_completed=trials_completed,
                             mean_trial_reward=all_trials_reward / trials_completed,
                         )
-                        print("inside logged metrics")
 
                     samples_generated += 1
 
                     with TRAINING_ADD_SAMPLE_TIME.time():
-                        print("starting update_info")
                         update_info = {}
                         update_info["observation"] = {}
                         update_info["observation"]["observation"] = sample.current_player_sample[0]
@@ -228,16 +225,15 @@ def create_training_run(agent_adapter):
                         update_info["action"] = sample.current_player_sample[2]
                         update_info["reward"] = sample.current_player_sample[3]
                         update_info["done"] = sample.current_player_sample[6]
-                        print("calling model update")
+
                         model.update(update_info)
+
                         training_step += 1
                         await archive_model(
                             model_archive_schedule,
                             model_publication_schedule,
                             step_timestamp,
                             step_idx,
-                            # training_batch,
-                            # info,
                         )
 
                     TRAINING_REPLAY_BUFFER_SIZE.set(model._replay_buffer.size())
@@ -247,7 +243,9 @@ def create_training_run(agent_adapter):
                     f"[{run_session.params_name}/{run_id}] done, {model._replay_buffer.size()} samples gathered over {run_session.count_steps()} steps"
                 )
 
-            print("run_xp_tracker = ", run_xp_tracker)
+            if self_play_trial_configs:
+                await run_trials(self_play_trial_configs, max_parallel_trials=config.max_parallel_trials)
+
             run_xp_tracker.terminate_success()
 
         except Exception:
