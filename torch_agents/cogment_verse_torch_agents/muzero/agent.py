@@ -88,38 +88,15 @@ class MuZeroAgent:
     MuZero implementation
     """
 
-    def __init__(self, *, id, obs_dim, act_dim, device):
-        # debug/testing
-        self._params = dict(
-            id=id,
-            obs_dim=obs_dim,
-            act_dim=act_dim,
-            discount_rate=0.99,
-            weight_decay=1e-3,
-            device=device,
-            value_bootstrap_steps=20,
-            num_latent=128,
-            num_hidden=256,
-            num_hidden_layers=4,
-            projector_hidden=128,
-            projector_dim=64,
-            mcts_depth=3,
-            mcts_count=8,
-            ucb_c1=1.25,
-            ucb_c2=10000.0,
-            batch_size=16,
-            dirichlet_alpha=0.5,
-            rollout_length=4,
-            rmin=-100.0,
-            rmax=100.0,
-            vmin=-300.0,
-            vmax=300.0,
-            r_bins=128,
-            v_bins=128,
-        )
-
+    def __init__(self, *, obs_dim, act_dim, device, training_config: MuZeroTrainingConfig):
+        self._obs_dim = obs_dim
+        self._act_dim = act_dim
+        self._params = training_config
         self._device = torch.device(device)
         self._make_networks()
+        self._make_replay_buffer()
+
+    def _make_replay_buffer(self):
         self._replay_buffer = TrialReplayBuffer(max_size=1000, discount_rate=0.99, bootstrap_steps=10)
 
     def _create_replay_buffer(self):
@@ -127,67 +104,77 @@ class MuZeroAgent:
         self._replay_buffer = None
 
     def consume_training_sample(self, state, action, reward, next_state, done, policy, value):
+        state = state.unsqueeze(0)
+        next_state = next_state.unsqueeze(0)
         self._replay_buffer.add_sample(state, action, reward, next_state, done, policy, value)
 
     def sample_training_batch(self, batch_size):
-        return self._replay_buffer.sample(self._params["rollout_length"], batch_size)
+        return self._replay_buffer.sample(self._params.rollout_length, batch_size)
 
     def _make_networks(self):
         value_distribution = Distributional(
-            self._params["vmin"],
-            self._params["vmax"],
-            self._params["num_hidden"],
-            self._params["v_bins"],
+            self._params.vmin,
+            self._params.vmax,
+            self._params.hidden_dim,
+            self._params.vbins,
             reward_transform,
             reward_tansform_inverse,
         )
 
         reward_distribution = Distributional(
-            self._params["rmin"],
-            self._params["rmax"],
-            self._params["num_hidden"],
-            self._params["r_bins"],
+            self._params.rmin,
+            self._params.rmax,
+            self._params.hidden_dim,
+            self._params.rbins,
             reward_transform,
             reward_tansform_inverse,
         )
 
         representation = resnet(
-            self._params["obs_dim"],
-            self._params["num_hidden"],
-            self._params["num_latent"],
-            self._params["num_hidden_layers"],
-            # final_act=torch.nn.BatchNorm1d(self._params["num_latent"]),  # normalize for input to subsequent networks
+            self._obs_dim,
+            self._params.hidden_dim,
+            self._params.representation_dim,
+            self._params.hidden_layers,
+            # final_act=torch.nn.BatchNorm1d(self._params.num_latent"]),  # normalize for input to subsequent networks
         )
 
         dynamics = DynamicsAdapter(
             resnet(
-                self._params["num_latent"] + self._params["act_dim"],
-                self._params["num_hidden"],
-                self._params["num_hidden"],
-                self._params["num_hidden_layers"] - 1,
+                self._params.representation_dim + self._act_dim,
+                self._params.hidden_dim,
+                self._params.hidden_dim,
+                self._params.hidden_layers - 1,
                 final_act=torch.nn.LeakyReLU(),
             ),
-            self._params["act_dim"],
-            self._params["num_hidden"],
-            self._params["num_latent"],
+            self._act_dim,
+            self._params.hidden_dim,
+            self._params.representation_dim,
             reward_dist=reward_distribution,
         )
         policy = resnet(
-            self._params["num_latent"],
-            self._params["num_hidden"],
-            self._params["act_dim"],
-            self._params["num_hidden_layers"],
+            self._params.representation_dim,
+            self._params.hidden_dim,
+            self._act_dim,
+            self._params.hidden_layers,
             final_act=torch.nn.Softmax(dim=1),
         )
         value = resnet(
-            self._params["num_latent"],
-            self._params["num_hidden"],
-            self._params["num_hidden"],
-            self._params["num_hidden_layers"] - 1,
+            self._params.representation_dim,
+            self._params.hidden_dim,
+            self._params.hidden_dim,
+            self._params.hidden_layers - 1,
             final_act=value_distribution,
         )
-        projector = mlp(self._params["num_latent"], self._params["projector_hidden"], self._params["projector_dim"])
-        predictor = mlp(self._params["projector_dim"], self._params["projector_hidden"], self._params["projector_dim"])
+        projector = mlp(
+            self._params.representation_dim,
+            self._params.projector_hidden_dim,
+            self._params.projector_dim,
+            hidden_layers=self._params.projector_hidden_layers,
+        )
+        # todo: check number of hidden layers used in predictor (same as projector??)
+        predictor = mlp(
+            self._params.projector_dim, self._params.projector_hidden_dim, self._params.projector_dim, hidden_layers=1
+        )
 
         self._muzero = MuZero(
             representation, dynamics, policy, value, projector, predictor, reward_distribution, value_distribution
@@ -196,18 +183,18 @@ class MuZeroAgent:
         self._optimizer = torch.optim.AdamW(
             self._muzero.parameters(),
             lr=1e-3,
-            weight_decay=self._params["weight_decay"],
+            weight_decay=self._params.weight_decay,
         )
 
-    def act(self, cog_obs):
+    def act(self, observation):
         self._muzero.eval()
-        obs = torch.from_numpy(cog_obs.observation).float().unsqueeze(0).to(self._device)
-        action, policy, value = self._muzero.act(observation)
-        action = action.unsqueeze(0).cpu().numpy().item()
-        policy = policy.unsqueeze(0).cpu().numpy()
-        value = value.unsqueeze(0).cpu().numpy().item()
-        cog_action = AgentAction(discrete_action=action, policy=proto_array_from_np_array(policy), value=value)
-        return cog_action
+        obs = observation.float().to(self._device)
+        action, policy, value = self._muzero.act(
+            obs, self._params.exploration_epsilon, self._params.exploration_alpha, self._params.mcts_temperature
+        )
+        policy = policy.cpu().numpy()
+        value = value.cpu().numpy().item()
+        return action, policy, value
 
     def learn(self, batch, update_schedule=True):
         self._muzero.train()
@@ -230,8 +217,9 @@ class MuZeroAgent:
         # self._replay_buffer.update_priorities(list(zip(episode, step, priority)))
         importance_weight = 1 / (priority + 1e-6) / self._replay_buffer.size()
 
-        target_value = torch.clamp(batch.target_value, self._params["vmin"], self._params["vmax"])
-        target_reward = torch.clamp(batch.rewards, self._params["rmin"], self._params["rmax"])
+        target_value = torch.clamp(batch.target_value, self._params.vmin, self._params.vmax)
+        target_reward = torch.clamp(batch.rewards, self._params.rmin, self._params.rmax)
+
         priority, info = self._muzero.train_step(
             self._optimizer,
             batch.state,
@@ -274,10 +262,10 @@ class MuZeroAgent:
                     self._value,
                     input_queue,
                     output_queue,
-                    self._params["mcts_count"],
-                    self._params["mcts_depth"],
-                    self._params["ucb_c1"],
-                    self._params["ucb_c2"],
+                    self._params.mcts_count,
+                    self._params.mcts_depth,
+                    self._params.ucb_c1,
+                    self._params.ucb_c2,
                     end_process,
                     self._device,
                 ),
@@ -297,8 +285,6 @@ class MuZeroAgent:
                 return False
 
             episode_idx, step, policy, value = sample
-            # debug
-            # print("CONSUME_OUTPUT", policy, value)
             self._replay_buffer._episodes[episode_idx]._policy[step] = policy
             self._replay_buffer._episodes[episode_idx]._value[step] = value
             consumed_steps += 1
@@ -342,33 +328,18 @@ class MuZeroAgent:
     def save(self, f):
         torch.save(
             {
-                "params": self._params,
+                "obs_dim": self._obs_dim,
+                "act_dim": self._act_dim,
+                "training_config": self._params,
                 "muzero": self._muzero.state_dict(),
             },
             f,
         )
 
-    def load(self, f):
-        checkpoint = torch.load(f, map_location=self._device)
-        checkpoint["device"] = self._params["device"]
-
-        self._id = checkpoint["id"]
-        self._params = checkpoint["params"]
-        self._make_networks()
-
-        self._representation.load_state_dict(checkpoint["representation"])
-        self._dynamics.load_state_dict(checkpoint["dynamics"])
-        self._policy.load_state_dict(checkpoint["policy"])
-        self._value.load_state_dict(checkpoint["value"])
-        self._projector.load_state_dict(checkpoint["projector"])
-        self._predictor.load_state_dict(checkpoint["predictor"])
-
-        self._optimizer.load_state_dict(checkpoint["optimizer"])
-
-        self._learn_schedule = checkpoint["learn_schedule"]
-        self._epsilon_schedule = checkpoint["epsilon_schedule"]
-        self._target_net_update_schedule = checkpoint["target_net_update_schedule"]
-        self._rng = checkpoint["rng"]
-        self._lr_schedule = checkpoint["lr_schedule"]
-
-        self._replay_buffer = None
+    @staticmethod
+    def load(f, device):
+        checkpoint = torch.load(f, map_location=device)
+        muzero_state_dict = checkpoint.pop("muzero")
+        agent = MuZeroAgent(device=device, **checkpoint)
+        agent._muzero.load_state_dict(muzero_state_dict)
+        return agent

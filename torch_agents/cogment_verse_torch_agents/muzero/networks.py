@@ -85,13 +85,13 @@ class ResidualBlock(torch.nn.Module):
         self._final_act = activation or torch.nn.Identity()
 
     def forward(self, x):
-        x = self._prepare_input(x)
-        y = self._fc1(x)
+        xp = self._prepare_input(x)
+        y = self._fc1(xp)
         y = self._bn1(y)
         y = self._act(y)
         y = self._fc2(y)
         y = self._bn2(y)
-        return self._final_act(x + y)
+        return self._final_act(xp + y)
 
 
 class DynamicsAdapter(torch.nn.Module):

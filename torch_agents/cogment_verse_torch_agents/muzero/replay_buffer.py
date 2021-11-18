@@ -89,8 +89,6 @@ class Episode:
                 self._bootstrap[i] += (discount ** (k - i)) * self._rewards[k]
 
     def add_step(self, state, action, reward, done, policy, value):
-        # assert not self._done
-
         self._states.append(state)
         self._actions.append(action)
         self._rewards.append(reward)
@@ -237,7 +235,6 @@ def replay_buffer_worker(
                 updates = update_queue.get_nowait()
                 for (episode, step, priority) in updates:
                     replay_buffer.update_priority(episode, step, priority)
-                # print("RB UPDATED_PRIORITY")
             except queue.Empty:
                 break
 
@@ -246,12 +243,10 @@ def replay_buffer_worker(
             try:
                 sample = sample_queue.get_nowait()
                 replay_buffer.add_sample(sample)
-                # print("RB ADDED SAMPLE")
             except queue.Empty:
                 continue
 
         total_size.value = replay_buffer.size()
-        # print("RB SIZE", total_size.value)
 
         if replay_buffer.size() < min_size:
             continue
@@ -264,8 +259,6 @@ def replay_buffer_worker(
                 break
             except queue.Full:
                 continue
-
-        # print("RB ADDED TRAINING BATCH", batch_queue.qsize(), total_size.value)
 
 
 class ConcurrentTrialReplayBuffer(mp.Process):
@@ -312,16 +305,12 @@ class ConcurrentTrialReplayBuffer(mp.Process):
         self._sample_queue.put(sample)
 
     def sample(self, rollout_length, batch_size):
-        # print("TRAINING BATCH REQUESTED")
         while True:
             try:
                 batch = self._batch_queue.get(timeout=1.0)
-                # print("RECEIVED BATCH")
                 return batch
             except queue.Empty:
-                # print("NO TRAINING BATCH IN QUEUE")
                 continue
 
     def size(self):
-        # print("ConcurrentReplayBuffer::size(): RB total size", self._total_size.value)
         return self._total_size.value

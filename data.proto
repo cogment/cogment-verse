@@ -157,17 +157,35 @@ message MuZeroTrainingConfig {
   uint32 epoch_count = 1;
   uint32 epoch_trial_count = 2;
   uint32 max_parallel_trials = 3;
-  float discount_factor = 4;
-  float entropy_coef = 5;
-  float value_loss_coef = 6;
-  float action_loss_coef = 7;
-  float learning_rate = 8;
+  float discount_rate = 4;
+  float learning_rate = 5;
+  float weight_decay = 6;
+  uint32 bootstrap_steps = 7;
+  uint32 representation_dim = 8;
+  uint32 hidden_dim = 9;
+  uint32 hidden_layers = 10;
+  uint32 projector_dim = 11;
+  uint32 projector_hidden_dim = 12;
+  uint32 projector_hidden_layers = 13;
+  uint32 mcts_depth = 14;
+  uint32 mcts_samples = 15;
+  float mcts_temperature = 28;
+  float ucb_c1 = 16;
+  float ucb_c2 = 17;
+  uint32 batch_size = 18;
+  float exploration_alpha = 19;
+  float exploration_epsilon = 20;
+  uint32 rollout_length = 21;
+  float rmin = 22;
+  float rmax = 23;
+  float vmin = 24;
+  float vmax = 25;
+  uint32 rbins = 26;
+  uint32 vbins = 27;
 }
 
 message MuZeroTrainingRunConfig {
   EnvConfig environment = 1;
   ActorConfig actor = 2;
   MuZeroTrainingConfig training = 3;
-  MLPNetworkConfig actor_network = 4;
-  MLPNetworkConfig critic_network = 5;
 }
