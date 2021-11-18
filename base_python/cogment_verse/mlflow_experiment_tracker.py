@@ -118,7 +118,8 @@ class MlflowExperimentTracker:
         self._flush_metrics_worker = asyncio.create_task(worker())
 
     def _stop_flush_metrics_worker(self):
-        self._flush_metrics_worker.cancel()
+        if self._flush_metrics_worker is not None:
+            self._flush_metrics_worker.cancel()
         # We don't really need to await for the termination here
         self._flush_metrics_worker = None
 
