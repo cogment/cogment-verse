@@ -21,13 +21,13 @@ type KeyActionT = {
 };
 
 type KeyMapT = {
-  env_name: string;
+  environment_implementation: string;
   action_map: KeyActionT[];
 };
 
 const keymaps_json: KeyMapT[] = [
   {
-    env_name: "LunarLander-v2",
+    environment_implementation: "gym/LunarLander-v2",
     action_map: [
       {
         id: 0,
@@ -52,7 +52,7 @@ const keymaps_json: KeyMapT[] = [
     ],
   },
   {
-    env_name: "Breakout",
+    environment_implementation: "atari/Breakout",
     action_map: [
       {
         id: 0,
@@ -77,7 +77,7 @@ const keymaps_json: KeyMapT[] = [
     ],
   },
   {
-    env_name: "TetrisA-v0",
+    environment_implementation: "tetris/TetrisA-v0",
     action_map: [
       {
         id: 0,
@@ -143,9 +143,9 @@ const keymaps_json: KeyMapT[] = [
   },
 ];
 
-export const get_keymap = (envType: string, envName: string): KeyMapT | undefined => {
+export const get_keymap = (environmentImplementation: string): KeyMapT | undefined => {
   for (const keymap of keymaps_json) {
-    if (keymap.env_name === envName) {
+    if (keymap.environment_implementation === environmentImplementation) {
       return keymap;
     }
   }

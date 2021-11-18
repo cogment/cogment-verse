@@ -33,9 +33,9 @@ PORT = int(os.getenv("COGMENT_VERSE_TORCH_AGENTS_PORT", "9000"))
 PROMETHEUS_PORT = int(os.getenv("COGMENT_VERSE_TORCH_AGENTS_PROMETHEUS_PORT", "8000"))
 
 TRIAL_DATASTORE_ENDPOINT = os.getenv("COGMENT_VERSE_TRIAL_DATASTORE_ENDPOINT")
-ENVIRONMENT_ENDPOINT = os.getenv("COGMENT_VERSE_ENVIRONMENT_ENDPOINT")
 ORCHESTRATOR_ENDPOINT = os.getenv("COGMENT_VERSE_ORCHESTRATOR_ENDPOINT")
 ACTOR_ENDPOINTS = json.loads(os.getenv("COGMENT_VERSE_ACTOR_ENDPOINTS"))
+ENVIRONMENT_ENDPOINTS = json.loads(os.getenv("COGMENT_VERSE_ENVIRONMENT_ENDPOINTS"))
 
 logging.basicConfig(level=logging.INFO)
 
@@ -49,8 +49,8 @@ async def main():
         services_endpoints={
             "orchestrator": ORCHESTRATOR_ENDPOINT,
             "trial_datastore": TRIAL_DATASTORE_ENDPOINT,
-            "environment": ENVIRONMENT_ENDPOINT,
             **ACTOR_ENDPOINTS,
+            **ENVIRONMENT_ENDPOINTS,
         },
     )
 

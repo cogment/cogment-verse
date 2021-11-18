@@ -19,6 +19,17 @@ from cogment_verse_environment.base import GymObservation
 from cogment_verse_environment.gym_env import GymEnv
 from cogment_verse_environment.env_spec import EnvSpec
 
+from gym.envs import register
+
+# Atari-py includes a free Tetris rom for testing without needing to download other ROMs
+register(
+    id="TetrisALENoFrameskip-v0",
+    entry_point="gym.envs.atari:AtariEnv",
+    kwargs={"game": "tetris", "obs_type": "image"},
+    max_episode_steps=10000,
+    nondeterministic=False,
+)
+
 
 def _grayscale(image):
     return np.mean(image, axis=2)
@@ -30,7 +41,16 @@ class AtariEnv(GymEnv):
     """
 
     def __init__(
-        self, *, env_name, frame_skip=4, screen_size=84, sticky_actions=True, flatten=True, num_players=1, framestack=4
+        self,
+        *,
+        env_name,
+        frame_skip=4,
+        screen_size=84,
+        sticky_actions=True,
+        flatten=True,
+        num_players=1,
+        framestack=4,
+        **_kwargs,
     ):
         """
         Args:

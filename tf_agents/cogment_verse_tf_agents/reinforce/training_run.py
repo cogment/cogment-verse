@@ -16,8 +16,9 @@ from google.protobuf.json_format import MessageToDict
 
 from data_pb2 import (
     ActorConfig,
-    EnvConfig,
-    TrialActor,
+    ActorParams,
+    EnvironmentConfig,
+    EnvironmentParams,
     TrialConfig,
 )
 from cogment_verse import MlflowExperimentTracker
@@ -59,7 +60,7 @@ def create_training_run(agent_adapter):
 
             # Create config for the actor
             actor_configs = [
-                TrialActor(
+                ActorParams(
                     name=f"reinforce_player_{player_idx}",
                     actor_class="agent",
                     implementation=config.agent_implementation,
@@ -67,8 +68,7 @@ def create_training_run(agent_adapter):
                         model_id=model_id,
                         model_version=model_version_number,
                         run_id=run_id,
-                        env_type=config.environment_type,
-                        env_name=config.environment_name,
+                        environment_implementation=config.environment_implementation,
                         num_input=config.num_input,
                         num_action=config.num_action,
                     ),
@@ -80,15 +80,16 @@ def create_training_run(agent_adapter):
             trial_configs = [
                 TrialConfig(
                     run_id=run_id,
-                    environment_config=EnvConfig(
-                        player_count=config.player_count,
-                        run_id=run_id,
-                        render=False,
-                        render_width=config.render_width,
-                        env_type=config.environment_type,
-                        env_name=config.environment_name,
-                        flatten=config.flatten,
-                        framestack=config.framestack,
+                    environment=EnvironmentParams(
+                        implementation=config.environment_implementation,
+                        config=EnvironmentConfig(
+                            player_count=config.player_count,
+                            run_id=run_id,
+                            render=False,
+                            render_width=config.render_width,
+                            flatten=config.flatten,
+                            framestack=config.framestack,
+                        ),
                     ),
                     actors=actor_configs,
                 )

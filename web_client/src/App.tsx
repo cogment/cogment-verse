@@ -56,8 +56,7 @@ function App() {
   const [currentTrialId, setCurrentTrialId] = useState<string | undefined>();
 
   const [pressedKeys, onKeyDown, onKeyUp] = useControls();
-  const [envType, setEnvType] = useState<string>();
-  const [envName, setEnvName] = useState<string>();
+  const [environmentImplementation, setEnvironmentImplementation] = useState<string>();
 
   const [lastTime, setLastTime] = useState<DOMHighResTimeStamp>(0);
   const [emaFps, setEmaFps] = useState(0.0);
@@ -115,7 +114,7 @@ function App() {
         // todo: this should be read from actor conig
         const action = new data_pb.AgentAction();
         let action_int = -1;
-        const keymap = get_keymap(actorConfig.envType, actorConfig.envName);
+        const keymap = get_keymap(actorConfig.environmentImplementation);
 
         if (keymap === undefined) {
           console.log(`no keymap defined for environment ${actorConfig.envName}`);
@@ -168,8 +167,7 @@ function App() {
       setTrialStatus("trial joined");
       setCanStartTrial(false);
       if (actorConfig) {
-        setEnvName(actorConfig.envName);
-        setEnvType(actorConfig.envType);
+        setEnvironmentImplementation(actorConfig.environmentImplementation);
       }
     } else {
       setTrialStatus("no trial running");
@@ -261,7 +259,7 @@ function App() {
             Controls ≡
           </button>
           <div className="control-group">
-            <ControlList envType={envType} envName={envName} />
+            <ControlList environmentImplementation={environmentImplementation} />
           </div>
         </div>
       </div>
