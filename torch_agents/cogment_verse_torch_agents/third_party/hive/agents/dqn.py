@@ -216,7 +216,7 @@ class DQNAgent(Agent):
             self._state["episode_start"] = False
         return action
 
-    def update(self, batch):
+    def update(self, update_info):
         """
         Updates the DQN agent.
 
@@ -225,11 +225,11 @@ class DQNAgent(Agent):
             update the agent. Should contain a full transition, with keys for
             "observation", "action", "reward", and "done".
         """
-        # if update_info["done"]:
-        #     self._state["episode_start"] = True
+        if update_info["done"]:
+            self._state["episode_start"] = True
 
-        # if not self._training:
-        #     return
+        if not self._training:
+            return
 
         # Add the most recent transition to the replay buffer.
         # self._replay_buffer.add(**self.preprocess_update_info(update_info))
@@ -242,7 +242,7 @@ class DQNAgent(Agent):
             and self._replay_buffer.size() > 0
             and self._update_period_schedule.update()
         ):
-            # batch = self._replay_buffer.sample(batch_size=self._batch_size)
+            batch = self._replay_buffer.sample(batch_size=self._batch_size)
             qnet_inputs, target_qnet_inputs = self.preprocess_update_batch(batch)
 
             # Compute predicted Q values
