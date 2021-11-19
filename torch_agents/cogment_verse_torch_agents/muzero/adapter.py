@@ -13,6 +13,10 @@
 # limitations under the License.
 
 from collections import defaultdict
+import ctypes
+import sys
+import traceback
+import asyncio
 
 from data_pb2 import (
     MuZeroTrainingRunConfig,
@@ -26,9 +30,11 @@ from data_pb2 import (
     NDArray,
 )
 
+from cogment_verse.utils import LRU
 from cogment_verse import AgentAdapter
+from cogment_verse.model_registry_client import get_model_registry_client
 from cogment_verse import MlflowExperimentTracker
-from cogment_verse_torch_agents.wrapper import proto_array_from_np_array
+from cogment_verse_torch_agents.wrapper import np_array_from_proto_array, proto_array_from_np_array
 from cogment_verse_torch_agents.muzero.replay_buffer import Episode, TrialReplayBuffer, EpisodeBatch
 
 from cogment.api.common_pb2 import TrialState
@@ -44,6 +50,9 @@ log = logging.getLogger(__name__)
 from .agent import MuZeroAgent
 
 # pylint: disable=arguments-differ
+
+import torch.multiprocessing as mp
+import queue
 
 
 class RunningStats:
@@ -64,6 +73,8 @@ class RunningStats:
 
 
 DEFAULT_MUZERO_TRAINING_CONFIG = MuZeroTrainingConfig(
+    model_publication_interval=500,
+    trial_count=1000,
     discount_rate=0.99,
     learning_rate=1e-4,
     weight_decay=1e-3,
@@ -88,8 +99,6 @@ DEFAULT_MUZERO_TRAINING_CONFIG = MuZeroTrainingConfig(
     vmax=300.0,
     rbins=16,
     vbins=16,
-    epoch_count=10,
-    epoch_trial_count=100,
     max_parallel_trials=4,
     mcts_temperature=0.99,
     max_replay_buffer_size=20000,
@@ -130,18 +139,23 @@ class MuZeroAgentAdapter(AgentAdapter):
     def _create_actor_implementations(self):
         async def _single_agent_muzero_actor_implementation(actor_session):
             actor_session.start()
-
             config = actor_session.config
 
-            agent, _ = await self.retrieve_version(config.model_id, config.model_version)
+            event_queue = mp.Queue()
+            action_queue = mp.Queue()
 
-            async for event in actor_session.event_loop():
-                if event.observation and event.type == cogment.EventType.ACTIVE:
-                    obs = self.tensor_from_cog_obs(event.observation.snapshot)
-                    action, policy, value = agent.act(obs)
-                    actor_session.do_action(
-                        AgentAction(discrete_action=action, policy=proto_array_from_np_array(policy), value=value)
-                    )
+            agent, _ = await self.retrieve_version(config.model_id, config.model_version)
+            worker = AgentTrialWorker(agent, event_queue, action_queue)
+
+            try:
+                worker.start()
+                async for event in actor_session.event_loop():
+                    assert worker.is_alive()
+                    if event.observation and event.type == cogment.EventType.ACTIVE:
+                        event_queue.put(event)
+                        actor_session.do_action(action_queue.get())
+            finally:
+                worker.terminate()
 
         return {
             "muzero_mlp": (_single_agent_muzero_actor_implementation, ["agent"]),
@@ -178,7 +192,6 @@ async def single_agent_muzero_actor_implementation(agent_adapter, actor_session)
     actor_session.start()
 
     config = actor_session.config
-
     agent, _ = await agent_adapter.retrieve_version(config.model_id, config.model_version)
 
     async for event in actor_session.event_loop():
@@ -215,6 +228,7 @@ async def single_agent_muzero_sample_producer_implementation(agent_adapter, run_
                         target_policy=policy,
                         target_value=value,
                         priority=0.001,
+                        importance_weight=0.0,
                     ),
                     total_reward,
                 )
@@ -238,14 +252,13 @@ async def single_agent_muzero_run_implementation(agent_adapter, run_session):
     config = run_session.config
     assert config.environment.player_count == 1
 
-    agent, version_info = await agent_adapter.create_and_publish_initial_version(
-        model_id=model_id,
-        obs_dim=config.actor.num_input,
-        act_dim=config.actor.num_action,
-        device=agent_adapter._device,
-        training_config=config.training,
-    )
-    model_version_number = 1
+    sample_queue = mp.Queue()
+    update_queue = mp.Queue()
+    batch_queue = mp.Queue(32)  # todo: fix this?
+
+    replay_buffer = ReplayBufferWorker(sample_queue, update_queue, batch_queue, config.training)
+
+    model_version_number = -1
     trials_completed = 0
     running_stats = RunningStats()
 
@@ -255,88 +268,154 @@ async def single_agent_muzero_run_implementation(agent_adapter, run_session):
         config.training,
     )
 
-    total_samples = 0
-    for epoch in range(config.training.epoch_count):
-        epoch_last_step_idx = None
-        epoch_last_step_timestamp = None
-        async for (
-            step_idx,
-            step_timestamp,
-            _trial_id,
-            _tick_id,
-            (sample, total_reward),
-        ) in run_session.start_trials_and_wait_for_termination(
-            trial_configs=[
-                TrialConfig(
-                    run_id=run_session.run_id,
-                    environment_config=config.environment,
-                    actors=[
-                        TrialActor(
-                            name="agent_1",
-                            actor_class="agent",
-                            implementation="muzero_mlp",
-                            config=ActorConfig(
-                                model_id=model_id,
-                                model_version=model_version_number,
-                                num_input=config.actor.num_input,
-                                num_action=config.actor.num_action,
-                                env_type=config.environment.env_type,
-                                env_name=config.environment.env_name,
-                            ),
-                        )
-                    ],
+    trial_configs = [
+        TrialConfig(
+            run_id=run_session.run_id,
+            environment_config=config.environment,
+            actors=[
+                TrialActor(
+                    name="agent_1",
+                    actor_class="agent",
+                    implementation="muzero_mlp",
+                    config=ActorConfig(
+                        model_id=model_id,
+                        model_version=model_version_number,
+                        num_input=config.actor.num_input,
+                        num_action=config.actor.num_action,
+                        env_type=config.environment.env_type,
+                        env_name=config.environment.env_name,
+                    ),
                 )
-                for trial_ids in range(config.training.epoch_trial_count)
             ],
+        )
+        for trial_ids in range(config.training.trial_count)
+    ]
+
+    total_samples = 0
+    training_step = 0
+
+    agent, version_info = await agent_adapter.create_and_publish_initial_version(
+        model_id=model_id,
+        obs_dim=config.actor.num_input,
+        act_dim=config.actor.num_action,
+        device=agent_adapter._device,
+        training_config=config.training,
+    )
+
+    try:
+        # start worker processes
+        replay_buffer.start()
+
+        sample_generator = run_session.start_trials_and_wait_for_termination(
+            trial_configs,
             max_parallel_trials=config.training.max_parallel_trials,
-        ):
+        )
+
+        async for step, timestamp, _trial, _tick, (sample, total_reward) in sample_generator:
+            assert replay_buffer.is_alive()
+
             total_samples += 1
-            agent.consume_training_sample(
-                state=sample.state,
+            replay_buffer.add_sample(
+                state=sample.state.unsqueeze(0),
                 action=sample.action,
                 reward=sample.rewards,
-                next_state=sample.next_state,
+                next_state=sample.next_state.unsqueeze(0),
                 done=sample.done,
                 policy=sample.target_policy,
                 value=sample.target_value,
             )
-            total_samples += 1
-            epoch_last_step_idx = step_idx
-            epoch_last_step_timestamp = step_timestamp
 
             if sample.done:
                 trials_completed += 1
                 xp_tracker.log_metrics(
-                    step_timestamp, step_idx, trial_total_reward=total_reward, trials_completed=trials_completed
+                    timestamp, step, trial_total_reward=total_reward, trials_completed=trials_completed
                 )
 
-            if agent._replay_buffer.size() > config.training.min_replay_buffer_size:
-                batch = agent.sample_training_batch(config.training.batch_size)
+            if replay_buffer.size() > config.training.min_replay_buffer_size:
+                training_step += 1
+                batch = replay_buffer.get_training_batch()
                 priority, info = agent.learn(batch)
+
+                replay_buffer.update_priorities(batch.episode, batch.step, priority)
+
+                if training_step % config.training.model_publication_interval == 0:
+                    version_info = await agent_adapter.publish_version(model_id, agent)
+
+                info["model_version"] = version_info["version_number"]
+                info["training_step"] = training_step
                 running_stats.update(info)
 
                 if total_samples % config.training.log_frequency == 0:
                     xp_tracker.log_metrics(
-                        step_timestamp,
-                        step_idx,
+                        timestamp,
+                        step,
                         total_samples=total_samples,
                         **running_stats.get(),
                     )
                     running_stats.reset()
+    finally:
+        replay_buffer.terminate()
 
-            # xp_tracker.log_metrics(step_timestamp, step_idx, total_reward=sum([r.item() for r in trial_reward]))
+    log.info(f"[{run_session.params_name}/{run_session.run_id}] finished ({total_samples} samples seen)")
 
-        # total_samples += len(observation)
 
-        # Publish the newly trained version
-        version_info = await agent_adapter.publish_version(model_id, agent)
-        model_version_number = version_info["version_number"]
-        xp_tracker.log_metrics(
-            epoch_last_step_timestamp,
-            epoch_last_step_idx,
-            model_version_number=model_version_number,
-            epoch=epoch,
+class ReplayBufferWorker(mp.Process):
+    def __init__(self, sample_queue, update_queue, batch_queue, config):
+        super().__init__()
+        self._sample_queue = sample_queue
+        self._update_queue = update_queue
+        self._batch_queue = batch_queue
+        self._replay_buffer_size = mp.Value(ctypes.c_uint32, 0)
+        self._training_config = config
+
+    def run(self):
+        replay_buffer = TrialReplayBuffer(
+            max_size=self._training_config.max_replay_buffer_size,
+            discount_rate=self._training_config.discount_rate,
+            bootstrap_steps=self._training_config.bootstrap_steps,
         )
-        log.info(
-            f"[{run_session.params_name}/{run_session.run_id}] epoch #{epoch} finished ({total_samples} samples seen)"
-        )
+
+        while True:
+            while not self._update_queue.empty():
+                try:
+                    episodes, steps, priorities = self._update_queue.get(timeout=0.01)
+                    replay_buffer.update_priorities(episodes, steps, priorities)
+                except queue.Empty:
+                    pass
+
+            sample = self._sample_queue.get()
+            replay_buffer.add_sample(*sample)
+            self._replay_buffer_size.value = replay_buffer.size()
+
+            if replay_buffer.size() >= self._training_config.min_replay_buffer_size:
+                batch = replay_buffer.sample(self._training_config.rollout_length, self._training_config.batch_size)
+                self._batch_queue.put(batch)
+
+    def add_sample(self, state, action, reward, next_state, done, policy, value):
+        self._sample_queue.put((state, action, reward, next_state, done, policy, value))
+
+    def get_training_batch(self):
+        return self._batch_queue.get()
+
+    def update_priorities(self, episodes, steps, priorities):
+        self._update_queue.put((episodes, steps, priorities))
+
+    def size(self):
+        return self._replay_buffer_size.value
+
+
+class AgentTrialWorker(mp.Process):
+    def __init__(self, agent, event_queue, action_queue):
+        super().__init__()
+        self._agent = agent
+        self._event_queue = event_queue
+        self._action_queue = action_queue
+
+    def run(self):
+        while True:
+            event = self._event_queue.get()
+            obs = np_array_from_proto_array(event.observation.snapshot.vectorized)
+            action, policy, value = self._agent.act(torch.tensor(obs))
+            self._action_queue.put(
+                AgentAction(discrete_action=action, policy=proto_array_from_np_array(policy), value=value)
+            )

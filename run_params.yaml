@@ -561,8 +561,8 @@ lander_muzero:
       num_input: 8
       num_action: 4
     training:
-      epoch_count: 10
-      epoch_trial_count: 10
+      model_publication_interval: 1000
+      trial_count: 1000
       max_parallel_trials: 4
       discount_rate: 0.999
       learning_rate: 0.001

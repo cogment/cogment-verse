@@ -33,6 +33,7 @@ EpisodeBatch = namedtuple(
         "target_policy",
         "target_value",
         "priority",
+        "importance_weight",
     ],
 )
 
@@ -137,6 +138,7 @@ class Episode:
             # pad_slice(self._return, a, b, 0.0),
             pad_slice(self._bootstrap, a, b, 0.0),
             pad_slice(self._p, a, b, 0.0),
+            torch.zeros(b - a),
         )
 
 
@@ -206,11 +208,10 @@ class TrialReplayBuffer:
         probs = [self._p[i] for i in idx]
         transitions = [self._episodes[i].sample(rollout_length) for i in idx]
         batch = [torch.stack(item) for item in zip(*transitions)]
-        batch = EpisodeBatch(*batch)
-        for i, prob in enumerate(probs):
-            batch.priority[i] = batch.priority[i] * probs[i]
-
-        return batch
+        batch = EpisodeBatch(*batch)._asdict()
+        batch["priority"] = batch["priority"][:, 0] * torch.tensor(probs)
+        batch["importance_weight"] = 1 / (batch["priority"] + 1e-6) / self.size()
+        return EpisodeBatch(**batch)
 
     def add_sample(self, state, action, reward, next_state, done, policy, value):
         if self._current_episode is None:
@@ -222,107 +223,3 @@ class TrialReplayBuffer:
             self._current_episode.bootstrap_value(self._bootstrap_steps, self._discount_rate)
             self._add_episode(self._current_episode)
             self._current_episode = None
-
-
-def replay_buffer_worker(
-    *,
-    discount_rate,
-    bootstrap_steps,
-    sample_queue,
-    batch_queue,
-    update_queue,
-    batch_size,
-    min_size,
-    max_size,
-    rollout_length,
-    total_size,
-    terminate,
-):
-    replay_buffer = TrialReplayBuffer(max_size, discount_rate, bootstrap_steps)
-
-    while not terminate.value:
-        # apply all pending priority updates
-        while not update_queue.empty():
-            try:
-                updates = update_queue.get_nowait()
-                for (episode, step, priority) in updates:
-                    replay_buffer.update_priority(episode, step, priority)
-            except queue.Empty:
-                break
-
-        # wait for next sample
-        while not sample_queue.empty():
-            try:
-                sample = sample_queue.get_nowait()
-                replay_buffer.add_sample(sample)
-            except queue.Empty:
-                continue
-
-        total_size.value = replay_buffer.size()
-
-        if replay_buffer.size() < min_size:
-            continue
-
-        # push next training batch
-        batch = replay_buffer.sample(rollout_length, batch_size)
-        while True:
-            try:
-                batch_queue.put(batch, timeout=1.0)
-                break
-            except queue.Full:
-                continue
-
-
-class ConcurrentTrialReplayBuffer(mp.Process):
-    def __init__(self, *, batch_size, bootstrap_steps, min_size, max_size, rollout_length, discount_rate):
-        super().__init__()
-        sample_qsize = 10000
-        batch_qsize = 8
-        update_qsize = 10000
-        ctx = mp  # .get_context("spawn")
-        self._sample_queue = ctx.Queue(sample_qsize)
-        self._batch_queue = ctx.Queue(batch_qsize)
-        self._update_queue = ctx.Queue(update_qsize)
-        self._terminate = ctx.Value(ctypes.c_bool, False)
-        self._bootstrap_steps = bootstrap_steps
-        self._total_size = ctx.Value(ctypes.c_int64, 0)
-
-        self._kwargs = {
-            "sample_queue": self._sample_queue,
-            "batch_queue": self._batch_queue,
-            "update_queue": self._update_queue,
-            "batch_size": batch_size,
-            "min_size": min_size,
-            "max_size": max_size,
-            "rollout_length": rollout_length,
-            "discount_rate": discount_rate,
-            "rollout_length": rollout_length,
-            "terminate": self._terminate,
-            "bootstrap_steps": self._bootstrap_steps,
-            "total_size": self._total_size,
-        }
-
-    def run(self):
-        replay_buffer_worker(**self._kwargs)
-
-    def update_priorities(self, updates):
-        while True:
-            try:
-                self._update_queue.put(updates, timeout=1.0)
-                break
-            except queue.Full:
-                continue
-
-    def add_sample(self, sample):
-        self._sample_queue.put(sample)
-
-    def sample(self, rollout_length, batch_size):
-        while True:
-            try:
-                batch = self._batch_queue.get(timeout=1.0)
-                return batch
-            except queue.Empty:
-                continue
-
-    def size(self):
-        return self._total_size.value

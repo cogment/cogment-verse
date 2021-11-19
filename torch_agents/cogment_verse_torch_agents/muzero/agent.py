@@ -12,37 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from data_pb2 import (
-    MuZeroTrainingRunConfig,
-    MuZeroTrainingConfig,
-    AgentAction,
-    TrialConfig,
-    TrialActor,
-    EnvConfig,
-    ActorConfig,
-    MLPNetworkConfig,
-)
-
-from cogment_verse import AgentAdapter
-from cogment_verse import MlflowExperimentTracker
-
-from cogment.api.common_pb2 import TrialState
-import cogment
+from data_pb2 import MuZeroTrainingConfig
 
 import logging
 import torch
 import numpy as np
-import copy
-
-from collections import namedtuple
 
 log = logging.getLogger(__name__)
 
 from .networks import MuZero, reward_transform, reward_tansform_inverse, Distributional, DynamicsAdapter, resnet, mlp
-from .replay_buffer import ConcurrentTrialReplayBuffer, EpisodeBatch, TrialReplayBuffer
-from cogment_verse_torch_agents.wrapper import proto_array_from_np_array
-
-import itertools
+from .replay_buffer import EpisodeBatch
 
 # pylint: disable=arguments-differ
 
@@ -94,26 +73,6 @@ class MuZeroAgent:
         self._params = training_config
         self._device = torch.device(device)
         self._make_networks()
-        self._make_replay_buffer()
-
-    def _make_replay_buffer(self):
-        self._replay_buffer = TrialReplayBuffer(
-            max_size=self._params.max_replay_buffer_size,
-            discount_rate=self._params.discount_rate,
-            bootstrap_steps=self._params.bootstrap_steps,
-        )
-
-    def _create_replay_buffer(self):
-        # due to pickling issues for multiprocessing, we create the replay buffer lazily
-        self._replay_buffer = None
-
-    def consume_training_sample(self, state, action, reward, next_state, done, policy, value):
-        state = state.unsqueeze(0)
-        next_state = next_state.unsqueeze(0)
-        self._replay_buffer.add_sample(state, action, reward, next_state, done, policy, value)
-
-    def sample_training_batch(self, batch_size):
-        return self._replay_buffer.sample(self._params.rollout_length, batch_size)
 
     def _make_networks(self):
         value_distribution = Distributional(
@@ -200,7 +159,7 @@ class MuZeroAgent:
         value = value.cpu().numpy().item()
         return action, policy, value
 
-    def learn(self, batch, update_schedule=True):
+    def learn(self, batch):
         self._muzero.train()
 
         # todo: use schedule
@@ -215,9 +174,10 @@ class MuZeroAgent:
             batch_tensors.append(tensor.to(self._device))
         batch = EpisodeBatch(*batch_tensors)
 
-        priority = batch.priority[:, 0].view(-1)
-        self._replay_buffer.update_priorities(batch.episode, batch.step, priority)
-        importance_weight = 1 / (priority + 1e-6) / self._replay_buffer.size()
+        # priority = batch.priority[:, 0].view(-1)
+
+        # importance_weight = 1 / (priority + 1e-6) / self._replay_buffer.size()
+        importance_weight = batch.importance_weight.view(-1)
 
         target_value = torch.clamp(batch.target_value, self._params.vmin, self._params.vmax)
         target_reward = torch.clamp(batch.rewards, self._params.rmin, self._params.rmax)
