@@ -79,7 +79,7 @@ class HiveAgentAdapter(AgentAdapter):
         )
 
         model.load(model_data_f)
-        model.set_version_info(version_number, None)
+        # model.set_version_info(version_number, None)
 
         return model
 

@@ -310,7 +310,9 @@ class DQNAgent(Agent):
         # self._replay_buffer.save(replay_dir)
 
     def load(self, dname):
-        checkpoint = torch.load(os.path.join(dname, "agent.pt"))
+        super().load(dname)
+        checkpoint = torch.load(dname, map_location=self._device)
+        # checkpoint = torch.load(os.path.join(dname, "agent.pt"))
         self._qnet.load_state_dict(checkpoint["qnet"])
         self._target_qnet.load_state_dict(checkpoint["target_qnet"])
         self._optimizer.load_state_dict(checkpoint["optimizer"])
@@ -318,4 +320,4 @@ class DQNAgent(Agent):
         self._epsilon_schedule = checkpoint["epsilon_schedule"]
         self._target_net_update_schedule = checkpoint["target_net_update_schedule"]
         self._rng = checkpoint["rng"]
-        self._replay_buffer.load(os.path.join(dname, "replay"))
+        # self._replay_buffer.load(os.path.join(dname, "replay"))
