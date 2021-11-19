@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from collections import defaultdict
+
 from data_pb2 import (
     MuZeroTrainingRunConfig,
     MuZeroTrainingConfig,
@@ -36,13 +38,29 @@ import logging
 import torch
 import numpy as np
 
-from collections import namedtuple
 
 log = logging.getLogger(__name__)
 
 from .agent import MuZeroAgent
 
 # pylint: disable=arguments-differ
+
+
+class RunningStats:
+    def __init__(self):
+        self.reset()
+
+    def reset(self):
+        self._running_stats = defaultdict(int)
+        self._running_counts = defaultdict(int)
+
+    def update(self, info):
+        for key, val in info.items():
+            self._running_stats[key] += val
+            self._running_counts[key] += 1
+
+    def get(self):
+        return {key: self._running_stats[key] / count for key, count in self._running_counts.items()}
 
 
 DEFAULT_MUZERO_TRAINING_CONFIG = MuZeroTrainingConfig(
@@ -63,17 +81,20 @@ DEFAULT_MUZERO_TRAINING_CONFIG = MuZeroTrainingConfig(
     batch_size=16,
     exploration_alpha=0.5,
     exploration_epsilon=0.25,
-    rollout_length=3,
+    rollout_length=2,
     rmin=-100.0,
     rmax=100.0,
     vmin=-300.0,
     vmax=300.0,
-    rbins=128,
-    vbins=128,
+    rbins=16,
+    vbins=16,
     epoch_count=10,
     epoch_trial_count=100,
     max_parallel_trials=4,
     mcts_temperature=0.99,
+    max_replay_buffer_size=20000,
+    min_replay_buffer_size=200,
+    log_frequency=20,
 )
 
 
@@ -134,140 +155,10 @@ class MuZeroAgentAdapter(AgentAdapter):
         """
 
         async def _single_agent_muzero_sample_producer_implementation(run_sample_producer_session):
-            assert run_sample_producer_session.count_actors() == 1
-            state = None
-            step = 0
-
-            async for sample in run_sample_producer_session.get_all_samples():
-                next_state = self.tensor_from_cog_obs(sample.get_actor_observation(0))
-                done = sample.get_trial_state() == TrialState.ENDED
-
-                if state is not None:
-                    run_sample_producer_session.produce_training_sample(
-                        EpisodeBatch(
-                            episode=0,
-                            step=step,
-                            state=state,
-                            action=action,
-                            rewards=reward,
-                            next_state=next_state,
-                            done=done,
-                            target_policy=policy,
-                            target_value=value,
-                            priority=1000.0,
-                        )
-                    )
-
-                if done:
-                    break
-
-                step += 1
-                state = next_state
-                action, policy, value = self.decode_cog_action(sample.get_actor_action(0))
-                reward = sample.get_actor_reward(0)
+            return await single_agent_muzero_sample_producer_implementation(self, run_sample_producer_session)
 
         async def _single_agent_muzero_run_implementation(run_session):
-            xp_tracker = MlflowExperimentTracker(run_session.params_name, run_session.run_id)
-
-            # Initializing a model
-            model_id = f"{run_session.run_id}_model"
-
-            config = run_session.config
-            assert config.environment.player_count == 1
-
-            agent, version_info = await self.create_and_publish_initial_version(
-                model_id=model_id,
-                obs_dim=config.actor.num_input,
-                act_dim=config.actor.num_action,
-                device=self._device,
-                training_config=config.training,
-            )
-            model_version_number = 1
-
-            xp_tracker.log_params(
-                config.training,
-                config.environment,
-            )
-
-            total_samples = 0
-            for epoch in range(config.training.epoch_count):
-                # Rollout a bunch of trials
-                observation = []
-                action = []
-                reward = []
-                done = []
-                epoch_last_step_idx = None
-                epoch_last_step_timestamp = None
-                async for (
-                    step_idx,
-                    step_timestamp,
-                    _trial_id,
-                    _tick_id,
-                    sample,
-                ) in run_session.start_trials_and_wait_for_termination(
-                    trial_configs=[
-                        TrialConfig(
-                            run_id=run_session.run_id,
-                            environment_config=config.environment,
-                            actors=[
-                                TrialActor(
-                                    name="agent_1",
-                                    actor_class="agent",
-                                    implementation="muzero_mlp",
-                                    config=ActorConfig(
-                                        model_id=model_id,
-                                        model_version=model_version_number,
-                                        num_input=config.actor.num_input,
-                                        num_action=config.actor.num_action,
-                                        env_type=config.environment.env_type,
-                                        env_name=config.environment.env_name,
-                                    ),
-                                )
-                            ],
-                        )
-                        for trial_ids in range(config.training.epoch_trial_count)
-                    ],
-                    max_parallel_trials=config.training.max_parallel_trials,
-                ):
-                    total_samples += 1
-                    agent.consume_training_sample(
-                        state=sample.state,
-                        action=sample.action,
-                        reward=sample.rewards,
-                        next_state=sample.next_state,
-                        done=sample.done,
-                        policy=sample.target_policy,
-                        value=sample.target_value,
-                    )
-                    epoch_last_step_idx = step_idx
-                    epoch_last_step_timestamp = step_timestamp
-
-                    if agent._replay_buffer.size() > 200:
-                        batch = agent.sample_training_batch(config.training.batch_size)
-                        priority, info = agent.learn(batch)
-
-                    # xp_tracker.log_metrics(step_timestamp, step_idx, total_reward=sum([r.item() for r in trial_reward]))
-
-                # total_samples += len(observation)
-
-                # Publish the newly trained version
-                version_info = await self.publish_version(model_id, agent)
-                model_version_number = version_info["version_number"]
-                xp_tracker.log_metrics(
-                    epoch_last_step_timestamp,
-                    epoch_last_step_idx,
-                    model_version_number=model_version_number,
-                    epoch=epoch,
-                    # entropy_loss=entropy_loss.item(),
-                    # value_loss=value_loss.item(),
-                    # action_loss=action_loss.item(),
-                    # loss=loss.item(),
-                    total_samples=total_samples,
-                    **info,
-                )
-                log.info(
-                    f"[{run_session.params_name}/{run_session.run_id}] epoch #{epoch} finished ({total_samples} samples seen)"
-                )
+            return await single_agent_muzero_run_implementation(self, run_session)
 
         return {
             "muzero_mlp_training": (
@@ -281,3 +172,171 @@ class MuZeroAgentAdapter(AgentAdapter):
                 ),
             )
         }
+
+
+async def single_agent_muzero_actor_implementation(agent_adapter, actor_session):
+    actor_session.start()
+
+    config = actor_session.config
+
+    agent, _ = await agent_adapter.retrieve_version(config.model_id, config.model_version)
+
+    async for event in actor_session.event_loop():
+        if event.observation and event.type == cogment.EventType.ACTIVE:
+            obs = agent_adapter.tensor_from_cog_obs(event.observation.snapshot)
+            action, policy, value = agent.act(obs)
+            actor_session.do_action(
+                AgentAction(discrete_action=action, policy=proto_array_from_np_array(policy), value=value)
+            )
+
+
+async def single_agent_muzero_sample_producer_implementation(agent_adapter, run_sample_producer_session):
+    assert run_sample_producer_session.count_actors() == 1
+    state = None
+    step = 0
+    total_reward = 0
+
+    async for sample in run_sample_producer_session.get_all_samples():
+        next_state = agent_adapter.tensor_from_cog_obs(sample.get_actor_observation(0))
+        done = sample.get_trial_state() == TrialState.ENDED
+
+        if state is not None:
+            total_reward += reward
+            run_sample_producer_session.produce_training_sample(
+                (
+                    EpisodeBatch(
+                        episode=0,
+                        step=step,
+                        state=state,
+                        action=action,
+                        rewards=reward,
+                        next_state=next_state,
+                        done=done,
+                        target_policy=policy,
+                        target_value=value,
+                        priority=0.001,
+                    ),
+                    total_reward,
+                )
+            )
+
+        if done:
+            break
+
+        step += 1
+        state = next_state
+        action, policy, value = agent_adapter.decode_cog_action(sample.get_actor_action(0))
+        reward = sample.get_actor_reward(0)
+
+
+async def single_agent_muzero_run_implementation(agent_adapter, run_session):
+    xp_tracker = MlflowExperimentTracker(run_session.params_name, run_session.run_id)
+
+    # Initializing a model
+    model_id = f"{run_session.run_id}_model"
+
+    config = run_session.config
+    assert config.environment.player_count == 1
+
+    agent, version_info = await agent_adapter.create_and_publish_initial_version(
+        model_id=model_id,
+        obs_dim=config.actor.num_input,
+        act_dim=config.actor.num_action,
+        device=agent_adapter._device,
+        training_config=config.training,
+    )
+    model_version_number = 1
+    trials_completed = 0
+    running_stats = RunningStats()
+
+    xp_tracker.log_params(
+        config.environment,
+        config.actor,
+        config.training,
+    )
+
+    total_samples = 0
+    for epoch in range(config.training.epoch_count):
+        epoch_last_step_idx = None
+        epoch_last_step_timestamp = None
+        async for (
+            step_idx,
+            step_timestamp,
+            _trial_id,
+            _tick_id,
+            (sample, total_reward),
+        ) in run_session.start_trials_and_wait_for_termination(
+            trial_configs=[
+                TrialConfig(
+                    run_id=run_session.run_id,
+                    environment_config=config.environment,
+                    actors=[
+                        TrialActor(
+                            name="agent_1",
+                            actor_class="agent",
+                            implementation="muzero_mlp",
+                            config=ActorConfig(
+                                model_id=model_id,
+                                model_version=model_version_number,
+                                num_input=config.actor.num_input,
+                                num_action=config.actor.num_action,
+                                env_type=config.environment.env_type,
+                                env_name=config.environment.env_name,
+                            ),
+                        )
+                    ],
+                )
+                for trial_ids in range(config.training.epoch_trial_count)
+            ],
+            max_parallel_trials=config.training.max_parallel_trials,
+        ):
+            total_samples += 1
+            agent.consume_training_sample(
+                state=sample.state,
+                action=sample.action,
+                reward=sample.rewards,
+                next_state=sample.next_state,
+                done=sample.done,
+                policy=sample.target_policy,
+                value=sample.target_value,
+            )
+            total_samples += 1
+            epoch_last_step_idx = step_idx
+            epoch_last_step_timestamp = step_timestamp
+
+            if sample.done:
+                trials_completed += 1
+                xp_tracker.log_metrics(
+                    step_timestamp, step_idx, trial_total_reward=total_reward, trials_completed=trials_completed
+                )
+
+            if agent._replay_buffer.size() > config.training.min_replay_buffer_size:
+                batch = agent.sample_training_batch(config.training.batch_size)
+                priority, info = agent.learn(batch)
+                running_stats.update(info)
+
+                if total_samples % config.training.log_frequency == 0:
+                    xp_tracker.log_metrics(
+                        step_timestamp,
+                        step_idx,
+                        total_samples=total_samples,
+                        **running_stats.get(),
+                    )
+                    running_stats.reset()
+
+            # xp_tracker.log_metrics(step_timestamp, step_idx, total_reward=sum([r.item() for r in trial_reward]))
+
+        # total_samples += len(observation)
+
+        # Publish the newly trained version
+        version_info = await agent_adapter.publish_version(model_id, agent)
+        model_version_number = version_info["version_number"]
+        xp_tracker.log_metrics(
+            epoch_last_step_timestamp,
+            epoch_last_step_idx,
+            model_version_number=model_version_number,
+            epoch=epoch,
+        )
+        log.info(
+            f"[{run_session.params_name}/{run_session.run_id}] epoch #{epoch} finished ({total_samples} samples seen)"
+        )

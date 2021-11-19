@@ -51,7 +51,7 @@ def pad_slice(lst, a, b, padval, dtype=torch.float32):
 
 
 class Episode:
-    def __init__(self, initial_state, discount, id=0, min_priority=100.0):
+    def __init__(self, initial_state, discount, id=0, min_priority=1e-3):
         self._discount = discount
 
         self._id = 0
@@ -163,8 +163,20 @@ class TrialReplayBuffer:
         if episode < len(self._episodes):
             self._episodes[episode].update_priority(step, priority)
             self._priority[episode] = sum(self._episodes[episode]._priority)
-            self._p = np.array(self._priority, dtype=np.double)
-            self._p /= self._p.sum()
+        self._p = np.array(self._priority, dtype=np.double)
+        self._p /= self._p.sum()
+
+    def update_priorities(self, episodes, steps, priorities):
+        modified_episodes = set()
+        for episode, step, priority in zip(episodes, steps, priorities):
+            modified_episodes.add(episode)
+            self._episodes[episode].update_priority(step, priority)
+
+        for episode in modified_episodes:
+            self._priority[episode] = sum(self._episodes[episode]._priority)
+
+        self._p = np.array(self._priority, dtype=np.double)
+        self._p /= self._p.sum()
 
     def _add_episode(self, episode):
         self._episodes.append(episode)

@@ -97,7 +97,11 @@ class MuZeroAgent:
         self._make_replay_buffer()
 
     def _make_replay_buffer(self):
-        self._replay_buffer = TrialReplayBuffer(max_size=1000, discount_rate=0.99, bootstrap_steps=10)
+        self._replay_buffer = TrialReplayBuffer(
+            max_size=self._params.max_replay_buffer_size,
+            discount_rate=self._params.discount_rate,
+            bootstrap_steps=self._params.bootstrap_steps,
+        )
 
     def _create_replay_buffer(self):
         # due to pickling issues for multiprocessing, we create the replay buffer lazily
@@ -200,7 +204,7 @@ class MuZeroAgent:
         self._muzero.train()
 
         # todo: use schedule
-        lr = 1e-3
+        lr = self._params.learning_rate
         for grp in self._optimizer.param_groups:
             grp["lr"] = lr
 
@@ -211,10 +215,8 @@ class MuZeroAgent:
             batch_tensors.append(tensor.to(self._device))
         batch = EpisodeBatch(*batch_tensors)
 
-        #
         priority = batch.priority[:, 0].view(-1)
-        # todo: update priorities!!
-        # self._replay_buffer.update_priorities(list(zip(episode, step, priority)))
+        self._replay_buffer.update_priorities(batch.episode, batch.step, priority)
         importance_weight = 1 / (priority + 1e-6) / self._replay_buffer.size()
 
         target_value = torch.clamp(batch.target_value, self._params.vmin, self._params.vmax)
@@ -238,94 +240,12 @@ class MuZeroAgent:
         # Return loss
         return priority, info
 
-    @torch.no_grad()
-    def reanalyze_replay_buffer(self, fraction):
-        self.eval()
-        total_steps = np.sum(self._replay_buffer._priority)
-        current_steps = 0
-        ctx = mp.get_context("spawn")
-        # import multiprocessing
-        # ctx = multiprocessing.get_context("spawn")
-        # nworkers = cpu_count()
-        nworkers = 2
-        input_queue = ctx.JoinableQueue(nworkers)
-        output_queue = ctx.JoinableQueue(nworkers)
-        end_process = ctx.Value(ctypes.c_bool, False)
-
-        pool = [
-            ctx.Process(
-                target=reanalyze_queue,
-                args=(
-                    self._representation,
-                    self._dynamics,
-                    self._policy,
-                    self._value,
-                    input_queue,
-                    output_queue,
-                    self._params.mcts_count,
-                    self._params.mcts_depth,
-                    self._params.ucb_c1,
-                    self._params.ucb_c2,
-                    end_process,
-                    self._device,
-                ),
-            )
-            for _ in range(nworkers)
-        ]
-        for process in pool:
-            process.start()
-
-        consumed_steps = 0
-
-        def consume_output():
-            nonlocal consumed_steps
-            try:
-                sample = output_queue.get(timeout=1.0)
-            except queue.Empty:
-                return False
-
-            episode_idx, step, policy, value = sample
-            self._replay_buffer._episodes[episode_idx]._policy[step] = policy
-            self._replay_buffer._episodes[episode_idx]._value[step] = value
-            consumed_steps += 1
-            output_queue.task_done()
-            return True
-
-        for episode_idx, episode in enumerate(self._replay_buffer._episodes):
-            for step, state in enumerate(episode._states[:-1]):
-                while True:
-                    try:
-                        input_queue.put((episode_idx, step, state), timeout=1.0)
-                        break
-                    except queue.Full:
-                        while not consume_output():
-                            pass
-
-                        continue
-
-                consume_output()
-
-                # p, v = self.reanalyze(state)
-                # episode._policy[step] = p
-                # episode._value[step] = v
-            current_steps += len(episode)
-            if current_steps / total_steps > fraction:
-                break
-
-        while consumed_steps < current_steps:
-            consume_output()
-
-        end_process.value = True
-        input_queue.join()
-        output_queue.join()
-
-        for process in pool:
-            process.join()
-
     def _update_target(self):
         pass
 
     def save(self, f):
+        # note: we intentionally do not store the replay buffer and optimizer state
+        # as they are not needed for the current training setup
         torch.save(
             {
                 "obs_dim": self._obs_dim,

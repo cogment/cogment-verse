@@ -564,5 +564,13 @@ lander_muzero:
       epoch_count: 10
       epoch_trial_count: 10
       max_parallel_trials: 4
-      discount_rate: 0.95
-      learning_rate: 1e-4
+      discount_rate: 0.999
+      learning_rate: 0.001
+      batch_size: 32
+      representation_dim: 16
+      projector_dim: 8
+      hidden_dim: 64
+      projector_hidden_dim: 32
+      hidden_layers: 2
+      projector_hidden_layers: 2
+
