@@ -14,9 +14,7 @@
 
 from collections import defaultdict
 import ctypes
-import sys
-import traceback
-import asyncio
+import itertools
 
 from data_pb2 import (
     MuZeroTrainingRunConfig,
@@ -254,9 +252,26 @@ async def single_agent_muzero_run_implementation(agent_adapter, run_session):
 
     sample_queue = mp.Queue()
     update_queue = mp.Queue()
-    batch_queue = mp.Queue(32)  # todo: fix this?
+    agent_queue = mp.Queue()
+    max_prefetch_batch = 32
+    max_reanalyze_batch = 32
+    batch_queue = mp.Queue(max_prefetch_batch)  # todo: fix this?
+    reanalyze_queue = mp.Queue(max_reanalyze_batch)
+
+    num_reanalyze_workers = 8
 
     replay_buffer = ReplayBufferWorker(sample_queue, update_queue, batch_queue, config.training)
+    reanalyze_workers = [
+        ReanalyzeWorker(
+            batch_queue,
+            reanalyze_queue,
+            agent_queue,
+            config.training.exploration_epsilon,
+            config.training.exploration_alpha,
+            config.training.mcts_temperature,
+        )
+        for _ in range(num_reanalyze_workers)
+    ]
 
     model_version_number = -1
     trials_completed = 0
@@ -302,9 +317,13 @@ async def single_agent_muzero_run_implementation(agent_adapter, run_session):
         training_config=config.training,
     )
 
+    agent_queue.put(agent._muzero)
+
     try:
         # start worker processes
         replay_buffer.start()
+        # for reanalyze_worker in reanalyze_workers:
+        #    reanalyze_worker.start()
 
         sample_generator = run_session.start_trials_and_wait_for_termination(
             trial_configs,
@@ -313,6 +332,8 @@ async def single_agent_muzero_run_implementation(agent_adapter, run_session):
 
         async for step, timestamp, _trial, _tick, (sample, total_reward) in sample_generator:
             assert replay_buffer.is_alive()
+            # for reanalyze_worker in reanalyze_workers:
+            #    assert reanalyze_worker.is_alive()
 
             total_samples += 1
             replay_buffer.add_sample(
@@ -333,13 +354,15 @@ async def single_agent_muzero_run_implementation(agent_adapter, run_session):
 
             if replay_buffer.size() > config.training.min_replay_buffer_size:
                 training_step += 1
-                batch = replay_buffer.get_training_batch()
+                # batch = reanalyze_queue.get()
+                batch = batch_queue.get()
                 priority, info = agent.learn(batch)
 
                 replay_buffer.update_priorities(batch.episode, batch.step, priority)
 
                 if training_step % config.training.model_publication_interval == 0:
                     version_info = await agent_adapter.publish_version(model_id, agent)
+                    agent_queue.put(agent._muzero)
 
                 info["model_version"] = version_info["version_number"]
                 info["training_step"] = training_step
@@ -355,6 +378,8 @@ async def single_agent_muzero_run_implementation(agent_adapter, run_session):
                     running_stats.reset()
     finally:
         replay_buffer.terminate()
+        for reanalyze_worker in reanalyze_workers:
+            reanalyze_worker.terminate()
 
     log.info(f"[{run_session.params_name}/{run_session.run_id}] finished ({total_samples} samples seen)")
 
@@ -419,3 +444,34 @@ class AgentTrialWorker(mp.Process):
             self._action_queue.put(
                 AgentAction(discrete_action=action, policy=proto_array_from_np_array(policy), value=value)
             )
+
+
+class ReanalyzeWorker(mp.Process):
+    def __init__(self, batch_queue, reanalyze_queue, agent_queue, epsilon, alpha, temperature):
+        super().__init__()
+        self._batch_queue = batch_queue
+        self._reanalyze_queue = reanalyze_queue
+        self._agent_queue = agent_queue
+        self._epsilon = epsilon
+        self._alpha = alpha
+        self._temperature = temperature
+
+    def run(self):
+        agent = self._agent_queue.get()
+        while True:
+            try:
+                agent = self._agent_queue.get_nowait()
+            except queue.Empty:
+                pass
+
+            batch = self._batch_queue.get()
+            batch_size, rollout_length = batch.state.shape[:2]
+            for n, k in itertools.product(range(batch_size), range(rollout_length)):
+                observation = batch.state[n, k]
+                improved_policy, improved_value = agent.reanalyze(observation, self._epsilon, self._alpha)
+                improved_policy = torch.pow(improved_policy, 1 / self._temperature)
+                improved_policy /= torch.sum(improved_policy, dim=1)
+                batch.target_policy[n, k] = improved_policy.cpu().detach()
+                batch.target_value[n, k] = improved_value.cpu().detach()
+
+            self._reanalyze_queue.put(batch)
