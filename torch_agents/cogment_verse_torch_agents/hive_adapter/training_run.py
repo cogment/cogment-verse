@@ -219,9 +219,6 @@ def create_training_run(agent_adapter):
 
                     with TRAINING_ADD_SAMPLE_TIME.time():
                         update_info = {}
-                        # update_info["observation"] = {}
-                        # update_info["observation"]["observation"] = sample.current_player_sample[0]
-                        # update_info["observation"]["action_mask"] = sample.current_player_sample[1]
                         update_info["observation"] = sample.current_player_sample[0]
                         update_info["action"] = sample.current_player_sample[2]
                         update_info["reward"] = sample.current_player_sample[3]

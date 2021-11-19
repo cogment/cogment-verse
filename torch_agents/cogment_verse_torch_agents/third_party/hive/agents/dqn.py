@@ -228,17 +228,6 @@ class DQNAgent(Agent):
         if update_info["done"]:
             self._state["episode_start"] = True
 
-        # print("self._training = ", self._training)
-        # if not self._training:
-        #     return
-
-        # Add the most recent transition to the replay buffer.
-        self._replay_buffer.add(**self.preprocess_update_info(update_info))
-        print("added to replay buffer")
-        print("lear scheduel update = ", self._learn_schedule.update())
-        print("replay buffer size = ", self._replay_buffer.size())
-        print("update period schedule update = ", self._update_period_schedule.update())
-
         # Update the q network based on a sample batch from the replay buffer.
         # If the replay buffer doesn't have enough samples, catch the exception
         # and move on.
@@ -296,41 +285,10 @@ class DQNAgent(Agent):
         else:
             self._target_qnet.load_state_dict(self._qnet.state_dict())
 
-    # def save(self, dname):
-    #     torch.save(
-    #         {
-    #             "qnet": self._qnet.state_dict(),
-    #             "target_qnet": self._target_qnet.state_dict(),
-    #             "optimizer": self._optimizer.state_dict(),
-    #             "learn_schedule": self._learn_schedule,
-    #             "epsilon_schedule": self._epsilon_schedule,
-    #             "target_net_update_schedule": self._target_net_update_schedule,
-    #             "rng": self._rng,
-    #         },
-    #         dname
-    #         # os.path.join(dname, "agent.pt"),
-    #     )
-    #     # replay_dir = os.path.join(dname, "replay")
-    #     # create_folder(replay_dir)
-    #     # self._replay_buffer.save(replay_dir)
-    #
-    # def load(self, dname):
-    #     super().load(dname)
-    #     checkpoint = torch.load(dname, map_location=self._device)
-    #     # checkpoint = torch.load(os.path.join(dname, "agent.pt"))
-    #     self._qnet.load_state_dict(checkpoint["qnet"])
-    #     self._target_qnet.load_state_dict(checkpoint["target_qnet"])
-    #     self._optimizer.load_state_dict(checkpoint["optimizer"])
-    #     self._learn_schedule = checkpoint["learn_schedule"]
-    #     self._epsilon_schedule = checkpoint["epsilon_schedule"]
-    #     self._target_net_update_schedule = checkpoint["target_net_update_schedule"]
-    #     self._rng = checkpoint["rng"]
-    #     # self._replay_buffer.load(os.path.join(dname, "replay"))
     def save(self, f):
         torch.save(
             {
                 "id": self._id,
-                # "params": self._params,
                 "qnet": self._qnet.state_dict(),
                 "target_qnet": self._target_qnet.state_dict(),
                 "optimizer": self._optimizer.state_dict(),
@@ -338,7 +296,6 @@ class DQNAgent(Agent):
                 "epsilon_schedule": self._epsilon_schedule,
                 "target_net_update_schedule": self._target_net_update_schedule,
                 "rng": self._rng,
-                # "lr_schedule": self._lr_schedule,
             },
             f,
         )
@@ -347,7 +304,6 @@ class DQNAgent(Agent):
         super().load(f)
         checkpoint = torch.load(f, map_location=self._device)
         self._id = checkpoint["id"]
-        # self._params = checkpoint["params"]
         self._qnet.load_state_dict(checkpoint["qnet"])
         self._target_qnet.load_state_dict(checkpoint["target_qnet"])
         self._optimizer.load_state_dict(checkpoint["optimizer"])
@@ -355,4 +311,3 @@ class DQNAgent(Agent):
         self._epsilon_schedule = checkpoint["epsilon_schedule"]
         self._target_net_update_schedule = checkpoint["target_net_update_schedule"]
         self._rng = checkpoint["rng"]
-        # self._lr_schedule = checkpoint["lr_schedule"]
