@@ -40,6 +40,25 @@ cartpole_dqn:
     agent_implementation: dqn
     environment_type: gym
     environment_name: CartPole-v0
+    optimizer_fn: None
+    loss_fn: None
+    init_fn: None
+    id: 0
+    replay_buffer: None
+    discount_rate: 0.99
+    n_step: 1
+    grad_clip: None
+    reward_clip: None
+    update_period_schedule: None
+    target_net_soft_update: False
+    target_net_update_fraction: 0.05
+    target_net_update_schedule: None
+    epsilon_schedule: None
+    test_epsilon: 0.001
+    learn_schedule: None
+    batch_size: 32
+    device: "cpu"
+
 
 cartpole_REINFORCE:
   implementation: "reinforce_training"
