@@ -32,7 +32,7 @@ cogment run sync && cogment run build
 
 #### Troubleshooting
 
-Because this project is using rather large libraries such as tensorflow and pytorch, because of that the build might fail if docker doesn't have access to sufficient memory. 
+This project is using rather large libraries such as tensorflow and pytorch, because of that the build might fail if docker doesn't have access to sufficient memory. 
 
 ### Run
 
