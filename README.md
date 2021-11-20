@@ -12,9 +12,20 @@ Cogment verse includes environments from:
 - [Petting Zoo](https://www.pettingzoo.ml).
 - [MinAtar](https://github.com/kenjyoung/MinAtar).
 
-## Getting started
+## Documentation table of contents
 
-> The full documentation is available [here](./docs/index.md)
+- [Getting started](#getting-started)
+- Experimental results 🚧
+  - [A2C](/docs/results/a2c.md)
+- Develop 🚧
+  - [Development Setup](/docs/development_setup.md)
+  - [Debug](#debug)
+- [Changelog](/CHANGELOG.md)
+- [Contributors guide](/CONTRIBUTING.md)
+- [Community code of conduct](/CODE_OF_CONDUCT.md)
+- [Acknowledgments](#acknowledgements)
+
+## Getting started
 
 ### Setup
 
@@ -86,17 +97,19 @@ RUN_PARAMS=benchmark_lander_hill cogment run start_run
 
 and access the playing interface, by default at <http://localhost:8080>
 
-## Monitoring
-
-Cogment verse comes with [prometheus](https://prometheus.io), in <./prometheus>, and [grafana](https://grafana.com), in <./grafana>, services to facilitate the monitoring of the cluster.
-
-When running with the default `cogment run start`, the grafana dashboard can be accessed at <http://localhost:3000>.
-
-## GPU
+#### GPU
 
 Instead of using `cogment run build` and `cogment run start` use `cogment run build_gpu` and `cogment run start_gpu`.
 
-## Profiling python services
+## Debug
+
+### Resources monitoring
+
+Cogment verse comes with [prometheus](https://prometheus.io), in [`/prometheus`](/prometheus), and [grafana](https://grafana.com), in [`/grafana`](/grafana), services to facilitate the monitoring of the cluster.
+
+When running with the default `cogment run start`, the grafana dashboard can be accessed at <http://localhost:3000>.
+
+### Profiling
 
 Steps
 
@@ -108,7 +121,7 @@ Steps
 
 ## Acknowledgements
 
-The subdirectories </tf_agents/cogment_verse_tf_agents/third_party> and </torch_agents/cogment_verse_torch_agents/third_party> contains code from third party sources
+The subdirectories `/tf_agents/cogment_verse_tf_agents/third_party` and `/torch_agents/cogment_verse_torch_agents/third_party` contains code from third party sources
 
 - `hive`: Taken from the Hive library by MILA/CRL
 - `td3`: Taken form the [authors' implementation](https://github.com/sfujim/TD3)
