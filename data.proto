@@ -184,7 +184,14 @@ message MuZeroTrainingConfig {
   uint32 vbins = 27;
   uint32 max_replay_buffer_size = 29;
   uint32 min_replay_buffer_size = 30;
-  uint32 log_frequency = 31;
+  uint32 log_interval = 31;
+  float min_learning_rate = 32;
+  uint32 lr_warmup_steps = 33;
+  uint32 lr_decay_steps = 34;
+  float epsilon_min = 35;
+  float epsilon_decay_steps = 36;
+  float min_temperature = 37;
+  uint32 temperature_decay_steps = 38;
 }
 
 message MuZeroTrainingRunConfig {

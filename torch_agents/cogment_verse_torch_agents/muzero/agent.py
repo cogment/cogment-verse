@@ -26,42 +26,6 @@ from .replay_buffer import EpisodeBatch
 # pylint: disable=arguments-differ
 
 
-class LinearScheduleWithWarmup:
-    """Defines a linear schedule between two values over some number of steps.
-
-    If updated more than the defined number of steps, the schedule stays at the
-    end value.
-    """
-
-    def __init__(self, init_value, end_value, total_steps, warmup_steps):
-        """
-        Args:
-            init_value (Union[int, float]): starting value for schedule.
-            end_value (Union[int, float]): end value for schedule.
-            steps (int): Number of steps for schedule. Should be positive.
-        """
-        self._warmup_steps = max(warmup_steps, 0)
-        self._total_steps = max(total_steps, self._warmup_steps)
-        self._init_value = init_value
-        self._end_value = end_value
-        self._current_step = 0
-        self._value = 0
-
-    def get_value(self):
-        return self._value
-
-    def update(self):
-        if self._current_step < self._warmup_steps:
-            t = np.clip(self._current_step / (self._warmup_steps + 1), 0, 1)
-            self._value = self._init_value * t
-        else:
-            t = np.clip((self._current_step - self._warmup_steps) / (self._total_steps - self._warmup_steps), 0, 1)
-            self._value = self._init_value + t * (self._end_value - self._init_value)
-
-        self._current_step += 1
-        return self._value
-
-
 class MuZeroAgent:
     """
     MuZero implementation

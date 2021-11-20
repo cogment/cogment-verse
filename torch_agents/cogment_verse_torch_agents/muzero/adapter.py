@@ -53,6 +53,42 @@ import torch.multiprocessing as mp
 import queue
 
 
+class LinearScheduleWithWarmup:
+    """Defines a linear schedule between two values over some number of steps.
+
+    If updated more than the defined number of steps, the schedule stays at the
+    end value.
+    """
+
+    def __init__(self, init_value, end_value, total_steps, warmup_steps):
+        """
+        Args:
+            init_value (Union[int, float]): starting value for schedule.
+            end_value (Union[int, float]): end value for schedule.
+            steps (int): Number of steps for schedule. Should be positive.
+        """
+        self._warmup_steps = max(warmup_steps, 0)
+        self._total_steps = max(total_steps, self._warmup_steps)
+        self._init_value = init_value
+        self._end_value = end_value
+        self._current_step = 0
+        self._value = 0
+
+    def get_value(self):
+        return self._value
+
+    def update(self):
+        if self._current_step < self._warmup_steps:
+            t = np.clip(self._current_step / (self._warmup_steps + 1), 0, 1)
+            self._value = self._init_value * t
+        else:
+            t = np.clip((self._current_step - self._warmup_steps) / (self._total_steps - self._warmup_steps), 0, 1)
+            self._value = self._init_value + t * (self._end_value - self._init_value)
+
+        self._current_step += 1
+        return self._value
+
+
 class RunningStats:
     def __init__(self):
         self.reset()
@@ -101,7 +137,14 @@ DEFAULT_MUZERO_TRAINING_CONFIG = MuZeroTrainingConfig(
     mcts_temperature=0.99,
     max_replay_buffer_size=20000,
     min_replay_buffer_size=200,
-    log_frequency=20,
+    log_interval=200,
+    min_learning_rate=1e-6,
+    lr_warmup_steps=1000,
+    lr_decay_steps=1000000,
+    epsilon_min=0.01,
+    epsilon_decay_steps=100000,
+    min_temperature=0.25,
+    temperature_decay_steps=100000,
 )
 
 
@@ -277,6 +320,24 @@ async def single_agent_muzero_run_implementation(agent_adapter, run_session):
     trials_completed = 0
     running_stats = RunningStats()
 
+    lr_schedule = LinearScheduleWithWarmup(
+        config.training.learning_rate,
+        config.training.min_learning_rate,
+        config.training.lr_decay_steps,
+        config.training.lr_warmup_steps,
+    )
+
+    epsilon_schedule = LinearScheduleWithWarmup(
+        config.training.exploration_epsilon, config.training.epsilon_min, config.training.epsilon_decay_steps, 0
+    )
+
+    temperature_schedule = LinearScheduleWithWarmup(
+        config.training.mcts_temperature,
+        config.training.min_temperature,
+        config.training.temperature_decay_steps,
+        0,
+    )
+
     xp_tracker.log_params(
         config.environment,
         config.actor,
@@ -317,7 +378,7 @@ async def single_agent_muzero_run_implementation(agent_adapter, run_session):
         training_config=config.training,
     )
 
-    agent_queue.put(agent._muzero)
+    # agent_queue.put(agent._muzero)
 
     try:
         # start worker processes
@@ -360,15 +421,26 @@ async def single_agent_muzero_run_implementation(agent_adapter, run_session):
 
                 replay_buffer.update_priorities(batch.episode, batch.step, priority)
 
+                lr = lr_schedule.update()
+                epsilon = epsilon_schedule.update()
+                temperature = temperature_schedule.update()
+
+                agent._params.learning_rate = lr
+                agent._params.exploration_epsilon = epsilon
+                agent._params.mcts_temperature = temperature
+
                 if training_step % config.training.model_publication_interval == 0:
                     version_info = await agent_adapter.publish_version(model_id, agent)
-                    agent_queue.put(agent._muzero)
+                    # agent_queue.put(agent._muzero)
 
+                info["lr"] = lr
+                info["epsilon"] = epsilon
+                info["temperature"] = temperature
                 info["model_version"] = version_info["version_number"]
                 info["training_step"] = training_step
                 running_stats.update(info)
 
-                if total_samples % config.training.log_frequency == 0:
+                if total_samples % config.training.log_interval == 0:
                     xp_tracker.log_metrics(
                         timestamp,
                         step,

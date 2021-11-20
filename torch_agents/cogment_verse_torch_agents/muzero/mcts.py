@@ -63,11 +63,11 @@ class MCTS:
 
         self._cache_value = None
 
-        if self._root:
-            concentration = torch.zeros_like(self._prior)
-            concentration[:, :] = self._alpha
-            noise = torch.distributions.Dirichlet(concentration).sample()
-            self._prior = (1 - self._epsilon) * self._prior + self._epsilon * noise
+        # if self._root:
+        #    concentration = torch.zeros_like(self._prior)
+        #    concentration[:, :] = self._alpha
+        #    noise = torch.distributions.Dirichlet(concentration).sample()
+        #    self._prior = (1 - self._epsilon) * self._prior + self._epsilon * noise
 
     def build_search_tree(self, count):
         for _ in range(count):
@@ -97,11 +97,11 @@ class MCTS:
         N = torch.sum(self._N)
         p = self._prior
 
-        # if self._root:
-        #    concentration = torch.zeros_like(self._prior)
-        #    concentration[:, :] = self._alpha
-        #    noise = torch.distributions.Dirichlet(concentration).sample()
-        #    p = (1 - self._epsilon) * p + self._epsilon * noise
+        if self._root:
+            concentration = torch.zeros_like(self._prior)
+            concentration[:, :] = self._alpha
+            noise = torch.distributions.Dirichlet(concentration).sample()
+            p = (1 - self._epsilon) * p + self._epsilon * noise
 
         if N == 0:
             return p
