@@ -6,10 +6,10 @@ authors = ["AI Redefined Inc. <dev+cogment@ai-r.com>"]
 license = "Apache-2.0"
 
 [tool.poetry.dependencies]
-python = "^3.7"
+python = ">=3.7,<3.10"
 grpcio = "^1.38.0"
 click = "^8.0.1"
-cogment = {extras = ["generate"], version = "^1.3.0"}
+cogment = {extras = ["generate"], version = "^1.3.1"}
 PyYAML = "^5.4.1"
 
 [tool.poetry.dev-dependencies]
@@ -17,9 +17,9 @@ taskipy = "^1.8.1"
 grpcio-tools = "^1.38.0"
 
 [tool.taskipy.tasks]
-generate_protos = "python -m grpc.tools.protoc --proto_path=. --python_out=. --grpc_python_out=. ./run_api.proto && python -m cogment.generate"
-build = "task generate_protos"
-client = "python -m main"
+generate = "python -m grpc.tools.protoc --proto_path=. --python_out=. --grpc_python_out=. ./run_api.proto && python -m cogment.generate"
+build = "task generate"
+start = "python -m main"
 
 [tool.black]
 line-length = 120
