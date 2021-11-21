@@ -24,7 +24,8 @@ class PipeWorld(BaseEnv):
         self. expected_segment_count = 30
         self.logical_segments = LogicalSegments(self.expected_segment_count)
         self.score = 100000.0
-        self.budget = 1000.0
+        self.starting_budget = 3000.0
+        self.budget = self.starting_budget
         self.tick_id = 0
         self.seed_number = 0
         spec = self.create_env_spec(env_name, **kwargs)
@@ -54,7 +55,7 @@ class PipeWorld(BaseEnv):
     def reset(self):
         self.logical_segments = LogicalSegments(self.expected_segment_count)
         self.score = 100000.0
-        self.budget = 1000.0
+        self.budget = self.starting_budget
         self.tick_id = 0
         self.scale_segments(0.0)
 
@@ -71,16 +72,17 @@ class PipeWorld(BaseEnv):
         self._turn = (self._turn + 1) % self._num_players
         self.tick_id += 1
         if self.tick_id % 20 == 0:
-            self.budget += 1000.0
+            self.budget += self.starting_budget
         cost = self.logical_segments.step()
         self.score -= cost
 
-        reward = 1000.0
+        reward = 1.0 - cost / 1000.0
+         
         done = self.score < 0.0
 
         return GymObservation(
             observation=self.generate_observation(),
-            rewards=[reward-cost],
+            rewards=[reward],
             current_player=self._turn,
             legal_moves_as_int=[],
             done=done,
@@ -101,17 +103,35 @@ class PipeWorld(BaseEnv):
 
     def inspect(self, logical_segment_index):
         logical_segment = self.logical_segments.logical_segments[logical_segment_index]
-        self.budget -= logical_segment.cost_of_inspection
-        logical_segment.inspect()
+        if self.budget >= logical_segment.cost_of_inspection:
+            self.budget -= logical_segment.cost_of_inspection
+            logical_segment.inspect()
 
     def scale_segments(self, scale):
         self.logical_segments.scale_segments(scale)
 
     def display(self):
+        print("Budget: ", self.budget, "  --- SCORE: ", self.score)
         self.logical_segments.display()
 
     def generate_observation(self):
         return self.logical_segments.generate_observation()
+
+    def encode(self):
+        observation = Observation()
+        observation.budget = self.budget
+        observation.score = self.score
+        self.logical_segments.encode(observation)
+        return observation
+
+    def act(self, action):
+        if (action.action_type != ActionType.NO_ACTION and 
+                action.logical_segment_index >= 0 and 
+                action.logical_segment_index < len(self.logical_segments.logical_segments)):
+            if action.action_type == ActionType.INSPECT:
+                self.inspect(action.logical_segment_index)
+            elif action.action_type == ActionType.MAINTAIN:
+                self.maintain(action.logical_segment_index)
 
 
 def main():

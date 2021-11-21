@@ -54,8 +54,10 @@ class LogicalSegment:
             self.is_inspected = self.is_inspected or pipe.inspected
             self.water += pipe.water
 
-        self.cost_of_maintnance = 100.0 + self.length * 10.0
-        self.cost_of_inspection = 10.0 + self.length * 1.0
+        self.cost_of_failure /= len(self.pipes)
+
+        self.cost_of_maintnance = 10.0 + self.length * 1.0
+        self.cost_of_inspection = 1.0 + self.length * 0.1
 
     def step(self):
         self.compute_info()
@@ -75,8 +77,7 @@ class LogicalSegment:
             " Prob fail:  {:3.4f}".format(self.prob_of_failure),
             " Cost F:  {:3.2f}".format(self.cost_of_failure),
             " length:  {:3.2f}".format(self.length),
-            " Failure:  ",
-            self.is_failing,
+            " Failure:  ", self.is_failing,
             " Cost M:  {:3.2f}".format(self.cost_of_maintnance),
             " Cost I:  {:3.2f}".format(self.cost_of_inspection),
             " Water:  {:3.2f}".format(self.water),
@@ -90,6 +91,17 @@ class LogicalSegment:
         if self.is_inspected:
             is_inspected = 1.0
         return np.array([self.prob_of_failure, self.cost_of_failure, is_failing, is_inspected])
+
+
+    def encode(self, proto):
+        proto.probability_of_failure = self.prob_of_failure
+        proto.cost_of_failure = self.cost_of_failure
+        proto.is_failing = self.is_failing
+        proto.is_inspected = self.is_inspected
+
+        for pipe in self.pipes:
+            data_pipe = proto.physical_segments.add()
+            pipe.encode(data_pipe)
 
 
 class LogicalSegments:
@@ -125,12 +137,81 @@ class LogicalSegments:
 
     def apply_logical_segment_count(self):
         total_length = 0.0
-
         for pipe in self.pipeline.pipes:
             total_length += pipe.length
 
-        logical_segment_length = total_length / self.expected_segment_count
-        self.compute_logical_segment(logical_segment_length)
+        logical_segment_length = total_length / (self.expected_segment_count)
+        self.compute_logical_segment_2(logical_segment_length)
+
+    def compute_logical_segment_2(self, logical_segment_length):
+        self.logical_segments.clear()
+        self.pipeline.clear_pipes_from_logic()
+
+        total_length = 0.0
+        for pipe in self.pipeline.pipes:
+            total_length += pipe.length
+        total_length_added = 0.0
+
+        all_in_logic = False
+        while not all_in_logic:
+
+            pipe = None
+            all_in_logic = True
+            for other_pipe in self.pipeline.pipes:
+                if other_pipe.added_in_logical is False:
+                    pipe = other_pipe
+                    all_in_logic = False
+                    break
+            if all_in_logic:
+                break
+
+            logical_segment = LogicalSegment()
+            logical_segment.add_pipe(pipe)
+            current_length = pipe.length
+            total_length_added += pipe.length
+            dead_end = False
+            while (total_length_added / logical_segment_length <= len(self.logical_segments)
+                    and not dead_end):
+                
+                # Try to find a direct connected pipe
+                dead_end = True
+                for other_pipe in pipe.node1.pipes + pipe.node2.pipes:
+                    if other_pipe.added_in_logical is False:
+                        pipe = other_pipe
+                        dead_end = False
+                        break
+
+                # Otherwise try to find a connected pipe to the current logic
+                if dead_end:
+                    connected_pipes = []
+                    for p in logical_segment.pipes:
+                        connected_pipes.extend(p.node1.pipes + p.node2.pipes)
+                    for other_pipe in connected_pipes:
+                        if other_pipe.added_in_logical is False:
+                            pipe = other_pipe
+                            dead_end = False
+                            break
+
+                # Otherwise pick a disconnected one
+                if dead_end:
+                    for other_pipe in self.pipeline.pipes:
+                        if other_pipe.added_in_logical is False:
+                            pipe = other_pipe
+                            dead_end = False
+                            break
+
+                if not dead_end:
+                    logical_segment.add_pipe(pipe)
+                    current_length += pipe.length
+                    total_length_added += pipe.length
+
+            logical_segment.compute_info()
+            self.logical_segments.append(logical_segment)
+
+        pipe_count_check = 0
+        for l in self.logical_segments:
+            pipe_count_check += len(l.pipes)
+        assert pipe_count_check == len(self.pipeline.pipes)
 
     def compute_logical_segment(self, logical_segment_length):
         self.logical_segments.clear()
@@ -153,13 +234,14 @@ class LogicalSegments:
             dead_end = False
             while current_length <= logical_segment_length and not dead_end:
                 dead_end = True
-                for ohter_pipe in pipe.node1.pipes + pipe.node2.pipes:
-                    if ohter_pipe.added_in_logical is False:
-                        pipe = ohter_pipe
+                for other_pipe in pipe.node1.pipes + pipe.node2.pipes:
+                    if other_pipe.added_in_logical is False:
+                        pipe = other_pipe
                         dead_end = False
                         break
-                logical_segment.add_pipe(pipe)
-                current_length += pipe.length
+                if not dead_end:
+                    logical_segment.add_pipe(pipe)
+                    current_length += pipe.length
             logical_segment.compute_info()
             self.logical_segments.append(logical_segment)
 
@@ -177,3 +259,11 @@ class LogicalSegments:
             observation[index] = segment.generate_observation()
         observation = np.reshape(observation, (self.expected_segment_count*info_count))
         return observation
+
+
+    def encode(self, observation):
+        for segment in self.logical_segments:
+            proto_logi_seg = observation.logical_segments.add()
+            segment.encode(proto_logi_seg)
+
+        self.pipeline.encode(observation)
