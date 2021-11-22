@@ -63,11 +63,11 @@ class MCTS:
 
         self._cache_value = None
 
-        # if self._root:
-        #    concentration = torch.zeros_like(self._prior)
-        #    concentration[:, :] = self._alpha
-        #    noise = torch.distributions.Dirichlet(concentration).sample()
-        #    self._prior = (1 - self._epsilon) * self._prior + self._epsilon * noise
+        if self._root:
+            concentration = torch.zeros_like(self._prior)
+            concentration[:, :] = self._alpha
+            noise = torch.distributions.Dirichlet(concentration).sample()
+            self._prior = (1 - self._epsilon) * self._prior + self._epsilon * noise
 
     def build_search_tree(self, count):
         for _ in range(count):
@@ -77,9 +77,12 @@ class MCTS:
         return self._N / torch.sum(self._N)
 
     def q_normalized(self):
-        return torch.clamp(
-            (self._Q - self._valinfo.vmin) / max(self._valinfo.vmax - self._valinfo.vmin, 0.01), 0.0, 1.0
-        )
+        if self._valinfo.vmin < self._valinfo.vmax:
+            q = (self._Q - self._valinfo.vmin) / (self._valinfo.vmax - self._valinfo.vmin)
+        else:
+            q = self._Q
+
+        return torch.clamp(q, 0.0, 1.0)
 
     def improved_targets(self):
         """
@@ -97,11 +100,11 @@ class MCTS:
         N = torch.sum(self._N)
         p = self._prior
 
-        if self._root:
-            concentration = torch.zeros_like(self._prior)
-            concentration[:, :] = self._alpha
-            noise = torch.distributions.Dirichlet(concentration).sample()
-            p = (1 - self._epsilon) * p + self._epsilon * noise
+        # if self._root:
+        #    concentration = torch.zeros_like(self._prior)
+        #    concentration[:, :] = self._alpha
+        #    noise = torch.distributions.Dirichlet(concentration).sample()
+        #    p = (1 - self._epsilon) * p + self._epsilon * noise
 
         if N == 0:
             return p

@@ -230,7 +230,16 @@ class MuZero(torch.nn.Module):
         return action, policy, value
 
     def train_step(
-        self, optimizer, observation, action, reward, next_observation, target_policy, target_value, importance_weight
+        self,
+        optimizer,
+        observation,
+        action,
+        reward,
+        next_observation,
+        target_policy,
+        target_value,
+        importance_weight,
+        max_norm,
     ):
         """ """
         target_label_smoothing_factor = 0.01
@@ -247,6 +256,7 @@ class MuZero(torch.nn.Module):
             next_representation, next_reward_probs, next_reward = self._dynamics(
                 current_representation, action[:, k], return_probs=True
             )
+            next_representation.register_hook(lambda grad: grad * 0.5)
             pred_representation[:, k + 1] = next_representation
             pred_reward[:, k] = next_reward
             if k == 0:
@@ -296,10 +306,7 @@ class MuZero(torch.nn.Module):
             entropy_target = cross_entropy(target_policy, target_policy, importance_weight)
             entropy_pred = cross_entropy(pred_policy, pred_policy, importance_weight)
             priority = (
-                torch.abs(
-                    pred_value.view(batch_size, rollout_length)[:, 0]
-                    - target_value.view(batch_size, rollout_length)[:, 0]
-                )
+                torch.abs(pred_value.view(batch_size, rollout_length) - target_value.view(batch_size, rollout_length))
                 .cpu()
                 .detach()
                 .numpy()
@@ -310,6 +317,7 @@ class MuZero(torch.nn.Module):
         s_weight = 1.0
         total_loss = loss_p + loss_r + loss_v + s_weight * loss_s
         total_loss.backward()
+        torch.nn.utils.clip_grad_norm_(self.parameters(), max_norm=max_norm)
         optimizer.step()
 
         info = dict(

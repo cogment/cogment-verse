@@ -419,7 +419,8 @@ async def single_agent_muzero_run_implementation(agent_adapter, run_session):
                 batch = batch_queue.get()
                 priority, info = agent.learn(batch)
 
-                replay_buffer.update_priorities(batch.episode, batch.step, priority)
+                for k in range(config.training.rollout_length):
+                    replay_buffer.update_priorities(batch.episode, batch.step + k, priority[:, k])
 
                 lr = lr_schedule.update()
                 epsilon = epsilon_schedule.update()

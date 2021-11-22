@@ -192,6 +192,7 @@ message MuZeroTrainingConfig {
   float epsilon_decay_steps = 36;
   float min_temperature = 37;
   uint32 temperature_decay_steps = 38;
+  float max_norm = 39;
 }
 
 message MuZeroTrainingRunConfig {

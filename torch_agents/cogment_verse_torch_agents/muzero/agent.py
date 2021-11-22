@@ -155,6 +155,7 @@ class MuZeroAgent:
             batch.target_policy,
             target_value,
             importance_weight,
+            self._params.max_norm,
         )
 
         for key, val in info.items():

@@ -65,6 +65,7 @@ services:
       dockerfile: cpu.dockerfile
       args:
         BASE_PYTHON_IMAGE: cogment/cogment-verse-python-sdk:${IMAGE_TAG:-local}
+    shm_size: "8gb"
     restart: on-failure
     environment:
       - PYTHONUNBUFFERED=1
