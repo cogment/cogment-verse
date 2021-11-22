@@ -565,25 +565,25 @@ lander_muzero:
       trial_count: 2000
       max_parallel_trials: 4
       discount_rate: 0.999
-      learning_rate: 0.001
       batch_size: 128
-      representation_dim: 16
+      representation_dim: 32
       projector_dim: 8
-      hidden_dim: 64
-      projector_hidden_dim: 32
-      hidden_layers: 2
+      hidden_dim: 256
+      projector_hidden_dim: 128
+      hidden_layers: 4
       projector_hidden_layers: 2
       min_replay_buffer_size: 500
       max_replay_buffer_size: 20000
       exploration_alpha: 0.3
       log_interval: 100
-      weight_decay: 0.01
+      weight_decay: 0.001
+      learning_rate: 0.001
       min_learning_rate: 0.00001
       lr_warmup_steps: 200
       lr_decay_steps: 200000
-      exploration_epsilon: 1.0
+      exploration_epsilon: 0.6
       epsilon_min: 0.1
-      epsilon_decay_steps: 50000
+      epsilon_decay_steps: 20000
       mcts_temperature: 1.0
       min_temperature: 0.25
-      temperature_decay_steps: 100000
+      temperature_decay_steps: 50000
