@@ -256,6 +256,7 @@ class MuZero(torch.nn.Module):
             next_representation, next_reward_probs, next_reward = self._dynamics(
                 current_representation, action[:, k], return_probs=True
             )
+            # todo: check this against other implementations
             next_representation.register_hook(lambda grad: grad * 0.5)
             pred_representation[:, k + 1] = next_representation
             pred_reward[:, k] = next_reward

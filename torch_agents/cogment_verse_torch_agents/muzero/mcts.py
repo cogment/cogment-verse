@@ -77,12 +77,9 @@ class MCTS:
         return self._N / torch.sum(self._N)
 
     def q_normalized(self):
-        if self._valinfo.vmin < self._valinfo.vmax:
-            q = (self._Q - self._valinfo.vmin) / (self._valinfo.vmax - self._valinfo.vmin)
-        else:
-            q = self._Q
-
-        return torch.clamp(q, 0.0, 1.0)
+        return torch.clamp(
+            (self._Q - self._valinfo.vmin) / max(self._valinfo.vmax - self._valinfo.vmin, 0.01), 0.0, 1.0
+        )
 
     def improved_targets(self):
         """
