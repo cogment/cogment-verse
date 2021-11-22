@@ -416,7 +416,11 @@ async def single_agent_muzero_run_implementation(agent_adapter, run_session):
             if replay_buffer.size() > config.training.min_replay_buffer_size:
                 training_step += 1
                 # batch = reanalyze_queue.get()
-                batch = batch_queue.get()
+                try:
+                    batch = batch_queue.get(timeout=1.0)
+                except queue.Empty:
+                    raise
+
                 priority, info = agent.learn(batch)
 
                 for k in range(config.training.rollout_length):
