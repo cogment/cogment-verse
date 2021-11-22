@@ -95,7 +95,7 @@ function App() {
   >(
     cogSettings,
     "web_actor", // actor name
-    "teacher_agent", // actor class
+    "pipe_player", // actor class
     grpcURL
   );
 

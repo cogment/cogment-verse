@@ -144,9 +144,6 @@ class SimpleA2CAgentAdapter(AgentAdapter):
         async def run_impl(run_session):
             xp_tracker = MlflowExperimentTracker(run_session.params_name, run_session.run_id)
 
-            # Initializing a model
-            model_id = f"{run_session.run_id}_model"
-
             config = run_session.config
             assert config.environment.player_count == 1
 

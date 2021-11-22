@@ -546,7 +546,7 @@ pipe_dqn:
   config:
     <<: *default_config
     num_input: 120
-    num_action: 60
+    num_action: 31
     agent_implementation: dqn
     environment_type: pipe_world
     environment_name: PipeWorld
@@ -554,13 +554,20 @@ pipe_dqn:
 pipe_human_dqn: 
   implementation: "human_dqn"
   config:
-    <<: *default_config
-    # class_name: data_pb2.PipeGameRunConfig
-    num_input: 120
-    num_action: 60
-    agent_implementation: dqn
-    environment_type: pipe_world
-    environment_name: PipeWorld
+    class_name: data_pb2.PipeGameRunConfig
+    model_id: serene_einstein_model
+    model_version: 37
+    environment:
+      env_type: pipe_world
+      env_name: PipeWorld
+    actor:
+      num_input: 120
+      num_action: 31
+  
+
+    # agent_implementation: dqn
+    # environment_type: pipe_world
+    # environment_name: PipeWorld
 
 
 pipe_rainbow: 
@@ -568,10 +575,12 @@ pipe_rainbow:
   config:
     <<: *default_config
     num_input: 120
-    num_action: 60
+    num_action: 31
     agent_implementation: rainbowtorch
     environment_type: pipe_world
     environment_name: PipeWorld
-
+    model_kwargs:
+      v_min: -70.0
+      v_max: 100.0
 
     

@@ -144,3 +144,54 @@ message SimpleA2CTrainingRunConfig {
   MLPNetworkConfig actor_network = 4;
   MLPNetworkConfig critic_network = 5;
 }
+
+message PipeGameRunConfig {
+  EnvConfig environment = 1;
+  ActorConfig actor = 2;
+  string model_id = 3;
+  int32 model_version = 4;
+}
+
+message Coordinate {
+  float x = 1;
+  float y = 2;
+}
+
+message PhysicalSegment {
+  Coordinate start = 1;
+  Coordinate end = 2;
+  float water = 3;
+}
+
+message LogicalSegment {
+  float probability_of_failure = 1; 
+  float cost_of_failure = 2; 
+  bool is_failing = 3; 
+  bool is_inspected = 4;
+  repeated PhysicalSegment physical_segments = 5;
+}
+
+
+message CommonObservation {
+  repeated LogicalSegment logical_segments = 1;
+  float budget = 2;
+  float score = 3;
+  repeated Coordinate houses = 4;
+  repeated Coordinate water_towers = 5;
+}
+
+message HumanObservation {
+  CommonObservation observation = 1;
+  CommonAction recommendation = 2;
+}
+
+enum ActionType {
+  NO_ACTION = 0; 
+  INSPECT = 1;
+  MAINTAIN = 2;
+}
+
+message CommonAction {
+  int32 logical_segment_index = 1;
+  ActionType action_type = 2;
+}

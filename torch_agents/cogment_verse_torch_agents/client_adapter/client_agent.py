@@ -46,8 +46,6 @@ log = logging.getLogger(__name__)
 
 
 # pylint: disable=arguments-differ
-
-
 class ClientAgent(AgentAdapter):
     def __init__(self):
         super().__init__()
@@ -126,23 +124,23 @@ class ClientAgent(AgentAdapter):
                         total_reward += reward.value
 
                     if event.observation and event.type == cogment.EventType.ACTIVE:
-                        with COMPUTE_NEXT_ACTION_TIME.labels(impl_name=impl_name).time():
-                            obs = event.observation.snapshot
-                            obs = torch_obs_from_cog_obs(obs)
-                            obs_input = obs["vectorized"]
-                            
-                            legal_moves_input = format_legal_moves(
-                                obs["legal_moves_as_int"], actor_session.config.num_action
-                            )
+                    
+                        obs = event.observation.snapshot
+                        obs = torch_obs_from_cog_obs(obs)
+                        obs_input = obs["vectorized"]
+                        
+                        legal_moves_input = format_legal_moves(
+                            obs["legal_moves_as_int"], actor_session.config.num_action
+                        )
 
-                            if obs["current_player"] != actor_index:
-                                # Use -1 to indicate no action, since not active player
-                                action = -1
-                            else:
-                                action = model.act(obs_input, legal_moves_input)
+                        if obs["current_player"] != actor_index:
+                            # Use -1 to indicate no action, since not active player
+                            action = -1
+                        else:
+                            action = model.act(obs_input, legal_moves_input)
 
-                            cog_action = cog_action_from_torch_action(action)
-                            actor_session.do_action(cog_action)
+                        cog_action = cog_action_from_torch_action(action)
+                        actor_session.do_action(cog_action)
 
             return impl
 
@@ -158,7 +156,9 @@ class ClientAgent(AgentAdapter):
             model_id = f"{run_session.run_id}_model"
 
             config = run_session.config
-            # assert config.environment.player_count == 2
+            model_id = config.model_id
+            model_version = config.model_version
+
             # To investigate 
             trial_count = 1
 
@@ -181,16 +181,7 @@ class ClientAgent(AgentAdapter):
                     trial_configs=[
                         TrialConfig(
                             run_id=run_session.run_id,
-                            environment_config=EnvConfig(
-                                player_count=config.player_count,
-                                run_id=run_session.run_id,
-                                render=False,
-                                render_width=config.render_width,
-                                env_type=config.environment_type,
-                                env_name=config.environment_name,
-                                flatten=config.flatten,
-                                framestack=config.framestack,
-                            ),
+                            environment_config=config.environment,
                             actors=[
                                 TrialActor(
                                     name="agent_1",
@@ -198,27 +189,24 @@ class ClientAgent(AgentAdapter):
                                     implementation="dqn", ## Here to fix that 
                                     config=ActorConfig(
                                         model_id=model_id,
-                                        model_version=-1,
-                                        num_input=config.num_input,
-                                        num_action=config.num_action,
-                                        env_type=config.environment_type,
-                                        env_name=config.environment_name,
+                                        model_version=model_version,
+                                        num_input=config.actor.num_input,
+                                        num_action=config.actor.num_action,
+                                        env_type=config.environment.env_type,
+                                        env_name=config.environment.env_name,
                                     ),
                                     
                                 ),
                                 TrialActor(
-                                    name="human",
-                                    actor_class="agent",
+                                    name="web_actor",
+                                    actor_class="pipe_player",
                                     implementation="client",
                                     config=ActorConfig(
-                                        model_id=model_id,
-                                        model_version=-1,
-                                        num_input=config.num_input,
-                                        num_action=config.num_action,
-                                        env_type=config.environment_type,
-                                        env_name=config.environment_name,
+                                        num_input=config.actor.num_input,
+                                        num_action=config.actor.num_action,
+                                        env_type=config.environment.env_type,
+                                        env_name=config.environment.env_name,
                                     ),
-                                    
                                 )
                             ],
                         )
@@ -258,6 +246,8 @@ class ClientAgent(AgentAdapter):
             "human_dqn": (
                 sample_producer,
                 run_impl,
-                RunConfig(),
+                PipeGameRunConfig(environment=EnvConfig(
+                        seed=12, env_type="pipe_world", env_name="PipeWorld", player_count=2, framestack=1
+                    )),
                 )
         }

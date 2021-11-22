@@ -103,7 +103,7 @@ class Pipe:
         self.area = pi * self.radius * self.radius
         self.capacity_empty = self.length * self.area
         self.added_in_logical = False
-        self.inspected = False
+        self.inspected = True # To change False
 
     def inspect(self):
         self.inspected = True
@@ -168,7 +168,7 @@ class City:
         for _ in range(self.district_side_count * self.district_side_count):
             cost_of_failure = random.randint(self.min_cost, self.max_cost)
             self.cost_of_failures.append(cost_of_failure)
-
+        
     def fill_cost_of_failures(self, pipes):
         for pipe in pipes:
             x1 = pipe.node1.position[0] // self.district_size
@@ -196,11 +196,10 @@ class Pipeline:
         self.houses = []
         self.water_towers = []
 
-    def generate_pipeline(self):
+    def generate_node(self):
         consumer_count = 20
         provider_count = 5
         no_consumer_count = 200
-        pipe_count = 400
 
         node_id = 0
         for _ in range(no_consumer_count):
@@ -226,6 +225,12 @@ class Pipeline:
             self.nodes.append(node)
             water_tower = Coordinate(x=node.position[0], y=node.position[1])
             self.water_towers.append(water_tower)
+
+    def generate_pipeline(self):
+        
+        self.generate_node()
+
+        pipe_count = 400
 
         node_count = len(self.nodes)
         # Use some heuristic here

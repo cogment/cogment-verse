@@ -28,13 +28,14 @@ class PipeWorld(BaseEnv):
         self.budget = self.starting_budget
         self.tick_id = 0
         self.seed_number = 0
+        self.total_reward = 0.0
         spec = self.create_env_spec(env_name, **kwargs)
         super().__init__(
             env_spec=spec, num_players=1, framestack=1
         )
 
     def create_env_spec(self, env_name, **_kwargs):
-        act_dim = 2*self.expected_segment_count+1
+        act_dim = self.expected_segment_count+1
         obs_dim = 4*self.expected_segment_count
         return EnvSpec(
             env_name=env_name,
@@ -55,6 +56,7 @@ class PipeWorld(BaseEnv):
     def reset(self):
         self.logical_segments = LogicalSegments(self.expected_segment_count)
         self.score = 100000.0
+        self.total_reward = 0.0
         self.budget = self.starting_budget
         self.tick_id = 0
         self.scale_segments(0.0)
@@ -73,12 +75,21 @@ class PipeWorld(BaseEnv):
         self.tick_id += 1
         if self.tick_id % 20 == 0:
             self.budget += self.starting_budget
+
+        if action[0] < len(self.logical_segments.logical_segments):
+            self.maintain(action[0])
+
         cost = self.logical_segments.step()
         self.score -= cost
 
         reward = 1.0 - cost / 1000.0
+        self.total_reward += reward
          
         done = self.score < 0.0
+
+        if done:
+            print("End after tick_id count : ", self.tick_id, " reward: ", self.total_reward)
+            self.score = 0.0
 
         return GymObservation(
             observation=self.generate_observation(),

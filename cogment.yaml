@@ -72,3 +72,9 @@ actor_classes:
     observation:
       space: cogment_verse.Observation
     config_type: cogment_verse.ActorConfig
+
+  - name: pipe_player
+    action:
+      space: cogment_verse.AgentAction
+    observation:
+      space: cogment_verse.HumanObservation
