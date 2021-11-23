@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 from google.protobuf.json_format import MessageToDict
 
 from data_pb2 import (
