@@ -2,7 +2,7 @@
 
 ## About
 
-REINFORCE is an on-policy Monte Carlo variant of a [policy gradient algorithm](https://proceedings.neurips.cc/paper/1999/file/464d828b85b0bed98e80ade0a5c43b0f-Paper.pdf). The agent uses its current policy to collect samples over an episode and then consumes the entire trajectory to update its paramters using the [policy gradient theorem](https://lilianweng.github.io/lil-log/2018/04/08/policy-gradient-algorithms.html#policy-gradient-theorem)
+REINFORCE is an on-policy Monte Carlo variant of a [policy gradient algorithm](https://proceedings.neurips.cc/paper/1999/file/464d828b85b0bed98e80ade0a5c43b0f-Paper.pdf). The agent uses its current policy to collect samples over an episode and then consumes the entire trajectory to update its paramters using the [policy gradient theorem](https://lilianweng.github.io/lil-log/2018/04/08/policy-gradient-algorithms.html#policy-gradient-theorem).
 
 ## Implementations
 
