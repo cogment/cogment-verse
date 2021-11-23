@@ -17,6 +17,7 @@ Cogment verse includes environments from:
 - [Getting started](#getting-started)
 - Experimental results 🚧
   - [A2C](/docs/results/a2c.md)
+  - [REINFORCE](/docs/results/REINFORCE.md)
 - Develop 🚧
   - [Development Setup](/docs/development_setup.md)
   - [Debug](#debug)
@@ -44,7 +45,7 @@ cogment run sync && cogment run build
 
 #### Troubleshooting
 
-This project is using rather large libraries such as tensorflow and pytorch, because of that the build might fail if docker doesn't have access to sufficient memory. 
+This project is using rather large libraries such as tensorflow and pytorch, because of that the build might fail if docker doesn't have access to sufficient memory.
 
 ### Run
 
