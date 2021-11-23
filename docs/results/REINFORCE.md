@@ -29,7 +29,7 @@ cartpole_REINFORCE:
     max_parallel_trials: 1
 ```
 
-This is a plot of the total trial reward against the number of trials with a moving average over 50 trials.
+This is a plot of the total trial reward against the number of trials with an exponential moving average over 50 trials.
 
 ![Training total reward for the Reinforce implementation](./REINFORCE.png)
 
