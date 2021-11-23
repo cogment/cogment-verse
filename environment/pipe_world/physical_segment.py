@@ -18,10 +18,8 @@ import random
 
 from math import pi
 
-class Coordinate:
-    def __init__(self, x, y):
-        self.x = x
-        self.y = y
+from data_pb2 import Coordinate
+
 
 class Node:
     def __init__(self, node_id):

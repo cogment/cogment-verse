@@ -17,6 +17,8 @@ from cogment_verse_environment.env_spec import EnvSpec
 
 from pipe_world.logical_segment import LogicalSegments
 import numpy as np
+from data_pb2 import CommonObservation, HumanObservation
+
 
 
 class PipeWorld(BaseEnv):
@@ -62,7 +64,7 @@ class PipeWorld(BaseEnv):
         self.scale_segments(0.0)
 
         return GymObservation(
-            observation=self.generate_observation(),
+            observation=(self.generate_observation(), self.encode()),
             rewards=[0.0],
             current_player=self._turn,
             legal_moves_as_int=[],
@@ -92,7 +94,7 @@ class PipeWorld(BaseEnv):
             self.score = 0.0
 
         return GymObservation(
-            observation=self.generate_observation(),
+            observation=(self.generate_observation(), self.encode()),
             rewards=[reward],
             current_player=self._turn,
             legal_moves_as_int=[],
@@ -129,10 +131,10 @@ class PipeWorld(BaseEnv):
         return self.logical_segments.generate_observation()
 
     def encode(self):
-        observation = Observation()
-        observation.budget = self.budget
-        observation.score = self.score
-        self.logical_segments.encode(observation)
+        observation = HumanObservation()
+        observation.observation.budget = self.budget
+        observation.observation.score = self.score
+        self.logical_segments.encode(observation.observation)
         return observation
 
     def act(self, action):

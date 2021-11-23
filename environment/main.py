@@ -135,7 +135,14 @@ async def environment(environment_session):
         steerable = True
         teacher_idx = len(actors) - 1
         print(teacher_idx, " -> ", actors[teacher_idx].actor_class_name)
-        assert actors[teacher_idx].actor_class_name == "teacher_agent" or actors[teacher_idx].actor_class_name == "agent"
+        assert actors[teacher_idx].actor_class_name == "teacher_agent" or actors[teacher_idx].actor_class_name == "pipe_player"
+
+
+    has_pipe_player = False
+    if actors[1].actor_class_name == "pipe_player":
+        print("A PLAYER IS ENGAGED")
+        has_pipe_player = True
+    
 
     env_spec = env.env_spec
     assert len(env_spec.act_dim) == 1, "only a single action space is currently supported"
@@ -153,8 +160,16 @@ async def environment(environment_session):
 
     assert len(pixels.tobytes()) == np.prod(pixels.shape)
 
-    cog_obs = cog_obs_from_gym_obs(gym_obs.observation, pixels, gym_obs.current_player, gym_obs.legal_moves_as_int)
-    environment_session.start([("*", cog_obs)])
+
+    if has_pipe_player:
+        cog_obs = cog_obs_from_gym_obs(gym_obs.observation[0], pixels, gym_obs.current_player, gym_obs.legal_moves_as_int)
+        environment_session.start([(actors[0].actor_name, cog_obs), (actors[1].actor_name, gym_obs.observation[1])])
+    else:
+        cog_obs = cog_obs_from_gym_obs(gym_obs.observation, pixels, gym_obs.current_player, gym_obs.legal_moves_as_int)
+        environment_session.start([("*", cog_obs)])
+
+
+
     async for event in environment_session.event_loop():
         if event.actions:
             player_override = -1
@@ -193,7 +208,14 @@ async def environment(environment_session):
                 gym_obs.legal_moves_as_int,
                 player_override=player_override,
             )
-            observations = [("*", cog_obs)]
+
+            if has_pipe_player:
+                cog_obs = cog_obs_from_gym_obs(gym_obs.observation[0], pixels, gym_obs.current_player, gym_obs.legal_moves_as_int)
+                observations = [(actors[0].actor_name, cog_obs), (actors[1].actor_name, gym_obs.observation[1])]
+            else:
+                cog_obs = cog_obs_from_gym_obs(gym_obs.observation, pixels, gym_obs.current_player, gym_obs.legal_moves_as_int)
+                observations = [("*", cog_obs)]
+            
 
             if environment_session.get_tick_id() >= 1e1000 or gym_obs.done:
                 log.debug(

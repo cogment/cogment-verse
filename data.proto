@@ -161,6 +161,7 @@ message PhysicalSegment {
   Coordinate start = 1;
   Coordinate end = 2;
   float water = 3;
+  float water_flow = 4;
 }
 
 message LogicalSegment {
@@ -170,7 +171,6 @@ message LogicalSegment {
   bool is_inspected = 4;
   repeated PhysicalSegment physical_segments = 5;
 }
-
 
 message CommonObservation {
   repeated LogicalSegment logical_segments = 1;
@@ -195,3 +195,4 @@ message CommonAction {
   int32 logical_segment_index = 1;
   ActionType action_type = 2;
 }
+
