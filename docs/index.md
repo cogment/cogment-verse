@@ -1,16 +1,12 @@
 # Cogment Verse Documentation
 
-## General
-
-- [Project's readme](../README.md)
-- [Changelog](../CHANGELOG.md)
-- [Contributors guide](../CONTRIBUTING.md)
-- [Community code of conduct](../CODE_OF_CONDUCT.md)
-
-## Experimental results
-
-- [A2C](./results/a2c.md)
-
-## Developers
-
-- [Development Setup](./development_setup.md)
+- [Getting started](/README.md#getting-started)
+- Experimental results 🚧
+  - [A2C](/docs/results/a2c.md)
+- Develop 🚧
+  - [Development Setup](/docs/development_setup.md)
+  - [Debug](/README.md#debug)
+- [Changelog](/CHANGELOG.md)
+- [Contributors guide](/CONTRIBUTING.md)
+- [Community code of conduct](/CODE_OF_CONDUCT.md)
+- [Acknowledgments](/README.md#acknowledgements)

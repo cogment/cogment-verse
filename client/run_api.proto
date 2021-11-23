@@ -14,7 +14,7 @@
 
 syntax = "proto3";
 
-package cogment.run;
+package cogment_verse.run;
 
 import "google/protobuf/timestamp.proto";
 

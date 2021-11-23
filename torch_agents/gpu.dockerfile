@@ -25,7 +25,7 @@ RUN poetry install --no-root
 
 # Build the package
 COPY . ./
-RUN poetry run task generate_protos
+RUN poetry run task build
 
 ENTRYPOINT [ "poetry", "run" ]
 CMD [ "task", "start" ]

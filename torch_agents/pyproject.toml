@@ -16,7 +16,7 @@ python-dotenv = "^0.19.1"
 
 [tool.poetry.extras]
 with_torch = ["torch"]
-test = ["cogment-verse-environment"]
+test = ["cogment-verse-environment", "torch"]
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2.5"
@@ -25,8 +25,8 @@ coverage = "^6.0.2"
 taskipy = "^1.9.0"
 
 [tool.taskipy.tasks]
-generate_protos = "./scripts/generate_protos.sh"
-build = "task generate_protos"
+generate = "python -m cogment.generate"
+build = "task generate"
 unit_tests = "python -m pytest --cov=. --cov-report term-missing tests"
 coverage = "coverage html -i"
 test="task unit_tests && task coverage"
