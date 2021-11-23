@@ -21,8 +21,8 @@ taskipy = "^1.9.0"
 with_tf = ["tensorflow", "torch"]
 
 [tool.taskipy.tasks]
-generate_protos = "./scripts/generate_protos.sh"
-build = "task generate_protos"
+generate = "python -m cogment.generate"
+build = "task generate"
 start="python -m main"
 
 [tool.black]
