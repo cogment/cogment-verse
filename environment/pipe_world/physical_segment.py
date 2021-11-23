@@ -15,10 +15,9 @@
 import numpy as np
 import random
 
+from data_pb2 import Coordinate
 
 from math import pi
-
-from data_pb2 import Coordinate
 
 
 class Node:
@@ -53,11 +52,11 @@ class Node:
             left_water = 0.0
             water_by_pipe = self.flow / pipe_count
             for pipe in self.pipes:
-                left_water = pipe.add_water(water_by_pipe + left_water)
+                left_water = pipe.add_water(self, water_by_pipe + left_water)
 
             if left_water != 0.0:
                 for pipe in self.pipes:
-                    left_water = pipe.add_water(left_water)
+                    left_water = pipe.add_water(self, left_water)
 
     def step_balance_water(self):
         pipe_count = len(self.pipes)
@@ -74,7 +73,7 @@ class Node:
             check_sum = 0.0
             for pipe in self.pipes:
                 water = water_level * pipe.capacity_empty
-                pipe.set_water(water)
+                pipe.set_water(self, water)
                 check_sum += water
 
             if abs(check_sum - total_water) > 1.0:
@@ -89,6 +88,8 @@ class Pipe:
         self.node1.add_pipe(self)
         self.node2.add_pipe(self)
         self.water = 0.0
+        self.water_added_by_node1 = 0.0
+        self.water_added_by_node2 = 0.0
         self.pressure = 0.0
         self.condition = 9.0 + random.random()
         self.prob_of_failure = 0.0
@@ -101,7 +102,12 @@ class Pipe:
         self.area = pi * self.radius * self.radius
         self.capacity_empty = self.length * self.area
         self.added_in_logical = False
-        self.inspected = True # To change False
+        self.inspected = False
+
+
+    def clear_water_flow(self):
+        self.water_added_by_node1 = 0.0
+        self.water_added_by_node2 = 0.0
 
     def inspect(self):
         self.inspected = True
@@ -112,7 +118,12 @@ class Pipe:
         else:
             return self.cost_of_failure + self.estimate_error * self.cost_of_failure
 
-    def add_water(self, water):
+    def add_water(self, node, water):
+        if node == self.node1:
+            self.water_added_by_node1 += water
+        elif node == self.node2:
+            self.water_added_by_node2 += water
+
         if self.is_failing:
             self.water = 0.0
             return 0.0
@@ -125,11 +136,17 @@ class Pipe:
             self.water = self.capacity_empty
         return left_water
 
-    def set_water(self, water):
+    def set_water(self, node, water):
+        previous_water = self.water 
         if self.is_failing:
             self.water = 0.0
         else:
             self.water = min(water, self.capacity_empty)
+
+            if node == self.node1:
+                self.water_added_by_node1 += (self.water - previous_water)
+            elif node == self.node2:
+                self.water_added_by_node2 += (self.water - previous_water)
 
     def step(self):
         self.pressure = self.water / self.capacity_empty
@@ -149,7 +166,8 @@ class Pipe:
         proto.start.y = self.node1.position[1]
         proto.end.x = self.node2.position[0]
         proto.end.y = self.node2.position[1]
-        proto.water = self.water
+        proto.water = self.water / self.capacity_empty
+        proto.water_flow = (self.water_added_by_node2 - self.water_added_by_node1) / self.capacity_empty
 
 
 class City:
@@ -166,7 +184,7 @@ class City:
         for _ in range(self.district_side_count * self.district_side_count):
             cost_of_failure = random.randint(self.min_cost, self.max_cost)
             self.cost_of_failures.append(cost_of_failure)
-        
+
     def fill_cost_of_failures(self, pipes):
         for pipe in pipes:
             x1 = pipe.node1.position[0] // self.district_size
@@ -307,6 +325,9 @@ class Pipeline:
             pipe.added_in_logical = False
 
     def step(self):
+        for pipe in self.pipes:
+            pipe.clear_water_flow()
+
         for node in self.nodes:
             node.step_water_flow()
 
