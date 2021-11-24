@@ -3,6 +3,7 @@
 - [Getting started](/README.md#getting-started)
 - Experimental results 🚧
   - [A2C](/docs/results/a2c.md)
+  - [REINFORCE](/docs/results/REINFORCE.md)
 - Develop 🚧
   - [Development Setup](/docs/development_setup.md)
   - [Debug](/README.md#debug)
