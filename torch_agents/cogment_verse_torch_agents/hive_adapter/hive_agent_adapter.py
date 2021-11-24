@@ -19,6 +19,7 @@ from cogment_verse import AgentAdapter
 from cogment_verse_torch_agents.atari_cnn import NatureAtariDQNModel
 from cogment_verse_torch_agents.third_party.hive.ddpg import DDPGAgent
 from cogment_verse_torch_agents.third_party.hive.dqn import DQNAgent
+from cogment_verse_torch_agents.third_party.hive.d3qn import D3QNAgent
 from cogment_verse_torch_agents.third_party.hive.rainbow import RainbowDQNAgent
 from cogment_verse_torch_agents.third_party.td3.td3 import TD3Agent
 from cogment_verse_torch_agents.wrapper import format_legal_moves, cog_action_from_torch_action, torch_obs_from_cog_obs
@@ -48,6 +49,7 @@ class HiveAgentAdapter(AgentAdapter):
             "ddpg": DDPGAgent,
             "rainbowtorch": RainbowDQNAgent,
             "dqn": DQNAgent,
+            "d3qn": D3QNAgent,
             "atari_cnn": NatureAtariDQNModel,
         }
 

@@ -31,6 +31,7 @@ class PipeWorld(BaseEnv):
         self.tick_id = 0
         self.seed_number = 0
         self.total_reward = 0.0
+        print("******************************>>>>>>>>>>>>>>>>>>>>>>>> ", num_players)
         spec = self.create_env_spec(env_name, **kwargs)
         super().__init__(
             env_spec=spec, num_players=1, framestack=1
@@ -63,8 +64,13 @@ class PipeWorld(BaseEnv):
         self.tick_id = 0
         self.scale_segments(0.0)
 
+        if self._num_players == 1:
+            observation = self.generate_observation()
+        else:
+            observation = (self.generate_observation(), self.encode())
+
         return GymObservation(
-            observation=(self.generate_observation(), self.encode()),
+            observation=observation,
             rewards=[0.0],
             current_player=self._turn,
             legal_moves_as_int=[],
@@ -93,8 +99,13 @@ class PipeWorld(BaseEnv):
             print("End after tick_id count : ", self.tick_id, " reward: ", self.total_reward)
             self.score = 0.0
 
+        if self._num_players == 1:
+            observation = self.generate_observation()
+        else:
+            observation = (self.generate_observation(), self.encode())
+
         return GymObservation(
-            observation=(self.generate_observation(), self.encode()),
+            observation=observation,
             rewards=[reward],
             current_player=self._turn,
             legal_moves_as_int=[],

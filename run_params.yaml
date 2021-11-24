@@ -41,6 +41,18 @@ cartpole_dqn:
     environment_type: gym
     environment_name: CartPole-v0
 
+cartpole_d3qn:
+  <<: *default_params
+  config:
+    <<: *default_config
+    num_input: 4
+    num_action: 2
+    agent_implementation: d3qn
+    environment_type: gym
+    environment_name: CartPole-v0
+
+
+
 cartpole_REINFORCE:
   implementation: "reinforce_training"
   config:
@@ -541,13 +553,13 @@ simple_a2c_cartpole: &default_simple_a2c_params
       hidden_size: 64
 
 
-pipe_dqn: 
+pipe_d3qn:
   <<: *default_params
   config:
     <<: *default_config
     num_input: 120
     num_action: 31
-    agent_implementation: dqn
+    agent_implementation: d3qn
     environment_type: pipe_world
     environment_name: PipeWorld
 

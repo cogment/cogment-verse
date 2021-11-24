@@ -25,6 +25,7 @@ from data_pb2 import (
 from cogment_verse_torch_agents.atari_cnn import NatureAtariDQNModel
 from cogment_verse_torch_agents.third_party.hive.ddpg import DDPGAgent
 from cogment_verse_torch_agents.third_party.hive.dqn import DQNAgent
+from cogment_verse_torch_agents.third_party.hive.d3qn import D3QNAgent
 from cogment_verse_torch_agents.third_party.hive.rainbow import RainbowDQNAgent
 from cogment_verse_torch_agents.third_party.td3.td3 import TD3Agent
 from cogment_verse_torch_agents.wrapper import format_legal_moves, cog_action_from_torch_action, torch_obs_from_cog_obs
@@ -54,6 +55,7 @@ class ClientAgent(AgentAdapter):
             "ddpg": DDPGAgent,
             "rainbowtorch": RainbowDQNAgent,
             "dqn": DQNAgent,
+            "d3qn": D3QNAgent,
             "atari_cnn": NatureAtariDQNModel,
         }
 
@@ -145,7 +147,8 @@ class ClientAgent(AgentAdapter):
             return impl
 
         print({impl_name: (create_actor_impl(impl_name), ["agent"]) for impl_name in self._agent_classes})
-        return {impl_name: (create_actor_impl(impl_name), ["agent"]) for impl_name in self._agent_classes}
+        # return {impl_name: (create_actor_impl(impl_name), ["agent"]) for impl_name in self._agent_classes}
+        return {}
 
     def _create_run_implementations(self):
         

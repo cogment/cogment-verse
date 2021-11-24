@@ -56,8 +56,8 @@ async def main():
         },
     )
 
-    # hive_adapter = HiveAgentAdapter()
-    # hive_adapter.register_implementations(context)
+    hive_adapter = HiveAgentAdapter()
+    hive_adapter.register_implementations(context)
 
     simple_a2c_adapter = SimpleA2CAgentAdapter()
     simple_a2c_adapter.register_implementations(context)

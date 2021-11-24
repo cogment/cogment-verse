@@ -139,7 +139,7 @@ async def environment(environment_session):
 
 
     has_pipe_player = False
-    if actors[1].actor_class_name == "pipe_player":
+    if len(actors) > 1 and actors[1].actor_class_name == "pipe_player":
         print("A PLAYER IS ENGAGED")
         has_pipe_player = True
     
@@ -164,11 +164,12 @@ async def environment(environment_session):
     if has_pipe_player:
         cog_obs = cog_obs_from_gym_obs(gym_obs.observation[0], pixels, gym_obs.current_player, gym_obs.legal_moves_as_int)
         environment_session.start([(actors[0].actor_name, cog_obs), (actors[1].actor_name, gym_obs.observation[1])])
+        print("First Observation sent ")
     else:
         cog_obs = cog_obs_from_gym_obs(gym_obs.observation, pixels, gym_obs.current_player, gym_obs.legal_moves_as_int)
         environment_session.start([("*", cog_obs)])
 
-
+    
 
     async for event in environment_session.event_loop():
         if event.actions:
