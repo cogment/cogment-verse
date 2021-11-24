@@ -24,9 +24,10 @@ cartpole_REINFORCE:
   config:
     <<: *default_config
     agent_implementation: reinforce
-    aggregate_by_actor: True
     min_replay_buffer_size: 100000
     max_parallel_trials: 1
+    learning_rate: 3.0e-4
+    discount_factor: 0.99
 ```
 
 This is a plot of the total trial reward against the number of trials with an exponential moving average over 50 trials.
