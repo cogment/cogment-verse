@@ -557,6 +557,9 @@ pipe_d3qn:
   <<: *default_params
   config:
     <<: *default_config
+    epsilon_steps: 700000
+    learning_rate: 1.0e-4
+    total_trial_count: 100000
     num_input: 120
     num_action: 31
     agent_implementation: d3qn
