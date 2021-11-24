@@ -20,7 +20,7 @@ import numpy as np
 
 log = logging.getLogger(__name__)
 
-from .networks import MuZero, reward_transform, reward_tansform_inverse, Distributional, DynamicsAdapter, resnet, mlp
+from .networks import MuZero, reward_transform, reward_transform_inverse, Distributional, DynamicsAdapter, resnet, mlp
 from .replay_buffer import EpisodeBatch
 
 # pylint: disable=arguments-differ
@@ -45,7 +45,7 @@ class MuZeroAgent:
             self._params.hidden_dim,
             self._params.vbins,
             reward_transform,
-            reward_tansform_inverse,
+            reward_transform_inverse,
         )
 
         reward_distribution = Distributional(
@@ -54,7 +54,7 @@ class MuZeroAgent:
             self._params.hidden_dim,
             self._params.rbins,
             reward_transform,
-            reward_tansform_inverse,
+            reward_transform_inverse,
         )
 
         representation = resnet(
@@ -156,6 +156,9 @@ class MuZeroAgent:
             target_value,
             importance_weight,
             self._params.max_norm,
+            self._params.target_label_smoothing_factor,
+            self._params.s_weight,
+            self._params.p_weight,
         )
 
         for key, val in info.items():

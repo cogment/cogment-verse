@@ -3,7 +3,8 @@ FROM ${BASE_PYTHON_IMAGE} as base
 FROM nvcr.io/nvidia/pytorch:21.08-py3
 
 # Install the rest of the dependencies
-RUN apt-get update && apt-get install -y python3-opengl xvfb git tk swig wget unrar libglib2.0-0
+# RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y tzdata
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y python3-opengl xvfb git tk swig wget unrar libglib2.0-0
 RUN apt-get install -y g++ cmake
 
 # Install poetry
@@ -20,7 +21,7 @@ WORKDIR /torch_agents
 COPY pyproject.toml ./
 # '/environment' is the location of an optional dependency we don't install here,
 # still poetry is checking for its existance so let's fake it
-COPY null_environment_setup.py /environment/setup.py
+COPY mock_environment/setup.py /environment/setup.py
 RUN poetry install --no-root
 
 # Build the package

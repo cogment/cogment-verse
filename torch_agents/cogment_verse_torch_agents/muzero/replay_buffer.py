@@ -52,9 +52,8 @@ def pad_slice(lst, a, b, padval, dtype=torch.float32):
 
 
 class Episode:
-    def __init__(self, initial_state, discount, id=0, min_priority=1e-3):
+    def __init__(self, initial_state, discount, id=0, min_priority=0.1):
         self._discount = discount
-
         self._id = 0
         self._states = [initial_state]
         self._actions = []
@@ -105,7 +104,7 @@ class Episode:
             self._return[-1] = reward
             for i in reversed(range(N - 1)):
                 self._return[i] = self._rewards[i] + self._discount * self._return[i + 1]
-                self._priority[i] = min(self._min_priority, abs(self._return[i] - self._value[i]))
+                self._priority[i] = self._min_priority + abs(self._return[i] - self._value[i])
             self._p = np.array(self._priority, dtype=np.double)
             self._p = self._p / self._p.sum()
             self._p = self._p.tolist()

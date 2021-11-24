@@ -193,6 +193,10 @@ message MuZeroTrainingConfig {
   float min_temperature = 37;
   uint32 temperature_decay_steps = 38;
   float max_norm = 39;
+  float target_label_smoothing_factor = 40;
+  uint32 target_label_smoothing_factor_steps = 41;
+  float s_weight = 42;
+  float p_weight = 43;
 }
 
 message MuZeroTrainingRunConfig {

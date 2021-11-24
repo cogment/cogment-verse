@@ -145,6 +145,10 @@ DEFAULT_MUZERO_TRAINING_CONFIG = MuZeroTrainingConfig(
     epsilon_decay_steps=100000,
     min_temperature=0.25,
     temperature_decay_steps=100000,
+    target_label_smoothing_factor=0.01,
+    target_label_smoothing_factor_steps=1,
+    s_weight=1e-2,
+    p_weight=0.1,
 )
 
 
@@ -165,6 +169,7 @@ class MuZeroAgentAdapter(AgentAdapter):
         super().__init__()
         self._device = "cuda" if torch.cuda.is_available() else "cpu"
         self._dtype = torch.float
+        mp.set_start_method("spawn")
 
     def _create(self, model_id, *, obs_dim, act_dim, device, training_config):
         return MuZeroAgent(obs_dim=obs_dim, act_dim=act_dim, device=device, training_config=training_config)
@@ -301,7 +306,7 @@ async def single_agent_muzero_run_implementation(agent_adapter, run_session):
     batch_queue = mp.Queue(max_prefetch_batch)  # todo: fix this?
     reanalyze_queue = mp.Queue(max_reanalyze_batch)
 
-    num_reanalyze_workers = 8
+    num_reanalyze_workers = 0
 
     replay_buffer = ReplayBufferWorker(sample_queue, update_queue, batch_queue, config.training)
     reanalyze_workers = [
@@ -336,6 +341,10 @@ async def single_agent_muzero_run_implementation(agent_adapter, run_session):
         config.training.min_temperature,
         config.training.temperature_decay_steps,
         0,
+    )
+
+    target_label_smoothing_schedule = LinearScheduleWithWarmup(
+        1.0, config.training.target_label_smoothing_factor, config.training.target_label_smoothing_factor_steps, 0
     )
 
     xp_tracker.log_params(
@@ -417,6 +426,8 @@ async def single_agent_muzero_run_implementation(agent_adapter, run_session):
                 training_step += 1
                 # batch = reanalyze_queue.get()
                 batch = batch_queue.get()
+                for item in batch:
+                    item.to(agent_adapter._device)
 
                 priority, info = agent.learn(batch)
 
@@ -426,10 +437,12 @@ async def single_agent_muzero_run_implementation(agent_adapter, run_session):
                 lr = lr_schedule.update()
                 epsilon = epsilon_schedule.update()
                 temperature = temperature_schedule.update()
+                target_label_smoothing_factor = target_label_smoothing_schedule.update()
 
                 agent._params.learning_rate = lr
                 agent._params.exploration_epsilon = epsilon
                 agent._params.mcts_temperature = temperature
+                agent._params.target_label_smoothing_factor = target_label_smoothing_factor
 
                 if training_step % config.training.model_publication_interval == 0:
                     version_info = await agent_adapter.publish_version(model_id, agent)
@@ -440,6 +453,7 @@ async def single_agent_muzero_run_implementation(agent_adapter, run_session):
                 info["temperature"] = temperature
                 info["model_version"] = version_info["version_number"]
                 info["training_step"] = training_step
+                info["target_label_smoothing_factor"] = target_label_smoothing_factor
                 running_stats.update(info)
 
                 if total_samples % config.training.log_interval == 0:
@@ -466,6 +480,7 @@ class ReplayBufferWorker(mp.Process):
         self._batch_queue = batch_queue
         self._replay_buffer_size = mp.Value(ctypes.c_uint32, 0)
         self._training_config = config
+        self._device = "cuda" if torch.cuda.is_available() else "cpu"
 
     def run(self):
         replay_buffer = TrialReplayBuffer(
@@ -477,7 +492,7 @@ class ReplayBufferWorker(mp.Process):
         while True:
             while not self._update_queue.empty():
                 try:
-                    episodes, steps, priorities = self._update_queue.get(timeout=0.01)
+                    episodes, steps, priorities = self._update_queue.get_nowait()
                     replay_buffer.update_priorities(episodes, steps, priorities)
                 except queue.Empty:
                     pass
@@ -488,7 +503,9 @@ class ReplayBufferWorker(mp.Process):
 
             if replay_buffer.size() >= self._training_config.min_replay_buffer_size:
                 batch = replay_buffer.sample(self._training_config.rollout_length, self._training_config.batch_size)
-                self._batch_queue.put(batch)
+                for item in batch:
+                    item.share_memory_()
+                self._batch_queue.put(EpisodeBatch(*batch))
 
     def add_sample(self, state, action, reward, next_state, done, policy, value):
         self._sample_queue.put((state, action, reward, next_state, done, policy, value))

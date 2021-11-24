@@ -23,7 +23,7 @@ class TrialDatastoreClient:
         channel = grpc.aio.insecure_channel(endpoint)
         self._stub = TrialDatastoreSPStub(channel)
 
-    async def retrieve_trials(self, trial_ids, timeout=5000):
+    async def retrieve_trials(self, trial_ids, timeout=30000):
         req = RetrieveTrialsRequest(trial_ids=trial_ids, timeout=timeout)
 
         rep = await self._stub.RetrieveTrials(req)
