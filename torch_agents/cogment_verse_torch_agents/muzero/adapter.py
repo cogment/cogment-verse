@@ -249,6 +249,41 @@ async def single_agent_muzero_actor_implementation(agent_adapter, actor_session)
             )
 
 
+def make_trial_configs(config):
+    demonstration_trial_configs = []
+    teacher_actor_config = TrialActor(
+        name="web_actor",
+        actor_class="teacher_agent",
+        implementation="client",
+        config=ActorConfig(
+            run_id=run_id,
+            env_type=config.environment_type,
+            env_name=config.environment_name,
+            num_input=config.num_input,
+            num_action=config.num_action,
+        ),
+    )
+    demonstration_trial_configs = [
+        TrialConfig(
+            run_id=run_id,
+            environment_config=EnvConfig(
+                player_count=config.player_count,
+                run_id=run_id,
+                render=True,
+                render_width=config.render_width,
+                env_type=config.environment_type,
+                env_name=config.environment_name,
+                flatten=config.flatten,
+                framestack=config.framestack,
+            ),
+            actors=[*player_actor_configs, teacher_actor_config],
+            distinguished_actor=distinguished_actor,
+        )
+        for _ in range(config.demonstration_count)
+    ]
+    return demonstration_trial_configs
+
+
 async def single_agent_muzero_sample_producer_implementation(agent_adapter, run_sample_producer_session):
     assert run_sample_producer_session.count_actors() == 1
     state = None

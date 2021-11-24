@@ -117,7 +117,15 @@ class MuZeroAgent:
         self._muzero.eval()
         obs = observation.float().to(self._device)
         action, policy, value = self._muzero.act(
-            obs, self._params.exploration_epsilon, self._params.exploration_alpha, self._params.mcts_temperature
+            obs,
+            self._params.exploration_epsilon,
+            self._params.exploration_alpha,
+            self._params.mcts_temperature,
+            self._params.discount_rate,
+            self._params.mcts_depth,
+            self._params.mcts_samples,
+            self._params.ucb_c1,
+            self._params.ucb_c2,
         )
         policy = policy.cpu().numpy()
         value = value.cpu().numpy().item()
@@ -159,6 +167,7 @@ class MuZeroAgent:
             self._params.target_label_smoothing_factor,
             self._params.s_weight,
             self._params.p_weight,
+            self._params.discount_rate,
         )
 
         for key, val in info.items():

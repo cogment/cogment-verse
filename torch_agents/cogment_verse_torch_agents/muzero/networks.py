@@ -234,8 +234,10 @@ class MuZero(torch.nn.Module):
         self._value_distribution = value_distribution
 
     @torch.no_grad()
-    def act(self, observation, epsilon, alpha, temperature):
-        policy, value = self.reanalyze(observation, epsilon, alpha)
+    def act(self, observation, epsilon, alpha, temperature, discount_rate, mcts_depth, mcts_count, ucb_c1, ucb_c2):
+        policy, value = self.reanalyze(
+            observation, epsilon, alpha, discount_rate, mcts_depth, mcts_count, ucb_c1, ucb_c2
+        )
         policy = torch.pow(policy, 1 / temperature)
         policy /= torch.sum(policy, dim=1)
         action = torch.distributions.Categorical(policy).sample()
@@ -256,6 +258,7 @@ class MuZero(torch.nn.Module):
         target_label_smoothing_factor,
         s_weight,
         p_weight,
+        discount_factor,
     ):
         """ """
         batch_size, rollout_length = observation.shape[:2]
@@ -307,13 +310,18 @@ class MuZero(torch.nn.Module):
             ) * target_policy + target_label_smoothing_factor / num_action
             target_policy /= torch.sum(target_policy, dim=1, keepdim=True)
 
+            target_next_state = self._representation(next_observations)
+            target_projection = self._projector(target_next_state)
+
             reward = reward.view(*pred_reward.shape)
             target_value = target_value.view(*pred_value.shape)
 
+            # debugging, test with TD estimate
+            target_value = reward + discount_factor * self._value(target_next_state)[1]
+
             target_value_probs = self._value_distribution.compute_target(target_value).to(device)
             target_reward_probs = self._reward_distribution.compute_target(reward).to(device)
-            target_next_state = self._representation(next_observations)
-            target_projection = self._projector(target_next_state)
+
             target_value_clamped = self._value_distribution.compute_value(target_value_probs)
             target_reward_clamped = self._reward_distribution.compute_value(target_reward_probs)
 
@@ -372,7 +380,7 @@ class MuZero(torch.nn.Module):
         return priority, info
 
     @torch.no_grad()
-    def reanalyze(self, state, epsilon, alpha):
+    def reanalyze(self, state, epsilon, alpha, discount_rate, mcts_depth, mcts_count, ucb_c1, ucb_c2):
         self.eval()
 
         if isinstance(state, np.ndarray):
@@ -392,13 +400,6 @@ class MuZero(torch.nn.Module):
 
         dynamics = LambdaModule(_dynamics_deterministic, context=self._dynamics)
         value = LambdaModule(_value_deterministic, context=self._value)
-
-        # todo: make parameters
-        mcts_depth = 3
-        ucb_c1 = 1.25
-        ucb_c2 = 15000.0
-        discount_rate = 0.99
-        mcts_count = 8
 
         # get policy/val training targets via MCTS improvement
         representation = self._representation(state)
