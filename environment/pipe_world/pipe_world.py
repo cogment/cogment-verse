@@ -31,15 +31,16 @@ class PipeWorld(BaseEnv):
         self.tick_id = 0
         self.seed_number = 0
         self.total_reward = 0.0
-        print("******************************>>>>>>>>>>>>>>>>>>>>>>>> ", num_players)
         spec = self.create_env_spec(env_name, **kwargs)
         super().__init__(
             env_spec=spec, num_players=1, framestack=1
         )
 
     def create_env_spec(self, env_name, **_kwargs):
+        # Plus one for no action
         act_dim = self.expected_segment_count+1
-        obs_dim = 4*self.expected_segment_count
+        # Plus one for the budget in the observation
+        obs_dim = 4*self.expected_segment_count+1
         return EnvSpec(
             env_name=env_name,
             obs_dim=[obs_dim],
@@ -139,7 +140,9 @@ class PipeWorld(BaseEnv):
         self.logical_segments.display()
 
     def generate_observation(self):
-        return self.logical_segments.generate_observation()
+        np_observation = self.logical_segments.generate_observation()
+        np_observation = np.concatenate((np_observation, np.array([self.budget])))
+        return np_observation
 
     def encode(self):
         observation = HumanObservation()
