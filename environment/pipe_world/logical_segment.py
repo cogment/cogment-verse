@@ -90,7 +90,7 @@ class LogicalSegment:
         is_inspected = 0.0
         if self.is_inspected:
             is_inspected = 1.0
-        return np.array([self.prob_of_failure, self.cost_of_failure, is_failing, is_inspected])
+        return np.array([self.prob_of_failure, self.cost_of_failure, is_failing])
 
 
     def encode(self, proto):
@@ -251,7 +251,7 @@ class LogicalSegments:
             segment.display()
 
     def generate_observation(self):
-        info_count = 4
+        info_count = 3
         observation = np.zeros((self.expected_segment_count, info_count))
         for index, segment in enumerate(self.logical_segments):
             if index >= self.expected_segment_count:

@@ -17,7 +17,7 @@ class QNetwork(nn.Module):
     def __init__(self, state_size, action_size):
         super(QNetwork, self).__init__()
         torch.manual_seed(0)
-        layer_size = 32
+        layer_size = 256
 
         self.value = nn.Sequential(
             nn.Linear(state_size, layer_size),
@@ -37,7 +37,7 @@ class QNetwork(nn.Module):
     def forward(self, state):
         values = self.value(state)
         advantages = self.advantage(state)
-        q_values = values + (advantages - advantages.mean())
+        q_values = values + (advantages - torch.mean(advantages, dim=1, keepdim=True))
 
         return q_values
 

@@ -40,7 +40,7 @@ class PipeWorld(BaseEnv):
         # Plus one for no action
         act_dim = self.expected_segment_count+1
         # Plus one for the budget in the observation
-        obs_dim = 4*self.expected_segment_count+1
+        obs_dim = 3*self.expected_segment_count+1
         return EnvSpec(
             env_name=env_name,
             obs_dim=[obs_dim],
@@ -96,9 +96,11 @@ class PipeWorld(BaseEnv):
          
         done = self.score < 0.0
 
+        info = {}
         if done:
             print("End after tick_id count : ", self.tick_id, " reward: ", self.total_reward)
             self.score = 0.0
+            info = {"tick_count": self.tick_id}
 
         if self._num_players == 1:
             observation = self.generate_observation()
@@ -111,7 +113,7 @@ class PipeWorld(BaseEnv):
             current_player=self._turn,
             legal_moves_as_int=[],
             done=done,
-            info={},
+            info=info,
         )
 
     def render(self, mode="rgb_array"):

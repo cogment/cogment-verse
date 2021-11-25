@@ -94,7 +94,7 @@ class Pipe:
         self.condition = 9.0 + random.random()
         self.prob_of_failure = 0.0
         self.is_failing = False
-        self.estimate_error = random.random() - 0.5
+        self.estimate_error = 2.0 * random.random() - 0.5
         self.cost_of_failure = 0.0
         diff = node1.position - node2.position
         self.length = np.linalg.norm(diff)
@@ -102,7 +102,7 @@ class Pipe:
         self.area = pi * self.radius * self.radius
         self.capacity_empty = self.length * self.area
         self.added_in_logical = False
-        self.inspected = False
+        self.inspected = True # False
 
 
     def clear_water_flow(self):
