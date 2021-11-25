@@ -566,7 +566,7 @@ pipe_d3qn:
     environment_type: pipe_world
     environment_name: PipeWorld
 
-pipe_human_dqn: 
+pipe_human_dqn:
   implementation: "human_dqn"
   config:
     class_name: data_pb2.PipeGameRunConfig
@@ -578,14 +578,14 @@ pipe_human_dqn:
     actor:
       num_input: 91
       num_action: 31
-  
+
 
     # agent_implementation: dqn
     # environment_type: pipe_world
     # environment_name: PipeWorld
 
 
-pipe_rainbow: 
+pipe_rainbow:
   <<: *default_params
   config:
     <<: *default_config
@@ -598,4 +598,29 @@ pipe_rainbow:
       v_min: -70.0
       v_max: 100.0
 
-    
+
+
+pipe_a2c:
+  implementation: pipeworld_a2c_training
+  config:
+    class_name: data_pb2.SimpleA2CTrainingRunConfig
+    environment:
+      env_type: pipe_world
+      env_name: PipeWorld
+      seed: 12
+    actor:
+      num_input: 91
+      num_action: 61
+    training:
+      epoch_count: 100
+      epoch_trial_count: 15
+      max_parallel_trials: 8
+      discount_factor: 0.95
+      entropy_coef: 0.01
+      value_loss_coef: 0.5
+      action_loss_coef: 1.0
+      learning_rate: 0.01
+    actor_network:
+      hidden_size: 512
+    critic_network:
+      hidden_size: 512

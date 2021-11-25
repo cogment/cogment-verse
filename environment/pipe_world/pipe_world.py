@@ -20,10 +20,9 @@ import numpy as np
 from data_pb2 import CommonObservation, HumanObservation
 
 
-
 class PipeWorld(BaseEnv):
     def __init__(self, *, env_name, num_players=1, framestack=1, **kwargs):
-        self. expected_segment_count = 30
+        self.expected_segment_count = 30
         self.logical_segments = LogicalSegments(self.expected_segment_count)
         self.score = 100000.0
         self.starting_budget = 3000.0
@@ -32,15 +31,13 @@ class PipeWorld(BaseEnv):
         self.seed_number = 0
         self.total_reward = 0.0
         spec = self.create_env_spec(env_name, **kwargs)
-        super().__init__(
-            env_spec=spec, num_players=1, framestack=1
-        )
+        super().__init__(env_spec=spec, num_players=1, framestack=1)
 
     def create_env_spec(self, env_name, **_kwargs):
         # Plus one for no action
-        act_dim = self.expected_segment_count+1
+        act_dim = self.expected_segment_count + 1
         # Plus one for the budget in the observation
-        obs_dim = 3*self.expected_segment_count+1
+        obs_dim = 3 * self.expected_segment_count + 1
         return EnvSpec(
             env_name=env_name,
             obs_dim=[obs_dim],
@@ -85,15 +82,21 @@ class PipeWorld(BaseEnv):
         if self.tick_id % 20 == 0:
             self.budget += self.starting_budget
 
-        if action[0] < len(self.logical_segments.logical_segments):
-            self.maintain(action[0])
+        num_segments = len(self.logical_segments.logical_segments)
+        mode = action[0] // num_segments
+        segment_index = action[0] % num_segments
+
+        if mode == 0:
+            self.maintain(segment_index)
+        elif mode == 1:
+            self.inspect(segment_index)
 
         cost = self.logical_segments.step()
         self.score -= cost
 
         reward = 1.0 - cost / 1000.0
         self.total_reward += reward
-         
+
         done = self.score < 0.0
 
         info = {}
@@ -154,9 +157,11 @@ class PipeWorld(BaseEnv):
         return observation
 
     def act(self, action):
-        if (action.action_type != ActionType.NO_ACTION and 
-                action.logical_segment_index >= 0 and 
-                action.logical_segment_index < len(self.logical_segments.logical_segments)):
+        if (
+            action.action_type != ActionType.NO_ACTION
+            and action.logical_segment_index >= 0
+            and action.logical_segment_index < len(self.logical_segments.logical_segments)
+        ):
             if action.action_type == ActionType.INSPECT:
                 self.inspect(action.logical_segment_index)
             elif action.action_type == ActionType.MAINTAIN:

@@ -26,6 +26,8 @@ from data_pb2 import (
 from cogment_verse import AgentAdapter
 from cogment_verse import MlflowExperimentTracker
 
+from cogment_verse_torch_agents.simple_a2c.simple_a2c_agent import SimpleA2CAgentAdapter
+
 from cogment.api.common_pb2 import TrialState
 import cogment
 
@@ -42,66 +44,29 @@ SimpleA2CModel = namedtuple("SimpleA2CModel", ["model_id", "version_number", "ac
 # pylint: disable=arguments-differ
 
 
-class SimpleA2CAgentAdapter(AgentAdapter):
-    def __init__(self):
-        super().__init__()
-        self._dtype = torch.float
+def heuristic_policy(obs, n=30):
+    obs = obs[:-1].view(n, 3)
+    fail_prob = obs[:, 0]
+    fail_cost = obs[:, 1]
+    is_fail = obs[:, 2]
 
-    def tensor_from_cog_obs(self, cog_obs, device=None):
-        pb_array = cog_obs.vectorized
-        np_array = np.frombuffer(pb_array.data, dtype=pb_array.dtype).reshape(*pb_array.shape)
-        return torch.tensor(np_array, dtype=self._dtype, device=device)
+    policy = torch.zeros(2 * n + 1, dtype=torch.float32)
+    policy[:n] = fail_prob * fail_cost
+    policy[:n] += is_fail
+    policy[n:] = 0.01
 
-    def tensor_from_cog_action(self, cog_action, device=None):
-        return torch.tensor(cog_action.discrete_action, dtype=self._dtype, device=device)
+    policy = torch.clamp(policy, 0, 10)
 
-    @staticmethod
-    def cog_action_from_tensor(tensor):
-        return AgentAction(discrete_action=tensor.item())
+    return torch.nn.functional.softmax(policy, dim=0)
 
-    def _create(
-        self,
-        model_id,
-        observation_size,
-        action_count,
-        actor_network_hidden_size=64,
-        critic_network_hidden_size=64,
-        **kwargs,
-    ):
-        return SimpleA2CModel(
-            model_id=model_id,
-            version_number=1,
-            actor_network=torch.nn.Sequential(
-                torch.nn.Linear(observation_size, actor_network_hidden_size),
-                torch.nn.Tanh(),
-                torch.nn.Linear(actor_network_hidden_size, actor_network_hidden_size),
-                torch.nn.Tanh(),
-                torch.nn.Linear(actor_network_hidden_size, action_count),
-            ).to(self._dtype),
-            critic_network=torch.nn.Sequential(
-                torch.nn.Linear(observation_size, critic_network_hidden_size),
-                torch.nn.Tanh(),
-                torch.nn.Linear(critic_network_hidden_size, critic_network_hidden_size),
-                torch.nn.Tanh(),
-                torch.nn.Linear(critic_network_hidden_size, 1),
-            ).to(self._dtype),
-        )
 
-    def _load(self, model_id, version_number, version_user_data, model_data_f):
-        (actor_network, critic_network) = torch.load(model_data_f)
-        assert isinstance(actor_network, torch.nn.Sequential)
-        assert isinstance(critic_network, torch.nn.Sequential)
-        return SimpleA2CModel(
-            model_id=model_id, version_number=version_number, actor_network=actor_network, critic_network=critic_network
-        )
+EPSILON = 1.0
 
-    def _save(self, model, model_data_f):
-        assert isinstance(model, SimpleA2CModel)
-        torch.save((model.actor_network, model.critic_network), model_data_f)
-        return {}
 
+class PipeWorldA2CAgentAdapter(SimpleA2CAgentAdapter):
     def _create_actor_implementations(self):
         async def impl(actor_session):
+            global EPSILON
             actor_session.start()
 
             config = actor_session.config
@@ -114,14 +79,20 @@ class SimpleA2CAgentAdapter(AgentAdapter):
                     scores = model.actor_network(obs)
                     probs = torch.softmax(scores, dim=-1)
                     action = torch.distributions.Categorical(probs).sample()
+                    # heuristic
+                    # if np.random.rand() < EPSILON:
+                    #    policy = heuristic_policy(obs)
+                    #    action = torch.distributions.Categorical(policy).sample()
+
                     actor_session.do_action(self.cog_action_from_tensor(action))
 
         return {
-            "simple_a2c": (impl, ["agent"]),
+            "pipeworld_a2c": (impl, ["agent"]),
         }
 
     def _create_run_implementations(self):
         async def sample_producer_impl(run_sample_producer_session):
+
             assert run_sample_producer_session.count_actors() == 1
             observation = []
             action = []
@@ -142,6 +113,8 @@ class SimpleA2CAgentAdapter(AgentAdapter):
             run_sample_producer_session.produce_training_sample((observation, action, reward, done))
 
         async def run_impl(run_session):
+            global EPSILON
+
             xp_tracker = MlflowExperimentTracker(run_session.params_name, run_session.run_id)
             model_id = f"{run_session.run_id}_model"
 
@@ -194,7 +167,7 @@ class SimpleA2CAgentAdapter(AgentAdapter):
                                 TrialActor(
                                     name="agent_1",
                                     actor_class="agent",
-                                    implementation="simple_a2c",
+                                    implementation="pipeworld_a2c",
                                     config=ActorConfig(
                                         model_id=model_id,
                                         model_version=model_version_number,
@@ -247,6 +220,14 @@ class SimpleA2CAgentAdapter(AgentAdapter):
                 action_log_probs = torch.gather(action_probs, -1, action.long()).log()
                 action_loss = -(action_log_probs[:-1] * advantage.detach()).mean()
 
+                # debug/testing: add a term for behavioural cloning of a heuristic rule
+                # print("ACTION_LOG_PROBS", action_probs.shape)
+                # print("OBS", observation.shape)
+                target_policy = torch.stack([heuristic_policy(obs) for obs in observation], dim=0)
+                heuristic_loss = torch.mean(torch.sum(-action_probs * torch.log(target_policy), dim=1))
+
+                action_loss = (1 - EPSILON) * action_loss + EPSILON * heuristic_loss
+
                 # Compute the complete loss
                 loss = (
                     -config.training.entropy_coef * entropy_loss
@@ -258,6 +239,8 @@ class SimpleA2CAgentAdapter(AgentAdapter):
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
+
+                EPSILON *= 0.999
 
                 # Publish the newly trained version
                 version_info = await self.publish_version(model_id, model)
@@ -272,13 +255,14 @@ class SimpleA2CAgentAdapter(AgentAdapter):
                     action_loss=action_loss.item(),
                     loss=loss.item(),
                     total_samples=total_samples,
+                    epsilon=EPSILON,
                 )
                 log.info(
                     f"[{run_session.params_name}/{run_session.run_id}] epoch #{epoch} finished ({total_samples} samples seen)"
                 )
 
         return {
-            "simple_a2c_training": (
+            "pipeworld_a2c_training": (
                 sample_producer_impl,
                 run_impl,
                 SimpleA2CTrainingRunConfig(
