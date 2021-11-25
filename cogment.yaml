@@ -42,6 +42,9 @@ commands:
   test_environment: >
     docker-compose build base_python &&
     docker-compose -f docker-compose.yaml -f docker-compose.tests.yaml up --build --abort-on-container-exit test_environment
+  torch_agents_jupyter: >
+    docker-compose build base_python &&
+    docker-compose -f docker-compose.yaml up --build --abort-on-container-exit torch_agents_jupyter
 
 environment:
   config_type: cogment_verse.EnvironmentConfig

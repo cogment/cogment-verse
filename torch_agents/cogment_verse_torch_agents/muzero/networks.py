@@ -103,7 +103,7 @@ class DynamicsAdapter(torch.nn.Module):
         self._reward_dist = reward_dist
         self._state_pred = torch.nn.Linear(num_input, num_latent)
 
-    def forward(self, representation, action, return_probs=False):
+    def forward(self, representation, action):
         """
         Returns tuple (next_state, reward)
         """
@@ -257,97 +257,75 @@ class MuZero(torch.nn.Module):
         max_norm,
         target_label_smoothing_factor,
         s_weight,
-        p_weight,
+        v_weight,
         discount_factor,
     ):
         """ """
         batch_size, rollout_length = observation.shape[:2]
-        observation_shape = observation.shape[2:]
-        current_representation = self._representation(observation[:, 0, :])
-        representation_shape = current_representation.shape[1:]
+        current_representation = self._representation(observation[:, 0])
         device = current_representation.device
+        priority = torch.zeros((batch_size, rollout_length), dtype=current_representation.dtype, device=device)
 
-        pred_representation = torch.zeros((batch_size, rollout_length + 1, *representation_shape), device=device)
-        pred_representation[:, 0, :] = current_representation
-        pred_reward = torch.zeros((batch_size, rollout_length), device=device)
+        loss_kl = 0
+        loss_v = 0
+        loss_r = 0
+        loss_s = 0
 
         for k in range(rollout_length):
-            next_representation, next_reward_probs, next_reward = self._dynamics(
+            pred_next_state, pred_reward_probs, pred_reward = self._dynamics(
                 current_representation, action[:, k], return_probs=True
             )
             # todo: check this against other implementations
-            next_representation.register_hook(lambda grad: grad * 0.5)
-            pred_representation[:, k + 1] = next_representation
-            pred_reward[:, k] = next_reward
-            if k == 0:
-                r_bins = next_reward_probs.shape[1]
-                num_latent = next_representation.shape[1]
-                pred_reward_probs = torch.zeros((batch_size, rollout_length, r_bins), device=device)
-            pred_reward_probs[:, k, :] = next_reward_probs
-            current_representation = next_representation
+            # next_representation.register_hook(lambda grad: grad * 0.5)
 
-        del current_representation
-        del next_representation
-        del next_reward_probs
-        del next_reward
+            pred_policy = self._policy(current_representation)
+            pred_value_probs, pred_value = self._value(current_representation)
+            pred_projection = self._predictor(self._projector(pred_next_state))
 
-        states = pred_representation[:, :-1, :].reshape(batch_size * rollout_length, -1)
+            # anooying squeeze/unsqueeze nonsense (check replay/episode buffer sampling?)
+            target_policy_k = target_policy[:, k].reshape(*pred_policy.shape)
 
-        next_observations = next_observation.view(batch_size * rollout_length, *observation_shape)
+            with torch.no_grad():
+                next_state = self._representation(next_observation[:, k])
+                target_projection = self._projector(next_state)
 
-        pred_policy = self._policy(states)
-        pred_value_probs, pred_value = self._value(states)
-        pred_reward = pred_reward.view(batch_size * rollout_length)
-        pred_reward_probs = pred_reward_probs.view(batch_size * rollout_length, r_bins)
-        pred_next_states = pred_representation[:, 1:, :].reshape(batch_size * rollout_length, num_latent)
-        pred_projection = self._predictor(self._projector(pred_next_states))
+                target_value_probs = self._value_distribution.compute_target(target_value[:, k]).to(device)
+                target_reward_probs = self._reward_distribution.compute_target(reward[:, k]).to(device)
+                target_value_clamped = self._value_distribution.compute_value(target_value_probs)
 
-        with torch.no_grad():
-            target_policy = target_policy.view(*pred_policy.shape)
-            num_action = target_policy.shape[1]
-            target_policy = (
-                1 - target_label_smoothing_factor
-            ) * target_policy + target_label_smoothing_factor / num_action
-            target_policy /= torch.sum(target_policy, dim=1, keepdim=True)
+                # debug
+                # print("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF")
+                # print(importance_weight.shape, target_policy.shape)
 
-            target_next_state = self._representation(next_observations)
-            target_projection = self._projector(target_next_state)
+                entropy_target = cross_entropy(target_policy_k, target_policy_k, importance_weight.view(-1))
+                entropy_pred = cross_entropy(pred_policy, pred_policy, importance_weight.view(-1))
+                priority[:, k] = torch.abs(pred_value.view(-1) - target_value_clamped.view(-1))
 
-            reward = reward.view(*pred_reward.shape)
-            target_value = target_value.view(*pred_value.shape)
+            loss_kl += cross_entropy(pred_policy, target_policy_k, importance_weight) - entropy_target
+            loss_r += cross_entropy(pred_reward_probs, target_reward_probs, importance_weight)
+            loss_v += cross_entropy(pred_value_probs, target_value_probs, importance_weight)
+            loss_s += cosine_similarity_loss(pred_projection, target_projection, weights=importance_weight)
 
-            # debugging, test with TD estimate
-            target_value = reward + discount_factor * self._value(target_next_state)[1]
+            # end of rollout loop body
+            current_representation = pred_next_state
 
-            target_value_probs = self._value_distribution.compute_target(target_value).to(device)
-            target_reward_probs = self._reward_distribution.compute_target(reward).to(device)
+        priority = priority.detach().cpu().numpy()
 
-            target_value_clamped = self._value_distribution.compute_value(target_value_probs)
-            target_reward_clamped = self._reward_distribution.compute_value(target_reward_probs)
-
-            importance_weight = (
-                torch.stack([importance_weight] * rollout_length, dim=-1).view(batch_size * rollout_length).to(device)
-            )
-
-            entropy_target = cross_entropy(target_policy, target_policy, importance_weight)
-            entropy_pred = cross_entropy(pred_policy, pred_policy, importance_weight)
-            value_error = torch.abs(
-                pred_value.view(batch_size, rollout_length) - target_value_clamped.view(batch_size, rollout_length)
-            )
-            priority = value_error.cpu().detach().numpy()
-
-        loss_p = cross_entropy(pred_policy, target_policy, importance_weight)
-        loss_r = cross_entropy(pred_reward_probs, target_reward_probs, importance_weight)
-        loss_v = cross_entropy(pred_value_probs, target_value_probs, importance_weight)
-        loss_s = cosine_similarity_loss(pred_projection, target_projection, weights=importance_weight)
+        loss_kl /= rollout_length
+        loss_s /= rollout_length
+        loss_r /= rollout_length
+        loss_v /= rollout_length
 
         optimizer.zero_grad()
 
-        loss_kl = loss_p - entropy_target
-        total_loss = p_weight * loss_kl + loss_r + loss_v + s_weight * loss_s
+        total_loss = loss_kl + loss_r + v_weight * loss_v + s_weight * loss_s
         total_loss.backward()
         torch.nn.utils.clip_grad_norm_(self.parameters(), max_norm=max_norm)
         optimizer.step()
+
+        # debug
+        # for n in range(pred_policy.shape[0]):
+        #    print(k, pred_policy[n], target_policy[n])
 
         info = dict(
             loss_r=loss_r,
@@ -365,17 +343,15 @@ class MuZero(torch.nn.Module):
             value_l2=parameters_l2(self._value),
             projector_l2=parameters_l2(self._projector),
             predictor_l2=parameters_l2(self._predictor),
-            value_error=torch.mean(importance_weight.view(-1) * value_error.view(-1)),
-            mean_value_target=torch.mean(importance_weight.view(-1) * target_value.view(-1)),
-            mean_reward_target=torch.mean(importance_weight.view(-1) * reward.view(-1)),
-            mean_value_pred=torch.mean(importance_weight.view(-1) * pred_value.view(-1)),
-            mean_reward_pred=torch.mean(importance_weight.view(-1) * pred_reward.view(-1)),
-            mean_reward_clamped=torch.mean(importance_weight.view(-1) * target_reward_clamped.view(-1)),
-            mean_value_clamped=torch.mean(importance_weight.view(-1) * target_value_clamped.view(-1)),
-            min_reward=torch.min(reward),
-            max_reward=torch.max(reward),
-            min_value=torch.min(target_value),
-            max_value=torch.max(target_value),
+            # mean_value_target=torch.mean(importance_weight.view(-1, 1) * target_value),
+            # mean_reward_target=torch.mean(importance_weight.view(-1, 1) * reward),
+            # mean_value_pred=torch.mean(importance_weight.view(-1) * pred_value.view(-1)),
+            # mean_reward_pred=torch.mean(importance_weight.view(-1) * pred_reward.view(-1)),
+            # min_reward=torch.min(reward),
+            ##max_reward=torch.max(reward),
+            # min_value=torch.min(target_value),
+            # max_value=torch.max(target_value),
+            priority_mean=priority.mean(),
         )
         return priority, info
 

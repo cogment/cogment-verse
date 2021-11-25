@@ -131,6 +131,18 @@ class MuZeroAgent:
         value = value.cpu().numpy().item()
         return action, policy, value
 
+    def reanalyze(self, observation):
+        return self._muzero.reanalyze(
+            observation,
+            self._params.exploration_epsilon,
+            self._params.exploration_alpha,
+            self._params.discount_rate,
+            self._params.mcts_depth,
+            self._params.mcts_samples,
+            self._params.ucb_c1,
+            self._params.ucb_c2,
+        )
+
     def learn(self, batch):
         self._muzero.train()
 
@@ -166,7 +178,7 @@ class MuZeroAgent:
             self._params.max_norm,
             self._params.target_label_smoothing_factor,
             self._params.s_weight,
-            self._params.p_weight,
+            self._params.v_weight,
             self._params.discount_rate,
         )
 

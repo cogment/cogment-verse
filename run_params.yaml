@@ -595,8 +595,8 @@ lander_muzero:
       mcts_samples: 32
       target_label_smoothing_factor: 0.01
       target_label_smoothing_factor_steps: 0
-      s_weight: 0.1
-      p_weight: 1.0
+      s_weight: 0.001
+      v_weight: 0.1
 
 cartpole_muzero:
   implementation: muzero_mlp_training
@@ -612,17 +612,17 @@ cartpole_muzero:
     training:
       model_publication_interval: 200
       trial_count: 2000
-      max_parallel_trials: 4
+      max_parallel_trials: 8
       discount_rate: 0.99
-      batch_size: 256
-      representation_dim: 32
-      projector_dim: 8
-      hidden_dim: 256
-      projector_hidden_dim: 64
+      batch_size: 32
+      representation_dim: 8
+      projector_dim: 4
+      hidden_dim: 64
+      projector_hidden_dim: 32
       hidden_layers: 2
       projector_hidden_layers: 2
-      min_replay_buffer_size: 1000
-      max_replay_buffer_size: 10000
+      min_replay_buffer_size: 200
+      max_replay_buffer_size: 20000
       exploration_alpha: 0.3
       log_interval: 100
       weight_decay: 0.01
@@ -631,12 +631,12 @@ cartpole_muzero:
       lr_warmup_steps: 200
       lr_decay_steps: 200000
       exploration_epsilon: 1.0
-      epsilon_min: 0.1
-      epsilon_decay_steps: 100000
+      epsilon_min: 0.25
+      epsilon_decay_steps: 1000
       mcts_temperature: 1.0
-      min_temperature: 1.0
-      temperature_decay_steps: 0
-      max_norm: 1.0
+      min_temperature: 0.25
+      temperature_decay_steps: 200000
+      max_norm: 10.0
       rbins: 32
       vbins: 32
       rollout_length: 4
@@ -644,5 +644,5 @@ cartpole_muzero:
       mcts_samples: 32
       target_label_smoothing_factor: 0.01
       target_label_smoothing_factor_steps: 0
-      s_weight: 0.1
-      p_weight: 1.0
+      s_weight: 0.0001
+      v_weight: 0.1

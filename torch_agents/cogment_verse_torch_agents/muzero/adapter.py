@@ -148,7 +148,7 @@ DEFAULT_MUZERO_TRAINING_CONFIG = MuZeroTrainingConfig(
     target_label_smoothing_factor=0.01,
     target_label_smoothing_factor_steps=1,
     s_weight=1e-2,
-    p_weight=0.1,
+    v_weight=0.1,
 )
 
 
@@ -352,6 +352,7 @@ async def single_agent_muzero_run_implementation(agent_adapter, run_session):
             config.training.exploration_epsilon,
             config.training.exploration_alpha,
             config.training.mcts_temperature,
+            config.training.discount_rate,
         )
         for _ in range(num_reanalyze_workers)
     ]
@@ -422,13 +423,13 @@ async def single_agent_muzero_run_implementation(agent_adapter, run_session):
         training_config=config.training,
     )
 
-    # agent_queue.put(agent._muzero)
+    # agent_queue.put(agent)
 
     try:
         # start worker processes
         replay_buffer.start()
-        # for reanalyze_worker in reanalyze_workers:
-        #    reanalyze_worker.start()
+        for reanalyze_worker in reanalyze_workers:
+            reanalyze_worker.start()
 
         sample_generator = run_session.start_trials_and_wait_for_termination(
             trial_configs,
@@ -437,8 +438,8 @@ async def single_agent_muzero_run_implementation(agent_adapter, run_session):
 
         async for step, timestamp, _trial, _tick, (sample, total_reward) in sample_generator:
             assert replay_buffer.is_alive()
-            # for reanalyze_worker in reanalyze_workers:
-            #    assert reanalyze_worker.is_alive()
+            for reanalyze_worker in reanalyze_workers:
+                assert reanalyze_worker.is_alive()
 
             total_samples += 1
             replay_buffer.add_sample(
@@ -481,7 +482,7 @@ async def single_agent_muzero_run_implementation(agent_adapter, run_session):
 
                 if training_step % config.training.model_publication_interval == 0:
                     version_info = await agent_adapter.publish_version(model_id, agent)
-                    # agent_queue.put(agent._muzero)
+                    # agent_queue.put(agent)
 
                 info["lr"] = lr
                 info["epsilon"] = epsilon
@@ -573,7 +574,7 @@ class AgentTrialWorker(mp.Process):
 
 
 class ReanalyzeWorker(mp.Process):
-    def __init__(self, batch_queue, reanalyze_queue, agent_queue, epsilon, alpha, temperature):
+    def __init__(self, batch_queue, reanalyze_queue, agent_queue, epsilon, alpha, temperature, discount):
         super().__init__()
         self._batch_queue = batch_queue
         self._reanalyze_queue = reanalyze_queue
@@ -581,6 +582,7 @@ class ReanalyzeWorker(mp.Process):
         self._epsilon = epsilon
         self._alpha = alpha
         self._temperature = temperature
+        self._discount = discount
 
     def run(self):
         agent = self._agent_queue.get()
@@ -590,14 +592,23 @@ class ReanalyzeWorker(mp.Process):
             except queue.Empty:
                 pass
 
+            print("REANALYZE WORKER GET BATCH")
             batch = self._batch_queue.get()
             batch_size, rollout_length = batch.state.shape[:2]
+            print("REANALYZE WORKER REANALYZING")
             for n, k in itertools.product(range(batch_size), range(rollout_length)):
                 observation = batch.state[n, k]
-                improved_policy, improved_value = agent.reanalyze(observation, self._epsilon, self._alpha)
+                improved_policy, improved_value = agent.reanalyze(observation)
                 improved_policy = torch.pow(improved_policy, 1 / self._temperature)
                 improved_policy /= torch.sum(improved_policy, dim=1)
                 batch.target_policy[n, k] = improved_policy.cpu().detach()
                 batch.target_value[n, k] = improved_value.cpu().detach()
 
+            print("REANALYZE WORKER BOOTSTRAP STEP")
+            # bootstrap values
+            for n, k in itertools.product(range(batch_size), range(rollout_length)):
+                if k < rollout_length - 1:
+                    batch.target_value[n, k] = batch.rewards[n, k] + self._discount * batch.target_value[n, k + 1]
+
+            print("REANALYZE WORKER PUTTING BATCH IN QUEUE")
             self._reanalyze_queue.put(batch)
