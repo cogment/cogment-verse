@@ -27,7 +27,6 @@ cartpole_REINFORCE:
     epsilon_min: 0.1
     epsilon_steps: 100000
     target_net_update_schedule: 1000
-    learning_rate: 1.0e-4
     lr_warmup_steps: 10000
     demonstration_count: 0
     total_trial_count: 10000
@@ -35,10 +34,6 @@ cartpole_REINFORCE:
     model_archive_interval_multiplier: 4 # Archive every fourth published model
     render_width: 256
     batch_size: 256
-    min_replay_buffer_size: 1000
-    max_parallel_trials: 1
-    model_kwargs: {}
-    max_replay_buffer_size: 100000
     flatten: True
     aggregate_by_actor: True
     framestack: 1
@@ -47,8 +42,14 @@ cartpole_REINFORCE:
       action_dtype: int8
     num_input: 4
     num_action: 2
+    model_kwargs: {}
     environment_type: gym
     environment_name: CartPole-v0
+    learning_rate: 3.0e-4
+    discount_factor: 0.99
+    min_replay_buffer_size: 10000
+    max_replay_buffer_size: 100000
+    max_parallel_trials: 1
     agent_implementation: reinforce
 ```
 
