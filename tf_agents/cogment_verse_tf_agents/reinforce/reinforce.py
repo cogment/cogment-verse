@@ -26,16 +26,14 @@ import pickle as pkl
 # pylint: disable=W0212
 # pylint: disable=W0622
 class ReinforceAgent:
-    def __init__(
-        self,
-        model_params=None,
-        **params
-    ):
+    def __init__(self, model_params=None, **params):
 
         self._params = params
         self._model = PolicyNetwork(self._params["obs_dim"], self._params["act_dim"])
         self._optimizer = tf.keras.optimizers.Adam(learning_rate=self._params["lr"])
-        self._replay_buffer = Memory(self._params["obs_dim"], self._params["act_dim"], self._params["max_replay_buffer_size"])
+        self._replay_buffer = Memory(
+            self._params["obs_dim"], self._params["act_dim"], self._params["max_replay_buffer_size"]
+        )
 
         if model_params is not None:
             self._model.set_weights(model_params)
@@ -57,7 +55,9 @@ class ReinforceAgent:
             discounted_rewards.append(sum_rewards)
 
         discounted_rewards = np.array(discounted_rewards[::-1])
-        discounted_rewards = (discounted_rewards - discounted_rewards.mean()) / (discounted_rewards.std() + np.finfo(np.float32).eps.item())
+        discounted_rewards = (discounted_rewards - discounted_rewards.mean()) / (
+            discounted_rewards.std() + np.finfo(np.float32).eps.item()
+        )
         return discounted_rewards
 
     @staticmethod

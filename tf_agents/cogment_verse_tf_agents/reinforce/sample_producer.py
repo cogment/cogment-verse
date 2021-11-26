@@ -21,9 +21,7 @@ from cogment_verse_tf_agents.wrapper import (
 from collections import namedtuple
 
 
-def vectorized_training_sample_from_samples(
-    sample, next_sample, last_tick
-):
+def vectorized_training_sample_from_samples(sample, next_sample, last_tick):
     vectorized_observation = tf_obs_from_cog_obs(sample.get_actor_observation(0))
     vectorized_next_observation = tf_obs_from_cog_obs(next_sample.get_actor_observation(0))
     action = tf_action_from_cog_action(sample.get_actor_action(0))
@@ -62,9 +60,7 @@ async def sample_producer(run_sample_producer_session):
         if previous_sample:
             run_sample_producer_session.produce_training_sample(
                 TrainingSample(
-                    player_sample=vectorized_training_sample_from_samples(
-                        previous_sample, sample, last_tick
-                    ),
+                    player_sample=vectorized_training_sample_from_samples(previous_sample, sample, last_tick),
                     trial_cumulative_reward=trial_cumulative_reward,
                 ),
             )
