@@ -103,16 +103,16 @@ class DynamicsAdapter(torch.nn.Module):
         self._reward_dist = reward_dist
         self._state_pred = torch.nn.Linear(num_input, num_latent)
 
-    def forward(self, representation, action):
+    def forward(self, state, action):
         """
         Returns tuple (next_state, reward)
         """
         action = torch.nn.functional.one_hot(action, self._act_dim)
-        intermediate = self._net(torch.cat([representation, action], dim=1))
-        state = self._state_pred(intermediate)
+        intermediate = self._net(torch.cat([state, action], dim=1))
+        state_delta = self._state_pred(intermediate)
         reward_probs, reward = self._reward_dist(intermediate)
 
-        return state, reward_probs, reward
+        return state + state_delta, reward_probs, reward
 
 
 def resnet(
@@ -272,9 +272,7 @@ class MuZero(torch.nn.Module):
         loss_s = 0
 
         for k in range(rollout_length):
-            pred_next_state, pred_reward_probs, pred_reward = self._dynamics(
-                current_representation, action[:, k], return_probs=True
-            )
+            pred_next_state, pred_reward_probs, pred_reward = self._dynamics(current_representation, action[:, k])
             # todo: check this against other implementations
             # next_representation.register_hook(lambda grad: grad * 0.5)
 

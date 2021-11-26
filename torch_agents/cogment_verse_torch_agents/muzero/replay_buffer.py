@@ -133,7 +133,6 @@ class Episode:
             pad_slice(self._states, a + 1, b + 1, self._states[-1]),
             pad_slice(self._done, a, b, self._done[-1]),
             pad_slice(self._policy, a, b, self._policy[-1]),
-            # pad_slice(self._value, a, b, 0.0),
             # pad_slice(self._return, a, b, 0.0),
             pad_slice(self._bootstrap, a, b, 0.0),
             pad_slice(self._p, a, b, 0.0),
