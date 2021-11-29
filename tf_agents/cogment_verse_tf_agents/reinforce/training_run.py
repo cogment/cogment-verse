@@ -47,7 +47,7 @@ def create_training_run(agent_adapter):
                     "act_dim": config.num_action,
                     "max_replay_buffer_size": config.max_replay_buffer_size,
                     "lr": config.learning_rate,
-                    "gamma": config.discount_factor
+                    "gamma": config.discount_factor,
                 },
                 **model_kwargs,
             )
@@ -90,7 +90,7 @@ def create_training_run(agent_adapter):
                         flatten=config.flatten,
                         framestack=config.framestack,
                     ),
-                    actors=actor_configs
+                    actors=actor_configs,
                 )
                 for _ in range(config.total_trial_count)
             ]
@@ -104,7 +104,7 @@ def create_training_run(agent_adapter):
             ) in run_session.start_trials_and_wait_for_termination(
                 trial_configs=trial_configs,
                 max_parallel_trials=config.max_parallel_trials,
-                ):
+            ):
                 model.consume_training_sample(sample.player_sample)
 
                 # Check if last sample

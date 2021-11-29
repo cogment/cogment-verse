@@ -15,8 +15,7 @@
 import numpy as np
 
 
-class Memory():
-
+class Memory:
     def __init__(self, number_features, number_actions, buffer_size):
         """Initialize buffer
         Params
@@ -32,11 +31,11 @@ class Memory():
 
         # initialize state, action, reward, next_state, done arrays
         self._data = {}
-        self._data['observations'] = np.zeros((self.buffer_size, self.number_features))
-        self._data['actions'] = np.zeros((self.buffer_size,))
-        self._data['rewards'] = np.zeros((self.buffer_size,))
-        self._data['next_observations'] = np.zeros((self.buffer_size, self.number_features))
-        self._data['dones'] = np.zeros((self.buffer_size,))
+        self._data["observations"] = np.zeros((self.buffer_size, self.number_features))
+        self._data["actions"] = np.zeros((self.buffer_size,))
+        self._data["rewards"] = np.zeros((self.buffer_size,))
+        self._data["next_observations"] = np.zeros((self.buffer_size, self.number_features))
+        self._data["dones"] = np.zeros((self.buffer_size,))
 
         self._ptr = 0
 
@@ -52,12 +51,11 @@ class Memory():
         self._ptr = (self._ptr + 1) % self.buffer_size
 
     def sample(self):
-        """Sample previous trajectory data from the buffer
-        """
+        """Sample previous trajectory data from the buffer"""
 
         rval = {}
         for key, _ in self._data.items():
-            rval[key] = self._data[key][0:self._ptr]
+            rval[key] = self._data[key][0 : self._ptr]
 
         return rval
 
