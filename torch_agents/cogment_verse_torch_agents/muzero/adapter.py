@@ -414,6 +414,7 @@ async def single_agent_muzero_run_implementation(agent_adapter, run_session):
 
     total_samples = 0
     training_step = 0
+    run_total_reward = 0
 
     agent, version_info = await agent_adapter.create_and_publish_initial_version(
         model_id=model_id,
@@ -443,10 +444,10 @@ async def single_agent_muzero_run_implementation(agent_adapter, run_session):
 
             total_samples += 1
             replay_buffer.add_sample(
-                state=sample.state.unsqueeze(0),
+                state=sample.state,
                 action=sample.action,
                 reward=sample.rewards,
-                next_state=sample.next_state.unsqueeze(0),
+                next_state=sample.next_state,
                 done=sample.done,
                 policy=sample.target_policy,
                 value=sample.target_value,
@@ -457,6 +458,7 @@ async def single_agent_muzero_run_implementation(agent_adapter, run_session):
                 xp_tracker.log_metrics(
                     timestamp, step, trial_total_reward=total_reward, trials_completed=trials_completed
                 )
+                run_total_reward += total_reward
 
             if replay_buffer.size() > config.training.min_replay_buffer_size:
                 training_step += 1
@@ -468,6 +470,8 @@ async def single_agent_muzero_run_implementation(agent_adapter, run_session):
                 priority, info = agent.learn(batch)
 
                 for k in range(config.training.rollout_length):
+                    # debug/testing
+                    # replay_buffer.update_priorities(batch.episode, batch.step + k, [0.01] * config.training.batch_size)
                     replay_buffer.update_priorities(batch.episode, batch.step + k, priority[:, k])
 
                 lr = lr_schedule.update()
@@ -490,6 +494,7 @@ async def single_agent_muzero_run_implementation(agent_adapter, run_session):
                 info["model_version"] = version_info["version_number"]
                 info["training_step"] = training_step
                 info["target_label_smoothing_factor"] = target_label_smoothing_factor
+                info["mean_trial_reward"] = run_total_reward / max(1, trials_completed)
                 running_stats.update(info)
 
                 if total_samples % config.training.log_interval == 0:

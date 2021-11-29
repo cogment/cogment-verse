@@ -17,10 +17,26 @@ from data_pb2 import MuZeroTrainingConfig
 import logging
 import torch
 import numpy as np
+import copy
+import itertools
 
 log = logging.getLogger(__name__)
 
-from .networks import MuZero, reward_transform, reward_transform_inverse, Distributional, DynamicsAdapter, resnet, mlp
+from .networks import (
+    MuZero,
+    lin_bn_act,
+    reward_transform,
+    reward_transform_inverse,
+    Distributional,
+    DynamicsAdapter,
+    resnet,
+    mlp,
+    RepresentationNetwork,
+    PolicyNetwork,
+    ValueNetwork,
+    DynamicsNetwork,
+    QNetwork,
+)
 from .replay_buffer import EpisodeBatch
 
 # pylint: disable=arguments-differ
@@ -39,64 +55,33 @@ class MuZeroAgent:
         self._make_networks()
 
     def _make_networks(self):
-        value_distribution = Distributional(
+        stem = lin_bn_act(self._obs_dim, self._params.hidden_dim, bn=True, act=torch.nn.ReLU())
+        representation = RepresentationNetwork(stem, self._params.hidden_dim, self._params.hidden_layers)
+
+        policy = PolicyNetwork(self._params.hidden_dim, self._params.hidden_layers, self._act_dim)
+
+        value = ValueNetwork(
+            self._params.hidden_dim,
+            self._params.hidden_layers,
             self._params.vmin,
             self._params.vmax,
-            self._params.hidden_dim,
             self._params.vbins,
-            reward_transform,
-            reward_transform_inverse,
         )
 
-        reward_distribution = Distributional(
+        dynamics = DynamicsNetwork(
+            self._act_dim,
+            self._params.hidden_dim,
+            self._params.hidden_layers,
             self._params.rmin,
             self._params.rmax,
-            self._params.hidden_dim,
             self._params.rbins,
-            reward_transform,
-            reward_transform_inverse,
         )
 
-        representation = resnet(
-            self._obs_dim,
-            self._params.hidden_dim,
-            self._params.representation_dim,
-            self._params.hidden_layers,
-            # final_act=torch.nn.BatchNorm1d(self._params.num_latent"]),  # normalize for input to subsequent networks
-        )
-
-        dynamics = DynamicsAdapter(
-            resnet(
-                self._params.representation_dim + self._act_dim,
-                self._params.hidden_dim,
-                self._params.hidden_dim,
-                self._params.hidden_layers - 1,
-                final_act=torch.nn.LeakyReLU(),
-            ),
-            self._act_dim,
-            self._params.hidden_dim,
-            self._params.representation_dim,
-            reward_dist=reward_distribution,
-        )
-        policy = resnet(
-            self._params.representation_dim,
-            self._params.hidden_dim,
-            self._act_dim,
-            self._params.hidden_layers,
-            final_act=torch.nn.Softmax(dim=1),
-        )
-        value = resnet(
-            self._params.representation_dim,
-            self._params.hidden_dim,
-            self._params.hidden_dim,
-            self._params.hidden_layers - 1,
-            final_act=value_distribution,
-        )
         projector = mlp(
-            self._params.representation_dim,
+            self._params.hidden_dim,
             self._params.projector_hidden_dim,
             self._params.projector_dim,
-            hidden_layers=self._params.projector_hidden_layers,
+            hidden_layers=1,
         )
         # todo: check number of hidden layers used in predictor (same as projector??)
         predictor = mlp(
@@ -104,8 +89,25 @@ class MuZeroAgent:
         )
 
         self._muzero = MuZero(
-            representation, dynamics, policy, value, projector, predictor, reward_distribution, value_distribution
+            representation,
+            dynamics,
+            policy,
+            value,
+            projector,
+            predictor,
+            dynamics.distribution,
+            value.distribution,
+            QNetwork(
+                self._act_dim,
+                self._params.hidden_dim,
+                self._params.hidden_layers,
+                self._params.vmin,
+                self._params.vmax,
+                self._params.vbins,
+            ),
         ).to(self._device)
+
+        self._target_muzero = copy.deepcopy(self._muzero)
 
         self._optimizer = torch.optim.AdamW(
             self._muzero.parameters(),
@@ -113,10 +115,15 @@ class MuZeroAgent:
             weight_decay=self._params.weight_decay,
         )
 
+        # if True:
+        #    self._optimizer = torch.optim.SGD(
+        #        self._muzero.parameters(), lr=1e-3, momentum=0.0, weight_decay=self._params.weight_decay
+        #    )
+
     def act(self, observation):
-        self._muzero.eval()
+        self._target_muzero.eval()
         obs = observation.float().to(self._device)
-        action, policy, value = self._muzero.act(
+        action, policy, q, value = self._target_muzero.act(
             obs,
             self._params.exploration_epsilon,
             self._params.exploration_alpha,
@@ -129,10 +136,17 @@ class MuZeroAgent:
         )
         policy = policy.cpu().numpy()
         value = value.cpu().numpy().item()
+
+        # debug/testing
+        if np.random.rand() < 0.1:
+            action = np.random.randint(0, self._act_dim)
+        # else:
+        #    action = torch.argmax(q, dim=1).detach().cpu().item()
+
         return action, policy, value
 
     def reanalyze(self, observation):
-        return self._muzero.reanalyze(
+        return self._target_muzero.reanalyze(
             observation,
             self._params.exploration_epsilon,
             self._params.exploration_alpha,
@@ -172,6 +186,7 @@ class MuZeroAgent:
             batch.action,
             target_reward,
             batch.next_state,
+            batch.done,
             batch.target_policy,
             target_value,
             importance_weight,
@@ -180,7 +195,14 @@ class MuZeroAgent:
             self._params.s_weight,
             self._params.v_weight,
             self._params.discount_rate,
+            self._target_muzero,
         )
+
+        online_params = itertools.chain(self._muzero.parameters(), self._muzero.buffers())
+        target_params = itertools.chain(self._target_muzero.parameters(), self._target_muzero.buffers())
+        for po, pt in zip(online_params, target_params):
+            gamma = 0.9
+            pt.data = gamma * pt.data + (1 - gamma) * po.data
 
         for key, val in info.items():
             if isinstance(val, torch.Tensor):
@@ -201,6 +223,7 @@ class MuZeroAgent:
                 "act_dim": self._act_dim,
                 "training_config": self._params,
                 "muzero": self._muzero.state_dict(),
+                "target_muzero": self._target_muzero.state_dict(),
             },
             f,
         )
@@ -209,8 +232,10 @@ class MuZeroAgent:
     def load(f, device):
         checkpoint = torch.load(f, map_location=device)
         muzero_state_dict = checkpoint.pop("muzero")
+        target_muzero_state_dict = checkpoint.pop("target_muzero")
         agent = MuZeroAgent(device=device, **checkpoint)
         agent._muzero.load_state_dict(muzero_state_dict)
+        agent._target_muzero.load_state_dict(target_muzero_state_dict)
         return agent
 
 
@@ -224,80 +249,3 @@ class UniformPolicy(torch.nn.Module):
         p = torch.ones((bsz, self.act_dim), dtype=x.dtype, device=x.device)
         p /= torch.sum(p, dim=1, keepdim=True)
         return p
-
-
-class SimpleMuZeroAgent(MuZeroAgent):
-    def _make_networks(self):
-        value_distribution = Distributional(
-            self._params.vmin,
-            self._params.vmax,
-            self._params.hidden_dim,
-            self._params.vbins,
-            reward_transform,
-            reward_transform_inverse,
-        )
-
-        reward_distribution = Distributional(
-            self._params.rmin,
-            self._params.rmax,
-            self._params.hidden_dim,
-            self._params.rbins,
-            reward_transform,
-            reward_transform_inverse,
-        )
-
-        representation = torch.nn.Identity()
-
-        dynamics = DynamicsAdapter(
-            mlp(
-                self._obs_dim + self._act_dim,
-                self._params.hidden_dim,
-                self._params.hidden_dim,
-                final_act=torch.nn.LeakyReLU(),
-            ),
-            self._act_dim,
-            self._params.hidden_dim,
-            self._obs_dim,
-            reward_dist=reward_distribution,
-        )
-        policy = mlp(
-            self._obs_dim,
-            self._params.hidden_dim,
-            self._act_dim,
-            self._params.hidden_layers,
-            final_act=torch.nn.Softmax(dim=1),
-        )
-
-        # policy = UniformPolicy(self._act_dim)
-
-        policy = mlp(
-            self._obs_dim,
-            self._params.hidden_dim,
-            self._act_dim,
-            self._params.hidden_layers,
-            final_act=torch.nn.Softmax(),
-        )
-
-        value = mlp(
-            self._obs_dim,
-            self._params.hidden_dim,
-            self._params.hidden_dim,
-            self._params.hidden_layers - 1,
-            final_act=value_distribution,
-        )
-        projector = torch.nn.Identity()
-        # todo: check number of hidden layers used in predictor (same as projector??)
-        predictor = torch.nn.Identity()
-
-        self._muzero = MuZero(
-            representation, dynamics, policy, value, projector, predictor, reward_distribution, value_distribution
-        ).to(self._device)
-
-        self._optimizer = torch.optim.AdamW(
-            self._muzero.parameters(),
-            lr=1e-3,
-            weight_decay=self._params.weight_decay,
-        )
-
-
-MuZeroAgent = SimpleMuZeroAgent

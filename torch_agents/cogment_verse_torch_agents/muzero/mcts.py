@@ -83,10 +83,10 @@ class MCTS:
 
     def improved_targets(self):
         """
-        :return: Tuple (target policy, target value)
+        :return: Tuple (target policy, target q, target value)
         """
         p = self.p()
-        return p, torch.sum(p * self._Q)
+        return p, self._Q, torch.sum(p * self._Q)
 
     def ucb(self, c1, c2):
         """

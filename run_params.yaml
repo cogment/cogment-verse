@@ -561,7 +561,7 @@ lander_muzero:
       num_input: 8
       num_action: 4
     training:
-      model_publication_interval: 1000
+      model_publication_interval: 200
       trial_count: 2000
       max_parallel_trials: 4
       discount_rate: 0.99
@@ -611,43 +611,45 @@ cartpole_muzero:
       num_action: 2
     training:
       model_publication_interval: 200
-      trial_count: 2000
+      trial_count: 1000
       max_parallel_trials: 8
       discount_rate: 0.95
-      batch_size: 32
-      representation_dim: 32
+      batch_size: 128
+      representation_dim: 16
       projector_dim: 16
-      hidden_dim: 256
-      projector_hidden_dim: 128
-      hidden_layers: 1
+      hidden_dim: 64
+      projector_hidden_dim: 32
+      hidden_layers: 0
       projector_hidden_dim: 1
       projector_hidden_layers: 1
-      min_replay_buffer_size: 200
-      max_replay_buffer_size: 2000
+      min_replay_buffer_size: 1000
+      max_replay_buffer_size: 10000
       exploration_alpha: 1.0
       log_interval: 100
-      weight_decay: 0.01
-      learning_rate: 0.001
+      weight_decay: 0.0001
+      learning_rate: 0.0001
       min_learning_rate: 0.00001
-      lr_warmup_steps: 200
-      lr_decay_steps: 200000
-      exploration_epsilon: 1.0
+      lr_warmup_steps: 1000
+      lr_decay_steps: 100000
+      exploration_epsilon: 0.25
       epsilon_min: 0.25
-      epsilon_decay_steps: 20000
+      epsilon_decay_steps: 1
       mcts_temperature: 1.0
-      min_temperature: 0.25
-      temperature_decay_steps: 1000000
-      max_norm: 10.0
+      min_temperature: 1.0
+      temperature_decay_steps: 20000
+      max_norm: 1.0
       rbins: 4
       rmin: -1.0
       rmax: 1.0
-      vbins: 32
-      vmin: 0.0
+      vbins: 16
+      vmin: -200.0
       vmax: 200.0
-      rollout_length: 4
-      mcts_depth: 2
+      rollout_length: 1
+      mcts_depth: 1
       mcts_samples: 8
       target_label_smoothing_factor: 0.01
       target_label_smoothing_factor_steps: 0
-      s_weight: 0.0
+      s_weight: 1.0
       v_weight: 1.0
+      ucb_c1: 1.25
+      ucb_c2: 15000.0
