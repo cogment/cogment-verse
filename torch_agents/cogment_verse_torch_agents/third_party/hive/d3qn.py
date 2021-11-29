@@ -160,8 +160,13 @@ class D3QNAgent(Agent):
         epsilon = self.get_epsilon_schedule(update_schedule)
 
         if self._rng.random() < epsilon:
-            legal_moves = torch.nonzero(legal_moves_as_int == 0).view(-1).cpu().numpy()
-            action = self._rng.choice(legal_moves)
+            action = None
+            for i in range(60, 90):
+                if observation[0][i] == 1.0:
+                    action = i - 60
+            if action is None:
+                legal_moves = torch.nonzero(legal_moves_as_int == 0).view(-1).cpu().numpy()
+                action = self._rng.choice(legal_moves)
         else:
             with torch.no_grad():
                 a = self._qnet(observation).cpu() # , legal_moves=legal_moves_as_int
