@@ -120,8 +120,9 @@ class MlflowExperimentTracker:
     def _stop_flush_metrics_worker(self):
         if self._flush_metrics_worker is not None:
             self._flush_metrics_worker.cancel()
-        # We don't really need to await for the termination here
-        self._flush_metrics_worker = None
+
+            # We don't really need to await for the termination here
+            self._flush_metrics_worker = None
 
     def log_params(self, *args, **kwargs):
 
