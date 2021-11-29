@@ -18,6 +18,7 @@ from cogment_verse import AgentAdapter
 
 from cogment_verse_torch_agents.third_party.hive.agents.dqn import DQNAgent
 from cogment_verse_torch_agents.third_party.hive.agents.rainbow import RainbowDQNAgent
+from cogment_verse_torch_agents.third_party.td3.td3 import TD3Agent
 
 # from cogment_verse_torch_agents.third_party.td3.td3 import TD3Agent
 from cogment_verse_torch_agents.wrapper import format_legal_moves, cog_action_from_torch_action, torch_obs_from_cog_obs
