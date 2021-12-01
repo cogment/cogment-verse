@@ -92,12 +92,12 @@ def main():
         act_dim=2,
         hidden_dim=64,
         hidden_layers=2,
-        rmin=0.0,
-        rmax=1.0,
-        rbins=4,
+        rmin=-1.0,
+        rmax=0.0,
+        rbins=16,
         vmin=0.0,
         vmax=200.0,
-        vbins=16,
+        vbins=32,
         projector_dim=16,
         projector_hidden_dim=32,
     )
@@ -127,7 +127,7 @@ def main():
                     alpha=0.1,
                     temperature=temperature,
                     discount_rate=0.95,
-                    mcts_depth=2,
+                    mcts_depth=3,
                     mcts_count=16,
                     ucb_c1=1.25,
                     ucb_c2=15000.0,
@@ -139,9 +139,11 @@ def main():
             total_trial_reward += reward
             trial_reward += reward
 
+            env.render()
+
             if replay_buffer.size() > min_replay_buffer_size:
                 muzero.train()
-                temperature = max(0.1, temperature * 0.9)
+                temperature = max(0.25, temperature * 0.99)
                 batch = replay_buffer.sample(rollout_length, batch_size)
 
                 batch_tensors = []

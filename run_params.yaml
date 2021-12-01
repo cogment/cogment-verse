@@ -610,24 +610,23 @@ cartpole_muzero:
       num_input: 4
       num_action: 2
     training:
-      model_publication_interval: 200
+      model_publication_interval: 2000
       trial_count: 10000
-      max_parallel_trials: 8
+      max_parallel_trials: 4
       discount_rate: 0.95
       batch_size: 64
       representation_dim: 16
       projector_dim: 16
       hidden_dim: 64
+      hidden_layers: 2
       projector_hidden_dim: 32
-      hidden_layers: 1
-      projector_hidden_dim: 1
       projector_hidden_layers: 1
-      min_replay_buffer_size: 200
+      min_replay_buffer_size: 1000
       max_replay_buffer_size: 20000
       log_interval: 100
       weight_decay: 0.01
       learning_rate: 0.001
-      min_learning_rate: 0.00001
+      min_learning_rate: 0.0001
       lr_warmup_steps: 100
       lr_decay_steps: 100000
       exploration_alpha: 0.1
@@ -635,18 +634,18 @@ cartpole_muzero:
       epsilon_min: 0.25
       epsilon_decay_steps: 1
       mcts_temperature: 1.0
-      min_temperature: 1.0
-      temperature_decay_steps: 1
-      max_norm: 10.0
-      rbins: 8
+      min_temperature: 0.25
+      temperature_decay_steps: 1000
+      max_norm: 100.0
+      rbins: 4
       rmin: -1.0
       rmax: 1.0
       vbins: 16
       vmin: -0.1 # avoid proto default value???
       vmax: 200.0
-      rollout_length: 3
-      mcts_depth: 3
-      mcts_samples: 32
+      rollout_length: 4
+      mcts_depth: 4
+      mcts_samples: 16
       target_label_smoothing_factor: 0.01
       target_label_smoothing_factor_steps: 1
       s_weight: 0.01

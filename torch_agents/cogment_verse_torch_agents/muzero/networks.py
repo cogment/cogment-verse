@@ -489,7 +489,7 @@ class MuZero(torch.nn.Module):
             current_representation = pred_next_state
 
         # testing; disable priority replay
-        # priority = torch.ones_like(priority)
+        priority = torch.ones_like(priority)
 
         priority = priority.detach().cpu().numpy()
 
@@ -536,6 +536,7 @@ class MuZero(torch.nn.Module):
             priority_mean=priority.mean(),
             max_value_error=max_value_error,
             max_reward_error=max_reward_error,
+            batch_done=torch.mean(done),
         )
         return priority, info
 

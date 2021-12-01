@@ -183,6 +183,19 @@ class MuZeroAgentAdapter(AgentAdapter):
         model.save(model_data_f)
         return {}
 
+    def _cached_model_key(self, model_id):
+        return f"/cache/{model_id}/latest"
+
+    def _cache_model(self, model_id, model):
+        self._model_cache[self._cached_model_key(model_id)] = model
+
+    async def _latest_model(self, model_id):
+        key = self._cached_model_key(model_id)
+        if key in self._model_cache:
+            return self._model_cache[key]
+        model, _ = await self.retrieve_version(model_id, -1)
+        return model
+
     def _create_actor_implementations(self):
         async def _single_agent_muzero_actor_implementation(actor_session):
             actor_session.start()
@@ -191,8 +204,10 @@ class MuZeroAgentAdapter(AgentAdapter):
             event_queue = mp.Queue()
             action_queue = mp.Queue()
 
-            agent, _ = await self.retrieve_version(config.model_id, config.model_version)
+            # agent, version_info = await self.retrieve_version(config.model_id, config.model_version)
+            agent = await self._latest_model(config.model_id)
             worker = AgentTrialWorker(agent, event_queue, action_queue)
+            # print("VERSION_INFO", version_info)
             # agent._muzero.to("cpu")
 
             try:
@@ -426,10 +441,7 @@ async def single_agent_muzero_run_implementation(agent_adapter, run_session):
         training_config=config.training,
     )
 
-    # issue with parameter sharing from the model registry cache??
-    agent = copy.deepcopy(agent)
-
-    # agent_queue.put(agent)
+    agent_adapter._cache_model(model_id, agent)
 
     try:
         # start worker processes
@@ -458,6 +470,8 @@ async def single_agent_muzero_run_implementation(agent_adapter, run_session):
                 value=sample.target_value,
             )
 
+            print(_trial, _tick, step, timestamp)
+
             if sample.done:
                 trials_completed += 1
                 xp_tracker.log_metrics(
@@ -473,6 +487,8 @@ async def single_agent_muzero_run_implementation(agent_adapter, run_session):
                     item.to(agent_adapter._device)
 
                 priority, info = agent.learn(batch)
+                # try to cache again in case it was evicted
+                agent_adapter._cache_model(model_id, agent)
 
                 for k in range(config.training.rollout_length):
                     replay_buffer.update_priorities(batch.episode, batch.step + k, priority[:, k])
@@ -480,6 +496,9 @@ async def single_agent_muzero_run_implementation(agent_adapter, run_session):
                 lr = lr_schedule.update()
                 epsilon = epsilon_schedule.update()
                 temperature = temperature_schedule.update()
+                # test
+                # temperature = max(0.25, temperature * 0.995)
+
                 target_label_smoothing_factor = target_label_smoothing_schedule.update()
 
                 agent._params.learning_rate = lr
@@ -547,8 +566,8 @@ class ReplayBufferWorker(mp.Process):
 
             if replay_buffer.size() >= self._training_config.min_replay_buffer_size:
                 batch = replay_buffer.sample(self._training_config.rollout_length, self._training_config.batch_size)
-                for item in batch:
-                    item.share_memory_()
+                # for item in batch:
+                #    item.share_memory_()
                 self._batch_queue.put(EpisodeBatch(*batch))
 
     def add_sample(self, state, action, reward, next_state, done, policy, value):
