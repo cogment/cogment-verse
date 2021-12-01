@@ -462,11 +462,11 @@ class MuZero(torch.nn.Module):
 
                 expect_equal_shape(reward, done)
                 expect_equal_shape(reward[:, k], pred_next_val)
-                td_target = reward[:, k] + discount_factor * (1 - done[:, k]) * pred_next_val
-                td_target_probs = self._value_distribution.compute_target(td_target).to(pred_next_val.device)
+                # td_target = reward[:, k] + discount_factor * (1 - done[:, k]) * pred_next_val
+                # td_target_probs = self._value_distribution.compute_target(td_target).to(pred_next_val.device)
 
-                # target_value_probs = self._value_distribution.compute_target(target_value[:, k]).to(device)
-                target_value_probs = td_target_probs
+                target_value_probs = self._value_distribution.compute_target(target_value[:, k]).to(device)
+                # target_value_probs = td_target_probs
 
                 # testing for stabilization???
                 # target_value_probs = 0.5 * (target_value_probs + td_target_probs)

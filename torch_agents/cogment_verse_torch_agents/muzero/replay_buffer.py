@@ -247,10 +247,10 @@ class TrialReplayBuffer:
         return EpisodeBatch(**batch)
 
     def sample(self, rollout_length, batch_size) -> EpisodeBatch:
-        p = torch.tensor(map(len, self._episodes))
+        p = torch.tensor(list(map(len, self._episodes)), dtype=torch.double)
         p /= torch.sum(p)
-        idx = torch.distributions.Categorical(p).sample
-        idx = np.random.randint(0, len(self._episodes), batch_size, p)
+        idx = torch.distributions.Categorical(p).sample((batch_size,))
+        # idx = np.random.randint(0, len(self._episodes), batch_size, p)
         # idx = np.random.choice(self._range, batch_size, p=self._p)
         # probs = [self._p[i] for i in idx]
         transitions = [self._episodes[i].sample(rollout_length) for i in idx]

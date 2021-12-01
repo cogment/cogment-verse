@@ -306,6 +306,7 @@ async def single_agent_muzero_sample_producer_implementation(agent_adapter, run_
     state = None
     step = 0
     total_reward = 0
+    samples = []
 
     async for sample in run_sample_producer_session.get_all_samples():
         next_state = agent_adapter.tensor_from_cog_obs(sample.get_actor_observation(0))
@@ -313,22 +314,20 @@ async def single_agent_muzero_sample_producer_implementation(agent_adapter, run_
 
         if state is not None:
             total_reward += reward
-            run_sample_producer_session.produce_training_sample(
-                (
-                    EpisodeBatch(
-                        episode=0,
-                        step=step,
-                        state=state,
-                        action=action,
-                        rewards=reward,
-                        next_state=next_state,
-                        done=done,
-                        target_policy=policy,
-                        target_value=value,
-                        priority=0.001,
-                        importance_weight=0.0,
-                    ),
-                    total_reward,
+
+            samples.append(
+                EpisodeBatch(
+                    episode=0,
+                    step=step,
+                    state=state,
+                    action=action,
+                    rewards=reward,
+                    next_state=next_state,
+                    done=done,
+                    target_policy=policy,
+                    target_value=value,
+                    priority=0.001,
+                    importance_weight=0.0,
                 )
             )
 
@@ -339,6 +338,8 @@ async def single_agent_muzero_sample_producer_implementation(agent_adapter, run_
         state = next_state
         action, policy, value = agent_adapter.decode_cog_action(sample.get_actor_action(0))
         reward = sample.get_actor_reward(0)
+
+    run_sample_producer_session.produce_training_sample((samples, total_reward))
 
 
 async def single_agent_muzero_run_implementation(agent_adapter, run_session):
@@ -454,79 +455,80 @@ async def single_agent_muzero_run_implementation(agent_adapter, run_session):
             max_parallel_trials=config.training.max_parallel_trials,
         )
 
-        async for step, timestamp, _trial, _tick, (sample, total_reward) in sample_generator:
+        async for _step, timestamp, _trial, _tick, (samples, total_reward) in sample_generator:
             assert replay_buffer.is_alive()
             for reanalyze_worker in reanalyze_workers:
                 assert reanalyze_worker.is_alive()
 
-            total_samples += 1
-            replay_buffer.add_sample(
-                state=sample.state,
-                action=sample.action,
-                reward=sample.rewards,
-                next_state=sample.next_state,
-                done=sample.done,
-                policy=sample.target_policy,
-                value=sample.target_value,
-            )
-
-            print(_trial, _tick, step, timestamp)
-
-            if sample.done:
-                trials_completed += 1
-                xp_tracker.log_metrics(
-                    timestamp, step, trial_total_reward=total_reward, trials_completed=trials_completed
+            for sample in samples:
+                total_samples += 1
+                replay_buffer.add_sample(
+                    state=sample.state,
+                    action=sample.action,
+                    reward=sample.rewards,
+                    next_state=sample.next_state,
+                    done=sample.done,
+                    policy=sample.target_policy,
+                    value=sample.target_value,
                 )
-                run_total_reward += total_reward
 
-            if replay_buffer.size() > config.training.min_replay_buffer_size:
-                training_step += 1
-                # batch = reanalyze_queue.get()
-                batch = batch_queue.get()
-                for item in batch:
-                    item.to(agent_adapter._device)
+                # print(_trial, _tick, step, timestamp)
 
-                priority, info = agent.learn(batch)
-                # try to cache again in case it was evicted
-                agent_adapter._cache_model(model_id, agent)
-
-                for k in range(config.training.rollout_length):
-                    replay_buffer.update_priorities(batch.episode, batch.step + k, priority[:, k])
-
-                lr = lr_schedule.update()
-                epsilon = epsilon_schedule.update()
-                temperature = temperature_schedule.update()
-                # test
-                # temperature = max(0.25, temperature * 0.995)
-
-                target_label_smoothing_factor = target_label_smoothing_schedule.update()
-
-                agent._params.learning_rate = lr
-                agent._params.exploration_epsilon = epsilon
-                agent._params.mcts_temperature = temperature
-                agent._params.target_label_smoothing_factor = target_label_smoothing_factor
-
-                if training_step % config.training.model_publication_interval == 0:
-                    version_info = await agent_adapter.publish_version(model_id, agent)
-                    # agent_queue.put(agent)
-
-                info["lr"] = lr
-                info["epsilon"] = epsilon
-                info["temperature"] = temperature
-                info["model_version"] = version_info["version_number"]
-                info["training_step"] = training_step
-                info["target_label_smoothing_factor"] = target_label_smoothing_factor
-                info["mean_trial_reward"] = run_total_reward / max(1, trials_completed)
-                running_stats.update(info)
-
-                if total_samples % config.training.log_interval == 0:
+                if sample.done:
+                    trials_completed += 1
                     xp_tracker.log_metrics(
-                        timestamp,
-                        step,
-                        total_samples=total_samples,
-                        **running_stats.get(),
+                        timestamp, total_samples, trial_total_reward=total_reward, trials_completed=trials_completed
                     )
-                    running_stats.reset()
+                    run_total_reward += total_reward
+
+                if replay_buffer.size() > config.training.min_replay_buffer_size:
+                    training_step += 1
+                    # batch = reanalyze_queue.get()
+                    batch = batch_queue.get()
+                    for item in batch:
+                        item.to(agent_adapter._device)
+
+                    priority, info = agent.learn(batch)
+                    # try to cache again in case it was evicted
+                    agent_adapter._cache_model(model_id, agent)
+
+                    for k in range(config.training.rollout_length):
+                        replay_buffer.update_priorities(batch.episode, batch.step + k, priority[:, k])
+
+                    lr = lr_schedule.update()
+                    epsilon = epsilon_schedule.update()
+                    temperature = temperature_schedule.update()
+                    # test
+                    # temperature = max(0.25, temperature * 0.995)
+
+                    target_label_smoothing_factor = target_label_smoothing_schedule.update()
+
+                    agent._params.learning_rate = lr
+                    agent._params.exploration_epsilon = epsilon
+                    agent._params.mcts_temperature = temperature
+                    agent._params.target_label_smoothing_factor = target_label_smoothing_factor
+
+                    if training_step % config.training.model_publication_interval == 0:
+                        version_info = await agent_adapter.publish_version(model_id, agent)
+                        # agent_queue.put(agent)
+
+                    info["lr"] = lr
+                    info["epsilon"] = epsilon
+                    info["temperature"] = temperature
+                    info["model_version"] = version_info["version_number"]
+                    info["training_step"] = training_step
+                    info["target_label_smoothing_factor"] = target_label_smoothing_factor
+                    info["mean_trial_reward"] = run_total_reward / max(1, trials_completed)
+                    running_stats.update(info)
+
+                    if total_samples % config.training.log_interval == 0:
+                        xp_tracker.log_metrics(
+                            timestamp,
+                            total_samples,
+                            total_samples=total_samples,
+                            **running_stats.get(),
+                        )
+                        running_stats.reset()
     finally:
         replay_buffer.terminate()
         for reanalyze_worker in reanalyze_workers:
