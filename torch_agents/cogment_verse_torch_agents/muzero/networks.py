@@ -409,14 +409,7 @@ class MuZero(torch.nn.Module):
             pred_next_state, pred_reward_probs, pred_reward_vals = self._dynamics(current_representation, action[:, 0])
             pred_q_probs, _ = self._dqn(current_representation)
             pred_next_q_probs, _ = self._dqn(pred_next_state)
-            print(
-                "PRED_Q_PROBS",
-                pred_q_probs.shape,
-                "TARGET_Q_PROBS",
-                target_q_probs.shape,
-                "IMPORTANCE",
-                importance_weight.shape,
-            )
+
             loss_q0 = 0
             loss_q1 = 0
             for b in range(batch_size):

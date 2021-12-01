@@ -118,7 +118,7 @@ def dynamics(num_latent, act_dim, num_hidden, reward_distribution):
             num_hidden,
             num_hidden,
             2,
-            final_act=torch.nn.LeakyReLU(),
+            final_act=torch.nn.ReLU(),
         ),
         act_dim,
         num_hidden,
