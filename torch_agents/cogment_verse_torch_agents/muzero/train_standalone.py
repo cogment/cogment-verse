@@ -102,10 +102,11 @@ def main():
         projector_hidden_dim=32,
     )
     optimizer = torch.optim.AdamW(muzero.parameters(), lr=1e-3, weight_decay=0.01)
-    min_replay_buffer_size = 200
-    batch_size = 32
+    min_replay_buffer_size = 1000
+    batch_size = 64
     gamma = 0.9
     rollout_length = 2
+    temperature = 1.0
 
     target_muzero = copy.deepcopy(muzero)
     total_trial_reward = 0
@@ -123,11 +124,11 @@ def main():
                 action, policy, q, value = target_muzero.act(
                     torch.from_numpy(observation).float(),
                     epsilon=0.25,
-                    alpha=1.0,
-                    temperature=1.0,
+                    alpha=0.1,
+                    temperature=temperature,
                     discount_rate=0.95,
-                    mcts_depth=3,
-                    mcts_count=32,
+                    mcts_depth=2,
+                    mcts_count=16,
                     ucb_c1=1.25,
                     ucb_c2=15000.0,
                 )
@@ -140,6 +141,7 @@ def main():
 
             if replay_buffer.size() > min_replay_buffer_size:
                 muzero.train()
+                temperature = max(0.1, temperature * 0.9)
                 batch = replay_buffer.sample(rollout_length, batch_size)
 
                 batch_tensors = []

@@ -330,7 +330,7 @@ class MuZero(torch.nn.Module):
     def act(self, observation, epsilon, alpha, temperature, discount_rate, mcts_depth, mcts_count, ucb_c1, ucb_c2):
         self.eval()
 
-        if False:
+        if True:
             policy, q, value = self.reanalyze(
                 observation, epsilon, alpha, discount_rate, mcts_depth, mcts_count, ucb_c1, ucb_c2
             )
@@ -395,8 +395,10 @@ class MuZero(torch.nn.Module):
         target_value = target_value.view(batch_size, rollout_length)
         reward = reward.view(batch_size, rollout_length)
 
+        importance_weight = 1
+
         # testing the setup with vanilla dqn
-        if True:
+        if False:
             k = 0
             with torch.no_grad():
                 next_state = target_muzero._representation(next_observation[:, k])
@@ -458,6 +460,8 @@ class MuZero(torch.nn.Module):
 
                 _, pred_next_val = target_muzero._value(next_state)
 
+                expect_equal_shape(reward, done)
+                expect_equal_shape(reward[:, k], pred_next_val)
                 td_target = reward[:, k] + discount_factor * (1 - done[:, k]) * pred_next_val
                 td_target_probs = self._value_distribution.compute_target(td_target).to(pred_next_val.device)
 
@@ -472,8 +476,8 @@ class MuZero(torch.nn.Module):
 
                 max_value_error = max(max_value_error, torch.max(torch.abs(pred_value - target_value_clamped)))
 
-                entropy_target = cross_entropy(target_policy_k, target_policy_k, importance_weight.view(-1))
-                entropy_pred = cross_entropy(pred_policy, pred_policy, importance_weight.view(-1))
+                entropy_target = cross_entropy(target_policy_k, target_policy_k, importance_weight)
+                entropy_pred = cross_entropy(pred_policy, pred_policy, importance_weight)
                 priority[:, k] = torch.abs(pred_value.view(-1) - target_value_clamped.view(-1))
 
             loss_kl += cross_entropy(pred_policy, target_policy_k, importance_weight) - entropy_target

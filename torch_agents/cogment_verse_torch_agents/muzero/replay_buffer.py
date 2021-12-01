@@ -136,7 +136,7 @@ class Episode:
         priority = torch.zeros((b - a,))
         importance_weight = torch.zeros((b - a,))
 
-        uniform_policy = torch.ones_like(torch.tensor(self._policy[a]))
+        uniform_policy = torch.ones_like(ensure_tensor(self._policy[a]))
         uniform_policy /= torch.sum(uniform_policy)
 
         c = min(b, len(self._actions))
