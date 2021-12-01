@@ -57,6 +57,7 @@ class MuZeroAgent:
     def _make_networks(self):
         stem = lin_bn_act(self._obs_dim, self._params.hidden_dim, bn=True, act=torch.nn.ReLU())
         representation = RepresentationNetwork(stem, self._params.hidden_dim, self._params.hidden_layers)
+        # representation = stem
 
         policy = PolicyNetwork(self._params.hidden_dim, self._params.hidden_layers, self._act_dim)
 

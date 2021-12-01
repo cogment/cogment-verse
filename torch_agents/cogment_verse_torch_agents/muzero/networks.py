@@ -19,6 +19,10 @@ import torch
 from .mcts import MCTS
 
 
+def expect_equal_shape(a, b):
+    assert a.shape == b.shape, f"{a.shape} == {b.shape}"
+
+
 @torch.no_grad()
 def parameters_l2(model):
     l2 = 0
@@ -156,10 +160,11 @@ class Distributional(torch.nn.Module):
         self._transform = transform or torch.nn.Identity()
         self._inverse_transform = inverse_transform or torch.nn.Identity()
         self._act = torch.nn.Softmax(dim=1)
-        self._vmin = self._transform(torch.tensor(vmin)).detach()
-        self._vmax = self._transform(torch.tensor(vmax)).detach()
-        self._bins = torch.nn.parameter.Parameter(
-            torch.from_numpy(np.linspace(self._vmin, self._vmax, num=count, dtype=np.float32)), requires_grad=False
+        self._vmin = self._transform(torch.tensor(vmin)).detach().cpu().item()
+        self._vmax = self._transform(torch.tensor(vmax)).detach().cpu().item()
+
+        self.register_buffer(
+            "_bins", torch.from_numpy(np.linspace(self._vmin, self._vmax, num=count, dtype=np.float32))
         )
         self._fc = torch.nn.Linear(num_input, count)
 
@@ -333,6 +338,14 @@ class MuZero(torch.nn.Module):
             policy /= torch.sum(policy, dim=1)
             action = torch.distributions.Categorical(policy).sample()
             action = action.cpu().numpy().item()
+            value = torch.sum(policy * q)
+
+            # testing
+            # if np.random.rand() < 0.1:
+            #    action = np.random.randint(0, policy.shape[-1])
+            #    # action = torch.argmax(q).cpu().detach().item()
+
+            return action, policy, q, value
 
         representation = self._representation(observation.unsqueeze(0))
         # testing/debug
@@ -382,11 +395,52 @@ class MuZero(torch.nn.Module):
         target_value = target_value.view(batch_size, rollout_length)
         reward = reward.view(batch_size, rollout_length)
 
+        # testing the setup with vanilla dqn
+        if True:
+            k = 0
+            with torch.no_grad():
+                next_state = target_muzero._representation(next_observation[:, k])
+                next_q_probs, next_q_vals = target_muzero._dqn(next_state)
+                next_q_max, _ = torch.max(next_q_vals, dim=1)
+                target_q = reward[:, k] + (1 - done[:, k]) * next_q_max
+                target_q_probs = self._value_distribution.compute_target(target_q).to(device)
+                expect_equal_shape(target_q, reward[:, k])
+
+            pred_next_state, pred_reward_probs, pred_reward_vals = self._dynamics(current_representation, action[:, 0])
+            pred_q_probs, _ = self._dqn(current_representation)
+            pred_next_q_probs, _ = self._dqn(pred_next_state)
+            print(
+                "PRED_Q_PROBS",
+                pred_q_probs.shape,
+                "TARGET_Q_PROBS",
+                target_q_probs.shape,
+                "IMPORTANCE",
+                importance_weight.shape,
+            )
+            loss_q0 = 0
+            loss_q1 = 0
+            for b in range(batch_size):
+                expect_equal_shape(target_q_probs[b], pred_q_probs[b, action[b, k]])
+                loss_q0 += -torch.sum(target_q_probs[b] * torch.log(pred_q_probs[b, action[b, k]]))
+                loss_q1 += -torch.sum(next_q_probs[b] * torch.log(pred_next_q_probs[b, action[b, k]]))
+
+            loss_q0 /= batch_size
+            loss_q1 /= batch_size
+
+            total_loss = loss_q0 + loss_q1
+
+            optimizer.zero_grad()
+            total_loss.backward()
+            optimizer.step()
+
+            info = dict(total_loss=total_loss, loss_q0=loss_q0, loss_q1=loss_q1)
+            priority = torch.ones_like(reward).cpu().detach().numpy()
+            return priority, info
+
         loss_kl = 0
         loss_v = 0
         loss_r = 0
         loss_s = 0
-        loss_q = 0
 
         max_value_error = 0
         max_reward_error = 0
@@ -405,35 +459,25 @@ class MuZero(torch.nn.Module):
             # anooying squeeze/unsqueeze nonsense (check replay/episode buffer sampling?)
             target_policy_k = target_policy[:, k].reshape(*pred_policy.shape)
 
-            pred_q_probs, pred_q_vals = self._dqn(current_representation)
-
             with torch.no_grad():
                 next_state = target_muzero._representation(next_observation[:, k])
                 target_projection = target_muzero._projector(next_state)
 
                 _, pred_next_val = target_muzero._value(next_state)
 
-                next_q_probs, next_q_vals = target_muzero._dqn(next_state)
-                next_action = torch.argmax(next_q_vals, dim=1)
-                # print("JJJJJJJJJJJJJJJ", next_q_vals.shape, next_action.shape)
+                td_target = reward[:, k] + discount_factor * (1 - done[:, k]) * pred_next_val
+                td_target_probs = self._value_distribution.compute_target(td_target).to(pred_next_val.device)
 
-                target_q = torch.zeros_like(pred_q_vals)
-                for b in range(pred_q_vals.shape[0]):
-                    target_q[b] = reward[b, k] + discount_factor * (1 - done[b, k]) * next_q_vals[b, next_action[b]]
+                # target_value_probs = self._value_distribution.compute_target(target_value[:, k]).to(device)
+                target_value_probs = td_target_probs
 
-                target_q_probs = self._value_distribution.compute_target(target_q)
-                # td_target = reward[:, k] + discount_factor * pred_next_val
-                # target_value_probs = self._value_distribution.compute_target(td_target)
+                # testing for stabilization???
+                # target_value_probs = 0.5 * (target_value_probs + td_target_probs)
 
-                target_value_probs = self._value_distribution.compute_target(target_value[:, k]).to(device)
                 target_reward_probs = self._reward_distribution.compute_target(reward[:, k]).to(device)
                 target_value_clamped = self._value_distribution.compute_value(target_value_probs)
 
                 max_value_error = max(max_value_error, torch.max(torch.abs(pred_value - target_value_clamped)))
-
-                # debug
-                # print("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF")
-                # print(importance_weight.shape, target_policy.shape)
 
                 entropy_target = cross_entropy(target_policy_k, target_policy_k, importance_weight.view(-1))
                 entropy_pred = cross_entropy(pred_policy, pred_policy, importance_weight.view(-1))
@@ -443,26 +487,15 @@ class MuZero(torch.nn.Module):
             loss_r += cross_entropy(pred_reward_probs, target_reward_probs, importance_weight)
             loss_v += cross_entropy(pred_value_probs, target_value_probs, importance_weight)
             loss_s += self._similarity_loss(pred_projection, target_projection, weights=importance_weight)
-            # print("GGGGGGGGGGGGGGGGGGGGGG", pred_q_probs.shape, target_q_probs.shape, importance_weight.shape)
-            coords = [(i, j) for i, j in enumerate(action[:, k].view(-1))]
-            next_coords = [(i, j) for i, j in enumerate(next_action.view(-1))]
-            # debug)
-            for b in range(pred_q_probs.shape[0]):
-                loss_q += cross_entropy(
-                    pred_q_probs[b, action[b, k]].view(1, -1),
-                    target_q_probs[b, next_action[b]].view(1, -1),
-                    weights=importance_weight[b].view(1, 1),
-                )
 
             # end of rollout loop body
             current_representation = pred_next_state
 
         # testing; disable priority replay
-        priority = torch.ones_like(priority)
+        # priority = torch.ones_like(priority)
 
         priority = priority.detach().cpu().numpy()
 
-        loss_q /= rollout_length * batch_size
         loss_kl /= rollout_length
         loss_s /= rollout_length
         loss_r /= rollout_length
@@ -470,9 +503,7 @@ class MuZero(torch.nn.Module):
 
         optimizer.zero_grad()
 
-        # total_loss = loss_kl + loss_r + v_weight * loss_v + s_weight * loss_s
-        # total_loss = loss_kl + loss_r + v_weight * loss_v + s_weight * loss_s + loss_q
-        total_loss = loss_q
+        total_loss = loss_kl + loss_r + v_weight * loss_v + s_weight * loss_s
         total_loss.backward()
         torch.nn.utils.clip_grad_norm_(self.parameters(), max_norm=max_norm)
         optimizer.step()
@@ -485,7 +516,6 @@ class MuZero(torch.nn.Module):
             loss_r=loss_r,
             loss_v=loss_v,
             loss_s=loss_s,
-            loss_q=loss_q,
             loss_kl=loss_kl,
             total_loss=total_loss,
             entropy_target=entropy_target,

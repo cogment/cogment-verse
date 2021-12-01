@@ -15,6 +15,7 @@
 from collections import defaultdict
 import ctypes
 import itertools
+import copy
 
 from data_pb2 import (
     MuZeroTrainingRunConfig,
@@ -192,6 +193,7 @@ class MuZeroAgentAdapter(AgentAdapter):
 
             agent, _ = await self.retrieve_version(config.model_id, config.model_version)
             worker = AgentTrialWorker(agent, event_queue, action_queue)
+            # agent._muzero.to("cpu")
 
             try:
                 worker.start()
@@ -424,6 +426,9 @@ async def single_agent_muzero_run_implementation(agent_adapter, run_session):
         training_config=config.training,
     )
 
+    # issue with parameter sharing from the model registry cache??
+    agent = copy.deepcopy(agent)
+
     # agent_queue.put(agent)
 
     try:
@@ -470,8 +475,6 @@ async def single_agent_muzero_run_implementation(agent_adapter, run_session):
                 priority, info = agent.learn(batch)
 
                 for k in range(config.training.rollout_length):
-                    # debug/testing
-                    # replay_buffer.update_priorities(batch.episode, batch.step + k, [0.01] * config.training.batch_size)
                     replay_buffer.update_priorities(batch.episode, batch.step + k, priority[:, k])
 
                 lr = lr_schedule.update()
