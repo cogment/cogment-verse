@@ -20,6 +20,16 @@ import queue
 from collections import namedtuple
 import torch.multiprocessing as mp
 
+
+def ensure_tensor(x):
+    if isinstance(x, torch.Tensor):
+        return x
+    elif isinstance(x, np.array):
+        return torch.from_numpy(x)
+    else:
+        return torch.tensor(x)
+
+
 EpisodeBatch = namedtuple(
     "EpisodeBatch",
     [
@@ -94,6 +104,8 @@ class Episode:
             for i in reversed(range(N - 1)):
                 self._return[i] = self._rewards[i] + self._discount * self._return[i + 1]
                 self._priority[i] = self._min_priority + abs(self._return[i] - self._value[i])
+                # testing
+                self._priority[i] = 1.0
             self._p = np.array(self._priority, dtype=np.double)
             self._p = self._p / self._p.sum()
             self._p = self._p.tolist()
@@ -104,7 +116,8 @@ class Episode:
         return any(self._done)
 
     def sample(self, k) -> EpisodeBatch:
-        a = np.random.choice(self._range, 1, p=self._p).item()
+        # a = np.random.choice(self._range, 1, p=self._p).item()
+        a = np.random.randint(0, len(self._actions))
         b = a + k
         return self.episode_slice(a, b)
 
@@ -112,16 +125,16 @@ class Episode:
         assert b > a
         assert a < len(self._actions)
 
-        states = torch.zeros((b - a, *self._states[a].shape), dtype=self._states[a].dtype)
+        states = torch.zeros((b - a, *self._states[a].shape))
         actions = torch.zeros((b - a), dtype=torch.long)
 
-        rewards = torch.zeros((b - a), dtype=self._states[a].dtype)
-        done = torch.zeros((b - a), dtype=torch.long)
-        next_states = torch.zeros((b - a, *self._states[a].shape), dtype=self._states[a].dtype)
-        target_policy = torch.zeros((b - a, *self._policy[a].shape), dtype=self._states[a].dtype)
-        target_value = torch.zeros((b - a,), dtype=self._states[a].dtype)
-        priority = torch.zeros((b - a,), dtype=self._states[a].dtype)
-        importance_weight = torch.zeros((b - a,), dtype=self._states[a].dtype)
+        rewards = torch.zeros((b - a))
+        done = torch.zeros((b - a))
+        next_states = torch.zeros((b - a, *self._states[a].shape))
+        target_policy = torch.zeros((b - a, *self._policy[a].shape))
+        target_value = torch.zeros((b - a,))
+        priority = torch.zeros((b - a,))
+        importance_weight = torch.zeros((b - a,))
 
         uniform_policy = torch.ones_like(torch.tensor(self._policy[a]))
         uniform_policy /= torch.sum(uniform_policy)
@@ -133,7 +146,7 @@ class Episode:
             next_states[k - a] = torch.tensor(self._states[k + 1])
             actions[k - a] = self._actions[k]
             rewards[k - a] = self._rewards[k]
-            target_policy[k - a] = torch.from_numpy(self._policy[k])
+            target_policy[k - a] = ensure_tensor(self._policy[k])
             target_value[k - a] = self._bootstrap[k]
             priority[k - a] = self._p[k]
             importance_weight[k - a] = 0.0
@@ -221,7 +234,7 @@ class TrialReplayBuffer:
         self._p /= self._p.sum()
         self._range = list(range(len(self._episodes)))
 
-    def sample(self, rollout_length, batch_size) -> EpisodeBatch:
+    def sample_old(self, rollout_length, batch_size) -> EpisodeBatch:
         # idx = np.random.randint(0, len(self._episodes), batch_size)
         idx = np.random.choice(self._range, batch_size, p=self._p)
         probs = [self._p[i] for i in idx]
@@ -230,6 +243,20 @@ class TrialReplayBuffer:
         batch = EpisodeBatch(*batch)._asdict()
         batch["priority"] = batch["priority"][:, 0] * torch.tensor(probs)
         batch["importance_weight"] = 1 / (batch["priority"] + 1e-6) / self.size()
+
+        return EpisodeBatch(**batch)
+
+    def sample(self, rollout_length, batch_size) -> EpisodeBatch:
+        idx = np.random.randint(0, len(self._episodes), batch_size)
+        # idx = np.random.choice(self._range, batch_size, p=self._p)
+        # probs = [self._p[i] for i in idx]
+        transitions = [self._episodes[i].sample(rollout_length) for i in idx]
+        batch = [torch.stack(item) for item in zip(*transitions)]
+        batch = EpisodeBatch(*batch)._asdict()
+        # batch["priority"] = batch["priority"][:, 0] * torch.tensor(probs)
+        # batch["importance_weight"] = 1 / (batch["priority"] + 1e-6) / self.size()
+        batch["priority"] = torch.ones_like(batch["priority"])
+        batch["importance_weight"] = torch.ones_like(batch["priority"])
 
         return EpisodeBatch(**batch)
 

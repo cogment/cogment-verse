@@ -9,7 +9,7 @@ from muzero.networks import (
     lin_bn_act,
     mlp,
 )
-import muzero.replay_buffer
+from muzero.replay_buffer import TrialReplayBuffer, Episode, EpisodeBatch
 
 import torch
 import copy
@@ -105,19 +105,13 @@ def main():
     min_replay_buffer_size = 200
     batch_size = 32
     gamma = 0.9
+    rollout_length = 2
 
     target_muzero = copy.deepcopy(muzero)
-
-    observations = []
-    next_observations = []
-    actions = []
-    rewards = []
-    dones = []
-    policies = []
-    values = []
-
     total_trial_reward = 0
     total_steps = 0
+
+    replay_buffer = TrialReplayBuffer(max_size=100000, discount_rate=0.95, bootstrap_steps=10)
 
     for episode in range(1000):
         observation = env.reset()
@@ -138,39 +132,33 @@ def main():
                     ucb_c2=15000.0,
                 )
             next_observation, reward, done, _ = env.step(action)
-            observations.append(observation)
-            next_observations.append(next_observation)
-            actions.append(action)
-            rewards.append(reward)
-            dones.append(done)
-            policies.append(policy.squeeze(0).detach().numpy())
-            values.append(value)
+            replay_buffer.add_sample(observation, action, reward, next_observation, done, policy, value)
             observation = next_observation
             total_steps += 1
             total_trial_reward += reward
             trial_reward += reward
 
-            if len(actions) > min_replay_buffer_size:
+            if replay_buffer.size() > min_replay_buffer_size:
                 muzero.train()
-                idx = np.random.randint(0, len(actions), batch_size)
-                batch_observations = torch.tensor([observations[i] for i in idx]).float().unsqueeze(1)
-                batch_next_observations = torch.tensor([next_observations[i] for i in idx]).float().unsqueeze(1)
-                batch_actions = torch.tensor([actions[i] for i in idx]).long().unsqueeze(1)
-                batch_rewards = torch.tensor([rewards[i] for i in idx]).float().unsqueeze(1)
-                batch_dones = torch.tensor([dones[i] for i in idx]).float().unsqueeze(1)
-                batch_policies = torch.tensor([policies[i] for i in idx]).float().unsqueeze(1)
-                batch_values = torch.tensor([values[i] for i in idx]).float().unsqueeze(1)
+                batch = replay_buffer.sample(rollout_length, batch_size)
+
+                batch_tensors = []
+                for _, tensor in enumerate(batch):
+                    if isinstance(tensor, np.ndarray):
+                        tensor = torch.from_numpy(tensor)
+                    batch_tensors.append(tensor)
+                batch = EpisodeBatch(*batch_tensors)
 
                 priority, info = muzero.train_step(
                     optimizer=optimizer,
-                    observation=batch_observations,
-                    action=batch_actions,
-                    reward=batch_rewards,
-                    next_observation=batch_next_observations,
-                    done=batch_dones,
-                    target_policy=batch_policies,
-                    target_value=batch_values,
-                    importance_weight=torch.ones((batch_size,)),
+                    observation=batch.state,
+                    action=batch.action,
+                    reward=batch.rewards,
+                    next_observation=batch.next_state,
+                    done=batch.done,
+                    target_policy=batch.target_policy,
+                    target_value=batch.target_value,
+                    importance_weight=batch.importance_weight,
                     max_norm=100.0,
                     target_label_smoothing_factor=0.01,
                     s_weight=0.01,
