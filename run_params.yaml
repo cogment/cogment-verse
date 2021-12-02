@@ -653,6 +653,8 @@ cartpole_muzero: &default_muzero
       v_weight: 1.0
       ucb_c1: 1.25
       ucb_c2: 15000.0
+      train_device: "cuda:0"
+      actor_device: "cuda:1"
 
 lander_muzero:
   <<: *default_muzero
@@ -674,7 +676,7 @@ lander_muzero:
       vmin: -500.0 # avoid proto default value???
       vmax: 500.0
       min_replay_buffer_size: 200
-      demonstration_trials: 1000
-      max_parallel_trials: 1
+      #demonstration_trials: 1000
+      max_parallel_trials: 6
       mcts_depth: 2
       mcts_samples: 8

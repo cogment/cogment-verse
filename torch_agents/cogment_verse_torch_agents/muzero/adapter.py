@@ -168,7 +168,6 @@ class MuZeroAgentAdapter(AgentAdapter):
 
     def __init__(self):
         super().__init__()
-        self._device = "cuda" if torch.cuda.is_available() else "cpu"
         self._dtype = torch.float
         mp.set_start_method("spawn")
 
@@ -176,7 +175,7 @@ class MuZeroAgentAdapter(AgentAdapter):
         return MuZeroAgent(obs_dim=obs_dim, act_dim=act_dim, device=device, training_config=training_config)
 
     def _load(self, model_id, version_number, version_user_data, model_data_f):
-        return MuZeroAgent.load(model_data_f, self._device)
+        return MuZeroAgent.load(model_data_f, "cpu")
 
     def _save(self, model, model_data_f):
         assert isinstance(model, MuZeroAgent)
@@ -206,6 +205,8 @@ class MuZeroAgentAdapter(AgentAdapter):
 
             # agent, version_info = await self.retrieve_version(config.model_id, config.model_version)
             agent = await self._latest_model(config.model_id)
+            agent = copy.deepcopy(agent)
+            agent.set_device(config.device)
             worker = AgentTrialWorker(agent, event_queue, action_queue)
             # print("VERSION_INFO", version_info)
             # agent._muzero.to("cpu")
@@ -251,21 +252,6 @@ class MuZeroAgentAdapter(AgentAdapter):
         }
 
 
-async def single_agent_muzero_actor_implementation(agent_adapter, actor_session):
-    actor_session.start()
-
-    config = actor_session.config
-    agent, _ = await agent_adapter.retrieve_version(config.model_id, config.model_version)
-
-    async for event in actor_session.event_loop():
-        if event.observation and event.type == cogment.EventType.ACTIVE:
-            obs = agent_adapter.tensor_from_cog_obs(event.observation.snapshot)
-            action, policy, value = agent.act(obs)
-            actor_session.do_action(
-                AgentAction(discrete_action=action, policy=proto_array_from_np_array(policy), value=value)
-            )
-
-
 def make_trial_configs(run_session, config, model_id, model_version_number):
     demonstration_env_config = copy.deepcopy(config.environment)
     demonstration_env_config.render = True
@@ -276,6 +262,7 @@ def make_trial_configs(run_session, config, model_id, model_version_number):
         num_action=config.actor.num_action,
         env_type=config.environment.env_type,
         env_name=config.environment.env_name,
+        device=config.training.actor_device,
     )
     muzero_config = TrialActor(
         name="agent_1",
@@ -365,16 +352,30 @@ async def single_agent_muzero_run_implementation(agent_adapter, run_session):
     config = run_session.config
     assert config.environment.player_count == 1
 
+    agent, version_info = await agent_adapter.create_and_publish_initial_version(
+        model_id=model_id,
+        obs_dim=config.actor.num_input,
+        act_dim=config.actor.num_action,
+        device=config.training.train_device,
+        training_config=config.training,
+    )
+
+    agent_adapter._cache_model(model_id, agent)
+
     sample_queue = mp.Queue()
     update_queue = mp.Queue()
-    agent_queue = mp.Queue()
     max_prefetch_batch = 32
     max_reanalyze_batch = 32
     batch_queue = mp.Queue(max_prefetch_batch)  # todo: fix this?
     reanalyze_queue = mp.Queue(max_reanalyze_batch)
+    agent_update_queue = mp.Queue()
+    # limit to small size so that training and sample generation don't get out of sync
+    info_queue = mp.Queue(10)
 
     num_reanalyze_workers = 0
+    agent_queue = mp.Queue()
 
+    train_worker = TrainWorker(agent, batch_queue, agent_update_queue, info_queue, config)
     replay_buffer = ReplayBufferWorker(sample_queue, update_queue, batch_queue, config.training)
     reanalyze_workers = [
         ReanalyzeWorker(
@@ -389,31 +390,8 @@ async def single_agent_muzero_run_implementation(agent_adapter, run_session):
         for _ in range(num_reanalyze_workers)
     ]
 
-    model_version_number = -1
     trials_completed = 0
     running_stats = RunningStats()
-
-    lr_schedule = LinearScheduleWithWarmup(
-        config.training.learning_rate,
-        config.training.min_learning_rate,
-        config.training.lr_decay_steps,
-        config.training.lr_warmup_steps,
-    )
-
-    epsilon_schedule = LinearScheduleWithWarmup(
-        config.training.exploration_epsilon, config.training.epsilon_min, config.training.epsilon_decay_steps, 0
-    )
-
-    temperature_schedule = LinearScheduleWithWarmup(
-        config.training.mcts_temperature,
-        config.training.min_temperature,
-        config.training.temperature_decay_steps,
-        0,
-    )
-
-    target_label_smoothing_schedule = LinearScheduleWithWarmup(
-        1.0, config.training.target_label_smoothing_factor, config.training.target_label_smoothing_factor_steps, 0
-    )
 
     xp_tracker.log_params(
         config.environment,
@@ -427,21 +405,11 @@ async def single_agent_muzero_run_implementation(agent_adapter, run_session):
     training_step = 0
     run_total_reward = 0
 
-    agent, version_info = await agent_adapter.create_and_publish_initial_version(
-        model_id=model_id,
-        obs_dim=config.actor.num_input,
-        act_dim=config.actor.num_action,
-        device=agent_adapter._device,
-        training_config=config.training,
-    )
-
-    agent_adapter._cache_model(model_id, agent)
+    workers = [train_worker, replay_buffer] + reanalyze_workers
 
     try:
-        # start worker processes
-        replay_buffer.start()
-        for reanalyze_worker in reanalyze_workers:
-            reanalyze_worker.start()
+        for worker in workers:
+            worker.start()
 
         sample_generator = run_session.start_trials_and_wait_for_termination(
             trial_configs,
@@ -449,9 +417,8 @@ async def single_agent_muzero_run_implementation(agent_adapter, run_session):
         )
 
         async for _step, timestamp, _trial, _tick, (samples, total_reward) in sample_generator:
-            assert replay_buffer.is_alive()
-            for reanalyze_worker in reanalyze_workers:
-                assert reanalyze_worker.is_alive()
+            for worker in workers:
+                assert worker.is_alive()
 
             for sample in samples:
                 total_samples += 1
@@ -474,58 +441,37 @@ async def single_agent_muzero_run_implementation(agent_adapter, run_session):
                     )
                     run_total_reward += total_reward
 
-                if replay_buffer.size() > config.training.min_replay_buffer_size:
-                    training_step += 1
-                    # batch = reanalyze_queue.get()
-                    batch = batch_queue.get()
-                    for item in batch:
-                        item.to(agent_adapter._device)
+                if replay_buffer.size() < config.training.min_replay_buffer_size:
+                    continue
 
-                    priority, info = agent.learn(batch)
-                    # try to cache again in case it was evicted
+                training_step += 1
+                priority, info = info_queue.get()
+                info["model_version"] = version_info["version_number"]
+                info["training_step"] = training_step
+                info["mean_trial_reward"] = run_total_reward / max(1, trials_completed)
+                running_stats.update(info)
+
+                # get latest online model
+                try:
+                    agent = agent_update_queue.get_nowait()
                     agent_adapter._cache_model(model_id, agent)
+                except queue.Empty:
+                    pass
 
-                    for k in range(config.training.rollout_length):
-                        replay_buffer.update_priorities(batch.episode, batch.step + k, priority[:, k])
+                if training_step % config.training.model_publication_interval == 0:
+                    version_info = await agent_adapter.publish_version(model_id, agent)
 
-                    lr = lr_schedule.update()
-                    epsilon = epsilon_schedule.update()
-                    temperature = temperature_schedule.update()
-                    # test
-                    # temperature = max(0.25, temperature * 0.995)
-
-                    target_label_smoothing_factor = target_label_smoothing_schedule.update()
-
-                    agent._params.learning_rate = lr
-                    agent._params.exploration_epsilon = epsilon
-                    agent._params.mcts_temperature = temperature
-                    agent._params.target_label_smoothing_factor = target_label_smoothing_factor
-
-                    if training_step % config.training.model_publication_interval == 0:
-                        version_info = await agent_adapter.publish_version(model_id, agent)
-                        # agent_queue.put(agent)
-
-                    info["lr"] = lr
-                    info["epsilon"] = epsilon
-                    info["temperature"] = temperature
-                    info["model_version"] = version_info["version_number"]
-                    info["training_step"] = training_step
-                    info["target_label_smoothing_factor"] = target_label_smoothing_factor
-                    info["mean_trial_reward"] = run_total_reward / max(1, trials_completed)
-                    running_stats.update(info)
-
-                    if total_samples % config.training.log_interval == 0:
-                        xp_tracker.log_metrics(
-                            timestamp,
-                            total_samples,
-                            total_samples=total_samples,
-                            **running_stats.get(),
-                        )
-                        running_stats.reset()
+                if total_samples % config.training.log_interval == 0:
+                    xp_tracker.log_metrics(
+                        timestamp,
+                        total_samples,
+                        total_samples=total_samples,
+                        **running_stats.get(),
+                    )
+                    running_stats.reset()
     finally:
-        replay_buffer.terminate()
-        for reanalyze_worker in reanalyze_workers:
-            reanalyze_worker.terminate()
+        for worker in workers:
+            worker.terminate()
 
     log.info(f"[{run_session.params_name}/{run_session.run_id}] finished ({total_samples} samples seen)")
 
@@ -538,7 +484,7 @@ class ReplayBufferWorker(mp.Process):
         self._batch_queue = batch_queue
         self._replay_buffer_size = mp.Value(ctypes.c_uint32, 0)
         self._training_config = config
-        self._device = "cuda" if torch.cuda.is_available() else "cpu"
+        self._device = config.train_device
 
     def run(self):
         replay_buffer = TrialReplayBuffer(
@@ -593,6 +539,85 @@ class AgentTrialWorker(mp.Process):
             self._action_queue.put(
                 AgentAction(discrete_action=action, policy=proto_array_from_np_array(policy), value=value)
             )
+
+
+class TrainWorker(mp.Process):
+    def __init__(self, agent, batch_queue, agent_update_queue, info_queue, config):
+        super().__init__()
+        self.batch_queue = batch_queue
+        self.agent = agent
+        self.agent_update_queue = agent_update_queue
+        self.info_queue = info_queue
+        self.config = config
+        self.steps_per_update = 200
+
+    def run(self):
+        self.agent.set_device(self.config.training.train_device)
+        step = 0
+
+        lr_schedule = LinearScheduleWithWarmup(
+            self.config.training.learning_rate,
+            self.config.training.min_learning_rate,
+            self.config.training.lr_decay_steps,
+            self.config.training.lr_warmup_steps,
+        )
+
+        epsilon_schedule = LinearScheduleWithWarmup(
+            self.config.training.exploration_epsilon,
+            self.config.training.epsilon_min,
+            self.config.training.epsilon_decay_steps,
+            0,
+        )
+
+        temperature_schedule = LinearScheduleWithWarmup(
+            self.config.training.mcts_temperature,
+            self.config.training.min_temperature,
+            self.config.training.temperature_decay_steps,
+            0,
+        )
+
+        target_label_smoothing_schedule = LinearScheduleWithWarmup(
+            1.0,
+            self.config.training.target_label_smoothing_factor,
+            self.config.training.target_label_smoothing_factor_steps,
+            0,
+        )
+
+        while True:
+            lr = lr_schedule.update()
+            epsilon = epsilon_schedule.update()
+            temperature = temperature_schedule.update()
+            # test
+            # temperature = max(0.25, temperature * 0.995)
+            target_label_smoothing_factor = target_label_smoothing_schedule.update()
+
+            self.agent._params.learning_rate = lr
+            self.agent._params.exploration_epsilon = epsilon
+            self.agent._params.mcts_temperature = temperature
+            self.agent._params.target_label_smoothing_factor = target_label_smoothing_factor
+
+            batch = self.batch_queue.get()
+            for item in batch:
+                item.to(self.config.training.train_device)
+            priority, info = self.agent.learn(batch)
+
+            info = dict(
+                lr=lr,
+                epsilon=epsilon,
+                temperature=temperature,
+                target_label_smoothing_factor=target_label_smoothing_factor,
+                **info,
+            )
+            self.info_queue.put((priority, info))
+
+            step += 1
+            if step % self.steps_per_update == 0:
+                cpu_agent = copy.deepcopy(self.agent)
+                cpu_agent.set_device("cpu")
+                self.agent_update_queue.put(cpu_agent)
+
+            # for k in range(config.training.rollout_length):
+            #    replay_buffer.update_priorities(batch.episode, batch.step + k, priority[:, k])
 
 
 class ReanalyzeWorker(mp.Process):

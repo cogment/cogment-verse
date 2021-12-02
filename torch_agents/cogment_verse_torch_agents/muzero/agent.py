@@ -54,6 +54,11 @@ class MuZeroAgent:
         self._device = torch.device(device)
         self._make_networks()
 
+    def set_device(self, device):
+        self._device = torch.device(device)
+        self._muzero = self._muzero.to(self._device)
+        self._target_muzero = self._target_muzero.to(self._device)
+
     def _make_networks(self):
         stem = lin_bn_act(self._obs_dim, self._params.hidden_dim, bn=True, act=torch.nn.ReLU())
         representation = RepresentationNetwork(stem, self._params.hidden_dim, self._params.hidden_layers)

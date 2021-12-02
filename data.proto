@@ -47,6 +47,7 @@ message ActorConfig {
   string environment_implementation = 6; // TODO Remove by retrieving info from the environment instead
   string env_type = 7;
   string env_name = 8;
+  string device = 9;
 }
 
 message ActorParams {
@@ -198,10 +199,12 @@ message MuZeroTrainingConfig {
   float s_weight = 42;
   float v_weight = 43;
   uint32 demonstration_trials = 44;
+  string train_device = 45;
+  string actor_device = 46;
 }
 
 message MuZeroTrainingRunConfig {
-  EnvConfig environment = 1;
+  EnvironmentConfig environment = 1;
   ActorConfig actor = 2;
   MuZeroTrainingConfig training = 3;
 }
