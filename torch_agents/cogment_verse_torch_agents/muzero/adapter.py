@@ -36,7 +36,7 @@ from cogment_verse import MlflowExperimentTracker
 from cogment_verse_torch_agents.wrapper import np_array_from_proto_array, proto_array_from_np_array
 from cogment_verse_torch_agents.muzero.replay_buffer import Episode, TrialReplayBuffer, EpisodeBatch
 
-from cogment.api.common_pb2 import TrialState
+from cogment.api.common_pb2 import EnvironmentConfig, TrialState
 import cogment
 
 import logging
@@ -266,51 +266,65 @@ async def single_agent_muzero_actor_implementation(agent_adapter, actor_session)
             )
 
 
-def make_trial_configs(config):
-    demonstration_trial_configs = []
-    teacher_actor_config = TrialActor(
+def make_trial_configs(run_session, config, model_id, model_version_number):
+    demonstration_env_config = copy.deepcopy(config.environment)
+    demonstration_env_config.render = True
+    actor_config = ActorConfig(
+        model_id=model_id,
+        model_version=model_version_number,
+        num_input=config.actor.num_input,
+        num_action=config.actor.num_action,
+        env_type=config.environment.env_type,
+        env_name=config.environment.env_name,
+    )
+    muzero_config = TrialActor(
+        name="agent_1",
+        actor_class="agent",
+        implementation="muzero_mlp",
+        config=actor_config,
+    )
+    teacher_config = TrialActor(
         name="web_actor",
         actor_class="teacher_agent",
         implementation="client",
-        config=ActorConfig(
-            run_id=run_id,
-            env_type=config.environment_type,
-            env_name=config.environment_name,
-            num_input=config.num_input,
-            num_action=config.num_action,
-        ),
+        config=actor_config,
     )
-    demonstration_trial_configs = [
+    demonstration_configs = [
         TrialConfig(
-            run_id=run_id,
-            environment_config=EnvConfig(
-                player_count=config.player_count,
-                run_id=run_id,
-                render=True,
-                render_width=config.render_width,
-                env_type=config.environment_type,
-                env_name=config.environment_name,
-                flatten=config.flatten,
-                framestack=config.framestack,
-            ),
-            actors=[*player_actor_configs, teacher_actor_config],
-            distinguished_actor=distinguished_actor,
+            run_id=run_session.run_id,
+            environment_config=demonstration_env_config,
+            actors=[muzero_config, teacher_config],
         )
-        for _ in range(config.demonstration_count)
+        for _ in range(config.training.demonstration_trials)
     ]
-    return demonstration_trial_configs
+
+    trial_configs = [
+        TrialConfig(
+            run_id=run_session.run_id,
+            environment_config=config.environment,
+            actors=[muzero_config],
+        )
+        for _ in range(config.training.trial_count - config.training.demonstration_trials)
+    ]
+
+    return demonstration_configs + trial_configs
 
 
 async def single_agent_muzero_sample_producer_implementation(agent_adapter, run_sample_producer_session):
-    assert run_sample_producer_session.count_actors() == 1
+    # allow up to two players for human/expert intervention
+    assert run_sample_producer_session.count_actors() in (1, 2)
     state = None
     step = 0
     total_reward = 0
     samples = []
 
     async for sample in run_sample_producer_session.get_all_samples():
-        next_state = agent_adapter.tensor_from_cog_obs(sample.get_actor_observation(0))
+        observation = sample.get_actor_observation(0)
+        next_state = agent_adapter.tensor_from_cog_obs(observation)
         done = sample.get_trial_state() == TrialState.ENDED
+        current_player = (
+            observation.current_player if observation.player_override == -1 else observation.player_override
+        )
 
         if state is not None:
             total_reward += reward
@@ -336,8 +350,8 @@ async def single_agent_muzero_sample_producer_implementation(agent_adapter, run_
 
         step += 1
         state = next_state
-        action, policy, value = agent_adapter.decode_cog_action(sample.get_actor_action(0))
-        reward = sample.get_actor_reward(0)
+        action, policy, value = agent_adapter.decode_cog_action(sample.get_actor_action(current_player))
+        reward = sample.get_actor_reward(current_player)
 
     run_sample_producer_session.produce_training_sample((samples, total_reward))
 
@@ -407,28 +421,7 @@ async def single_agent_muzero_run_implementation(agent_adapter, run_session):
         config.training,
     )
 
-    trial_configs = [
-        TrialConfig(
-            run_id=run_session.run_id,
-            environment_config=config.environment,
-            actors=[
-                TrialActor(
-                    name="agent_1",
-                    actor_class="agent",
-                    implementation="muzero_mlp",
-                    config=ActorConfig(
-                        model_id=model_id,
-                        model_version=model_version_number,
-                        num_input=config.actor.num_input,
-                        num_action=config.actor.num_action,
-                        env_type=config.environment.env_type,
-                        env_name=config.environment.env_name,
-                    ),
-                )
-            ],
-        )
-        for trial_ids in range(config.training.trial_count)
-    ]
+    trial_configs = make_trial_configs(run_session, config, model_id, -1)
 
     total_samples = 0
     training_step = 0

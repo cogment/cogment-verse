@@ -283,19 +283,20 @@ class DynamicsNetwork(torch.nn.Module):
         super().__init__()
         self.num_action = num_action
 
-        self.blocks = torch.nn.ModuleList([ResidualBlock(num_hidden + num_action) for _ in range(num_hidden_layers)])
-        self.distribution = Distributional(rmin, rmax, num_hidden + num_action, rbins)
-        self.state_predictor = torch.nn.Linear(num_hidden + num_action, num_hidden)
+        self.encoding = mlp(num_action + num_hidden, num_hidden, num_hidden)
+        self.blocks = torch.nn.ModuleList([ResidualBlock(num_hidden) for _ in range(num_hidden_layers)])
+        self.distribution = Distributional(rmin, rmax, num_hidden, rbins)
+        self.state_predictor = torch.nn.Linear(num_hidden, num_hidden)
 
     def forward(self, state, action):
         action_one_hot = torch.nn.functional.one_hot(action, self.num_action)
-        x = torch.cat((state, action_one_hot), dim=1)
+        encoded_state = self.encoding(torch.cat((state, action_one_hot), dim=1))
 
         for block in self.blocks:
-            x = block(x)
+            encoded_state = block(encoded_state)
 
-        reward_probs, reward = self.distribution(x)
-        next_state = self.state_predictor(x)
+        reward_probs, reward = self.distribution(encoded_state)
+        next_state = self.state_predictor(encoded_state)
         return normalize_scale(next_state), reward_probs, reward
 
 

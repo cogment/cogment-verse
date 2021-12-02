@@ -598,9 +598,10 @@ lander_muzero:
       s_weight: 0.001
       v_weight: 0.1
 
-cartpole_muzero:
+
+cartpole_muzero: &default_muzero
   implementation: muzero_mlp_training
-  config:
+  config: &default_muzero_config
     class_name: data_pb2.MuZeroTrainingRunConfig
     environment:
       env_type: "gym"
@@ -609,20 +610,20 @@ cartpole_muzero:
     actor:
       num_input: 4
       num_action: 2
-    training:
+    training: &default_muzero_training_config
       model_publication_interval: 2000
       trial_count: 10000
       max_parallel_trials: 4
       discount_rate: 0.95
-      batch_size: 64
+      batch_size: 256
       representation_dim: 16
       projector_dim: 16
-      hidden_dim: 64
+      hidden_dim: 128
       hidden_layers: 2
       projector_hidden_dim: 32
       projector_hidden_layers: 1
       min_replay_buffer_size: 1000
-      max_replay_buffer_size: 20000
+      max_replay_buffer_size: 1000000
       log_interval: 100
       weight_decay: 0.01
       learning_rate: 0.001
@@ -645,10 +646,35 @@ cartpole_muzero:
       vmax: 200.0
       rollout_length: 4
       mcts_depth: 4
-      mcts_samples: 16
+      mcts_samples: 32
       target_label_smoothing_factor: 0.01
       target_label_smoothing_factor_steps: 1
-      s_weight: 0.01
+      s_weight: 1.0
       v_weight: 1.0
       ucb_c1: 1.25
       ucb_c2: 15000.0
+
+lander_muzero:
+  <<: *default_muzero
+  config:
+    <<: *default_muzero_config
+    environment:
+      env_type: "gym"
+      env_name: "LunarLander-v2"
+      seed: 12
+    actor:
+      num_input: 8
+      num_action: 4
+    training:
+      <<: *default_muzero_training_config
+      rbins: 32
+      rmin: -100.0
+      rmax: 100.0
+      vbins: 64
+      vmin: -500.0 # avoid proto default value???
+      vmax: 500.0
+      min_replay_buffer_size: 200
+      demonstration_trials: 1000
+      max_parallel_trials: 1
+      mcts_depth: 2
+      mcts_samples: 8

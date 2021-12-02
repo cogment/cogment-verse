@@ -197,6 +197,7 @@ message MuZeroTrainingConfig {
   uint32 target_label_smoothing_factor_steps = 41;
   float s_weight = 42;
   float v_weight = 43;
+  uint32 demonstration_trials = 44;
 }
 
 message MuZeroTrainingRunConfig {
