@@ -161,6 +161,7 @@ class MuZeroAgent:
             self._params.mcts_samples,
             self._params.ucb_c1,
             self._params.ucb_c2,
+            self._params.mcts_temperature,
         )
 
     def learn(self, batch):

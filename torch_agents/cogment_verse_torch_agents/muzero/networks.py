@@ -333,38 +333,11 @@ class MuZero(torch.nn.Module):
 
         if True:
             policy, q, value = self.reanalyze(
-                observation, epsilon, alpha, discount_rate, mcts_depth, mcts_count, ucb_c1, ucb_c2
+                observation, epsilon, alpha, discount_rate, mcts_depth, mcts_count, ucb_c1, ucb_c2, temperature
             )
-            policy = torch.pow(policy, 1 / temperature)
-            policy /= torch.sum(policy, dim=1)
             action = torch.distributions.Categorical(policy).sample()
             action = action.cpu().numpy().item()
-            value = torch.sum(policy * q)
-
-            # testing
-            # if np.random.rand() < 0.1:
-            #    action = np.random.randint(0, policy.shape[-1])
-            #    # action = torch.argmax(q).cpu().detach().item()
-
             return action, policy, q, value
-
-        representation = self._representation(observation.unsqueeze(0))
-        # testing/debug
-        q_probs, q = self._dqn(representation)
-        qmin = torch.min(q)
-        qmax = torch.max(q)
-        policy = torch.clamp((q - qmin) / (qmax - qmin), 0.1, 1.0)
-        policy /= torch.sum(policy)
-        # action = torch.distributions.Categorical(policy).sample().detach().item()
-
-        if np.random.rand() < 0.1:
-            action = np.random.randint(0, q.shape[1])
-        else:
-            action = torch.argmax(q).detach().cpu().item()
-
-        value = q[:, action]
-
-        return action, policy, q, value
 
     def train_step(
         self,
@@ -542,7 +515,7 @@ class MuZero(torch.nn.Module):
         return priority, info
 
     @torch.no_grad()
-    def reanalyze(self, state, epsilon, alpha, discount_rate, mcts_depth, mcts_count, ucb_c1, ucb_c2):
+    def reanalyze(self, state, epsilon, alpha, discount_rate, mcts_depth, mcts_count, ucb_c1, ucb_c2, temperature):
         self.eval()
 
         if isinstance(state, np.ndarray):
@@ -579,4 +552,4 @@ class MuZero(torch.nn.Module):
         )
 
         mcts.build_search_tree(mcts_count)
-        return mcts.improved_targets()
+        return mcts.improved_targets(temperature)

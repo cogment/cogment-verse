@@ -81,12 +81,14 @@ class MCTS:
             (self._Q - self._valinfo.vmin) / max(self._valinfo.vmax - self._valinfo.vmin, 0.01), 0.0, 1.0
         )
 
-    def improved_targets(self):
+    def improved_targets(self, temperature):
         """
         :return: Tuple (target policy, target q, target value)
         """
-        p = self.p()
-        return p, self._Q, torch.sum(p * self._Q)
+        policy = torch.pow(self.p(), 1 / temperature)
+        policy /= torch.sum(policy, dim=1)
+        value = torch.sum(policy * self._Q)
+        return policy, self._Q, value
 
     def ucb(self, c1, c2):
         """
