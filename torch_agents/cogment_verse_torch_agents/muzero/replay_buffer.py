@@ -212,7 +212,7 @@ class TrialReplayBuffer:
         self._p = np.array(self._priority, dtype=np.double)
         self._p /= self._p.sum()
 
-    def _add_episode(self, episode):
+    def add_episode(self, episode):
         self._episodes.append(episode)
         self._total_size += len(episode)
         self._priority.append(sum(episode._priority))
@@ -271,5 +271,5 @@ class TrialReplayBuffer:
 
         if done:
             self._current_episode.bootstrap_value(self._bootstrap_steps, self._discount_rate)
-            self._add_episode(self._current_episode)
+            self.add_episode(self._current_episode)
             self._current_episode = None

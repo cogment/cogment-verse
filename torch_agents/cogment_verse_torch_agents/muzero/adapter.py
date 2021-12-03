@@ -12,7 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from collections import defaultdict
+import asyncio
+from collections import defaultdict, namedtuple
 import ctypes
 import itertools
 import copy
@@ -52,6 +53,9 @@ from .agent import MuZeroAgent
 
 import torch.multiprocessing as mp
 import queue
+
+
+MuZeroSample = namedtuple("MuZeroSample", ["state", "action", "reward", "next_state", "done", "policy", "value"])
 
 
 class LinearScheduleWithWarmup:
@@ -150,6 +154,8 @@ DEFAULT_MUZERO_TRAINING_CONFIG = MuZeroTrainingConfig(
     target_label_smoothing_factor_steps=1,
     s_weight=1e-2,
     v_weight=0.1,
+    train_device="cpu",
+    actor_device="cpu",
 )
 
 
@@ -304,6 +310,7 @@ async def single_agent_muzero_sample_producer_implementation(agent_adapter, run_
     step = 0
     total_reward = 0
     samples = []
+    state, action, reward, policy, value = None, None, None, None, None
 
     async for sample in run_sample_producer_session.get_all_samples():
         observation = sample.get_actor_observation(0)
@@ -316,20 +323,8 @@ async def single_agent_muzero_sample_producer_implementation(agent_adapter, run_
         if state is not None:
             total_reward += reward
 
-            samples.append(
-                EpisodeBatch(
-                    episode=0,
-                    step=step,
-                    state=state,
-                    action=action,
-                    rewards=reward,
-                    next_state=next_state,
-                    done=done,
-                    target_policy=policy,
-                    target_value=value,
-                    priority=0.001,
-                    importance_weight=0.0,
-                )
+            run_sample_producer_session.produce_training_sample(
+                (MuZeroSample(state, action, reward, next_state, done, policy, value), total_reward)
             )
 
         if done:
@@ -339,8 +334,6 @@ async def single_agent_muzero_sample_producer_implementation(agent_adapter, run_
         state = next_state
         action, policy, value = agent_adapter.decode_cog_action(sample.get_actor_action(current_player))
         reward = sample.get_actor_reward(current_player)
-
-    run_sample_producer_session.produce_training_sample((samples, total_reward))
 
 
 async def single_agent_muzero_run_implementation(agent_adapter, run_session):
@@ -360,23 +353,23 @@ async def single_agent_muzero_run_implementation(agent_adapter, run_session):
         training_config=config.training,
     )
 
+    episode_samples = {}
     agent_adapter._cache_model(model_id, agent)
 
-    sample_queue = mp.Queue()
+    episode_queue = mp.Queue()
     update_queue = mp.Queue()
-    max_prefetch_batch = 32
-    max_reanalyze_batch = 32
-    batch_queue = mp.Queue(max_prefetch_batch)  # todo: fix this?
-    reanalyze_queue = mp.Queue(max_reanalyze_batch)
+    max_prefetch_batch = 128
+    batch_queue = mp.Queue(max_prefetch_batch)  # max_prefetch_batch)  # todo: fix this?
+    reanalyze_queue = mp.Queue()
     agent_update_queue = mp.Queue()
     # limit to small size so that training and sample generation don't get out of sync
-    info_queue = mp.Queue(10)
+    info_queue = mp.Queue(2)
 
     num_reanalyze_workers = 0
     agent_queue = mp.Queue()
 
     train_worker = TrainWorker(agent, batch_queue, agent_update_queue, info_queue, config)
-    replay_buffer = ReplayBufferWorker(sample_queue, update_queue, batch_queue, config.training)
+    replay_buffer = ReplayBufferWorker(episode_queue, update_queue, batch_queue, config.training)
     reanalyze_workers = [
         ReanalyzeWorker(
             batch_queue,
@@ -416,59 +409,78 @@ async def single_agent_muzero_run_implementation(agent_adapter, run_session):
             max_parallel_trials=config.training.max_parallel_trials,
         )
 
-        async for _step, timestamp, _trial, _tick, (samples, total_reward) in sample_generator:
+        async for _step, timestamp, trial_id, _tick, (sample, total_reward) in sample_generator:
             for worker in workers:
                 assert worker.is_alive()
 
-            for sample in samples:
-                total_samples += 1
-                replay_buffer.add_sample(
-                    state=sample.state,
-                    action=sample.action,
-                    reward=sample.rewards,
-                    next_state=sample.next_state,
-                    done=sample.done,
-                    policy=sample.target_policy,
-                    value=sample.target_value,
+            if trial_id not in episode_samples:
+                episode_samples[trial_id] = Episode(sample.state, config.training.discount_rate)
+
+            episode_samples[trial_id].add_step(
+                sample.next_state, sample.action, sample.reward, sample.done, sample.policy, sample.value
+            )
+            total_samples += 1
+
+            if sample.done:
+                trials_completed += 1
+                xp_tracker.log_metrics(
+                    timestamp, total_samples, trial_total_reward=total_reward, trials_completed=trials_completed
                 )
+                run_total_reward += total_reward
+                replay_buffer.add_episode(episode_samples.pop(trial_id))
 
-                # print(_trial, _tick, step, timestamp)
+            if replay_buffer.size() <= config.training.min_replay_buffer_size:
+                continue
 
-                if sample.done:
-                    trials_completed += 1
-                    xp_tracker.log_metrics(
-                        timestamp, total_samples, trial_total_reward=total_reward, trials_completed=trials_completed
-                    )
-                    run_total_reward += total_reward
-
-                if replay_buffer.size() < config.training.min_replay_buffer_size:
+            # avoid occasional deadlock?
+            training_starved = False
+            while True:
+                try:
+                    # rint("run implementation about to get info")
+                    priority, info = info_queue.get(timeout=1.0)  # _nowait()
+                    # print("run implementation got info")
+                    break
+                except queue.Empty:
+                    # print("no info yet available")
+                    if batch_queue.qsize() == 0 and episode_queue.qsize() == 0:
+                        # training_starved = True
+                        print("training process is starved of data")
+                        # break
+                    # print("episode_queue", episode_queue.qsize())
+                    # print("agent_update_queue", agent_update_queue.qsize())
+                    # print("update_queue", update_queue.qsize())
+                    # print("batch_queue", batch_queue.qsize())
+                    # print("info_queue", info_queue.qsize())
+                    # await asyncio.sleep(1.0)
                     continue
 
-                training_step += 1
-                priority, info = info_queue.get()
-                info["model_version"] = version_info["version_number"]
-                info["training_step"] = training_step
-                info["mean_trial_reward"] = run_total_reward / max(1, trials_completed)
-                running_stats.update(info)
+            if training_starved:
+                continue
 
-                # get latest online model
-                try:
-                    agent = agent_update_queue.get_nowait()
-                    agent_adapter._cache_model(model_id, agent)
-                except queue.Empty:
-                    pass
+            # get latest online model
+            try:
+                agent = agent_update_queue.get_nowait()
+                agent_adapter._cache_model(model_id, agent)
+            except queue.Empty:
+                pass
 
-                if training_step % config.training.model_publication_interval == 0:
-                    version_info = await agent_adapter.publish_version(model_id, agent)
+            training_step += 1
+            info["model_version"] = version_info["version_number"]
+            info["training_step"] = training_step
+            info["mean_trial_reward"] = run_total_reward / max(1, trials_completed)
+            running_stats.update(info)
 
-                if total_samples % config.training.log_interval == 0:
-                    xp_tracker.log_metrics(
-                        timestamp,
-                        total_samples,
-                        total_samples=total_samples,
-                        **running_stats.get(),
-                    )
-                    running_stats.reset()
+            if training_step % config.training.model_publication_interval == 0:
+                version_info = await agent_adapter.publish_version(model_id, agent)
+
+            if total_samples % config.training.log_interval == 0:
+                xp_tracker.log_metrics(
+                    timestamp,
+                    total_samples,
+                    total_samples=total_samples,
+                    **running_stats.get(),
+                )
+                running_stats.reset()
     finally:
         for worker in workers:
             worker.terminate()
@@ -477,9 +489,9 @@ async def single_agent_muzero_run_implementation(agent_adapter, run_session):
 
 
 class ReplayBufferWorker(mp.Process):
-    def __init__(self, sample_queue, update_queue, batch_queue, config):
+    def __init__(self, episode_queue, update_queue, batch_queue, config):
         super().__init__()
-        self._sample_queue = sample_queue
+        self._episode_queue = episode_queue
         self._update_queue = update_queue
         self._batch_queue = batch_queue
         self._replay_buffer_size = mp.Value(ctypes.c_uint32, 0)
@@ -493,6 +505,8 @@ class ReplayBufferWorker(mp.Process):
             bootstrap_steps=self._training_config.bootstrap_steps,
         )
 
+        batches_to_queue = 0
+
         while True:
             while not self._update_queue.empty():
                 try:
@@ -501,18 +515,25 @@ class ReplayBufferWorker(mp.Process):
                 except queue.Empty:
                     pass
 
-            sample = self._sample_queue.get()
-            replay_buffer.add_sample(*sample)
-            self._replay_buffer_size.value = replay_buffer.size()
+            try:
+                episode = self._episode_queue.get_nowait()
+                episode.bootstrap_value(self._training_config.bootstrap_steps, self._training_config.discount_rate)
+                replay_buffer.add_episode(episode)
+                batches_to_queue += len(episode)
+            except queue.Empty:
+                pass
 
             if replay_buffer.size() >= self._training_config.min_replay_buffer_size:
                 batch = replay_buffer.sample(self._training_config.rollout_length, self._training_config.batch_size)
-                # for item in batch:
-                #    item.share_memory_()
-                self._batch_queue.put(EpisodeBatch(*batch))
+                try:
+                    self._batch_queue.put(EpisodeBatch(*batch), timeout=1.0)
+                except queue.Full:
+                    pass
 
-    def add_sample(self, state, action, reward, next_state, done, policy, value):
-        self._sample_queue.put((state, action, reward, next_state, done, policy, value))
+            self._replay_buffer_size.value = replay_buffer.size()
+
+    def add_episode(self, episode):
+        self._episode_queue.put(episode)
 
     def get_training_batch(self):
         return self._batch_queue.get()
@@ -596,10 +617,15 @@ class TrainWorker(mp.Process):
             self.agent._params.mcts_temperature = temperature
             self.agent._params.target_label_smoothing_factor = target_label_smoothing_factor
 
+            print("train worker getting batch")
             batch = self.batch_queue.get()
+            print("train worker got batch")
             for item in batch:
                 item.to(self.config.training.train_device)
+
+            print("train worker about to learn")
             priority, info = self.agent.learn(batch)
+            print("train worker done learning")
 
             info = dict(
                 lr=lr,
@@ -639,10 +665,10 @@ class ReanalyzeWorker(mp.Process):
             except queue.Empty:
                 pass
 
-            print("REANALYZE WORKER GET BATCH")
+            # episode_queue"REANALYZE WORKER GET BATCH")
             batch = self._batch_queue.get()
             batch_size, rollout_length = batch.state.shape[:2]
-            print("REANALYZE WORKER REANALYZING")
+            # print("REANALYZE WORKER REANALYZING")
             for n, k in itertools.product(range(batch_size), range(rollout_length)):
                 observation = batch.state[n, k]
                 improved_policy, improved_value = agent.reanalyze(observation)
@@ -651,11 +677,11 @@ class ReanalyzeWorker(mp.Process):
                 batch.target_policy[n, k] = improved_policy.cpu().detach()
                 batch.target_value[n, k] = improved_value.cpu().detach()
 
-            print("REANALYZE WORKER BOOTSTRAP STEP")
+            # print("REANALYZE WORKER BOOTSTRAP STEP")
             # bootstrap values
             for n, k in itertools.product(range(batch_size), range(rollout_length)):
                 if k < rollout_length - 1:
                     batch.target_value[n, k] = batch.rewards[n, k] + self._discount * batch.target_value[n, k + 1]
 
-            print("REANALYZE WORKER PUTTING BATCH IN QUEUE")
+            # print("REANALYZE WORKER PUTTING BATCH IN QUEUE")
             self._reanalyze_queue.put(batch)
