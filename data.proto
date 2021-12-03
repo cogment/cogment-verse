@@ -201,6 +201,7 @@ message MuZeroTrainingConfig {
   uint32 demonstration_trials = 44;
   string train_device = 45;
   string actor_device = 46;
+  string reanalyze_device = 47;
 }
 
 message MuZeroTrainingRunConfig {

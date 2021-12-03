@@ -158,6 +158,7 @@ DEFAULT_MUZERO_TRAINING_CONFIG = MuZeroTrainingConfig(
     v_weight=0.1,
     train_device="cpu",
     actor_device="cpu",
+    reanalyze_device="cpu",
 )
 
 
@@ -376,7 +377,9 @@ async def single_agent_muzero_run_implementation(agent_adapter, run_session):
     )
     reanalyze_agent_queue = [mp.Queue() for _ in range(num_reanalyze_workers)]
     reanalyze_workers = [
-        ReanalyzeWorker(reanalyze_queue, reanalyze_update_queue, reanalyze_agent_queue[i])
+        ReanalyzeWorker(
+            reanalyze_queue, reanalyze_update_queue, reanalyze_agent_queue[i], config.training.reanalyze_device
+        )
         for i in range(num_reanalyze_workers)
     ]
 
@@ -435,8 +438,10 @@ async def single_agent_muzero_run_implementation(agent_adapter, run_session):
             try:
                 agent = agent_update_queue.get_nowait()
                 agent_adapter._cache_model(model_id, agent)
+                cpu_agent = copy.deepcopy(agent)
+                cpu_agent.set_device("cpu")
                 for i, agent_queue in enumerate(reanalyze_agent_queue):
-                    agent_queue.put(agent)
+                    agent_queue.put(cpu_agent)
             except queue.Empty:
                 pass
 
@@ -566,7 +571,7 @@ class TrainWorker(mp.Process):
         self.agent_update_queue = agent_update_queue
         self.info_queue = info_queue
         self.config = config
-        self.steps_per_update = 200
+        self.steps_per_update = 1  # 200
 
     def run(self):
         self.agent.set_device(self.config.training.train_device)
@@ -639,25 +644,30 @@ class TrainWorker(mp.Process):
 
 
 class ReanalyzeWorker(mp.Process):
-    def __init__(self, reanalyze_queue, reanalyze_update_queue, agent_queue):
+    def __init__(self, reanalyze_queue, reanalyze_update_queue, agent_queue, device):
         super().__init__()
         self._reanalyze_queue = reanalyze_queue
         self._reanalyze_update_queue = reanalyze_update_queue
         self._agent_queue = agent_queue
+        self._device = device
 
     def run(self):
         agent = self._agent_queue.get()
+        agent.set_device(self._device)
 
         while True:
             try:
                 agent = self._agent_queue.get_nowait()
+                agent.set_device(self._device)
             except queue.Empty:
                 pass
 
             episode_id, episode = self._reanalyze_queue.get()
             reanalyze_episode = Episode(episode._states[0], agent._params.discount_rate)
             for step in range(len(episode)):
-                policy, _, value = agent.reanalyze(episode._states[step])
+                policy, _, value = agent.reanalyze(episode._states[step].clone())
+                policy = policy.to("cpu")
+                value = value.to("cpu").item()
                 reanalyze_episode.add_step(
                     episode._states[step + 1],
                     episode._actions[step],
@@ -668,3 +678,4 @@ class ReanalyzeWorker(mp.Process):
                 )
             episode.bootstrap_value(agent._params.bootstrap_steps, agent._params.discount_rate)
             self._reanalyze_update_queue.put((episode_id, episode))
+            print("REANALYZE UPDATED UPDATE QUEUE")

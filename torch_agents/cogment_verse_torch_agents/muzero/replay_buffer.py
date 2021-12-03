@@ -25,7 +25,7 @@ def ensure_tensor(x):
     if isinstance(x, torch.Tensor):
         return x
     elif isinstance(x, np.ndarray):
-        return torch.from_numpy(x)
+        return torch.from_numpy(x.copy())
     else:
         return torch.tensor(x)
 
@@ -52,7 +52,7 @@ class Episode:
     def __init__(self, initial_state, discount, id=0, min_priority=0.1):
         self._discount = discount
         self._id = 0
-        self._states = [initial_state]
+        self._states = [ensure_tensor(initial_state).clone().to("cpu")]
         self._actions = []
         self._rewards = []
         self._policy = []
@@ -87,10 +87,10 @@ class Episode:
                 self._bootstrap[i] += (discount ** (k - i)) * self._rewards[k]
 
     def add_step(self, state, action, reward, done, policy, value):
-        self._states.append(state)
+        self._states.append(ensure_tensor(state).clone().to("cpu"))
         self._actions.append(action)
         self._rewards.append(reward)
-        self._policy.append(policy)
+        self._policy.append(ensure_tensor(policy).clone().to("cpu"))
         self._value.append(value)
         self._done.append(done)
         self._p = None
@@ -142,8 +142,8 @@ class Episode:
         c = min(b, len(self._actions))
 
         for k in range(a, c):
-            states[k - a] = torch.tensor(self._states[k])
-            next_states[k - a] = torch.tensor(self._states[k + 1])
+            states[k - a] = ensure_tensor(self._states[k])
+            next_states[k - a] = ensure_tensor(self._states[k + 1])
             actions[k - a] = self._actions[k]
             rewards[k - a] = self._rewards[k]
             target_policy[k - a] = ensure_tensor(self._policy[k])
@@ -254,7 +254,7 @@ class TrialReplayBuffer:
         # idx = np.random.choice(self._range, batch_size, p=self._p)
         # probs = [self._p[i] for i in idx]
         transitions = [self._episodes[i].sample(rollout_length) for i in idx]
-        batch = [torch.stack(item) for item in zip(*transitions)]
+        batch = [torch.stack(item).clone().cpu() for item in zip(*transitions)]
         batch = EpisodeBatch(*batch)._asdict()
         # batch["priority"] = batch["priority"][:, 0] * torch.tensor(probs)
         # batch["importance_weight"] = 1 / (batch["priority"] + 1e-6) / self.size()

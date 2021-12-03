@@ -371,41 +371,6 @@ class MuZero(torch.nn.Module):
 
         importance_weight = 1
 
-        # testing the setup with vanilla dqn
-        if False:
-            k = 0
-            with torch.no_grad():
-                next_state = target_muzero._representation(next_observation[:, k])
-                next_q_probs, next_q_vals = target_muzero._dqn(next_state)
-                next_q_max, _ = torch.max(next_q_vals, dim=1)
-                target_q = reward[:, k] + (1 - done[:, k]) * next_q_max
-                target_q_probs = self._value_distribution.compute_target(target_q).to(device)
-                expect_equal_shape(target_q, reward[:, k])
-
-            pred_next_state, pred_reward_probs, pred_reward_vals = self._dynamics(current_representation, action[:, 0])
-            pred_q_probs, _ = self._dqn(current_representation)
-            pred_next_q_probs, _ = self._dqn(pred_next_state)
-
-            loss_q0 = 0
-            loss_q1 = 0
-            for b in range(batch_size):
-                expect_equal_shape(target_q_probs[b], pred_q_probs[b, action[b, k]])
-                loss_q0 += -torch.sum(target_q_probs[b] * torch.log(pred_q_probs[b, action[b, k]]))
-                loss_q1 += -torch.sum(next_q_probs[b] * torch.log(pred_next_q_probs[b, action[b, k]]))
-
-            loss_q0 /= batch_size
-            loss_q1 /= batch_size
-
-            total_loss = loss_q0 + loss_q1
-
-            optimizer.zero_grad()
-            total_loss.backward()
-            optimizer.step()
-
-            info = dict(total_loss=total_loss, loss_q0=loss_q0, loss_q1=loss_q1)
-            priority = torch.ones_like(reward).cpu().detach().numpy()
-            return priority, info
-
         loss_kl = 0
         loss_v = 0
         loss_r = 0

@@ -128,7 +128,7 @@ class MuZeroAgent:
 
     def act(self, observation):
         self._target_muzero.eval()
-        obs = observation.float().to(self._device)
+        obs = observation.clone().detach().float().to(self._device)
         action, policy, q, value = self._target_muzero.act(
             obs,
             self._params.exploration_epsilon,
@@ -143,17 +143,11 @@ class MuZeroAgent:
         policy = policy.cpu().numpy()
         value = value.cpu().numpy().item()
 
-        # debug/testing
-        if np.random.rand() < 0.1:
-            action = np.random.randint(0, self._act_dim)
-        # else:
-        #    action = torch.argmax(q, dim=1).detach().cpu().item()
-
         return action, policy, value
 
     def reanalyze(self, observation):
         return self._target_muzero.reanalyze(
-            observation,
+            observation.clone().to(self._device),
             self._params.exploration_epsilon,
             self._params.exploration_alpha,
             self._params.discount_rate,
