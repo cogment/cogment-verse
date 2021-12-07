@@ -207,24 +207,28 @@ class MuZeroAgentAdapter(AgentAdapter):
         return model
 
     def _create_actor_implementations(self):
+        pool = AgentWorkerPool(max_workers=8)
+        pool.start()
+
         async def _single_agent_muzero_actor_implementation(actor_session):
+            # print("STARTING ACTOR SESSION")
             actor_session.start()
-            config = actor_session.config
 
-            event_queue = mp.Queue()
-            action_queue = mp.Queue()
-            # event_queue = queue.Queue()
-            # action_queue = queue.Queue()
-            terminate = mp.Value(ctypes.c_bool, False)
+            worker_id, worker = await pool.get_worker()
+            assert worker.is_alive()
 
-            agent = await self._latest_model(config.model_id)
+            agent = await self._latest_model(actor_session.config.model_id)
             agent = copy.deepcopy(agent)
-            agent.set_device(config.device)
-            worker = AgentTrialWorker(agent, event_queue, action_queue, terminate)
+            agent.set_device(actor_session.config.device)
+            # agent.set_device("cpu")
+            worker._agent_queue.put(agent)
+
+            while worker._agent_queue.qsize():
+                await asyncio.sleep(1.0)
 
             try:
                 # print("STARTING WORKER")
-                worker.start()
+                # worker.start()
                 # print("WORKER STARTED")
                 async for event in actor_session.event_loop():
                     # print("CHECKING IF WORKER IS ALIVE")
@@ -232,14 +236,16 @@ class MuZeroAgentAdapter(AgentAdapter):
                     # print("WORKER IS ALIVE")
                     if event.observation and event.type == cogment.EventType.ACTIVE:
                         # print("PUTTING EVENT IN QUEUE")
-                        event_queue.put(event)
+                        worker._event_queue.put(event)
                         # print("GETTING ACTION FROM QUEUE")
-                        actor_session.do_action(action_queue.get())
+                        actor_session.do_action(worker._action_queue.get())
             finally:
-                terminate.value = True
+                # terminate.value = True
                 # print("JOINING WORKER")
                 # worker.join()
-                worker.terminate()
+                # worker.terminate()
+                print("RELEASING WORKER")
+                pool.release_worker(worker_id)
 
         return {
             "muzero_mlp": (_single_agent_muzero_actor_implementation, ["agent"]),
@@ -381,7 +387,7 @@ async def single_agent_muzero_run_implementation(agent_adapter, run_session):
     # limit to small size so that training and sample generation don't get out of sync
     info_queue = mp.Queue(2)
 
-    num_reanalyze_workers = 2
+    num_reanalyze_workers = 0  # 2
     agent_queue = mp.Queue()
     reanalyze_agent_queue = mp.Queue()
 
@@ -481,12 +487,13 @@ async def single_agent_muzero_run_implementation(agent_adapter, run_session):
                 running_stats.reset()
     finally:
         for worker in workers:
-            worker.terminate()
+            worker.terminate()  # todo: change this for threads
 
     log.info(f"[{run_session.params_name}/{run_session.run_id}] finished ({total_samples} samples seen)")
 
 
 class ReplayBufferWorker(mp.Process):
+    # class ReplayBufferWorker(Thread):
     def __init__(
         self, episode_queue, priority_update_queue, batch_queue, reanalyze_queue, reanalyze_update_queue, config
     ):
@@ -565,29 +572,66 @@ class ReplayBufferWorker(mp.Process):
         return self._replay_buffer_size.value
 
 
+class AgentWorkerPool:
+    def __init__(self, max_workers):
+        self._workers = [AgentTrialWorker() for _ in range(max_workers)]
+        self._busy = [False for _ in range(max_workers)]
+
+    def start(self):
+        for worker in self._workers:
+            worker.start()
+
+    async def get_worker(self):
+        i = 0
+        while self._busy[i]:
+            i += 1
+            if i >= len(self._workers):
+                i = i % len(self._workers)
+                await asyncio.sleep(1.0)
+        self._busy[i] = True
+        return i, self._workers[i]
+
+    def release_worker(self, i):
+        self._busy[i] = False
+
+
 class AgentTrialWorker(mp.Process):
-    # class AgentTrialWorker(Thread):
-    def __init__(self, agent, event_queue, action_queue, terminate):
+    def __init__(
+        self,
+    ):
         super().__init__()
-        self._agent = agent
-        self._event_queue = event_queue
-        self._action_queue = action_queue
-        self._terminate = terminate
+        self._event_queue = mp.Queue()
+        self._action_queue = mp.Queue()
+        self._agent_queue = mp.Queue()
+        self._terminate = mp.Value(ctypes.c_bool, False)
 
     def run(self):
+        agent = None
         while not self._terminate.value:
             try:
+                agent = self._agent_queue.get_nowait()
+                print("ACTOR WORKER GOT NEW AGENT")
+            except queue.Empty:
+                pass
+
+            if agent is None:
+                continue
+
+            try:
                 event = self._event_queue.get(timeout=1.0)
+                # print("ACTOR WORKER GOT EVENT")
+                obs = np_array_from_proto_array(event.observation.snapshot.vectorized)
+                action, policy, value = agent.act(torch.tensor(obs))
+                # print("ACTOR WORKER PUTTING ACTION TO QUEUE")
+                self._action_queue.put(
+                    AgentAction(discrete_action=action, policy=proto_array_from_np_array(policy), value=value)
+                )
             except queue.Empty:
                 continue
-            obs = np_array_from_proto_array(event.observation.snapshot.vectorized)
-            action, policy, value = self._agent.act(torch.tensor(obs))
-            self._action_queue.put(
-                AgentAction(discrete_action=action, policy=proto_array_from_np_array(policy), value=value)
-            )
 
 
 class TrainWorker(mp.Process):
+    # class TrainWorker(Thread):
     def __init__(self, agent, batch_queue, agent_update_queue, info_queue, config):
         super().__init__()
         self.batch_queue = batch_queue
@@ -668,6 +712,7 @@ class TrainWorker(mp.Process):
 
 
 class ReanalyzeWorker(mp.Process):
+    # class ReanalyzeWorker(Thread):
     def __init__(self, reanalyze_queue, reanalyze_update_queue, agent_queue, device):
         super().__init__()
         self._reanalyze_queue = reanalyze_queue
