@@ -55,6 +55,7 @@ from .agent import MuZeroAgent
 # pylint: disable=arguments-differ
 
 import torch.multiprocessing as mp
+from threading import Thread
 import queue
 
 
@@ -212,20 +213,32 @@ class MuZeroAgentAdapter(AgentAdapter):
 
             event_queue = mp.Queue()
             action_queue = mp.Queue()
+            # event_queue = queue.Queue()
+            # action_queue = queue.Queue()
+            terminate = mp.Value(ctypes.c_bool, False)
 
             agent = await self._latest_model(config.model_id)
             agent = copy.deepcopy(agent)
             agent.set_device(config.device)
-            worker = AgentTrialWorker(agent, event_queue, action_queue)
+            worker = AgentTrialWorker(agent, event_queue, action_queue, terminate)
 
             try:
+                # print("STARTING WORKER")
                 worker.start()
+                # print("WORKER STARTED")
                 async for event in actor_session.event_loop():
+                    # print("CHECKING IF WORKER IS ALIVE")
                     assert worker.is_alive()
+                    # print("WORKER IS ALIVE")
                     if event.observation and event.type == cogment.EventType.ACTIVE:
+                        # print("PUTTING EVENT IN QUEUE")
                         event_queue.put(event)
+                        # print("GETTING ACTION FROM QUEUE")
                         actor_session.do_action(action_queue.get())
             finally:
+                terminate.value = True
+                # print("JOINING WORKER")
+                # worker.join()
                 worker.terminate()
 
         return {
@@ -360,7 +373,7 @@ async def single_agent_muzero_run_implementation(agent_adapter, run_session):
     episode_queue = mp.Queue()
     priority_update_queue = mp.Queue()
     reanalyze_update_queue = mp.Queue()
-    reanalyze_queue = mp.Queue(200)
+    reanalyze_queue = mp.Queue(10)
     max_prefetch_batch = 128
     batch_queue = mp.Queue(max_prefetch_batch)  # max_prefetch_batch)  # todo: fix this?
     reanalyze_queue = mp.Queue()
@@ -435,8 +448,6 @@ async def single_agent_muzero_run_implementation(agent_adapter, run_session):
             if replay_buffer.size() <= config.training.min_replay_buffer_size:
                 continue
 
-            priority, info = info_queue.get()
-
             # get latest online model
             try:
                 agent = agent_update_queue.get_nowait()
@@ -448,11 +459,13 @@ async def single_agent_muzero_run_implementation(agent_adapter, run_session):
             except queue.Empty:
                 pass
 
+            priority, info = info_queue.get()
+
             training_step += 1
             info["model_version"] = version_info["version_number"]
             info["training_step"] = training_step
             info["mean_trial_reward"] = run_total_reward / max(1, trials_completed)
-            info["samples_per_sec"] = total_samples / (time.time() - start_time)
+            info["samples_per_sec"] = total_samples / max(1, time.time() - start_time)
             running_stats.update(info)
 
             if training_step % config.training.model_publication_interval == 0:
@@ -532,6 +545,8 @@ class ReplayBufferWorker(mp.Process):
 
             # Sample a batch and add it to the training queue
             batch = replay_buffer.sample(self._training_config.rollout_length, self._training_config.batch_size)
+            for item in batch:
+                item.share_memory_()
             try:
                 self._batch_queue.put(EpisodeBatch(*batch), timeout=1.0)
             except queue.Full:
@@ -551,15 +566,20 @@ class ReplayBufferWorker(mp.Process):
 
 
 class AgentTrialWorker(mp.Process):
-    def __init__(self, agent, event_queue, action_queue):
+    # class AgentTrialWorker(Thread):
+    def __init__(self, agent, event_queue, action_queue, terminate):
         super().__init__()
         self._agent = agent
         self._event_queue = event_queue
         self._action_queue = action_queue
+        self._terminate = terminate
 
     def run(self):
-        while True:
-            event = self._event_queue.get()
+        while not self._terminate.value:
+            try:
+                event = self._event_queue.get(timeout=1.0)
+            except queue.Empty:
+                continue
             obs = np_array_from_proto_array(event.observation.snapshot.vectorized)
             action, policy, value = self._agent.act(torch.tensor(obs))
             self._action_queue.put(
