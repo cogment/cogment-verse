@@ -17,6 +17,7 @@ from collections import defaultdict, namedtuple
 import ctypes
 import itertools
 import copy
+import time
 
 from numpy.lib.type_check import real
 
@@ -404,6 +405,8 @@ async def single_agent_muzero_run_implementation(agent_adapter, run_session):
         for worker in workers:
             worker.start()
 
+        start_time = time.time()
+
         sample_generator = run_session.start_trials_and_wait_for_termination(
             trial_configs,
             max_parallel_trials=config.training.max_parallel_trials,
@@ -449,6 +452,7 @@ async def single_agent_muzero_run_implementation(agent_adapter, run_session):
             info["model_version"] = version_info["version_number"]
             info["training_step"] = training_step
             info["mean_trial_reward"] = run_total_reward / max(1, trials_completed)
+            info["samples_per_sec"] = total_samples / (time.time() - start_time)
             running_stats.update(info)
 
             if training_step % config.training.model_publication_interval == 0:
