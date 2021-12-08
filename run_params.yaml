@@ -271,7 +271,7 @@ benchmark_lander_hill:
     learning_rate: 1.0e-4
     lr_warmup_steps: 100
     model_publication_interval: 250
-    render_width: 1000
+    render_width: 256
     batch_size: 256
     min_replay_buffer_size: 256
     model_kwargs:
@@ -677,12 +677,13 @@ lander_muzero:
       vbins: 64
       vmin: -500.0 # avoid proto default value???
       vmax: 500.0
-      batch_size: 32
+      batch_size: 8
       min_replay_buffer_size: 200
       demonstration_trials: 0
       max_parallel_trials: 4
-      mcts_depth: 4
-      mcts_samples: 16
+      mcts_depth: 2
+      mcts_samples: 8
+      rollout_length: 2
       train_device: "cuda:0"
       actor_device: "cuda:1"
       reanalyze_device: "cuda:1"

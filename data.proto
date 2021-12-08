@@ -109,7 +109,7 @@ message RunConfig {
   string environment_implementation = 5;
   uint32 player_count = 8;
   float epsilon_min = 9;
-  float epsilon_max = 29;
+  float epsilon_max = 30;
   uint32 epsilon_steps = 10;
   uint32 target_net_update_schedule = 11;
   float learning_rate = 12;
