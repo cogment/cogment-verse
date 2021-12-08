@@ -13,4 +13,3 @@ services:
           devices:
             - driver: nvidia
               capabilities: [gpu]
-              # device_ids: ["0", "1"]

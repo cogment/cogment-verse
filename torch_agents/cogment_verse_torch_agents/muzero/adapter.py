@@ -400,7 +400,7 @@ async def single_agent_muzero_run_implementation(agent_adapter, run_session):
     # limit to small size so that training and sample generation don't get out of sync
     info_queue = mp.Queue(128)
 
-    num_reanalyze_workers = 0
+    num_reanalyze_workers = 1
     agent_queue = mp.Queue()
     reanalyze_agent_queue = mp.Queue()
 
@@ -475,7 +475,7 @@ async def single_agent_muzero_run_implementation(agent_adapter, run_session):
             if replay_buffer.size() <= config.training.min_replay_buffer_size:
                 continue
 
-            if False:
+            if True:
                 # get latest online model
                 try:
                     agent = agent_update_queue.get_nowait()
@@ -488,7 +488,8 @@ async def single_agent_muzero_run_implementation(agent_adapter, run_session):
                     pass
 
             if True:
-                priority, info = info_queue.get()
+                # priority, info = info_queue.get()
+                info = info_queue.get()
 
                 training_step += 1
                 info["model_version"] = version_info["version_number"]
@@ -663,7 +664,7 @@ class TrainWorker(mp.Process):
         self.agent_update_queue = agent_update_queue
         self.info_queue = info_queue
         self.config = config
-        self.steps_per_update = 1  # 200
+        self.steps_per_update = 200
 
     def run(self):
         self.agent.set_device(self.config.training.train_device)
@@ -714,13 +715,7 @@ class TrainWorker(mp.Process):
             for item in batch:
                 item.to(self.config.training.train_device)
 
-            start_time = time.time()
-
             priority, info = self.agent.learn(batch)
-
-            delta_time = time.time() - start_time
-
-            print("UPDATE TIME", 1 / delta_time, delta_time)
 
             info = dict(
                 lr=lr,
@@ -729,7 +724,8 @@ class TrainWorker(mp.Process):
                 target_label_smoothing_factor=target_label_smoothing_factor,
                 **info,
             )
-            self.info_queue.put((priority, info))
+            # self.info_queue.put((priority, info))
+            self.info_queue.put(info)
 
             step += 1
             if step % self.steps_per_update == 0:

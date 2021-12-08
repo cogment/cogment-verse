@@ -665,7 +665,7 @@ lander_muzero:
       env_type: "gym"
       env_name: "LunarLander-v2"
       seed: 12
-      render_width: 256
+      render_width: 128
     actor:
       num_input: 8
       num_action: 4
@@ -677,13 +677,13 @@ lander_muzero:
       vbins: 64
       vmin: -500.0 # avoid proto default value???
       vmax: 500.0
-      batch_size: 8
+      batch_size: 16
       min_replay_buffer_size: 200
       demonstration_trials: 0
       max_parallel_trials: 4
-      mcts_depth: 2
-      mcts_samples: 8
+      mcts_depth: 3
+      mcts_samples: 16
       rollout_length: 2
       train_device: "cuda:0"
       actor_device: "cuda:1"
-      reanalyze_device: "cuda:1"
+      reanalyze_device: "cuda:0"

@@ -254,7 +254,7 @@ class TrialReplayBuffer:
         # idx = np.random.choice(self._range, batch_size, p=self._p)
         # probs = [self._p[i] for i in idx]
         transitions = [self._episodes[i].sample(rollout_length) for i in idx]
-        batch = [torch.stack(item).clone().cpu() for item in zip(*transitions)]
+        batch = [torch.stack(item).clone().cpu().pin_memory() for item in zip(*transitions)]
         batch = EpisodeBatch(*batch)._asdict()
         # batch["priority"] = batch["priority"][:, 0] * torch.tensor(probs)
         # batch["importance_weight"] = 1 / (batch["priority"] + 1e-6) / self.size()
