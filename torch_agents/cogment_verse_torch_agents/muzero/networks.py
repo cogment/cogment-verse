@@ -204,7 +204,7 @@ class Distributional(torch.nn.Module):
         return target.view(*target_shape)
 
 
-def cross_entropy(pred, target, weights=None, dim=1):
+def cross_entropy(pred, target, weights=None, dim=None):
     return torch.mean(weights * torch.sum(-target * torch.log(pred + 1e-12), dim=dim))
 
 
@@ -339,15 +339,38 @@ class MuZero(torch.nn.Module):
             action = action.cpu().numpy().item()
             return action, policy, q, value
 
+    def rollout(self, state, actions, length):
+        bsz, nlatent = state.shape
+        states = torch.zeros((length, bsz, nlatent), device=state.device)
+        next_states = torch.zeros_like(states)
+        rewards = torch.zeros((length, bsz), device=state.device)
+        reward_probs = None
+        states[0] = state
+        for k in range(length):
+            next_state, probs, reward = self._dynamics(states[k], actions[k])
+
+            if reward_probs is None:
+                reward_probs = torch.zeros((length, bsz, probs.shape[1]), device=state.device)
+
+            next_states[k] = next_state
+            rewards[k] = reward
+            reward_probs[k] = probs
+            if k < length - 1:
+                states[k + 1] = next_state
+
+        return states, reward_probs, rewards, next_states
+
     def train_step(
         self,
         optimizer,
         observation,
         action,
+        target_reward_probs,
         reward,
         next_observation,
         done,
         target_policy,
+        target_value_probs,
         target_value,
         importance_weight,
         max_norm,
@@ -361,92 +384,60 @@ class MuZero(torch.nn.Module):
         self.train()
         target_muzero.eval()
 
-        batch_size, rollout_length = observation.shape[:2]
-        current_representation = self._representation(observation[:, 0])
-        device = current_representation.device
-        priority = torch.zeros((batch_size, rollout_length), dtype=current_representation.dtype, device=device)
-
-        target_value = target_value.view(batch_size, rollout_length)
-        reward = reward.view(batch_size, rollout_length)
-
-        importance_weight = 1
+        rollout_length, batch_size = observation.shape[:2]
+        initial_state = self._representation(observation[0])
+        device = initial_state.device
+        priority = torch.zeros((rollout_length, batch_size), dtype=initial_state.dtype, device=device)
 
         loss_kl = 0
         loss_v = 0
         loss_r = 0
         loss_s = 0
 
-        max_value_error = 0
-        max_reward_error = 0
+        pred_states, pred_reward_probs, pred_rewards, pred_next_states = self.rollout(
+            initial_state, action, rollout_length
+        )
 
-        for k in range(rollout_length):
-            pred_next_state, pred_reward_probs, pred_reward = self._dynamics(current_representation, action[:, k])
-            # todo: check this against other implementations
-            # next_representation.register_hook(lambda grad: grad * 0.5)
+        # muzero model predictions
+        pred_states = pred_states.view(batch_size * rollout_length, -1)
+        pred_next_states = pred_next_states.view(batch_size * rollout_length, -1)
 
-            max_reward_error = max(max_reward_error, torch.max(torch.abs(pred_reward - reward[:, k])))
+        pred_reward_probs = pred_reward_probs.view(batch_size * rollout_length, -1)
+        pred_value_probs, pred_value = self._value(pred_states)
+        pred_policy = self._policy(pred_states)
 
-            pred_policy = self._policy(current_representation)
-            pred_value_probs, pred_value = self._value(current_representation)
-            pred_projection = self._predictor(self._projector(pred_next_state))
+        pred_projection = self._predictor(self._projector(pred_next_states))
 
-            # anooying squeeze/unsqueeze nonsense (check replay/episode buffer sampling?)
-            target_policy_k = target_policy[:, k].reshape(*pred_policy.shape)
+        # muzero training targets
+        with torch.no_grad():
+            target_policy = target_policy.reshape(rollout_length * batch_size, -1)
+            target_reward_probs = target_reward_probs.reshape(rollout_length * batch_size, -1)
+            target_value_probs = target_value_probs.reshape(rollout_length * batch_size, -1)
+            entropy_target = cross_entropy(target_policy, target_policy, weights=1, dim=1)
+            entropy_pred = cross_entropy(pred_policy, pred_policy, weights=1, dim=1)
+            target_value = target_value.reshape(-1)
+            reward = reward.reshape(-1)
 
-            with torch.no_grad():
-                next_state = target_muzero._representation(next_observation[:, k])
-                target_projection = target_muzero._projector(next_state)
+            target_projection = target_muzero._projector(
+                target_muzero._representation(next_observation.reshape(rollout_length * batch_size, -1))
+            )
 
-                _, pred_next_val = target_muzero._value(next_state)
-
-                expect_equal_shape(reward, done)
-                expect_equal_shape(reward[:, k], pred_next_val)
-                # td_target = reward[:, k] + discount_factor * (1 - done[:, k]) * pred_next_val
-                # td_target_probs = self._value_distribution.compute_target(td_target).to(pred_next_val.device)
-
-                target_value_probs = self._value_distribution.compute_target(target_value[:, k]).to(device)
-                # target_value_probs = td_target_probs
-
-                # testing for stabilization???
-                # target_value_probs = 0.5 * (target_value_probs + td_target_probs)
-
-                target_reward_probs = self._reward_distribution.compute_target(reward[:, k]).to(device)
-                target_value_clamped = self._value_distribution.compute_value(target_value_probs)
-
-                max_value_error = max(max_value_error, torch.max(torch.abs(pred_value - target_value_clamped)))
-
-                entropy_target = cross_entropy(target_policy_k, target_policy_k, importance_weight)
-                entropy_pred = cross_entropy(pred_policy, pred_policy, importance_weight)
-                priority[:, k] = torch.abs(pred_value.view(-1) - target_value_clamped.view(-1))
-
-            loss_kl += cross_entropy(pred_policy, target_policy_k, importance_weight) - entropy_target
-            loss_r += cross_entropy(pred_reward_probs, target_reward_probs, importance_weight)
-            loss_v += cross_entropy(pred_value_probs, target_value_probs, importance_weight)
-            loss_s += self._similarity_loss(pred_projection, target_projection, weights=importance_weight)
-
-            # end of rollout loop body
-            current_representation = pred_next_state
+        # muzero loss calculation
+        loss_kl = cross_entropy(pred_policy, target_policy, weights=1, dim=1) - entropy_target
+        loss_r = cross_entropy(pred_reward_probs, target_reward_probs, weights=1, dim=1)
+        loss_v = cross_entropy(pred_value_probs, target_value_probs, weights=1, dim=1)
+        loss_s = self._similarity_loss(pred_projection, target_projection, weights=1, dim=1)
 
         # testing; disable priority replay
         priority = torch.ones_like(priority)
-
         priority = priority.detach().cpu().numpy()
 
-        loss_kl /= rollout_length
-        loss_s /= rollout_length
-        loss_r /= rollout_length
-        loss_v /= rollout_length
-
+        # muzero optimizer step
         optimizer.zero_grad()
-
         total_loss = loss_kl + loss_r + v_weight * loss_v + s_weight * loss_s
         total_loss.backward()
         torch.nn.utils.clip_grad_norm_(self.parameters(), max_norm=max_norm)
         optimizer.step()
-
-        # debug
-        # for n in range(pred_policy.shape[0]):
-        #    print(k, pred_policy[n], target_policy[n])
 
         info = dict(
             loss_r=loss_r,
@@ -456,26 +447,12 @@ class MuZero(torch.nn.Module):
             total_loss=total_loss,
             entropy_target=entropy_target,
             entropy_pred=entropy_pred,
-            # reward_error=reward_delta,
-            # value_error=value_delta,
-            # representation_l2=parameters_l2(self._representation),
-            # dynamics_l2=parameters_l2(self._dynamics),
-            # policy_l2=parameters_l2(self._policy),
-            # value_l2=parameters_l2(self._value),
-            # projector_l2=parameters_l2(self._projector),
-            # predictor_l2=parameters_l2(self._predictor),
-            # mean_value_target=torch.mean(importance_weight.view(-1, 1) * target_value),
-            # mean_reward_target=torch.mean(importance_weight.view(-1, 1) * reward),
-            # mean_value_pred=torch.mean(importance_weight.view(-1) * pred_value.view(-1)),
-            # mean_reward_pred=torch.mean(importance_weight.view(-1) * pred_reward.view(-1)),
-            # min_reward=torch.min(reward),
-            ##max_reward=torch.max(reward),
-            # min_value=torch.min(target_value),
-            # max_value=torch.max(target_value),
-            # priority_mean=priority.mean(),
-            # max_value_error=max_value_error,
-            # max_reward_error=max_reward_error,
-            # batch_done=torch.mean(done),
+            reward_min=torch.min(reward),
+            reward_max=torch.max(reward),
+            reward_mean=torch.mean(reward),
+            value_min=torch.min(target_value),
+            value_mean=torch.mean(target_value),
+            value_max=torch.max(target_value),
         )
         return priority, info
 

@@ -25,11 +25,6 @@ log = logging.getLogger(__name__)
 from .networks import (
     MuZero,
     lin_bn_act,
-    reward_transform,
-    reward_transform_inverse,
-    Distributional,
-    DynamicsAdapter,
-    resnet,
     mlp,
     RepresentationNetwork,
     PolicyNetwork,
@@ -62,8 +57,6 @@ class MuZeroAgent:
     def _make_networks(self):
         stem = lin_bn_act(self._obs_dim, self._params.hidden_dim, bn=True, act=torch.nn.ReLU())
         representation = RepresentationNetwork(stem, self._params.hidden_dim, self._params.hidden_layers)
-        # representation = stem
-
         policy = PolicyNetwork(self._params.hidden_dim, self._params.hidden_layers, self._act_dim)
 
         value = ValueNetwork(
@@ -121,11 +114,6 @@ class MuZeroAgent:
             weight_decay=self._params.weight_decay,
         )
 
-        # if True:
-        #    self._optimizer = torch.optim.SGD(
-        #        self._muzero.parameters(), lr=1e-3, momentum=0.0, weight_decay=self._params.weight_decay
-        #    )
-
     def act(self, observation):
         self._target_muzero.eval()
         obs = observation.clone().detach().float().to(self._device)
@@ -173,24 +161,18 @@ class MuZeroAgent:
             batch_tensors.append(tensor.to(self._device))
         batch = EpisodeBatch(*batch_tensors)
 
-        # priority = batch.priority[:, 0].view(-1)
-
-        # importance_weight = 1 / (priority + 1e-6) / self._replay_buffer.size()
-        importance_weight = batch.importance_weight.view(-1)
-
-        target_value = torch.clamp(batch.target_value, self._params.vmin, self._params.vmax)
-        target_reward = torch.clamp(batch.rewards, self._params.rmin, self._params.rmax)
-
         priority, info = self._muzero.train_step(
             self._optimizer,
             batch.state,
             batch.action,
-            target_reward,
+            batch.target_reward_probs,
+            batch.target_reward,
             batch.next_state,
             batch.done,
             batch.target_policy,
-            target_value,
-            importance_weight,
+            batch.target_value_probs,
+            batch.target_value,
+            batch.importance_weight,
             self._params.max_norm,
             self._params.target_label_smoothing_factor,
             self._params.s_weight,
@@ -209,7 +191,6 @@ class MuZeroAgent:
             if isinstance(val, torch.Tensor):
                 info[key] = val.detach().cpu().numpy().item()
 
-        # Return loss
         return priority, info
 
     def _update_target(self):

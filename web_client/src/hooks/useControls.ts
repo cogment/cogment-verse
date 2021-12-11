@@ -96,7 +96,31 @@ const keymaps_json: KeyMapT[] = [
     ],
   },
   {
+<<<<<<< HEAD
     environment_implementation: "tetris/TetrisA-v0",
+=======
+    env_name: "MountainCar-v0",
+    action_map: [
+      {
+        id: 0,
+        name: "Accelerate left",
+        keys: ["ArrowLeft"],
+      },
+      {
+        id: 1,
+        name: "Do nothing",
+        keys: ["ArrowUp"],
+      },
+      {
+        id: 2,
+        name: "Accelerate right",
+        keys: ["ArrowRight"],
+      },
+    ],
+  },
+  {
+    env_name: "TetrisA-v0",
+>>>>>>> 8480e36 (Various improvements, converging for multiple envs)
     action_map: [
       {
         id: 0,

@@ -611,7 +611,7 @@ cartpole_muzero: &default_muzero
       num_input: 4
       num_action: 2
     training: &default_muzero_training_config
-      model_publication_interval: 2000
+      model_publication_interval: 200
       trial_count: 10000
       max_parallel_trials: 2
       discount_rate: 0.99
@@ -665,25 +665,91 @@ lander_muzero:
       env_type: "gym"
       env_name: "LunarLander-v2"
       seed: 12
-      render_width: 128
+      render_width: 256
     actor:
       num_input: 8
       num_action: 4
     training:
       <<: *default_muzero_training_config
-      rbins: 32
+      rbins: 16
       rmin: -100.0
       rmax: 100.0
-      vbins: 64
-      vmin: -500.0 # avoid proto default value???
+      vbins: 16
+      vmin: -500.0
       vmax: 500.0
-      batch_size: 16
+      batch_size: 32
+      hidden_dim: 128
       min_replay_buffer_size: 200
       demonstration_trials: 0
-      max_parallel_trials: 4
-      mcts_depth: 3
+      max_parallel_trials: 2
+      mcts_depth: 4
       mcts_samples: 16
-      rollout_length: 2
+      rollout_length: 4
       train_device: "cuda:0"
-      actor_device: "cuda:1"
-      reanalyze_device: "cuda:0"
+      actor_device: "cpu"
+      reanalyze_device: "cuda:1"
+      reanalyze_workers: 1
+
+mountaincar_muzero:
+  <<: *default_muzero
+  config:
+    <<: *default_muzero_config
+    environment:
+      env_type: "gym"
+      env_name: "MountainCar-v0"
+      seed: 12
+      render_width: 256
+    actor:
+      num_input: 2
+      num_action: 3
+    training:
+      <<: *default_muzero_training_config
+      rbins: 2
+      rmin: -1.0
+      rmax: 1.0
+      vbins: 16
+      vmin: -200.0
+      vmax: 200.0
+      batch_size: 32
+      min_replay_buffer_size: 200
+      demonstration_trials: 1000
+      max_parallel_trials: 2
+      mcts_depth: 4
+      mcts_samples: 16
+      rollout_length: 4
+      train_device: "cuda:0"
+      actor_device: "cpu"
+      reanalyze_device: "cuda:1"
+      reanalyze_workers: 1
+
+breakout_ram_muzero:
+  <<: *default_muzero
+  config:
+    <<: *default_muzero_config
+    environment:
+      env_type: "gym"
+      env_name: "Breakout-ram-v0"
+      seed: 12
+      render_width: 256
+    actor:
+      num_input: 128
+      num_action: 4
+    training:
+      <<: *default_muzero_training_config
+      rbins: 4
+      rmin: 0.0
+      rmax: 10.0
+      vbins: 32
+      vmin: 0.0
+      vmax: 100.0
+      batch_size: 32
+      min_replay_buffer_size: 1000
+      demonstration_trials: 0
+      max_parallel_trials: 2
+      mcts_depth: 4
+      mcts_samples: 16
+      rollout_length: 4
+      train_device: "cuda:0"
+      actor_device: "cpu"
+      reanalyze_device: "cuda:1"
+      reanalyze_workers: 1
