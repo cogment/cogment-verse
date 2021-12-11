@@ -69,6 +69,9 @@ def create_training_run(agent_adapter):
 
         run_xp_tracker = MlflowExperimentTracker(run_session.params_name, run_id)
 
+        print("obs dim = ", config.num_input)
+        print("representation net  = ", config.representation_net)
+
         try:
             # Initializing a model
             model_id = f"{run_id}_model"
@@ -83,10 +86,18 @@ def create_training_run(agent_adapter):
                 **{
                     "obs_dim": config.num_input,
                     "act_dim": config.num_action,
-                    "qnet": FunctionApproximator(MLPNetwork)(hidden_units=256),
-                    "epsilon_schedule": LinearSchedule(1, config.epsilon_min, config.epsilon_steps),
+                    # "qnet": FunctionApproximator(config.representation_net.name)(
+                    #     in_dim = config.num_input,
+                    #     channels = config.representation_net.channels,
+                    #     mlp_layers = config.representation_net.mlp_layers,
+                    #     kernel_sizes = config.representation_net.kernel_sizes,
+                    #     strides = config.representation_net.strides,
+                    #     paddings = config.representation_net.paddings,
+                    # ),
+                    "qnet": FunctionApproximator(config.representation_net.name),
+                    "epsilon_schedule": LinearSchedule(1, config.epsilon_schedule.init_value, config.epsilon_schedule.steps),
                     "learn_schedule": SwitchSchedule(False, True, 1),
-                    "target_net_update_schedule": PeriodicSchedule(False, True, config.target_net_update_schedule),
+                    "target_net_update_schedule": PeriodicSchedule(False, True, config.target_net_updateschedule.period),
                 },
                 **model_kwargs,
             )

@@ -10,7 +10,7 @@ import torch.nn.functional as F
 from cogment_verse_torch_agents.third_party.hive.utils.schedule import (
     PeriodicSchedule,
 )
-from cogment_verse_torch_agents.third_party.hive.agent import Agent
+from cogment_verse_torch_agents.third_party.hive.agents.agent import Agent
 from cogment_verse_torch_agents.third_party.td3.td3_mlp import ActorMLP, CriticMLP
 
 

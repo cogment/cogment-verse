@@ -41,6 +41,9 @@ class CallableType(Registrable):
         update_wrapper(self, self._fn)
 
     def __call__(self, *args, **kwargs):
+        print("self._fn = ", self._fn)
+        print("args = ", *args)
+        print("kwargs = ", *kwargs)
         return partial(self._fn, *args, **kwargs)
 
     @classmethod

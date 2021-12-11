@@ -95,6 +95,7 @@ class DQNAgent(Agent):
             logger: Logger used to log agent's metrics.
             log_frequency (int): How often to log the agent's metrics.
         """
+        print("qnet = ", qnet)
         super().__init__(obs_dim=obs_dim, act_dim=act_dim, id=id)
         self._init_fn = create_init_weights_fn(init_fn)
         self._device = torch.device(device)
@@ -141,6 +142,8 @@ class DQNAgent(Agent):
 
     def create_q_networks(self, qnet):
         """Creates the qnet and target qnet."""
+        print("in create q_networks qnet = ", qnet)
+        network = ConvNet(self._obs_dim)
         network = qnet(self._obs_dim)
         network_output_dim = np.prod(calculate_output_dim(network, self._obs_dim))
         self._qnet = DQNNetwork(network, network_output_dim, self._act_dim).to(

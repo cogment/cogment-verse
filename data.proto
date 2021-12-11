@@ -91,36 +91,93 @@ message ModelArgs {
 message ReplayBufferConfig {
     string action_dtype = 1;
     string observation_dtype = 2;
+    string name = 3;
+    uint32 capacity = 4;
+    uint32 stack_size = 5;
+    float gamma = 6;
+}
+
+message TargetNetUpdateSchedule {
+    string name = 1;
+    bool off_value = 2;
+    bool on_value = 3;
+    uint32 period = 4;
+}
+
+message UpdatePeriodSchedule {
+    string name = 1;
+    bool off_value = 2;
+    bool on_value = 3;
+    uint32 period = 4;
+}
+
+message EpsilonSchedule {
+    string name = 1;
+    float init_value = 2;
+    float end_value = 3;
+    uint32 steps = 4;
+}
+
+message LearnSchedule {
+    string name = 1;
+    bool off_value = 2;
+    bool on_value = 3;
+    uint32 steps = 4;
+}
+
+message OptimizerFnConfig {
+    string name = 1;
+    float lr = 2;
+    float weight_decay = 3;
+    bool centered = 4;
+    float momentum = 5;
+    float eps = 6;
+    float alpha = 7;
+}
+
+message RepresentationNetConfig {
+    string name = 1;
+    repeated int32 channels = 2;
+    repeated int32 kernel_sizes = 3;
+    repeated int32 strides = 4;
+    repeated int32 paddings = 5;
+    repeated int32 mlp_layers = 6;
 }
 
 message RunConfig {
   string name = 1;
-  uint32 num_input = 2;
+  repeated uint32 num_input = 2;
   uint32 num_action = 3;
   string agent_implementation = 4;
   string environment_type = 5;
   string environment_name = 6;
-  uint32 player_count = 8;
-  float epsilon_min = 9;
-  uint32 epsilon_steps = 10;
-  uint32 target_net_update_schedule = 11;
-  float learning_rate = 12;
-  uint32 lr_warmup_steps = 13;
-  uint32 demonstration_count = 14;
-  uint32 total_trial_count = 15;
-  uint32 model_publication_interval = 16;
-  uint32 model_archive_interval_multiplier = 17; // Archive every fourth published model
-  uint32 render_width = 18;
-  uint32 batch_size = 19;
-  uint32 min_replay_buffer_size = 20;
-  uint32 max_parallel_trials = 21;
-  ModelArgs model_kwargs = 22;
-  uint32 max_replay_buffer_size = 23;
-  bool flatten = 24;
-  bool aggregate_by_actor = 26;
-  uint32 framestack = 27;
-  ReplayBufferConfig replay_buffer_config = 28;
-  float discount_factor = 29;
+  uint32 player_count = 7;
+  uint32 epsilon_steps = 9;
+  uint32 lr_warmup_steps = 12;
+  uint32 demonstration_count = 13;
+  uint32 total_trial_count = 14;
+  uint32 model_publication_interval = 15;
+  uint32 model_archive_interval_multiplier = 16; // Archive every fourth published model
+  uint32 render_width = 17;
+  uint32 batch_size = 18;
+  uint32 min_replay_buffer_size = 19;
+  uint32 max_parallel_trials = 20;
+  ModelArgs model_kwargs = 21;
+  bool flatten = 23;
+  bool aggregate_by_actor = 24;
+  uint32 framestack = 25;
+  RepresentationNetConfig representation_net = 26;
+  OptimizerFnConfig optimizer_fn = 27;
+  string init_fn = 28;
+  string loss_fn = 29;
+  ReplayBufferConfig replay_buffer = 30;
+  float discount_rate = 31;
+  float reward_clip = 32;
+  TargetNetUpdateSchedule target_net_updateschedule = 33;
+  UpdatePeriodSchedule update_period_schedule = 34;
+  EpsilonSchedule epsilon_schedule = 35;
+  float test_epsilon = 36;
+  LearnSchedule learn_schedule = 37;
 }
 
 message MLPNetworkConfig {

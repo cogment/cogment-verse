@@ -4,10 +4,10 @@ cartpole_rainbow: &default_params
   config: &default_config
     class_name: data_pb2.RunConfig
     player_count: 1
-    epsilon_min: 0.1
+#    epsilon_min: 0.1
     epsilon_steps: 100000
-    target_net_update_schedule: 1000
-    learning_rate: 1.0e-4
+#    target_net_update_schedule: 1000
+#    learning_rate: 1.0e-4
     lr_warmup_steps: 10000
     demonstration_count: 0
     total_trial_count: 10000
@@ -18,13 +18,13 @@ cartpole_rainbow: &default_params
     min_replay_buffer_size: 1000
     max_parallel_trials: 4
     model_kwargs: {}
-    max_replay_buffer_size: 100000
+#    max_replay_buffer_size: 100000
     flatten: True
     aggregate_by_actor: False
     framestack: 1
-    replay_buffer_config:
-      observation_dtype: float32
-      action_dtype: int8
+#    replay_buffer_config:
+#      observation_dtype: float32
+#      action_dtype: int8
     num_input: 4
     num_action: 2
     agent_implementation: rainbowtorch
@@ -118,31 +118,89 @@ atari_breakout_cnn:
   <<: *default_params
   config:
     <<: *default_config
-    num_input: 7056
+    num_input: [84, 84]
     num_action: 4
-    agent_implementation: atari_cnn
+
     environment_type: atari
     environment_name: Breakout
-    demonstration_count: 0
-    total_trial_count: 10000
+
+    agent_implementation: dqn
+
+    representation_net:
+      name: 'ConvNetwork'
+      channels: [32, 64, 64]
+      kernel_sizes: [8, 4, 3]
+      strides: [4, 2, 1]
+      paddings: [2, 2, 1]
+      mlp_layers: [512]
+
+    optimizer_fn:
+      name: 'RMSpropTF'
+      lr: 0.00025
+      alpha: .95
+      eps: 0.00001
+      centered: True
+
+    loss_fn: 'SmoothL1Loss'
+
+    init_fn: 'xavier_uniform'
+
+    replay_buffer:
+      name: 'CircularReplayBuffer'
+      capacity: 1000000
+      stack_size: 4
+      gamma: &gamma .99
+
+    discount_rate: *gamma
+
+    reward_clip: 1.
+
+    target_net_updateschedule:
+      name: 'PeriodicSchedule'
+      off_value: False
+      on_value: True
+      period: 8000
+
+    update_period_schedule:
+      name: 'PeriodicSchedule'
+      off_value: False
+      on_value: True
+      period: 4
+
+    epsilon_schedule:
+      name: 'LinearSchedule'
+      init_value: 1.0
+      end_value: .01
+      steps: 250000
+
+    test_epsilon: .001
+
+    learn_schedule:
+      name: 'SwitchSchedule'
+      off_value: False
+      on_value: True
+      steps: 20000
+
+    total_trial_count: 100000
     model_publication_interval: 1000
     model_archive_interval_multiplier: 100
     max_parallel_trials: 2
     render_width: 256
     flatten: false
-    batch_size: 1024
+
+    batch_size: 32
     min_replay_buffer_size: 10000
-    max_replay_buffer_size: 350000
-    target_net_update_schedule: 100
-    epsilon_steps: 100000
-    learning_rate: 1.0e-4
+#    max_replay_buffer_size: 1000000
+#    target_net_update_schedule: 100
+#    epsilon_steps: 100000
+#    learning_rate: 1.0e-4
     lr_warmup_steps: 10000
     framestack: 4
-    model_kwargs:
-      target_net_soft_update: False
-    replay_buffer_config:
-      observation_dtype: uint8
-      action_dtype: int8
+#    model_kwargs:
+#      target_net_soft_update: False
+#    replay_buffer_config:
+#      observation_dtype: uint8
+#      action_dtype: int8
 
 minatar_breakout_demo:
   <<: *default_params
