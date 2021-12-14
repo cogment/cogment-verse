@@ -35,7 +35,7 @@ export const ControlList = (props: any) => {
       <table>
         <thead>
           <tr>
-            <th>{keymap.env_name} Controls</th>
+            <th>{keymap.environment_implementation} Controls</th>
           </tr>
           <tr>
             <th>Action</th>

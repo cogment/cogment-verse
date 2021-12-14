@@ -528,7 +528,7 @@ procgen_bigfish:
     num_action: 15
     agent_implementation: atari_cnn
     environment_implementation: procgen/bigfish
-    demonstration_count: 0
+    demonstration_count: 100
     total_trial_count: 10000
     model_publication_interval: 1000
     model_archive_interval_multiplier: 10
@@ -536,7 +536,7 @@ procgen_bigfish:
     render_width: 64
     flatten: false
     batch_size: 32
-    min_replay_buffer_size: 1
+    min_replay_buffer_size: 10000
     max_replay_buffer_size: 350000
     target_net_update_schedule: 100
     epsilon_steps: 100000

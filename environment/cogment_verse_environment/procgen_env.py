@@ -53,9 +53,9 @@ class ProcGenEnv(GymEnv):
         self,
         *,
         env_name,
-        frame_skip=4,
+        frame_skip=1,
         screen_size=64,
-        sticky_actions=True,
+        sticky_actions=False,
         flatten=True,
         num_players=1,
         framestack=4,
@@ -75,6 +75,7 @@ class ProcGenEnv(GymEnv):
 
         self._flatten = flatten
         self._last_obs = []  # to be used for framestacking
+        self._last_pixels = None
 
         super().__init__(env_name=full_env_name, num_players=num_players, framestack=framestack)
 
@@ -99,8 +100,9 @@ class ProcGenEnv(GymEnv):
 
     def reset(self):
         # Used for storing and pooling over two consecutive observations to reduce flicker
-        self.screen_buffer = [_grayscale(self._env.reset())] * 2
+        self._last_pixels = self._env.reset()
         observation, current_player = self._state()
+
 
         if self._framestack > 1:
             self._last_obs = [observation] * self._framestack
@@ -132,11 +134,9 @@ class ProcGenEnv(GymEnv):
 
         for _ in range(self.frame_skip):
             observation, reward, done, info = self._env.step(action)
+            self._last_pixels = observation
             observation = _grayscale(observation)
             accumulated_reward += reward
-
-            self.screen_buffer = [observation] + self.screen_buffer
-            self.screen_buffer = self.screen_buffer[:flicker_frames]
 
             if done:
                 break
@@ -157,26 +157,27 @@ class ProcGenEnv(GymEnv):
             info=info,
         )
 
-    def _pool_and_resize(self):
+    def _pool_and_resize(self, dtype=np.uint8):
         """Transforms two frames into a Nature DQN observation.
 
         Returns:
           transformed_screen (numpy array): pooled, resized screen.
         """
-        # Pool if there are enough screens to do so.
-        if self.frame_skip > 1:
-            np.maximum(self.screen_buffer[0], self.screen_buffer[1], out=self.screen_buffer[1])
-
-        transformed_image = cv2.resize(
-            self.screen_buffer[1],
-            (self.screen_size, self.screen_size),
-            interpolation=cv2.INTER_AREA,
-        )
-        int_image = np.asarray(transformed_image, dtype=np.uint8)
+        image = _grayscale(self._last_pixels)
+        if image.shape != (self.screen_size, self.screen_size):
+            image = cv2.resize(
+                image,
+                (self.screen_size, self.screen_size),
+                interpolation=cv2.INTER_AREA,
+            )
+        image = np.asarray(image, dtype=dtype)
         if self._flatten:
-            int_image = int_image.reshape(-1)
-        return np.expand_dims(int_image, axis=0)
+            image = image.reshape(-1)
+        return np.expand_dims(image, axis=0)
 
+    def render(self, mode="rgb_array"):
+        assert mode == "rgb_array"
+        return self._last_pixels
 
     def seed(self, seed=None):
         #self._env.seed(seed)

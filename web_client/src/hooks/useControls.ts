@@ -25,6 +25,25 @@ type KeyMapT = {
   action_map: KeyActionT[];
 };
 
+// https://github.com/openai/procgen/blob/c732194d6f6c929e4295c34f05fc911a1db9c7f4/procgen/env.py#L155
+const procgen_combos = [
+  { id: 0, name: "down left", keys: ["ArrowLeft", "ArrowDown"] },
+  { id: 1, name: "left", keys: ["ArrowLeft"] },
+  { id: 2, name: "up left", keys: ["ArrowLeft", "ArrowUp"] },
+  { id: 3, name: "down", keys: ["ArrowDown"] },
+  { id: 4, name: "nop", keys: ["KeyEscape"] },
+  { id: 5, name: "?", keys: ["ArrowUp"] },
+  { id: 6, name: "?", keys: ["ArrowRight", "ArrowDown"] },
+  { id: 7, name: "?", keys: ["ArrowRight"] },
+  { id: 8, name: "?", keys: ["ArrowRight", "ArrowUp"] },
+  { id: 9, name: "?", keys: ["KeyD"] },
+  { id: 10, name: "?", keys: ["KeyA"] },
+  { id: 11, name: "?", keys: ["KeyW"] },
+  { id: 12, name: "?", keys: ["KeyS"] },
+  { id: 13, name: "?", keys: ["KeyQ"] },
+  { id: 14, name: "?", keys: ["KeyE"] },
+];
+
 const keymaps_json: KeyMapT[] = [
   {
     environment_implementation: "gym/LunarLander-v2",
@@ -140,6 +159,10 @@ const keymaps_json: KeyMapT[] = [
         keys: ["KeyS", "KeyK"],
       },
     ],
+  },
+  {
+    environment_implementation: "procgen/bigfish",
+    action_map: procgen_combos,
   },
 ];
 

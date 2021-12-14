@@ -117,7 +117,7 @@ function App() {
         const keymap = get_keymap(actorConfig.environmentImplementation);
 
         if (keymap === undefined) {
-          console.log(`no keymap defined for environment ${actorConfig.envName}`);
+          console.log(`no keymap defined for actor config ${actorConfig}`);
         } else {
           for (let item of keymap.action_map) {
             const keySet = new Set<string>(item.keys);
