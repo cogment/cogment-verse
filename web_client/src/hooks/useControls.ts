@@ -32,16 +32,16 @@ const procgen_combos = [
   { id: 2, name: "up left", keys: ["ArrowLeft", "ArrowUp"] },
   { id: 3, name: "down", keys: ["ArrowDown"] },
   { id: 4, name: "nop", keys: ["KeyEscape"] },
-  { id: 5, name: "?", keys: ["ArrowUp"] },
-  { id: 6, name: "?", keys: ["ArrowRight", "ArrowDown"] },
-  { id: 7, name: "?", keys: ["ArrowRight"] },
-  { id: 8, name: "?", keys: ["ArrowRight", "ArrowUp"] },
-  { id: 9, name: "?", keys: ["KeyD"] },
-  { id: 10, name: "?", keys: ["KeyA"] },
-  { id: 11, name: "?", keys: ["KeyW"] },
-  { id: 12, name: "?", keys: ["KeyS"] },
-  { id: 13, name: "?", keys: ["KeyQ"] },
-  { id: 14, name: "?", keys: ["KeyE"] },
+  { id: 5, name: "up", keys: ["ArrowUp"] },
+  { id: 6, name: "down right", keys: ["ArrowRight", "ArrowDown"] },
+  { id: 7, name: "right", keys: ["ArrowRight"] },
+  { id: 8, name: "?up right", keys: ["ArrowRight", "ArrowUp"] },
+  { id: 9, name: "action D", keys: ["KeyD"] },
+  { id: 10, name: "action A", keys: ["KeyA"] },
+  { id: 11, name: "action W", keys: ["KeyW"] },
+  { id: 12, name: "action S", keys: ["KeyS"] },
+  { id: 13, name: "action Q", keys: ["KeyQ"] },
+  { id: 14, name: "action E", keys: ["KeyE"] },
 ];
 
 const keymaps_json: KeyMapT[] = [
@@ -162,6 +162,66 @@ const keymaps_json: KeyMapT[] = [
   },
   {
     environment_implementation: "procgen/bigfish",
+    action_map: procgen_combos,
+  },
+  {
+    environment_implementation: "procgen/bossfight",
+    action_map: procgen_combos,
+  },
+  {
+    environment_implementation: "procgen/caveflyer",
+    action_map: procgen_combos,
+  },
+  {
+    environment_implementation: "procgen/chaser",
+    action_map: procgen_combos,
+  },
+  {
+    environment_implementation: "procgen/climber",
+    action_map: procgen_combos,
+  },
+  {
+    environment_implementation: "procgen/coinrun",
+    action_map: procgen_combos,
+  },
+  {
+    environment_implementation: "procgen/dodgeball",
+    action_map: procgen_combos,
+  },
+  {
+    environment_implementation: "procgen/fruitbot",
+    action_map: procgen_combos,
+  },
+  {
+    environment_implementation: "procgen/heist",
+    action_map: procgen_combos,
+  },
+  {
+    environment_implementation: "procgen/jumper",
+    action_map: procgen_combos,
+  },
+  {
+    environment_implementation: "procgen/leaper",
+    action_map: procgen_combos,
+  },
+  {
+    environment_implementation: "procgen/maze",
+    action_map: procgen_combos,
+  },
+  {
+    environment_implementation: "procgen/miner",
+    action_map: procgen_combos,
+  },
+  {
+    environment_implementation: "procgen/ninja",
+    action_map: procgen_combos,
+  },
+  {
+    environment_implementation: "procgen/plunder",
+    action_map: procgen_combos,
+  },
+  {
+    environment_implementation: "procgen/starpilot",
     action_map: procgen_combos,
   },
 ];
