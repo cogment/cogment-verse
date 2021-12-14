@@ -19,6 +19,7 @@ from cogment_verse_environment.atari import AtariEnv
 from cogment_verse_environment.tetris import TetrisEnv
 from cogment_verse_environment.minatarenv import MinAtarEnv
 from cogment_verse_environment.zoo_env import PettingZooEnv
+from cogment_verse_environment.procgen_env import ProcGenEnv
 
 from cogment_verse_environment.utils.serialization_helpers import serialize_np_array, serialize_img
 
@@ -34,6 +35,7 @@ ENVIRONMENT_CONSTRUCTORS = {
     "minatar": MinAtarEnv,
     "tetris": TetrisEnv,
     "pettingzoo": PettingZooEnv,
+    "procgen": ProcGenEnv,
 }
 
 log = logging.getLogger(__name__)
@@ -101,6 +103,22 @@ class EnvironmentAdapter:
             "pettingzoo/backgammon_v3",
             "pettingzoo/connect_four_v3",
             "tetris/TetrisA-v0",
+            "procgen/bigfish",
+            "procgen/bossfight",
+            "procgen/caveflyer",
+            "procgen/chaser",
+            "procgen/climber",
+            "procgen/coinrun",
+            "procgen/dodgeball",
+            "procgen/fruitbot",
+            "procgen/heist",
+            "procgen/jumper",
+            "procgen/leaper",
+            "procgen/maze",
+            "procgen/miner",
+            "procgen/ninja",
+            "procgen/plunder",
+            "procgen/starpilot",
         ]
 
     def _create_implementations(self):
