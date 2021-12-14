@@ -23,25 +23,8 @@ import pytest
 # pylint doesn't like test fixtures
 # pylint: disable=redefined-outer-name
 
+from cogment_verse_environment.procgen_env import ENV_NAMES
 
-ENV_NAMES = [
-    "bigfish",
-    "bossfight",
-    "caveflyer",
-    "chaser",
-    "climber",
-    "coinrun",
-    "dodgeball",
-    "fruitbot",
-    "heist",
-    "jumper",
-    "leaper",
-    "maze",
-    "miner",
-    "ninja",
-    "plunder",
-    "starpilot",
-]
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("framestack", [1, 2, 4])

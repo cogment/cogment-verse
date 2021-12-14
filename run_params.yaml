@@ -518,3 +518,34 @@ simple_a2c_cartpole: &default_simple_a2c_params
     critic_network:
       hidden_size: 64
 
+
+# procgen environments follow
+procgen_bigfish:
+  <<: *default_params
+  config:
+    <<: *default_config
+    num_input: 7056
+    num_action: 15
+    agent_implementation: atari_cnn
+    environment_implementation: procgen/bigfish
+    demonstration_count: 0
+    total_trial_count: 10000
+    model_publication_interval: 1000
+    model_archive_interval_multiplier: 10
+    max_parallel_trials: 2
+    render_width: 64
+    flatten: false
+    batch_size: 32
+    min_replay_buffer_size: 1
+    max_replay_buffer_size: 350000
+    target_net_update_schedule: 100
+    epsilon_steps: 100000
+    learning_rate: 1.0e-4
+    lr_warmup_steps: 10000
+    framestack: 4
+    model_kwargs:
+      target_net_soft_update: False
+      screensize: 64
+    replay_buffer_config:
+      observation_dtype: uint8
+      action_dtype: int8

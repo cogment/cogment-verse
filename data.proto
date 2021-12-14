@@ -88,6 +88,7 @@ message ModelArgs {
   repeated int32 low_action = 6;
   float expl_noise = 7;
   bool target_net_soft_update = 8;
+  uint32 screensize = 9;
 }
 
 message ReplayBufferConfig {
