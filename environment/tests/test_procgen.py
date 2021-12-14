@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 from data_pb2 import EnvironmentConfig, AgentAction
 from tests.mock_environment_session import ActorInfo
 
