@@ -162,7 +162,6 @@ message MuZeroTrainingConfig {
   float learning_rate = 5;
   float weight_decay = 6;
   uint32 bootstrap_steps = 7;
-  uint32 representation_dim = 8;
   uint32 hidden_dim = 9;
   uint32 hidden_layers = 10;
   uint32 projector_dim = 11;
@@ -194,8 +193,6 @@ message MuZeroTrainingConfig {
   float min_temperature = 37;
   uint32 temperature_decay_steps = 38;
   float max_norm = 39;
-  float target_label_smoothing_factor = 40;
-  uint32 target_label_smoothing_factor_steps = 41;
   float s_weight = 42;
   float v_weight = 43;
   uint32 demonstration_trials = 44;

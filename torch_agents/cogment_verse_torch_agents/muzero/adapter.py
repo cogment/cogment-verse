@@ -124,7 +124,6 @@ DEFAULT_MUZERO_TRAINING_CONFIG = MuZeroTrainingConfig(
     learning_rate=1e-4,
     weight_decay=1e-3,
     bootstrap_steps=20,
-    representation_dim=32,
     hidden_dim=128,
     hidden_layers=2,
     projector_hidden_dim=128,
@@ -156,8 +155,6 @@ DEFAULT_MUZERO_TRAINING_CONFIG = MuZeroTrainingConfig(
     epsilon_decay_steps=100000,
     min_temperature=0.25,
     temperature_decay_steps=100000,
-    target_label_smoothing_factor=0.01,
-    target_label_smoothing_factor_steps=1,
     s_weight=1e-2,
     v_weight=0.1,
     train_device="cpu",
@@ -355,10 +352,14 @@ async def single_agent_muzero_sample_producer_implementation(agent_adapter, run_
         step += 1
         state = next_state
         action = agent_adapter.decode_cog_action(sample.get_actor_action(player_override))
-        policy, value = agent_adapter.decode_cog_policy_value(sample.get_actor_action(observation.current_player))
-        # if player_override != 0 and player_override != -1:
-        # print("OVERRIDE", player_override, action, policy, value)
+
+        if action < 0:
+            print("WARNING: override action is invalid, ignoring!")
+            action = agent_adapter.decode_cog_action(sample.get_actor_action(observation.current_player))
+
         assert action >= 0
+
+        policy, value = agent_adapter.decode_cog_policy_value(sample.get_actor_action(observation.current_player))
         reward = sample.get_actor_reward(player_override)
 
 
@@ -724,13 +725,6 @@ class TrainWorker(mp.Process):
             0,
         )
 
-        target_label_smoothing_schedule = LinearScheduleWithWarmup(
-            1.0,
-            self.config.training.target_label_smoothing_factor,
-            self.config.training.target_label_smoothing_factor_steps,
-            0,
-        )
-
         from multiprocessing.pool import ThreadPool
 
         threadpool = ThreadPool()
@@ -740,13 +734,9 @@ class TrainWorker(mp.Process):
             lr = lr_schedule.update()
             epsilon = epsilon_schedule.update()
             temperature = temperature_schedule.update()
-            target_label_smoothing_factor = target_label_smoothing_schedule.update()
-
             self.agent._params.learning_rate = lr
             self.agent._params.exploration_epsilon = epsilon
             self.agent._params.mcts_temperature = temperature
-            self.agent._params.target_label_smoothing_factor = target_label_smoothing_factor
-
             batch = next(batch_generator)
             priority, info = self.agent.learn(batch)
 
@@ -754,7 +744,6 @@ class TrainWorker(mp.Process):
                 lr=lr,
                 epsilon=epsilon,
                 temperature=temperature,
-                target_label_smoothing_factor=target_label_smoothing_factor,
                 **info,
             )
             self.info_queue.put(info)

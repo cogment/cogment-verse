@@ -372,7 +372,6 @@ class MuZero(torch.nn.Module):
         target_value,
         importance_weight,
         max_norm,
-        target_label_smoothing_factor,
         s_weight,
         v_weight,
         discount_factor,

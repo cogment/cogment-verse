@@ -174,7 +174,6 @@ class MuZeroAgent:
             batch.target_value,
             batch.importance_weight,
             self._params.max_norm,
-            self._params.target_label_smoothing_factor,
             self._params.s_weight,
             self._params.v_weight,
             self._params.discount_rate,

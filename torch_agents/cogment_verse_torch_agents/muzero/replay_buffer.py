@@ -281,7 +281,7 @@ class TrialReplayBuffer:
             if len(item.shape) >= 2:
                 # (batch, rollout) -> (rollout, batch)
                 item = torch.transpose(item, 0, 1)
-            item = item.cpu().detach().pin_memory()
+            item = item.cpu().detach()
             items.append(item)
 
         batch = EpisodeBatch(*items)._asdict()

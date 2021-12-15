@@ -549,55 +549,6 @@ procgen_bigfish:
     replay_buffer_config:
       observation_dtype: uint8
       action_dtype: int8
-lander_muzero:
-  implementation: muzero_mlp_training
-  config:
-    class_name: data_pb2.MuZeroTrainingRunConfig
-    environment:
-      env_type: "gym"
-      env_name: "LunarLander-v2"
-      seed: 12
-    actor:
-      num_input: 8
-      num_action: 4
-    training:
-      model_publication_interval: 200
-      trial_count: 2000
-      max_parallel_trials: 4
-      discount_rate: 0.99
-      batch_size: 256
-      representation_dim: 32
-      projector_dim: 8
-      hidden_dim: 256
-      projector_hidden_dim: 64
-      hidden_layers: 2
-      projector_hidden_layers: 2
-      min_replay_buffer_size: 5000
-      max_replay_buffer_size: 10000
-      exploration_alpha: 0.3
-      log_interval: 100
-      weight_decay: 0.01
-      learning_rate: 0.0001
-      min_learning_rate: 0.00001
-      lr_warmup_steps: 200
-      lr_decay_steps: 200000
-      exploration_epsilon: 1.0
-      epsilon_min: 0.1
-      epsilon_decay_steps: 100000
-      mcts_temperature: 1.0
-      min_temperature: 1.0
-      temperature_decay_steps: 0
-      max_norm: 1.0
-      rbins: 32
-      vbins: 32
-      rollout_length: 4
-      mcts_depth: 8
-      mcts_samples: 32
-      target_label_smoothing_factor: 0.01
-      target_label_smoothing_factor_steps: 0
-      s_weight: 0.001
-      v_weight: 0.1
-
 
 cartpole_muzero: &default_muzero
   implementation: muzero_mlp_training
@@ -612,11 +563,10 @@ cartpole_muzero: &default_muzero
       num_action: 2
     training: &default_muzero_training_config
       model_publication_interval: 200
-      trial_count: 10000
+      trial_count: 2000
       max_parallel_trials: 2
       discount_rate: 0.99
       batch_size: 128
-      representation_dim: 16
       projector_dim: 16
       hidden_dim: 64
       hidden_layers: 2
@@ -628,7 +578,7 @@ cartpole_muzero: &default_muzero
       weight_decay: 0.01
       learning_rate: 0.001
       min_learning_rate: 0.0001
-      lr_warmup_steps: 100
+      lr_warmup_steps: 1000
       lr_decay_steps: 100000
       exploration_alpha: 0.1
       exploration_epsilon: 0.25
@@ -636,30 +586,29 @@ cartpole_muzero: &default_muzero
       epsilon_decay_steps: 1
       mcts_temperature: 1.0
       min_temperature: 0.25
-      temperature_decay_steps: 1000
+      temperature_decay_steps: 5000
       max_norm: 100.0
       rbins: 4
       rmin: -1.0
       rmax: 1.0
       vbins: 16
-      vmin: -0.1 # avoid proto default value???
+      vmin: -1.0e-3
       vmax: 200.0
       rollout_length: 4
       mcts_depth: 4
       mcts_samples: 16
-      target_label_smoothing_factor: 0.01
-      target_label_smoothing_factor_steps: 1
       s_weight: 1.0
       v_weight: 1.0
       ucb_c1: 1.25
       ucb_c2: 15000.0
-      train_device: "cuda:0"
+      train_device: "cpu"
       actor_device: "cpu"
-      reanalyze_device: "cuda:1"
+      reanalyze_device: "cpu"
+      reanalyze_workers: 1
 
 lander_muzero:
   <<: *default_muzero
-  config:
+  config: &lander_muzero_config
     <<: *default_muzero_config
     environment:
       env_type: "gym"
@@ -669,7 +618,7 @@ lander_muzero:
     actor:
       num_input: 8
       num_action: 4
-    training:
+    training: &lander_muzero_training
       <<: *default_muzero_training_config
       rbins: 16
       rmin: -100.0
@@ -677,18 +626,7 @@ lander_muzero:
       vbins: 16
       vmin: -500.0
       vmax: 500.0
-      batch_size: 32
-      hidden_dim: 128
-      min_replay_buffer_size: 200
-      demonstration_trials: 0
-      max_parallel_trials: 2
-      mcts_depth: 4
-      mcts_samples: 16
-      rollout_length: 4
-      train_device: "cuda:0"
-      actor_device: "cpu"
-      reanalyze_device: "cuda:1"
-      reanalyze_workers: 1
+
 
 mountaincar_muzero:
   <<: *default_muzero
