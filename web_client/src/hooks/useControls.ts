@@ -35,7 +35,7 @@ const procgen_combos = [
   { id: 5, name: "up", keys: ["ArrowUp"] },
   { id: 6, name: "down right", keys: ["ArrowRight", "ArrowDown"] },
   { id: 7, name: "right", keys: ["ArrowRight"] },
-  { id: 8, name: "?up right", keys: ["ArrowRight", "ArrowUp"] },
+  { id: 8, name: "up right", keys: ["ArrowRight", "ArrowUp"] },
   { id: 9, name: "action D", keys: ["KeyD"] },
   { id: 10, name: "action A", keys: ["KeyA"] },
   { id: 11, name: "action W", keys: ["KeyW"] },
