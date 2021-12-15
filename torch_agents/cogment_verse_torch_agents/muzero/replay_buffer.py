@@ -21,6 +21,11 @@ from collections import namedtuple
 import torch.multiprocessing as mp
 
 
+def clone_to_cpu(x):
+    x = ensure_tensor(x)
+    return x.detach().clone().cpu()
+
+
 def ensure_tensor(x):
     if isinstance(x, torch.Tensor):
         return x
@@ -93,16 +98,16 @@ class Episode:
                 self._bootstrap[i] += (discount ** (k - i)) * self._rewards[k]
 
     def add_step(self, state, action, reward_probs, reward, done, policy, value_probs, value):
-        self._states.append(ensure_tensor(state).clone().to("cpu"))
-        self._actions.append(action)
-        self._rewards.append(reward)
-        self._policy.append(ensure_tensor(policy).clone().to("cpu"))
-        self._value.append(value)
-        self._done.append(done)
-        self._reward_probs.append(ensure_tensor(reward_probs).clone().to("cpu"))
-        self._value_probs.append(ensure_tensor(value_probs).clone().to("cpu"))
+        self._states.append(clone_to_cpu(state))
+        self._actions.append(int(action))
+        self._rewards.append(float(reward))
+        self._policy.append(clone_to_cpu(policy))
+        self._value.append(float(value))
+        self._done.append(int(done))
+        self._reward_probs.append(clone_to_cpu(reward_probs))
+        self._value_probs.append(clone_to_cpu(value_probs))
         self._p = None
-        self._action_space.add(action)
+        self._action_space.add(int(action))
 
         if done:
             N = len(self._actions)

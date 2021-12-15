@@ -91,7 +91,9 @@ class LinearScheduleWithWarmup:
             t = np.clip(self._current_step / (self._warmup_steps + 1), 0, 1)
             self._value = self._init_value * t
         else:
-            t = np.clip((self._current_step - self._warmup_steps) / (self._total_steps - self._warmup_steps), 0, 1)
+            t = np.clip(
+                (self._current_step - self._warmup_steps) / max(1, self._total_steps - self._warmup_steps), 0, 1
+            )
             self._value = self._init_value + t * (self._end_value - self._init_value)
 
         self._current_step += 1
@@ -184,6 +186,7 @@ class MuZeroAgentAdapter(AgentAdapter):
 
     def __init__(self):
         super().__init__()
+        self._model_cache = LRU(2)  # memory issue?
         self._dtype = torch.float
         mp.set_start_method("spawn")
 
@@ -353,9 +356,9 @@ async def single_agent_muzero_sample_producer_implementation(agent_adapter, run_
         state = next_state
         action = agent_adapter.decode_cog_action(sample.get_actor_action(player_override))
         policy, value = agent_adapter.decode_cog_policy_value(sample.get_actor_action(observation.current_player))
+        # if player_override != 0 and player_override != -1:
+        # print("OVERRIDE", player_override, action, policy, value)
         assert action >= 0
-        if player_override != 0 and player_override != -1:
-            print("OVERRIDE", action, policy, value)
         reward = sample.get_actor_reward(player_override)
 
 
@@ -390,16 +393,17 @@ async def single_agent_muzero_run_implementation(agent_adapter, run_session):
 
     num_reanalyze_workers = config.training.reanalyze_workers
 
+    max_prefetch_batch = 128
     sample_queue = mp.Queue()
     priority_update_queue = mp.Queue()
     reanalyze_update_queue = mp.Queue()
     reanalyze_queue = mp.Queue(num_reanalyze_workers + 1)
-    max_prefetch_batch = 128
+
     batch_queue = mp.Queue(max_prefetch_batch)
     reanalyze_queue = mp.Queue()
     agent_update_queue = mp.Queue()
     # limit to small size so that training and sample generation don't get out of sync
-    info_queue = mp.Queue(128)
+    info_queue = mp.Queue(max_prefetch_batch)
 
     agent_queue = mp.Queue()
     reanalyze_agent_queue = mp.Queue()
@@ -467,9 +471,6 @@ async def single_agent_muzero_run_implementation(agent_adapter, run_session):
             replay_buffer.add_sample(trial_id, sample)
             total_samples += 1
 
-            # if True:
-            #    continue
-
             for worker in workers:
                 assert worker.is_alive()
 
@@ -506,10 +507,10 @@ async def single_agent_muzero_run_implementation(agent_adapter, run_session):
                 info["samples_per_sec"] = total_samples / max(1, time.time() - start_time)
                 # info["batch_queue"] = batch_queue.qsize()
                 # info["info_queue"] = info_queue.qsize()
-                # info["reanalyzed_samples"] = sum([worker.reanalyzed_samples() for worker in reanalyze_workers])
+                info["reanalyzed_samples"] = sum([worker.reanalyzed_samples() for worker in reanalyze_workers])
                 running_stats.update(info)
 
-                print("SAMPLES_PER_SEC", info["samples_per_sec"])
+                # print("SAMPLES_PER_SEC", info["samples_per_sec"])
 
             if total_samples % config.training.model_publication_interval == 0:
                 version_info = await agent_adapter.publish_version(model_id, agent)
@@ -668,8 +669,8 @@ def yield_from_queue(pool, q, device, prefetch=4):
 class AgentTrialWorker(mp.Process):
     def __init__(self, agent, config):
         super().__init__()
-        self._event_queue = mp.Queue()
-        self._action_queue = mp.Queue()
+        self._event_queue = mp.Queue(1)
+        self._action_queue = mp.Queue(1)
         self._config = config
         self._agent = agent
         self._terminate = mp.Value(ctypes.c_bool, False)

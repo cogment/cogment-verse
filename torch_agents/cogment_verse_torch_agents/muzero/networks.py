@@ -330,14 +330,12 @@ class MuZero(torch.nn.Module):
     @torch.no_grad()
     def act(self, observation, epsilon, alpha, temperature, discount_rate, mcts_depth, mcts_count, ucb_c1, ucb_c2):
         self.eval()
-
-        if True:
-            policy, q, value = self.reanalyze(
-                observation, epsilon, alpha, discount_rate, mcts_depth, mcts_count, ucb_c1, ucb_c2, temperature
-            )
-            action = torch.distributions.Categorical(policy).sample()
-            action = action.cpu().numpy().item()
-            return action, policy, q, value
+        policy, q, value = self.reanalyze(
+            observation, epsilon, alpha, discount_rate, mcts_depth, mcts_count, ucb_c1, ucb_c2, temperature
+        )
+        action = torch.distributions.Categorical(policy).sample()
+        action = action.cpu().numpy().item()
+        return action, policy, q, value
 
     def rollout(self, state, actions, length):
         bsz, nlatent = state.shape
