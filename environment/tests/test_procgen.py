@@ -55,6 +55,7 @@ async def test_observation(create_mock_environment_session, env_name, framestack
 
     await session.terminate()
 
+
 @pytest.mark.asyncio
 @pytest.mark.parametrize("env_name", ENV_NAMES)
 async def test_step(create_mock_environment_session, env_name):

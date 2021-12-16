@@ -19,7 +19,7 @@ from cogment_verse_environment.base import GymObservation
 from cogment_verse_environment.gym_env import GymEnv
 from cogment_verse_environment.env_spec import EnvSpec
 
-import procgen # registers procgen environments
+import procgen  # registers procgen environments
 
 ENV_NAMES = [
     "bigfish",
@@ -39,6 +39,7 @@ ENV_NAMES = [
     "plunder",
     "starpilot",
 ]
+
 
 def _grayscale(image):
     return np.mean(image, axis=2)
@@ -102,7 +103,6 @@ class ProcGenEnv(GymEnv):
         # Used for storing and pooling over two consecutive observations to reduce flicker
         self._last_pixels = self._env.reset()
         observation, current_player = self._state()
-
 
         if self._framestack > 1:
             self._last_obs = [observation] * self._framestack
@@ -180,6 +180,6 @@ class ProcGenEnv(GymEnv):
         return self._last_pixels
 
     def seed(self, seed=None):
-        #self._env.seed(seed)
+        # self._env.seed(seed)
         # todo
         pass
