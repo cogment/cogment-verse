@@ -110,7 +110,7 @@ def representation(obs_dim, num_hidden, num_latent):
 @pytest.fixture
 def dynamics(num_latent, act_dim, num_hidden, reward_distribution):
     # debugging
-    # self._representation = torch.nn.Identity()
+    # self.representation = torch.nn.Identity()
 
     return DynamicsAdapter(
         resnet(

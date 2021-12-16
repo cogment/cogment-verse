@@ -45,49 +45,49 @@ class MuZeroAgent:
     def __init__(self, *, obs_dim, act_dim, device, training_config: MuZeroTrainingConfig):
         self._obs_dim = obs_dim
         self._act_dim = act_dim
-        self._params = training_config
+        self.params = training_config
         self._device = torch.device(device)
         self._make_networks()
 
     def set_device(self, device):
         self._device = torch.device(device)
-        self._muzero = self._muzero.to(self._device)
+        self.muzero = self.muzero.to(self._device)
         self._target_muzero = self._target_muzero.to(self._device)
 
     def _make_networks(self):
-        stem = lin_bn_act(self._obs_dim, self._params.hidden_dim, bn=True, act=torch.nn.ReLU())
-        representation = RepresentationNetwork(stem, self._params.hidden_dim, self._params.hidden_layers)
-        policy = PolicyNetwork(self._params.hidden_dim, self._params.hidden_layers, self._act_dim)
+        stem = lin_bn_act(self._obs_dim, self.params.hidden_dim, bn=True, act=torch.nn.ReLU())
+        representation = RepresentationNetwork(stem, self.params.hidden_dim, self.params.hidden_layers)
+        policy = PolicyNetwork(self.params.hidden_dim, self.params.hidden_layers, self._act_dim)
 
         value = ValueNetwork(
-            self._params.hidden_dim,
-            self._params.hidden_layers,
-            self._params.vmin,
-            self._params.vmax,
-            self._params.vbins,
+            self.params.hidden_dim,
+            self.params.hidden_layers,
+            self.params.vmin,
+            self.params.vmax,
+            self.params.vbins,
         )
 
         dynamics = DynamicsNetwork(
             self._act_dim,
-            self._params.hidden_dim,
-            self._params.hidden_layers,
-            self._params.rmin,
-            self._params.rmax,
-            self._params.rbins,
+            self.params.hidden_dim,
+            self.params.hidden_layers,
+            self.params.rmin,
+            self.params.rmax,
+            self.params.rbins,
         )
 
         projector = mlp(
-            self._params.hidden_dim,
-            self._params.projector_hidden_dim,
-            self._params.projector_dim,
+            self.params.hidden_dim,
+            self.params.projector_hidden_dim,
+            self.params.projector_dim,
             hidden_layers=1,
         )
         # todo: check number of hidden layers used in predictor (same as projector??)
         predictor = mlp(
-            self._params.projector_dim, self._params.projector_hidden_dim, self._params.projector_dim, hidden_layers=1
+            self.params.projector_dim, self.params.projector_hidden_dim, self.params.projector_dim, hidden_layers=1
         )
 
-        self._muzero = MuZero(
+        self.muzero = MuZero(
             representation,
             dynamics,
             policy,
@@ -98,20 +98,20 @@ class MuZeroAgent:
             value.distribution,
             QNetwork(
                 self._act_dim,
-                self._params.hidden_dim,
-                self._params.hidden_layers,
-                self._params.vmin,
-                self._params.vmax,
-                self._params.vbins,
+                self.params.hidden_dim,
+                self.params.hidden_layers,
+                self.params.vmin,
+                self.params.vmax,
+                self.params.vbins,
             ),
         ).to(self._device)
 
-        self._target_muzero = copy.deepcopy(self._muzero)
+        self._target_muzero = copy.deepcopy(self.muzero)
 
         self._optimizer = torch.optim.AdamW(
-            self._muzero.parameters(),
+            self.muzero.parameters(),
             lr=1e-3,
-            weight_decay=self._params.weight_decay,
+            weight_decay=self.params.weight_decay,
         )
 
     def act(self, observation):
@@ -119,14 +119,14 @@ class MuZeroAgent:
         obs = observation.clone().detach().float().to(self._device)
         action, policy, q, value = self._target_muzero.act(
             obs,
-            self._params.exploration_epsilon,
-            self._params.exploration_alpha,
-            self._params.mcts_temperature,
-            self._params.discount_rate,
-            self._params.mcts_depth,
-            self._params.mcts_samples,
-            self._params.ucb_c1,
-            self._params.ucb_c2,
+            self.params.exploration_epsilon,
+            self.params.exploration_alpha,
+            self.params.mcts_temperature,
+            self.params.discount_rate,
+            self.params.mcts_depth,
+            self.params.mcts_samples,
+            self.params.ucb_c1,
+            self.params.ucb_c2,
         )
         policy = policy.cpu().numpy()
         value = value.cpu().numpy().item()
@@ -136,21 +136,21 @@ class MuZeroAgent:
     def reanalyze(self, observation):
         return self._target_muzero.reanalyze(
             observation.clone().to(self._device),
-            self._params.exploration_epsilon,
-            self._params.exploration_alpha,
-            self._params.discount_rate,
-            self._params.mcts_depth,
-            self._params.mcts_samples,
-            self._params.ucb_c1,
-            self._params.ucb_c2,
-            self._params.mcts_temperature,
+            self.params.exploration_epsilon,
+            self.params.exploration_alpha,
+            self.params.discount_rate,
+            self.params.mcts_depth,
+            self.params.mcts_samples,
+            self.params.ucb_c1,
+            self.params.ucb_c2,
+            self.params.mcts_temperature,
         )
 
     def learn(self, batch):
-        self._muzero.train()
+        self.muzero.train()
 
         # todo: use schedule
-        lr = self._params.learning_rate
+        lr = self.params.learning_rate
         for grp in self._optimizer.param_groups:
             grp["lr"] = lr
 
@@ -161,7 +161,7 @@ class MuZeroAgent:
             batch_tensors.append(tensor.to(self._device))
         batch = EpisodeBatch(*batch_tensors)
 
-        priority, info = self._muzero.train_step(
+        priority, info = self.muzero.train_step(
             self._optimizer,
             batch.state,
             batch.action,
@@ -173,14 +173,14 @@ class MuZeroAgent:
             batch.target_value_probs,
             batch.target_value,
             batch.importance_weight,
-            self._params.max_norm,
-            self._params.s_weight,
-            self._params.v_weight,
-            self._params.discount_rate,
+            self.params.max_norm,
+            self.params.s_weight,
+            self.params.v_weight,
+            self.params.discount_rate,
             self._target_muzero,
         )
 
-        online_params = itertools.chain(self._muzero.parameters(), self._muzero.buffers())
+        online_params = itertools.chain(self.muzero.parameters(), self.muzero.buffers())
         target_params = itertools.chain(self._target_muzero.parameters(), self._target_muzero.buffers())
         for po, pt in zip(online_params, target_params):
             gamma = 0.9
@@ -202,8 +202,8 @@ class MuZeroAgent:
             {
                 "obs_dim": self._obs_dim,
                 "act_dim": self._act_dim,
-                "training_config": self._params,
-                "muzero": self._muzero.state_dict(),
+                "training_config": self.params,
+                "muzero": self.muzero.state_dict(),
                 "target_muzero": self._target_muzero.state_dict(),
             },
             f,
@@ -215,7 +215,7 @@ class MuZeroAgent:
         muzero_state_dict = checkpoint.pop("muzero")
         target_muzero_state_dict = checkpoint.pop("target_muzero")
         agent = MuZeroAgent(device=device, **checkpoint)
-        agent._muzero.load_state_dict(muzero_state_dict)
+        agent.muzero.load_state_dict(muzero_state_dict)
         agent._target_muzero.load_state_dict(target_muzero_state_dict)
         return agent
 

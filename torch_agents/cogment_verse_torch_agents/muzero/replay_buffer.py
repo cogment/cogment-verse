@@ -12,13 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import ctypes
-import queue
 import numpy as np
 import torch
-import queue
 from collections import namedtuple
-import torch.multiprocessing as mp
 
 
 def clone_to_cpu(x):
@@ -56,9 +52,11 @@ EpisodeBatch = namedtuple(
 
 
 class Episode:
-    def __init__(self, initial_state, discount, id=0, min_priority=0.1, zero_reward_probs=None, zero_value_probs=None):
+    def __init__(
+        self, initial_state, discount, trial_id=0, min_priority=0.1, zero_reward_probs=None, zero_value_probs=None
+    ):
         self._discount = discount
-        self._id = 0
+        self._id = trial_id
         self._states = [ensure_tensor(initial_state).clone().to("cpu")]
         self._actions = []
         self._rewards = []
@@ -78,6 +76,9 @@ class Episode:
 
     def __len__(self):
         return len(self._actions)
+
+    def total_priority(self):
+        return sum(self._priority)
 
     def update_priority(self, step, priority):
         if step < len(self._priority):
@@ -220,7 +221,7 @@ class TrialReplayBuffer:
     def update_priority(self, episode, step, priority):
         if episode < len(self._episodes):
             self._episodes[episode].update_priority(step, priority)
-            self._priority[episode] = sum(self._episodes[episode]._priority)
+            self._priority[episode] = self._episodes[episode].total_priority()
         self._p = np.array(self._priority, dtype=np.double)
         self._p /= self._p.sum()
 
@@ -231,7 +232,7 @@ class TrialReplayBuffer:
             self._episodes[episode].update_priority(step, priority)
 
         for episode in modified_episodes:
-            self._priority[episode] = sum(self._episodes[episode]._priority)
+            self._priority[episode] = self._episodes[episode].total_priority()
 
         self._p = np.array(self._priority, dtype=np.double)
         self._p /= self._p.sum()
@@ -239,7 +240,7 @@ class TrialReplayBuffer:
     def add_episode(self, episode):
         self._episodes.append(episode)
         self._total_size += len(episode)
-        self._priority.append(sum(episode._priority))
+        self._priority.append(episode.total_priority())
 
         # discard old episodes if necessary
         overflow = self._total_size - self._max_size

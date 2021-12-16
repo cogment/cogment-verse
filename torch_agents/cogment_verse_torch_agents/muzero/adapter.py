@@ -15,11 +15,14 @@
 import asyncio
 from collections import defaultdict, namedtuple
 import ctypes
-import itertools
 import copy
 import time
 
-from numpy.lib.type_check import real
+import logging
+import torch
+import torch.multiprocessing as mp
+import numpy as np
+import queue
 
 from data_pb2 import (
     MuZeroTrainingRunConfig,
@@ -29,34 +32,24 @@ from data_pb2 import (
     TrialActor,
     EnvConfig,
     ActorConfig,
-    MLPNetworkConfig,
-    NDArray,
 )
 
 from cogment_verse.utils import LRU
 from cogment_verse import AgentAdapter
-from cogment_verse.model_registry_client import get_model_registry_client
 from cogment_verse import MlflowExperimentTracker
 from cogment_verse_torch_agents.wrapper import np_array_from_proto_array, proto_array_from_np_array
 from cogment_verse_torch_agents.muzero.replay_buffer import Episode, TrialReplayBuffer, EpisodeBatch
 
-from cogment.api.common_pb2 import EnvironmentConfig, TrialState
+from cogment.api.common_pb2 import TrialState
 import cogment
 
-import logging
-import torch
-import numpy as np
-
-
-log = logging.getLogger(__name__)
 
 from .agent import MuZeroAgent
 
+
 # pylint: disable=arguments-differ
 
-import torch.multiprocessing as mp
-from threading import Thread
-import queue
+log = logging.getLogger(__name__)
 
 
 MuZeroSample = namedtuple("MuZeroSample", ["state", "action", "reward", "next_state", "done", "policy", "value"])
@@ -212,22 +205,8 @@ class MuZeroAgentAdapter(AgentAdapter):
                 async for event in actor_session.event_loop():
                     assert worker.is_alive()
                     if event.observation and event.type == cogment.EventType.ACTIVE:
-                        while True:
-                            try:
-                                worker._event_queue.put_nowait(event)
-                                break
-                            except queue.Full:
-                                await asyncio.sleep(0.01)
-                                continue
-
-                        while True:
-                            try:
-                                action = worker._action_queue.get_nowait()
-                                break
-                            except queue.Empty:
-                                await asyncio.sleep(0.01)
-                                continue
-
+                        await worker.put_event(event)
+                        action = await worker.get_action()
                         actor_session.do_action(action)
             finally:
                 worker.terminate()
@@ -409,8 +388,8 @@ async def single_agent_muzero_run_implementation(agent_adapter, run_session):
     agent_queue = mp.Queue()
     reanalyze_agent_queue = mp.Queue()
 
-    reward_distribution = copy.deepcopy(agent._muzero._reward_distribution).cpu()
-    value_distribution = copy.deepcopy(agent._muzero._value_distribution).cpu()
+    reward_distribution = copy.deepcopy(agent.muzero._reward_distribution).cpu()
+    value_distribution = copy.deepcopy(agent.muzero._value_distribution).cpu()
 
     train_worker = TrainWorker(agent, batch_queue, agent_update_queue, info_queue, config)
     replay_buffer = ReplayBufferWorker(
@@ -506,12 +485,8 @@ async def single_agent_muzero_run_implementation(agent_adapter, run_session):
                 info["training_step"] = training_step
                 info["mean_trial_reward"] = run_total_reward / max(1, trials_completed)
                 info["samples_per_sec"] = total_samples / max(1, time.time() - start_time)
-                # info["batch_queue"] = batch_queue.qsize()
-                # info["info_queue"] = info_queue.qsize()
                 info["reanalyzed_samples"] = sum([worker.reanalyzed_samples() for worker in reanalyze_workers])
                 running_stats.update(info)
-
-                # print("SAMPLES_PER_SEC", info["samples_per_sec"])
 
             if total_samples % config.training.model_publication_interval == 0:
                 version_info = await agent_adapter.publish_version(model_id, agent)
@@ -668,13 +643,29 @@ def yield_from_queue(pool, q, device, prefetch=4):
 
 
 class AgentTrialWorker(mp.Process):
-    def __init__(self, agent, config):
+    def __init__(self, agent, config, sleep_time=0.01):
         super().__init__()
         self._event_queue = mp.Queue(1)
         self._action_queue = mp.Queue(1)
         self._config = config
         self._agent = agent
         self._terminate = mp.Value(ctypes.c_bool, False)
+        self._sleep_time = sleep_time
+
+    async def put_event(self, event):
+        while True:
+            try:
+                self._event_queue.put_nowait(event)
+                break
+            except queue.Full:
+                await asyncio.sleep(self._sleep_time)
+
+    async def get_action(self):
+        while True:
+            try:
+                return self._action_queue.get_nowait()
+            except queue.Empty:
+                await asyncio.sleep(self._sleep_time)
 
     def run(self):
         while not self._terminate.value:
@@ -734,11 +725,11 @@ class TrainWorker(mp.Process):
             lr = lr_schedule.update()
             epsilon = epsilon_schedule.update()
             temperature = temperature_schedule.update()
-            self.agent._params.learning_rate = lr
-            self.agent._params.exploration_epsilon = epsilon
-            self.agent._params.mcts_temperature = temperature
+            self.agent.params.learning_rate = lr
+            self.agent.params.exploration_epsilon = epsilon
+            self.agent.params.mcts_temperature = temperature
             batch = next(batch_generator)
-            priority, info = self.agent.learn(batch)
+            _priority, info = self.agent.learn(batch)
 
             info = dict(
                 lr=lr,
@@ -783,7 +774,7 @@ class ReanalyzeWorker(mp.Process):
                 pass
 
             episode_id, episode = self._reanalyze_queue.get()
-            reanalyze_episode = Episode(episode._states[0], agent._params.discount_rate)
+            reanalyze_episode = Episode(episode._states[0], agent.params.discount_rate)
             for step in range(len(episode)):
                 policy, _, value = agent.reanalyze(episode._states[step].clone())
                 policy = policy.cpu()
@@ -800,6 +791,6 @@ class ReanalyzeWorker(mp.Process):
                     value_probs,
                     value,
                 )
-            episode.bootstrap_value(agent._params.bootstrap_steps, agent._params.discount_rate)
+            episode.bootstrap_value(agent.params.bootstrap_steps, agent.params.discount_rate)
             self._reanalyze_update_queue.put((episode_id, episode))
             self._reanalyzed_samples.value += len(episode)

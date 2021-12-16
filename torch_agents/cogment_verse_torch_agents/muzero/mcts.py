@@ -34,8 +34,8 @@ class MCTS:
         discount=0.99,
         epsilon=0.1,
         alpha=1.0,
-        c1=1.5,
-        c2=20000.0,
+        ucb_c1=1.5,
+        ucb_c2=20000.0,
         valinfo=None,
         root=True,
     ):
@@ -46,17 +46,18 @@ class MCTS:
         self._prior = self._policy(representation)
         self._root = root
 
-        self._representation = representation
+        self.representation = representation
         self._max_depth = max_depth
         self._valinfo = valinfo or ValInfo()
         self._epsilon = epsilon
         self._alpha = alpha
-        self._c1 = c1
-        self._c2 = c2
+        self._c1 = ucb_c1
+        self._c2 = ucb_c2
 
         self._discount = discount
 
         self._children = {}
+        # pylint: disable=invalid-name
         self._Q = torch.zeros_like(self._prior)
         self._N = torch.zeros_like(self._prior, dtype=torch.int32)
         self._R = torch.zeros_like(self._prior)
@@ -123,7 +124,7 @@ class MCTS:
         # action = torch.tensor([action_int]).to(actions.device)
 
         if action_int not in self._children.keys():
-            representation, reward = self._dynamics(self._representation, action)
+            representation, reward = self._dynamics(self.representation, action)
             self._R[:, action_int] = reward
             self._children[action_int] = MCTS(
                 policy=self._policy,
@@ -138,16 +139,16 @@ class MCTS:
 
         return action_int, self._children[action_int]
 
-    def update_valinfo(self, G):
-        Gmax = torch.max(G).detach().cpu().numpy().item()
-        Gmin = torch.min(G).detach().cpu().numpy().item()
-        self._valinfo.vmin = min(self._valinfo.vmin, Gmin)
-        self._valinfo.vmax = max(self._valinfo.vmax, Gmax)
+    def update_valinfo(self, val):
+        vmax = torch.max(val).detach().cpu().numpy().item()
+        vmin = torch.min(val).detach().cpu().numpy().item()
+        self._valinfo.vmin = min(self._valinfo.vmin, vmin)
+        self._valinfo.vmax = max(self._valinfo.vmax, vmax)
 
     def rollout(self):
         if self._max_depth == 0:
             if self._cache_value is None:
-                G = self._value(self._representation)
+                G = self._value(self.representation)
                 self.update_valinfo(G)
                 self._cache_value = G
             else:

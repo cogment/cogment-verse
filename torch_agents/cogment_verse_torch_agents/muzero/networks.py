@@ -46,12 +46,6 @@ def cosine_similarity_loss(u, v, dim=1, weights=None, eps=1e-6):
     return torch.mean((1.0 - cosine) * weights)
 
 
-def mean_error_loss(u, v, dim=1, weights=None, eps=1e-6):
-    if weights is None:
-        weights = 1.0
-    return torch.mean(weights * torch.mean((u - v) ** 2, dim=dim))  # , dim=dim)
-
-
 def lin_bn_act(num_in, num_out, bn=True, act=None):
     layers = [torch.nn.Linear(num_in, num_out)]
     if bn:
@@ -241,12 +235,12 @@ class PolicyNetwork(torch.nn.Module):
     def __init__(self, num_hidden, num_hidden_layers, num_act):
         super().__init__()
         self.blocks = torch.nn.ModuleList([ResidualBlock(num_hidden) for _ in range(num_hidden_layers)])
-        self.fc = torch.nn.Linear(num_hidden, num_act)
+        self.linear = torch.nn.Linear(num_hidden, num_act)
 
     def forward(self, x):
         for block in self.blocks:
             x = block(x)
-        x = self.fc(x)
+        x = self.linear(x)
         return torch.nn.functional.softmax(x, dim=1)
 
 
@@ -313,19 +307,21 @@ class MuZero(torch.nn.Module):
         value_distribution,
         dqn,
         similarity_loss=cosine_similarity_loss,
-        # similarity_loss=mean_error_loss,
     ):
         super().__init__()
-        self._representation = representation
+        self.representation = representation
         self._dynamics = dynamics
         self._policy = policy
         self._value = value
-        self._projector = projector
+        self.projector = projector
         self._predictor = predictor
         self._reward_distribution = reward_distribution
         self._value_distribution = value_distribution
         self._similarity_loss = similarity_loss
         self._dqn = dqn
+
+    def forward(self, _):
+        pass
 
     @torch.no_grad()
     def act(self, observation, epsilon, alpha, temperature, discount_rate, mcts_depth, mcts_count, ucb_c1, ucb_c2):
@@ -366,15 +362,15 @@ class MuZero(torch.nn.Module):
         target_reward_probs,
         reward,
         next_observation,
-        done,
+        _done,
         target_policy,
         target_value_probs,
         target_value,
-        importance_weight,
+        _importance_weight,
         max_norm,
         s_weight,
         v_weight,
-        discount_factor,
+        _discount_factor,
         target_muzero,
     ):
         """ """
@@ -382,7 +378,7 @@ class MuZero(torch.nn.Module):
         target_muzero.eval()
 
         rollout_length, batch_size = observation.shape[:2]
-        initial_state = self._representation(observation[0])
+        initial_state = self.representation(observation[0])
         device = initial_state.device
         priority = torch.zeros((rollout_length, batch_size), dtype=initial_state.dtype, device=device)
 
@@ -391,7 +387,7 @@ class MuZero(torch.nn.Module):
         loss_r = 0
         loss_s = 0
 
-        pred_states, pred_reward_probs, pred_rewards, pred_next_states = self.rollout(
+        pred_states, pred_reward_probs, _pred_rewards, pred_next_states = self.rollout(
             initial_state, action, rollout_length
         )
 
@@ -400,10 +396,10 @@ class MuZero(torch.nn.Module):
         pred_next_states = pred_next_states.view(batch_size * rollout_length, -1)
 
         pred_reward_probs = pred_reward_probs.view(batch_size * rollout_length, -1)
-        pred_value_probs, pred_value = self._value(pred_states)
+        pred_value_probs, _pred_value = self._value(pred_states)
         pred_policy = self._policy(pred_states)
 
-        pred_projection = self._predictor(self._projector(pred_next_states))
+        pred_projection = self._predictor(self.projector(pred_next_states))
 
         # muzero training targets
         with torch.no_grad():
@@ -415,8 +411,8 @@ class MuZero(torch.nn.Module):
             target_value = target_value.reshape(-1)
             reward = reward.reshape(-1)
 
-            target_projection = target_muzero._projector(
-                target_muzero._representation(next_observation.reshape(rollout_length * batch_size, -1))
+            target_projection = target_muzero.projector(
+                target_muzero.representation(next_observation.reshape(rollout_length * batch_size, -1))
             )
 
         # muzero loss calculation
@@ -464,19 +460,19 @@ class MuZero(torch.nn.Module):
 
         def _dynamics_deterministic(rep, action, *, context):
             distributional_dynamics = context
-            rep, probs, reward = distributional_dynamics(rep, action)
+            rep, _reward_probs, reward = distributional_dynamics(rep, action)
             return rep, reward
 
         def _value_deterministic(rep, *, context):
             distributional_value = context
-            probs, val = distributional_value(rep)
+            _probs, val = distributional_value(rep)
             return val
 
         dynamics = LambdaModule(_dynamics_deterministic, context=self._dynamics)
         value = LambdaModule(_value_deterministic, context=self._value)
 
         # get policy/val training targets via MCTS improvement
-        representation = self._representation(state)
+        representation = self.representation(state)
         mcts = MCTS(
             policy=self._policy,
             value=value,
@@ -485,8 +481,8 @@ class MuZero(torch.nn.Module):
             max_depth=mcts_depth,
             epsilon=epsilon,
             alpha=alpha,
-            c1=ucb_c1,
-            c2=ucb_c2,
+            ucb_c1=ucb_c1,
+            ucb_c2=ucb_c2,
             discount=discount_rate,
         )
 
