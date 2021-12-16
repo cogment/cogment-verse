@@ -94,7 +94,7 @@ def create_training_run(agent_adapter):
                 player_count=config.player_count,
                 batch_size=config.batch_size,
                 model_publication_interval=config.model_publication_interval,
-                model_archive_interval_multiplier=config.model_archive_interval_multiplier,
+                model_archive_interval=config.model_archive_interval,
                 environment=config.environment_implementation,
                 agent_implmentation=config.agent_implementation,
             )
@@ -103,7 +103,7 @@ def create_training_run(agent_adapter):
             model_archive_schedule = PeriodicSchedule(
                 False,
                 True,
-                config.model_archive_interval_multiplier * config.model_publication_interval,
+                config.model_archive_interval,
             )
 
             training_step = 0
