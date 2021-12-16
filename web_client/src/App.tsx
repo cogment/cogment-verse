@@ -13,9 +13,8 @@
 // limitations under the License.
 
 import { Message } from "google-protobuf";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import "./App.css";
-//import Canvas from './Canvas'
 import { cogSettings } from "./CogSettings";
 import { ControlList } from "./ControlList";
 import * as data_pb from "./data_pb";
@@ -87,7 +86,7 @@ function App() {
     img.src = "data:image/png;base64," + pixelData;
   });
 
-  const [event, joinTrial, sendAction, reset, trialJoined, watchTrials, trialStateList, actorConfig] = useActions<
+  const [event, joinTrial, _sendAction, reset, trialJoined, watchTrials, trialStateList, actorConfig] = useActions<
     ObservationT,
     ActionT,
     RewardT,
@@ -99,20 +98,33 @@ function App() {
     grpcURL
   );
 
-  //let lastTime: number | undefined = undefined;
+  const actionLock = useRef(false);
+
+  useEffect(() => {
+    actionLock.current = false;
+  }, [event]);
+
+  const sendAction = useCallback(
+    (action: ActionT) => {
+      // use lock to ensure we send exactly one action per tick
+      if (actionLock.current) return;
+      if (_sendAction) {
+        _sendAction(action);
+        actionLock.current = true;
+      }
+    },
+    [_sendAction]
+  );
 
   useEffect(() => {
     if (trialJoined && actorConfig && event.observation && event.observation.pixelData) {
       setPixelData(event.observation.pixelData as string);
-
-      //lastTime = currentTime;
     }
   }, [event, actorConfig, trialJoined]);
 
   useEffect(() => {
     if (trialJoined && actorConfig && event.observation && event.observation.pixelData) {
       if (!event.last) {
-        // todo: this should be read from actor conig
         const action = new data_pb.AgentAction();
         let action_int = -1;
         const keymap = get_keymap(actorConfig.envType, actorConfig.envName);
