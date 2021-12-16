@@ -16,14 +16,13 @@ from data_pb2 import EnvironmentConfig, AgentAction
 from tests.mock_environment_session import ActorInfo
 
 from cogment_verse_environment.utils.serialization_helpers import deserialize_np_array, deserialize_img
+from cogment_verse_environment.procgen_env import ENV_NAMES, ProcGenEnv
 
 import numpy as np
 import pytest
 
 # pylint doesn't like test fixtures
 # pylint: disable=redefined-outer-name
-
-from cogment_verse_environment.procgen_env import ENV_NAMES, ProcGenEnv
 
 
 @pytest.mark.asyncio
@@ -79,7 +78,7 @@ async def test_step(create_mock_environment_session, env_name):
 def test_render(env_name):
     env = ProcGenEnv(env_name=env_name, flatten=False)
     env.reset()
-    for i in range(10):
+    for _ in range(10):
         action = np.random.randint(0, 15)
         obs = env.step(action)
         pixels = env.render()

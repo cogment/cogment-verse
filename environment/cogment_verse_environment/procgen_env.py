@@ -19,7 +19,8 @@ from cogment_verse_environment.base import GymObservation
 from cogment_verse_environment.gym_env import GymEnv
 from cogment_verse_environment.env_spec import EnvSpec
 
-import procgen  # registers procgen environments
+# registers procgen environments
+import procgen  # pylint: disable=unused-import
 
 ENV_NAMES = [
     "bigfish",
@@ -56,7 +57,6 @@ class ProcGenEnv(GymEnv):
         env_name,
         frame_skip=1,
         screen_size=64,
-        sticky_actions=False,
         flatten=True,
         num_players=1,
         framestack=4,
@@ -100,7 +100,6 @@ class ProcGenEnv(GymEnv):
         return obs, self._turn
 
     def reset(self):
-        # Used for storing and pooling over two consecutive observations to reduce flicker
         self._last_pixels = self._env.reset()
         observation, current_player = self._state()
 
@@ -130,7 +129,6 @@ class ProcGenEnv(GymEnv):
         accumulated_reward = 0.0
         done = False
         info = {}
-        flicker_frames = 2
 
         for _ in range(self.frame_skip):
             observation, reward, done, info = self._env.step(action)
