@@ -46,33 +46,38 @@ def policy():
 
 @pytest.fixture
 def replay_buffer(env, policy):
+    reward_probs = torch.ones(4) / 4
+    value_probs = torch.ones(4) / 4
     rb = TrialReplayBuffer(max_size=1000, discount_rate=0.99, bootstrap_steps=10)
     for _ in range(10):
         obs = env.reset()
-        ep = Episode(obs.observation, 0.99)
-        while not obs.done:
+        done = False
+        ep = Episode(obs, 0.99, zero_reward_probs=reward_probs, zero_value_probs=value_probs)
+
+        while not done:
             action = 0
-            next_obs = env.step(action)
-            rb.add_sample(
-                obs.observation, action, next_obs.rewards[0], next_obs.observation, next_obs.done, policy, 0.0
-            )
+            next_obs, reward, done, _info = env.step(action)
+            ep.add_step(next_obs, action, reward_probs, reward, done, policy, value_probs, 0.0)
             obs = next_obs
+
+        ep.bootstrap_value(100, 0.99)
+        rb.add_episode(ep)
 
     return rb
 
 
 def test_create(replay_buffer):
     assert replay_buffer.num_episodes() == 10
-    assert replay_buffer.size() > 100
+    assert replay_buffer.size() == sum(len(episode) for episode in replay_buffer.episodes)
 
 
 @pytest.mark.parametrize("rollout_length", [4, 8, 12])
 def test_sample(replay_buffer, rollout_length):
     batch = replay_buffer.sample(rollout_length, 32)
-    assert batch.state.shape == (32, rollout_length, 8)
-    assert batch.next_state.shape == (32, rollout_length, 8)
-    assert batch.action.shape == (32, rollout_length)
-    assert batch.rewards.shape == (32, rollout_length)
-    assert batch.target_policy.shape == (32, rollout_length, 4)
-    assert batch.target_value.shape == (32, rollout_length)
-    assert batch.done.shape == (32, rollout_length)
+    assert batch.state.shape == (rollout_length, 32, 8)
+    assert batch.next_state.shape == (rollout_length, 32, 8)
+    assert batch.action.shape == (rollout_length, 32)
+    assert batch.target_reward.shape == (rollout_length, 32)
+    assert batch.target_policy.shape == (rollout_length, 32, 4)
+    assert batch.target_value.shape == (rollout_length, 32)
+    assert batch.done.shape == (rollout_length, 32)
