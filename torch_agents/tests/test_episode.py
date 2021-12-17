@@ -51,11 +51,11 @@ def test_sample(env, policy):
     for _ in range(1000):
         next_state = env.step(0)
         episode.add_step(next_state.observation, 0, next_state.rewards[0], next_state.done, policy, 0.0)
-        if episode.done:
+        if next_state.done:
             episode.bootstrap_value(10, 0.99)
             break
 
-    assert episode.done
+    assert episode.done[-1]
     # check that we can sample for small k
     batch = episode.sample(4)
 

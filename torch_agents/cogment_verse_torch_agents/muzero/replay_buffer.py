@@ -56,12 +56,12 @@ class Episode:
     ):
         self._discount = discount
         self._id = trial_id
-        self._states = [ensure_tensor(initial_state).clone().to("cpu")]
-        self._actions = []
-        self._rewards = []
+        self.states = [ensure_tensor(initial_state).clone().to("cpu")]
+        self.actions = []
+        self.rewards = []
         self._policy = []
         self._value = []
-        self._done = []
+        self.done = []
         self._priority = []
         self._return = []
         self._reward_probs = []
@@ -74,7 +74,7 @@ class Episode:
         self._zero_value_probs = zero_value_probs
 
     def __len__(self):
-        return len(self._actions)
+        return len(self.actions)
 
     def total_priority(self):
         return sum(self._priority)
@@ -95,55 +95,51 @@ class Episode:
                 self._bootstrap[i] = (discount ** (max_k - i)) * self._value[max_k]
 
             for k in reversed(range(i, max_k)):
-                self._bootstrap[i] += (discount ** (k - i)) * self._rewards[k]
+                self._bootstrap[i] += (discount ** (k - i)) * self.rewards[k]
 
     def add_step(self, state, action, reward_probs, reward, done, policy, value_probs, value):
-        self._states.append(clone_to_cpu(state))
-        self._actions.append(int(action))
-        self._rewards.append(float(reward))
+        self.states.append(clone_to_cpu(state))
+        self.actions.append(int(action))
+        self.rewards.append(float(reward))
         self._policy.append(clone_to_cpu(policy))
         self._value.append(float(value))
-        self._done.append(int(done))
+        self.done.append(int(done))
         self._reward_probs.append(clone_to_cpu(reward_probs))
         self._value_probs.append(clone_to_cpu(value_probs))
         self._p = None
         self._action_space.add(int(action))
 
         if done:
-            N = len(self._actions)
-            self._return = [0.0 for _ in range(N)]
-            self._priority = [0.0 for _ in range(N)]
+            num_steps = len(self.actions)
+            self._return = [0.0 for _ in range(num_steps)]
+            self._priority = [0.0 for _ in range(num_steps)]
             self._return[-1] = reward
-            for i in reversed(range(N - 1)):
-                self._return[i] = self._rewards[i] + self._discount * self._return[i + 1]
+            for i in reversed(range(num_steps - 1)):
+                self._return[i] = self.rewards[i] + self._discount * self._return[i + 1]
                 self._priority[i] = self._min_priority + abs(self._return[i] - self._value[i])
                 # testing
                 self._priority[i] = 1.0
             self._p = np.array(self._priority, dtype=np.double)
             self._p = self._p / self._p.sum()
             self._p = self._p.tolist()
-            self._range = list(range(N))
-
-    @property
-    def done(self):
-        return any(self._done)
+            self._range = list(range(num_steps))
 
     def sample(self, k) -> EpisodeBatch:
-        start = np.random.randint(0, len(self._actions))
+        start = np.random.randint(0, len(self.actions))
         end = start + k
         return self.episode_slice(start, end)
 
     def episode_slice(self, start, end) -> EpisodeBatch:
         assert end > start
-        assert start < len(self._actions)
+        assert start < len(self.actions)
         length = end - start
 
-        states = torch.zeros((length, *self._states[start].shape))
+        states = torch.zeros((length, *self.states[start].shape))
         actions = torch.zeros(length, dtype=torch.long)
 
         rewards = torch.zeros(length)
         done = torch.zeros(length)
-        next_states = torch.zeros((length, *self._states[start].shape))
+        next_states = torch.zeros((length, *self.states[start].shape))
         target_policy = torch.zeros((length, *self._policy[start].shape))
         target_value = torch.zeros(length)
         priority = torch.zeros(length)
@@ -155,18 +151,18 @@ class Episode:
         uniform_policy = torch.ones_like(ensure_tensor(self._policy[start]))
         uniform_policy /= torch.sum(uniform_policy)
 
-        c = min(end, len(self._actions))
+        c = min(end, len(self.actions))
 
         for k in range(start, c):
-            states[k - start] = ensure_tensor(self._states[k])
-            next_states[k - start] = ensure_tensor(self._states[k + 1])
-            actions[k - start] = self._actions[k]
-            rewards[k - start] = self._rewards[k]
+            states[k - start] = ensure_tensor(self.states[k])
+            next_states[k - start] = ensure_tensor(self.states[k + 1])
+            actions[k - start] = self.actions[k]
+            rewards[k - start] = self.rewards[k]
             target_policy[k - start] = ensure_tensor(self._policy[k])
             target_value[k - start] = self._bootstrap[k]
             priority[k - start] = self._p[k]
             importance_weight[k - start] = 0.0
-            done[k - start] = self._done[k]
+            done[k - start] = self.done[k]
 
             target_reward_probs[k - start] = self._reward_probs[k]
             target_value_probs[k - start] = self._value_probs[k]

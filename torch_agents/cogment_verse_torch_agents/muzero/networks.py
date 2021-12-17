@@ -16,7 +16,7 @@ import numpy as np
 
 import torch
 
-from .mcts import MCTS
+from cogment_verse_torch_agents.muzero.mcts import MCTS
 
 # pylint: disable=invalid-name
 
@@ -317,8 +317,8 @@ class MuZero(torch.nn.Module):
         self._value = value
         self.projector = projector
         self._predictor = predictor
-        self._reward_distribution = reward_distribution
-        self._value_distribution = value_distribution
+        self.reward_distribution = reward_distribution
+        self.value_distribution = value_distribution
         self._similarity_loss = similarity_loss
         self._dqn = dqn
 
@@ -375,7 +375,6 @@ class MuZero(torch.nn.Module):
         _discount_factor,
         target_muzero,
     ):
-        """ """
         self.train()
         target_muzero.eval()
 

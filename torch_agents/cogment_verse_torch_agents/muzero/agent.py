@@ -156,7 +156,7 @@ class MuZeroAgent:
             grp["lr"] = lr
 
         batch_tensors = []
-        for i, tensor in enumerate(batch):
+        for tensor in batch:
             if isinstance(tensor, np.ndarray):
                 tensor = torch.from_numpy(tensor)
             batch_tensors.append(tensor.to(self._device))

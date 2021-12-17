@@ -21,6 +21,7 @@ import time
 import logging
 import torch
 import torch.multiprocessing as mp
+from multiprocessing.pool import ThreadPool
 import numpy as np
 import queue
 
@@ -39,12 +40,10 @@ from cogment_verse import AgentAdapter
 from cogment_verse import MlflowExperimentTracker
 from cogment_verse_torch_agents.wrapper import np_array_from_proto_array, proto_array_from_np_array
 from cogment_verse_torch_agents.muzero.replay_buffer import Episode, TrialReplayBuffer, EpisodeBatch
+from cogment_verse_torch_agents.muzero.agent import MuZeroAgent
 
 from cogment.api.common_pb2 import TrialState
 import cogment
-
-
-from .agent import MuZeroAgent
 
 
 # pylint: disable=arguments-differ
@@ -80,6 +79,7 @@ class LinearScheduleWithWarmup:
         return self._value
 
     def update(self):
+        # pylint: disable=invalid-name
         if self._current_step < self._warmup_steps:
             t = np.clip(self._current_step / (self._warmup_steps + 1), 0, 1)
             self._value = self._init_value * t
@@ -306,7 +306,6 @@ async def single_agent_muzero_sample_producer_implementation(agent_adapter, run_
     state = None
     step = 0
     total_reward = 0
-    samples = []
     state, action, reward, policy, value = None, None, None, None, None
     player_override = None
 
@@ -388,8 +387,8 @@ async def single_agent_muzero_run_implementation(agent_adapter, run_session):
     agent_queue = mp.Queue()
     reanalyze_agent_queue = mp.Queue()
 
-    reward_distribution = copy.deepcopy(agent.muzero._reward_distribution).cpu()
-    value_distribution = copy.deepcopy(agent.muzero._value_distribution).cpu()
+    reward_distribution = copy.deepcopy(agent.muzero.reward_distribution).cpu()
+    value_distribution = copy.deepcopy(agent.muzero.value_distribution).cpu()
 
     train_worker = TrainWorker(agent, batch_queue, agent_update_queue, info_queue, config)
     replay_buffer = ReplayBufferWorker(
@@ -528,8 +527,8 @@ class ReplayBufferWorker(mp.Process):
         self._replay_buffer_size = mp.Value(ctypes.c_uint32, 0)
         self._training_config = config
         self._device = config.train_device
-        self._reward_distribution = reward_distribution
-        self._value_distribution = value_distribution
+        self.reward_distribution = reward_distribution
+        self.value_distribution = value_distribution
 
     def run(self):
         episode_samples = {}
@@ -539,8 +538,8 @@ class ReplayBufferWorker(mp.Process):
             bootstrap_steps=self._training_config.bootstrap_steps,
         )
 
-        zero_reward_probs = self._reward_distribution.compute_target(torch.tensor(0.0)).cpu().detach()
-        zero_value_probs = self._value_distribution.compute_target(torch.tensor(0.0)).cpu().detach()
+        zero_reward_probs = self.reward_distribution.compute_target(torch.tensor(0.0)).cpu().detach()
+        zero_value_probs = self.value_distribution.compute_target(torch.tensor(0.0)).cpu().detach()
 
         while True:
             # Fetch & perform all pending priority updates
@@ -564,8 +563,8 @@ class ReplayBufferWorker(mp.Process):
                     )
 
                 with torch.no_grad():
-                    reward_probs = self._reward_distribution.compute_target(torch.tensor(sample.reward)).cpu()
-                    value_probs = self._value_distribution.compute_target(torch.tensor(sample.value)).cpu()
+                    reward_probs = self.reward_distribution.compute_target(torch.tensor(sample.reward)).cpu()
+                    value_probs = self.value_distribution.compute_target(torch.tensor(sample.value)).cpu()
 
                 episode_samples[trial_id].add_step(
                     sample.next_state,
@@ -630,7 +629,7 @@ def get_from_queue(q, device):
     return batch
 
 
-def yield_from_queue(pool, q, device, prefetch=4):
+def yield_from_queue(pool, q, device, prefetch=4):  # pylint: disable=invalid-name
     futures = [pool.apply_async(get_from_queue, args=(q, device)) for _ in range(prefetch)]
     i = 0
     while True:
@@ -716,13 +715,11 @@ class TrainWorker(mp.Process):
             0,
         )
 
-        from multiprocessing.pool import ThreadPool
-
         threadpool = ThreadPool()
         batch_generator = yield_from_queue(threadpool, self.batch_queue, self.config.training.train_device)
 
         while True:
-            lr = lr_schedule.update()
+            lr = lr_schedule.update()  # pylint: disable=invalid-name
             epsilon = epsilon_schedule.update()
             temperature = temperature_schedule.update()
             self.agent.params.learning_rate = lr
@@ -756,8 +753,8 @@ class ReanalyzeWorker(mp.Process):
         self._agent_queue = agent_queue
         self._device = device
         self._reanalyzed_samples = mp.Value(ctypes.c_uint64, 0)
-        self._reward_distribution = reward_distribution
-        self._value_distribution = value_distribution
+        self.reward_distribution = reward_distribution
+        self.value_distribution = value_distribution
 
     def reanalyzed_samples(self):
         return self._reanalyzed_samples.value
@@ -774,19 +771,19 @@ class ReanalyzeWorker(mp.Process):
                 pass
 
             episode_id, episode = self._reanalyze_queue.get()
-            reanalyze_episode = Episode(episode._states[0], agent.params.discount_rate)
+            reanalyze_episode = Episode(episode.states[0], agent.params.discount_rate)
             for step in range(len(episode)):
-                policy, _, value = agent.reanalyze(episode._states[step].clone())
+                policy, _, value = agent.reanalyze(episode.states[step].clone())
                 policy = policy.cpu()
                 value = value.cpu().item()
-                reward_probs = self._reward_distribution.compute_target(torch.tensor(episode._rewards[step]))
-                value_probs = self._value_distribution.compute_target(torch.tensor(value))
+                reward_probs = self.reward_distribution.compute_target(torch.tensor(episode.rewards[step]))
+                value_probs = self.value_distribution.compute_target(torch.tensor(value))
                 reanalyze_episode.add_step(
-                    episode._states[step + 1],
-                    episode._actions[step],
+                    episode.states[step + 1],
+                    episode.actions[step],
                     reward_probs,
-                    episode._rewards[step],
-                    episode._done[step],
+                    episode.rewards[step],
+                    episode.done[step],
                     policy,
                     value_probs,
                     value,
