@@ -128,7 +128,7 @@ message RunConfig {
   bool aggregate_by_actor = 26;
   uint32 framestack = 27;
   ReplayBufferConfig replay_buffer_config = 28;
-  float discount_factor = 30;
+  float discount_factor = 31;
 }
 
 message MLPNetworkConfig {
