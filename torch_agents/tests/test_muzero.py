@@ -30,7 +30,7 @@ from cogment_verse_torch_agents.muzero.networks import (
 from cogment_verse_torch_agents.muzero.agent import MuZeroAgent
 from cogment_verse_torch_agents.muzero.adapter import MuZeroAgentAdapter, DEFAULT_MUZERO_TRAINING_CONFIG
 
-from cogment_verse_environment.factory import make_environment
+
 from cogment_verse_torch_agents.third_party.hive.utils.schedule import LinearSchedule
 
 # pylint doesn't like test fixtures

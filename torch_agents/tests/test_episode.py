@@ -16,7 +16,6 @@ import pytest
 import numpy as np
 import torch
 
-from cogment_verse_environment.factory import make_environment
 from cogment_verse_torch_agents.muzero.replay_buffer import Episode
 from cogment_verse_torch_agents.muzero.networks import Distributional
 
@@ -26,7 +25,19 @@ from cogment_verse_torch_agents.muzero.networks import Distributional
 
 @pytest.fixture
 def env():
-    return make_environment("gym", "LunarLander-v2")
+    class MockEnvironment:
+        def __init__(self):
+            self.num_action = 4
+            self.num_input = 8
+
+        def reset(self):
+            return np.random.rand(self.num_input)
+
+        def step(self, _action):
+            done = np.random.rand() < 0.2
+            return np.random.rand(self.num_input), np.random.rand(), done, {}
+
+    return MockEnvironment()
 
 
 @pytest.fixture
@@ -46,20 +57,20 @@ def zero_probs(distribution):
 
 def test_init(env, zero_probs):
     state = env.reset()
-    episode = Episode(state.observation, 0.99, zero_reward_probs=zero_probs, zero_value_probs=zero_probs)
+    episode = Episode(state, 0.99, zero_reward_probs=zero_probs, zero_value_probs=zero_probs)
     assert episode is not None
 
 
 def test_add(env, policy, zero_probs, distribution):
     state = env.reset()
-    episode = Episode(state.observation, 0.99, zero_reward_probs=zero_probs, zero_value_probs=zero_probs)
-    next_state = env.step(0)
+    episode = Episode(state, 0.99, zero_reward_probs=zero_probs, zero_value_probs=zero_probs)
+    next_state, reward, done, _info = env.step(0)
     episode.add_step(
-        next_state.observation,
+        next_state,
         0,
-        distribution.compute_target(torch.tensor(next_state.rewards[0])),
-        next_state.rewards[0],
-        next_state.done,
+        distribution.compute_target(torch.tensor(reward)),
+        reward,
+        done,
         policy,
         zero_probs,
         0.0,
@@ -68,20 +79,20 @@ def test_add(env, policy, zero_probs, distribution):
 
 def test_sample(env, policy, zero_probs, distribution):
     state = env.reset()
-    episode = Episode(state.observation, 0.99, zero_reward_probs=zero_probs, zero_value_probs=zero_probs)
+    episode = Episode(state, 0.99, zero_reward_probs=zero_probs, zero_value_probs=zero_probs)
     for _ in range(1000):
-        next_state = env.step(0)
+        next_state, reward, done, _info = env.step(0)
         episode.add_step(
-            next_state.observation,
+            next_state,
             0,
-            distribution.compute_target(torch.tensor(next_state.rewards[0])),
-            next_state.rewards[0],
-            next_state.done,
+            distribution.compute_target(torch.tensor(reward)),
+            reward,
+            done,
             policy,
             zero_probs,
             0.0,
         )
-        if next_state.done:
+        if done:
             episode.bootstrap_value(10, 0.99)
             break
 

@@ -16,7 +16,6 @@ import pytest
 import numpy as np
 import torch
 
-from cogment_verse_environment.factory import make_environment
 from cogment_verse_torch_agents.muzero.replay_buffer import Episode, TrialReplayBuffer
 
 # pylint doesn't like test fixtures
@@ -25,7 +24,19 @@ from cogment_verse_torch_agents.muzero.replay_buffer import Episode, TrialReplay
 
 @pytest.fixture
 def env():
-    return make_environment("gym", "LunarLander-v2")
+    class MockEnvironment:
+        def __init__(self):
+            self.num_action = 4
+            self.num_input = 8
+
+        def reset(self):
+            return np.random.rand(self.num_input)
+
+        def step(self, _action):
+            done = np.random.rand() < 0.2
+            return np.random.rand(self.num_input), np.random.rand(), done, {}
+
+    return MockEnvironment()
 
 
 @pytest.fixture
