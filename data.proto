@@ -203,7 +203,7 @@ message MuZeroTrainingConfig {
 }
 
 message MuZeroTrainingRunConfig {
-  EnvironmentConfig environment = 1;
+  EnvironmentParams environment = 1;
   ActorConfig actor = 2;
   MuZeroTrainingConfig training = 3;
 }

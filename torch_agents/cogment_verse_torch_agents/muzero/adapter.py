@@ -30,8 +30,9 @@ from data_pb2 import (
     MuZeroTrainingConfig,
     AgentAction,
     TrialConfig,
-    TrialActor,
-    EnvConfig,
+    ActorParams,
+    EnvironmentConfig,
+    EnvironmentParams,
     ActorConfig,
 )
 
@@ -233,13 +234,14 @@ class MuZeroAgentAdapter(AgentAdapter):
                 _single_agent_muzero_sample_producer_implementation,
                 _single_agent_muzero_run_implementation,
                 MuZeroTrainingRunConfig(
-                    environment=EnvConfig(
-                        seed=12,
-                        env_type="gym",
-                        env_name="CartPole-v0",
-                        player_count=1,
-                        framestack=1,
-                        render=False,
+                    environment=EnvironmentParams(
+                        implementation="gym/CartPole-v0",
+                        config=EnvironmentConfig(
+                            seed=12,
+                            player_count=1,
+                            framestack=1,
+                            render=False,
+                        ),
                     ),
                     training=DEFAULT_MUZERO_TRAINING_CONFIG,
                 ),
@@ -254,22 +256,24 @@ def make_trial_configs(run_session, config, model_id, model_version_number):
         config.seed = seed
         return config
 
+    env_type, env_name = config.environment.implementation.split("/")
+
     actor_config = ActorConfig(
         model_id=model_id,
         model_version=model_version_number,
         num_input=config.actor.num_input,
         num_action=config.actor.num_action,
-        env_type=config.environment.env_type,
-        env_name=config.environment.env_name,
+        env_type=env_type,
+        env_name=env_name,
         device=config.training.actor_device,
     )
-    muzero_config = TrialActor(
+    muzero_config = ActorParams(
         name="agent_1",
         actor_class="agent",
         implementation="muzero_mlp",
         config=actor_config,
     )
-    teacher_config = TrialActor(
+    teacher_config = ActorParams(
         name="web_actor",
         actor_class="teacher_agent",
         implementation="client",
@@ -278,7 +282,14 @@ def make_trial_configs(run_session, config, model_id, model_version_number):
     demonstration_configs = [
         TrialConfig(
             run_id=run_session.run_id,
-            environment_config=clone_config(config.environment, seed=config.environment.seed + i, render=True),
+            environment=EnvironmentParams(
+                implementation=config.environment.implementation,
+                config=clone_config(
+                    config.environment.config,
+                    seed=config.environment.config.seed + i + config.training.demonstration_trials,
+                    render=False,
+                ),
+            ),
             actors=[muzero_config, teacher_config],
         )
         for i in range(config.training.demonstration_trials)
@@ -287,10 +298,13 @@ def make_trial_configs(run_session, config, model_id, model_version_number):
     trial_configs = [
         TrialConfig(
             run_id=run_session.run_id,
-            environment_config=clone_config(
-                config.environment,
-                seed=config.environment.seed + i + config.training.demonstration_trials,
-                render=False,
+            environment=EnvironmentParams(
+                implementation=config.environment.implementation,
+                config=clone_config(
+                    config.environment.config,
+                    seed=config.environment.config.seed + i + config.training.demonstration_trials,
+                    render=False,
+                ),
             ),
             actors=[muzero_config],
         )
@@ -360,7 +374,7 @@ async def single_agent_muzero_run_implementation(agent_adapter, run_session):
     model_id = f"{run_session.run_id}_model"
 
     config = run_session.config
-    assert config.environment.player_count == 1
+    assert config.environment.config.player_count == 1
 
     agent, version_info = await agent_adapter.create_and_publish_initial_version(
         model_id=model_id,

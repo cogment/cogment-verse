@@ -555,9 +555,9 @@ cartpole_muzero: &default_muzero
   config: &default_muzero_config
     class_name: data_pb2.MuZeroTrainingRunConfig
     environment:
-      env_type: "gym"
-      env_name: "CartPole-v0"
-      seed: 12
+      implementation: "gym/CartPole-v0"
+      config:
+        seed: 12
     actor:
       num_input: 4
       num_action: 2
