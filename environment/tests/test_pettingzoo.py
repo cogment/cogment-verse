@@ -12,66 +12,98 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from data_pb2 import EnvironmentConfig, AgentAction
+from tests.mock_environment_session import ActorInfo
+
+from cogment_verse_environment.utils.serialization_helpers import deserialize_np_array, deserialize_img
+
+import pytest
 import numpy as np
 
-from cogment_verse_environment.factory import make_environment
-
-# pylint: disable=protected-access
-
-
-def test_render():
-    env = make_environment("pettingzoo", "connect_four_v3")
-    env.reset()
-    x = env.render()
-    assert len(x.shape) == 3
+# pylint doesn't like test fixtures
+# pylint: disable=redefined-outer-name
 
 
-def test_make_env():
-    env = make_environment("pettingzoo", "connect_four_v3")
-    env.reset()
+@pytest.fixture
+@pytest.mark.asyncio
+async def connect_four_session(create_mock_environment_session):
+    session = create_mock_environment_session(
+        impl_name="pettingzoo/connect_four_v3",
+        trial_id="test_pettingzoo",
+        environment_config=EnvironmentConfig(player_count=2, framestack=1, flatten=True),
+        actor_infos=[ActorInfo("player_1", "player"), ActorInfo("player_2", "player")],
+    )
+
+    yield session
+    await session.terminate()
 
 
-def test_observation():
-    env = make_environment("pettingzoo", "connect_four_v3")
-    env.reset()
-    obs = env.step(0)
-    x = obs.observation
-    assert x.shape == (84,)
+@pytest.mark.asyncio
+async def test_observation(connect_four_session):
+    tick_0_events = await connect_four_session.receive_events()
+    assert tick_0_events.tick_id == 0
+    assert len(tick_0_events.rewards) == 0
+    assert len(tick_0_events.messages) == 0
+    assert len(tick_0_events.observations) == 1
+
+    tick_0_observation_destination, tick_0_observation = tick_0_events.observations[0]
+    assert tick_0_observation_destination == "*"
+    assert deserialize_np_array(tick_0_observation.vectorized).shape == (84,)
+    assert deserialize_img(tick_0_observation.pixel_data).shape == (1, 1, 3)
 
 
-def test_step():
-    env = make_environment("pettingzoo", "connect_four_v3")
-    env.reset()
-    obs = env.step(0)
-    x = obs.observation
-    assert x.shape == (84,)
-    # correct handling of np arrays
-    _ = env.step(np.array(0))
+@pytest.mark.asyncio
+async def test_step(connect_four_session):
+    tick_0_events = await connect_four_session.receive_events()
+    assert tick_0_events.tick_id == 0
+
+    connect_four_session.send_events(actions=[AgentAction(discrete_action=0), AgentAction(discrete_action=0)])
+
+    tick_1_events = await connect_four_session.receive_events()
+    assert tick_1_events.tick_id == 1
 
 
-def test_current_player():
-    env = make_environment("pettingzoo", "connect_four_v3", num_players=2)
-    obs = env.reset()
-    assert env._num_players == 2
-    assert obs.current_player == 0
-    assert env._turn == 0
-    obs = env.step(0)
-    assert obs.current_player == 1
-    obs = env.step(0)
-    assert obs.current_player == 0
+@pytest.mark.asyncio
+async def test_current_player(connect_four_session):
+    tick_0_events = await connect_four_session.receive_events()
+    assert tick_0_events.tick_id == 0
+
+    _, tick_0_observation = tick_0_events.observations[0]
+    assert tick_0_observation.current_player == 0
+
+    connect_four_session.send_events(actions=[AgentAction(discrete_action=0), AgentAction(discrete_action=0)])
+
+    tick_1_events = await connect_four_session.receive_events()
+    assert tick_1_events.tick_id == 1
+
+    _, tick_1_observation = tick_1_events.observations[0]
+    assert tick_1_observation.current_player == 1
+
+    connect_four_session.send_events(actions=[AgentAction(discrete_action=0), AgentAction(discrete_action=0)])
+
+    tick_2_events = await connect_four_session.receive_events()
+    assert tick_2_events.tick_id == 2
+
+    _, tick_2_observation = tick_2_events.observations[0]
+    assert tick_2_observation.current_player == 0
 
 
-def test_rewards():
-    env = make_environment("pettingzoo", "connect_four_v3", num_players=2)
-    obs = env.reset()
+@pytest.mark.asyncio
+async def test_rewards(connect_four_session):
+    cumulative_rewards = 0
 
-    done = False
-    cumulative_rewards = np.full(2, 0.0)
+    while True:
+        tick_events = await connect_four_session.receive_events()
+        if tick_events.done:
+            break
+        cumulative_rewards += sum([reward.value for reward in tick_events.rewards])
+        _, observation = tick_events.observations[0]
 
-    while not done:
-        action = np.random.choice(obs.legal_moves_as_int)
-        obs = env.step(action)
-        done = obs.done
-        cumulative_rewards += obs.rewards
+        actions = [AgentAction(discrete_action=0), AgentAction(discrete_action=0)]
+        actions[observation.current_player] = AgentAction(
+            discrete_action=np.random.choice(observation.legal_moves_as_int)
+        )
 
-    assert cumulative_rewards.sum() == 0.0
+        connect_four_session.send_events(actions=actions)
+
+    assert cumulative_rewards == 0

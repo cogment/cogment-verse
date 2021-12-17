@@ -7,6 +7,7 @@
 - Develop 🚧
   - [Development Setup](/docs/development_setup.md)
   - [Debug](/README.md#debug)
+  - [Environment development](/docs/environment.md)
 - [Changelog](/CHANGELOG.md)
 - [Contributors guide](/CONTRIBUTING.md)
 - [Community code of conduct](/CODE_OF_CONDUCT.md)

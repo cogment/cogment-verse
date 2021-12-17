@@ -16,18 +16,23 @@ PettingZoo = "^1.11.1"
 pyglet = "^1.4"
 pygame = "^2.0.2"
 python-dotenv = "^0.19.1"
+PyYAML = "^5.4.1"
+filelock = "^3.4.0"
+procgen = "^0.10.4"
 
 [tool.poetry.dev-dependencies]
 taskipy = "^1.9.0"
 pytest = "^6.2.5"
 pytest-cov = "^3.0.0"
 coverage = "^6.0.2"
+pytest-asyncio = "^0.16.0"
 
 [tool.taskipy.tasks]
 retrieve_roms = "mkdir -p .atari_roms && curl -s http://www.atarimania.com/roms/Roms.rar -o .atari_roms/roms.rar && unrar x -r .atari_roms/roms.rar .atari_roms/"
 import_roms = "python -m atari_py.import_roms .atari_roms"
-generate = "python -m cogment.generate"
-build = "task import_roms && task generate"
+generate_protos = "python -m cogment.generate"
+build = "task import_roms && task generate_protos"
+start = "python -m main"
 unit_tests = "python -m pytest --cov=. --cov-report term-missing tests"
 coverage = "coverage html -i"
 test="task unit_tests && task coverage"
@@ -35,6 +40,9 @@ test="task unit_tests && task coverage"
 [tool.black]
 line-length = 120
 target-version = ["py37"]
+
+[tool.pytest.ini_options]
+addopts = "-rfs"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

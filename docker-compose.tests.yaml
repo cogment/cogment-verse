@@ -13,5 +13,4 @@ services:
       context: torch_agents
       dockerfile: test.dockerfile
       args:
-        ENVIRONMENT_IMAGE: cogment/cogment-verse-environment:${IMAGE_TAG:-local}
         BASE_PYTHON_IMAGE: cogment/cogment-verse-python-sdk:${IMAGE_TAG:-local}

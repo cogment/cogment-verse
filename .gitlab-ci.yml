@@ -57,6 +57,15 @@ npm_lint:
     - npm install
     - npx prettier --check .
 
+test_base_python:
+  extends: .base_poetry
+  stage: test
+  script:
+    - cd base_python
+    - poetry install
+    - poetry run task build
+    - poetry run task test
+
 test_environment:
   extends: .base_poetry
   stage: test

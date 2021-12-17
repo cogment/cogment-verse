@@ -1,7 +1,5 @@
 ARG BASE_PYTHON_IMAGE
-ARG ENVIRONMENT_IMAGE
 FROM ${BASE_PYTHON_IMAGE} as base_python
-FROM ${ENVIRONMENT_IMAGE} as environment
 FROM python:3.7-slim
 
 # Install torch as early as possible to help with cache
@@ -19,9 +17,6 @@ ENV POETRY_VIRTUALENVS_CREATE=false
 ENV POETRY_NO_INTERACTION=1
 ENV PATH="$POETRY_HOME/bin:$PATH"
 RUN curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/install-poetry.py | python -
-
-# Copy the 'environment' library
-COPY --from=environment /environment /environment
 
 # Copy the `base_python` library
 COPY --from=base_python /base_python /base_python
