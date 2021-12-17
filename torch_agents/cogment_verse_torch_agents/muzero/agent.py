@@ -20,9 +20,7 @@ import numpy as np
 import copy
 import itertools
 
-log = logging.getLogger(__name__)
-
-from .networks import (
+from cogment_verse_torch_agents.muzero.networks import (
     MuZero,
     lin_bn_act,
     mlp,
@@ -32,9 +30,12 @@ from .networks import (
     DynamicsNetwork,
     QNetwork,
 )
-from .replay_buffer import EpisodeBatch
+from cogment_verse_torch_agents.muzero.replay_buffer import EpisodeBatch
 
 # pylint: disable=arguments-differ
+# pylint: disable=invalid-name
+
+log = logging.getLogger(__name__)
 
 
 class MuZeroAgent:
@@ -52,7 +53,7 @@ class MuZeroAgent:
     def set_device(self, device):
         self._device = torch.device(device)
         self.muzero = self.muzero.to(self._device)
-        self._target_muzero = self._target_muzero.to(self._device)
+        self.target_muzero = self.target_muzero.to(self._device)
 
     def _make_networks(self):
         stem = lin_bn_act(self._obs_dim, self.params.hidden_dim, bn=True, act=torch.nn.ReLU())
@@ -106,7 +107,7 @@ class MuZeroAgent:
             ),
         ).to(self._device)
 
-        self._target_muzero = copy.deepcopy(self.muzero)
+        self.target_muzero = copy.deepcopy(self.muzero)
 
         self._optimizer = torch.optim.AdamW(
             self.muzero.parameters(),
@@ -115,9 +116,9 @@ class MuZeroAgent:
         )
 
     def act(self, observation):
-        self._target_muzero.eval()
+        self.target_muzero.eval()
         obs = observation.clone().detach().float().to(self._device)
-        action, policy, q, value = self._target_muzero.act(
+        action, policy, _q, value = self.target_muzero.act(
             obs,
             self.params.exploration_epsilon,
             self.params.exploration_alpha,
@@ -134,7 +135,7 @@ class MuZeroAgent:
         return action, policy, value
 
     def reanalyze(self, observation):
-        return self._target_muzero.reanalyze(
+        return self.target_muzero.reanalyze(
             observation.clone().to(self._device),
             self.params.exploration_epsilon,
             self.params.exploration_alpha,
@@ -177,11 +178,11 @@ class MuZeroAgent:
             self.params.s_weight,
             self.params.v_weight,
             self.params.discount_rate,
-            self._target_muzero,
+            self.target_muzero,
         )
 
         online_params = itertools.chain(self.muzero.parameters(), self.muzero.buffers())
-        target_params = itertools.chain(self._target_muzero.parameters(), self._target_muzero.buffers())
+        target_params = itertools.chain(self.target_muzero.parameters(), self.target_muzero.buffers())
         for po, pt in zip(online_params, target_params):
             gamma = 0.9
             pt.data = gamma * pt.data + (1 - gamma) * po.data
@@ -204,7 +205,7 @@ class MuZeroAgent:
                 "act_dim": self._act_dim,
                 "training_config": self.params,
                 "muzero": self.muzero.state_dict(),
-                "target_muzero": self._target_muzero.state_dict(),
+                "target_muzero": self.target_muzero.state_dict(),
             },
             f,
         )
@@ -216,7 +217,7 @@ class MuZeroAgent:
         target_muzero_state_dict = checkpoint.pop("target_muzero")
         agent = MuZeroAgent(device=device, **checkpoint)
         agent.muzero.load_state_dict(muzero_state_dict)
-        agent._target_muzero.load_state_dict(target_muzero_state_dict)
+        agent.target_muzero.load_state_dict(target_muzero_state_dict)
         return agent
 
 

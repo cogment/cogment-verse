@@ -15,6 +15,8 @@
 import numpy as np
 import torch
 
+# pylint: disable=invalid-name
+
 
 class ValInfo:
     def __init__(self):
@@ -57,7 +59,6 @@ class MCTS:
         self._discount = discount
 
         self._children = {}
-        # pylint: disable=invalid-name
         self._Q = torch.zeros_like(self._prior)
         self._N = torch.zeros_like(self._prior, dtype=torch.int32)
         self._R = torch.zeros_like(self._prior)
@@ -74,9 +75,6 @@ class MCTS:
         for _ in range(count):
             self.rollout()
 
-    def p(self):
-        return self._N / torch.sum(self._N)
-
     def q_normalized(self):
         return torch.clamp(
             (self._Q - self._valinfo.vmin) / max(self._valinfo.vmax - self._valinfo.vmin, 0.01), 0.0, 1.0
@@ -86,7 +84,8 @@ class MCTS:
         """
         :return: Tuple (target policy, target q, target value)
         """
-        policy = torch.pow(self.p(), 1 / temperature)
+        policy = self._N / torch.sum(self._N)
+        policy = torch.pow(policy, 1 / temperature)
         policy /= torch.sum(policy, dim=1)
         value = torch.sum(policy * self._Q)
         return policy, self._Q, value
@@ -100,28 +99,15 @@ class MCTS:
         N = torch.sum(self._N)
         p = self._prior
 
-        # if self._root:
-        #    concentration = torch.zeros_like(self._prior)
-        #    concentration[:, :] = self._alpha
-        #    noise = torch.distributions.Dirichlet(concentration).sample()
-        #    p = (1 - self._epsilon) * p + self._epsilon * noise
-
         if N == 0:
             return p
 
         return q + p * torch.sqrt(N) / (1 + self._N) * (c1 + torch.log((N + c2 + 1) / c2))
 
     def select_child(self):
-        # action = torch.argmax(self.ucb(c1, c2)).unsqueeze(0)
-        # _, actions = torch.max(self.ucb(c1, c2), dim=1)
-        # p = self.ucb(c1, c2)
-        # p /= torch.sum(p, dim=1, keepdim=True)
-        # action = torch.distributions.Categorical(p).sample()
         ucb = self.ucb(self._c1, self._c2)
         action = torch.argmax(ucb, dim=1)
         action_int = action.cpu().numpy().item()
-        # action_int = np.random.choice(actions.detach().cpu().numpy().reshape(-1))
-        # action = torch.tensor([action_int]).to(actions.device)
 
         if action_int not in self._children.keys():
             representation, reward = self._dynamics(self.representation, action)

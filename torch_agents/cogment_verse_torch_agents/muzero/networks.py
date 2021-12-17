@@ -18,6 +18,8 @@ import torch
 
 from .mcts import MCTS
 
+# pylint: disable=invalid-name
+
 
 def expect_equal_shape(a, b):
     assert a.shape == b.shape, f"{a.shape} == {b.shape}"
