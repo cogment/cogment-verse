@@ -468,7 +468,7 @@ async def single_agent_muzero_run_implementation(agent_adapter, run_session):
                 agent = agent_update_queue.get_nowait()
                 cpu_agent = copy.deepcopy(agent)
                 cpu_agent.set_device("cpu")
-                for i, agent_queue in enumerate(reanalyze_agent_queue):
+                for agent_queue in reanalyze_agent_queue:
                     agent_queue.put(cpu_agent)
             except queue.Empty:
                 pass
@@ -592,14 +592,14 @@ class ReplayBufferWorker(mp.Process):
             # Fetch/perform any pending reanalyze updates
             try:
                 episode_id, episode = self._reanalyze_update_queue.get_nowait()
-                replay_buffer._episodes[episode_id] = episode
+                replay_buffer.episodes[episode_id] = episode
             except queue.Empty:
                 pass
 
             # Queue next reanalyze update
             try:
-                episode_id = np.random.randint(0, len(replay_buffer._episodes))
-                self._reanalyze_queue.put_nowait((episode_id, replay_buffer._episodes[episode_id]))
+                episode_id = np.random.randint(0, len(replay_buffer.episodes))
+                self._reanalyze_queue.put_nowait((episode_id, replay_buffer.episodes[episode_id]))
             except queue.Full:
                 pass
 
@@ -622,7 +622,7 @@ class ReplayBufferWorker(mp.Process):
         return self._replay_buffer_size.value
 
 
-def get_from_queue(q, device):
+def get_from_queue(q, device):  # pylint: disable=invalid-name
     batch = q.get()
     for item in batch:
         item.to(device)

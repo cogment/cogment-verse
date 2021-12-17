@@ -196,7 +196,7 @@ class Episode:
 
 class TrialReplayBuffer:
     def __init__(self, max_size, discount_rate, bootstrap_steps):
-        self._episodes = []
+        self.episodes = []
         self._max_size = max_size
         self._total_size = 0
         self._priority = []
@@ -211,12 +211,12 @@ class TrialReplayBuffer:
         return self._total_size
 
     def num_episodes(self):
-        return len(self._episodes)
+        return len(self.episodes)
 
     def update_priority(self, episode, step, priority):
-        if episode < len(self._episodes):
-            self._episodes[episode].update_priority(step, priority)
-            self._priority[episode] = self._episodes[episode].total_priority()
+        if episode < len(self.episodes):
+            self.episodes[episode].update_priority(step, priority)
+            self._priority[episode] = self.episodes[episode].total_priority()
         self._p = np.array(self._priority, dtype=np.double)
         self._p /= self._p.sum()
 
@@ -224,16 +224,16 @@ class TrialReplayBuffer:
         modified_episodes = set()
         for episode, step, priority in zip(episodes, steps, priorities):
             modified_episodes.add(episode)
-            self._episodes[episode].update_priority(step, priority)
+            self.episodes[episode].update_priority(step, priority)
 
         for episode in modified_episodes:
-            self._priority[episode] = self._episodes[episode].total_priority()
+            self._priority[episode] = self.episodes[episode].total_priority()
 
         self._p = np.array(self._priority, dtype=np.double)
         self._p /= self._p.sum()
 
     def add_episode(self, episode):
-        self._episodes.append(episode)
+        self.episodes.append(episode)
         self._total_size += len(episode)
         self._priority.append(episode.total_priority())
 
@@ -242,23 +242,23 @@ class TrialReplayBuffer:
         discarded = 0
         idx = 0
         while discarded < overflow:
-            discarded += len(self._episodes[idx])
+            discarded += len(self.episodes[idx])
             idx += 1
 
         if discarded > 0:
             self._total_size -= discarded
-            self._episodes = self._episodes[idx:]
+            self.episodes = self.episodes[idx:]
             self._priority = self._priority[idx:]
 
         self._p = np.array(self._priority, dtype=np.double)
         self._p /= self._p.sum()
-        self._range = list(range(len(self._episodes)))
+        self._range = list(range(len(self.episodes)))
 
     def sample_old(self, rollout_length, batch_size) -> EpisodeBatch:
-        # idx = np.random.randint(0, len(self._episodes), batch_size)
+        # idx = np.random.randint(0, len(self.episodes), batch_size)
         idx = np.random.choice(self._range, batch_size, p=self._p)
         probs = [self._p[i] for i in idx]
-        transitions = [self._episodes[i].sample(rollout_length) for i in idx]
+        transitions = [self.episodes[i].sample(rollout_length) for i in idx]
         batch = [torch.stack(item) for item in zip(*transitions)]
         batch = EpisodeBatch(*batch)._asdict()
         batch["priority"] = batch["priority"][:, 0] * torch.tensor(probs)
@@ -267,10 +267,10 @@ class TrialReplayBuffer:
         return EpisodeBatch(**batch)
 
     def sample(self, rollout_length, batch_size) -> EpisodeBatch:
-        prob = torch.tensor(list(map(len, self._episodes)), dtype=torch.double)
+        prob = torch.tensor(list(map(len, self.episodes)), dtype=torch.double)
         prob /= torch.sum(prob)
         idx = torch.distributions.Categorical(prob).sample((batch_size,))
-        transitions = [self._episodes[i].sample(rollout_length) for i in idx]
+        transitions = [self.episodes[i].sample(rollout_length) for i in idx]
         items = []
         for item in zip(*transitions):
             item = torch.stack(item)

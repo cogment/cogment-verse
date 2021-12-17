@@ -18,6 +18,7 @@ import torch
 
 from cogment_verse_environment.factory import make_environment
 from cogment_verse_torch_agents.muzero.replay_buffer import Episode
+from cogment_verse_torch_agents.muzero.networks import Distributional
 
 # pylint doesn't like test fixtures
 # pylint: disable=redefined-outer-name
@@ -33,24 +34,53 @@ def policy():
     return np.array([0.25, 0.25, 0.25, 0.25])
 
 
-def test_init(env, policy):
-    state = env.reset()
-    episode = Episode(state, 0.99)
+@pytest.fixture
+def distribution():
+    return Distributional(-10, 10, 32, 16)
 
 
-def test_add(env):
+@pytest.fixture
+def zero_probs(distribution):
+    return distribution.compute_target(torch.tensor(0.0, dtype=torch.float32))
+
+
+def test_init(env, zero_probs):
     state = env.reset()
-    episode = Episode(state.observation, 0.99)
+    episode = Episode(state.observation, 0.99, zero_reward_probs=zero_probs, zero_value_probs=zero_probs)
+    assert episode is not None
+
+
+def test_add(env, policy, zero_probs, distribution):
+    state = env.reset()
+    episode = Episode(state.observation, 0.99, zero_reward_probs=zero_probs, zero_value_probs=zero_probs)
     next_state = env.step(0)
-    episode.add_step(next_state.observation, 0, next_state.rewards[0], [next_state.done], policy, 0.0)
+    episode.add_step(
+        next_state.observation,
+        0,
+        distribution.compute_target(torch.tensor(next_state.rewards[0])),
+        next_state.rewards[0],
+        next_state.done,
+        policy,
+        zero_probs,
+        0.0,
+    )
 
 
-def test_sample(env, policy):
+def test_sample(env, policy, zero_probs, distribution):
     state = env.reset()
-    episode = Episode(state.observation, 0.99)
+    episode = Episode(state.observation, 0.99, zero_reward_probs=zero_probs, zero_value_probs=zero_probs)
     for _ in range(1000):
         next_state = env.step(0)
-        episode.add_step(next_state.observation, 0, next_state.rewards[0], next_state.done, policy, 0.0)
+        episode.add_step(
+            next_state.observation,
+            0,
+            distribution.compute_target(torch.tensor(next_state.rewards[0])),
+            next_state.rewards[0],
+            next_state.done,
+            policy,
+            zero_probs,
+            0.0,
+        )
         if next_state.done:
             episode.bootstrap_value(10, 0.99)
             break
@@ -66,7 +96,7 @@ def test_sample(env, policy):
     # check that stacking/concatenation is correct
     assert batch.state.shape == (N, 8)
     assert batch.action.shape == (N,)
-    assert batch.rewards.shape == (N,)
+    assert batch.target_reward.shape == (N,)
     assert batch.next_state.shape == batch.state.shape
     assert batch.target_policy.shape == (N, 4)
     assert batch.target_value.shape == (N,)

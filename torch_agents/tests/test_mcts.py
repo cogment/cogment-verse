@@ -21,60 +21,73 @@ from cogment_verse_torch_agents.muzero.mcts import MCTS
 # pylint: disable=redefined-outer-name
 
 
-def perceptron(num_in, num_hidden, num_out):
-    return torch.nn.Sequential(
-        torch.nn.Linear(num_in, num_hidden), torch.nn.ReLU(), torch.nn.Linear(num_hidden, num_out)
-    )
+@pytest.fixture
+def mock_policy():
+    class Policy(torch.nn.Module):
+        def __init__(self):
+            super().__init__()
+            self.num_actions = 2
+
+        def forward(self, x):
+            # uniform + small random perturbation
+            prob = torch.ones((x.shape[0], self.num_actions), dtype=torch.float32)
+            prob += 0.01 * torch.rand_like(prob)
+            prob /= self.num_actions
+            return prob
+
+    return Policy()
 
 
 @pytest.fixture
-def num_latent():
-    return 8
-
-
-@pytest.fixture
-def num_action():
-    return 4
-
-
-@pytest.fixture
-def policy(num_latent, num_action):
-    return torch.nn.Sequential(perceptron(num_latent, 16, num_action), torch.nn.Softmax(dim=1))
-
-
-@pytest.fixture
-def dynamics(num_latent, num_action):
+def mock_dynamics():
+    # XOR game to test correctness of MCTS procedure:
+    # - two states 0,1 and two actions 0,1
+    # - reward is equal to state xor action
+    # - next_state is equal to action
     class Dynamics(torch.nn.Module):
         def __init__(self):
             super().__init__()
-            self._perceptron = perceptron(num_latent + num_action, 16, num_latent + 1)
 
-        def forward(self, representation, action):
-            action = torch.nn.functional.one_hot(action, num_action)
-            x = torch.cat((representation, action), dim=1)
-            return torch.split(self._perceptron(x), [num_latent, 1], dim=1)
+        def forward(self, state, action):
+            action = torch.nn.functional.one_hot(action, 2)
+            reward = torch.sum((1 - state) * action, dim=1)
+            next_state = action
+            return next_state, reward
 
     return Dynamics()
 
 
 @pytest.fixture
-def value(num_latent):
-    return perceptron(num_latent, 16, 1)
+def mock_value():
+    class Value(torch.nn.Module):
+        def __init__(self):
+            super().__init__()
+
+        def forward(self, x):
+            return torch.zeros(x.shape[0])
+
+    return Value()
 
 
 @pytest.mark.parametrize("device", ["cpu", "cuda"])
-def test_mcts(policy, dynamics, value, num_latent, num_action, device):
+def test_mcts(device, mock_policy, mock_value, mock_dynamics):
     if device == "cuda" and not torch.cuda.is_available():
         pytest.skip()
 
     device = torch.device(device)
-    dynamics = dynamics.to(device)
-    policy = policy.to(device)
-    value = value.to(device)
+    mock_dynamics = mock_dynamics.to(device)
+    mock_policy = mock_policy.to(device)
+    mock_value = mock_value.to(device)
 
-    representation = torch.rand(1, num_latent).to(device)
-    root = MCTS(policy=policy, value=value, dynamics=dynamics, representation=representation, max_depth=8)
-    root.build_search_tree(100)
-    policy, value = root.improved_targets()
-    assert policy.shape == (1, num_action)
-    assert value.shape == ()
+    for state in [[0, 1], [1, 0]]:
+        representation = torch.tensor(state).unsqueeze(0)
+        root = MCTS(
+            policy=mock_policy, value=mock_value, dynamics=mock_dynamics, representation=representation, max_depth=8
+        )
+        root.build_search_tree(100)
+        policy, _q, value = root.improved_targets(0.75)
+        assert policy.shape == (1, 2)
+        assert value.shape == ()
+        action = torch.argmax(policy).cpu().item()
+        wrong_action = torch.argmax(torch.tensor(state)).item()
+        assert action != wrong_action
