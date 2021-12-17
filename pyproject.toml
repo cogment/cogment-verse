@@ -56,7 +56,7 @@ jobs=0
 logging-format-style="new"
 
 [tool.pylint.FORMAT]
-good-names=["i","j","k","c","h","w","x","id", "f"]
+good-names=["i","j","k","c","h","w","x","id","f","to"]
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

@@ -56,8 +56,12 @@ class RunContext(cogment.Context):
         async def pre_trial_hook(pre_trial_hook_session):
             log.debug(f"[pre_trial_hook] Configuring trial {pre_trial_hook_session.get_trial_id()}")
 
-            pre_trial_hook_session.environment_config = pre_trial_hook_session.trial_config.environment_config
-            pre_trial_hook_session.environment_endpoint = "grpc://" + self._get_service_endpoint("environment")
+            environment_params = pre_trial_hook_session.trial_config.environment
+            pre_trial_hook_session.environment_config = environment_params.config
+            pre_trial_hook_session.environment_implementation = environment_params.implementation
+            pre_trial_hook_session.environment_endpoint = "grpc://" + self._get_service_endpoint(
+                environment_params.implementation
+            )
             pre_trial_hook_session.actors = [
                 {
                     "name": actor.name,

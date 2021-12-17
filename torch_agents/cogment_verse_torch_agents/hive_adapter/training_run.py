@@ -21,8 +21,9 @@ from google.protobuf.json_format import MessageToDict
 
 from data_pb2 import (
     ActorConfig,
-    EnvConfig,
-    TrialActor,
+    ActorParams,
+    EnvironmentConfig,
+    EnvironmentParams,
     TrialConfig,
 )
 from cogment_verse import MlflowExperimentTracker
@@ -70,7 +71,6 @@ def create_training_run(agent_adapter):
         try:
             # Initializing a model
             model_id = f"{run_id}_model"
-            batch_size = config.batch_size
 
             model_kwargs = MessageToDict(config.model_kwargs, preserving_proto_field_name=True)
             model_kwargs["device"] = "cuda" if torch.cuda.is_available() else "cpu"
@@ -92,10 +92,10 @@ def create_training_run(agent_adapter):
             run_xp_tracker.log_params(
                 model._params,
                 player_count=config.player_count,
-                batch_size=batch_size,
+                batch_size=config.batch_size,
                 model_publication_interval=config.model_publication_interval,
                 model_archive_interval_multiplier=config.model_archive_interval_multiplier,
-                environment=config.environment_name,
+                environment=config.environment_implementation,
                 agent_implmentation=config.agent_implementation,
             )
 
@@ -115,7 +115,7 @@ def create_training_run(agent_adapter):
 
             # Create the config for the player agents
             player_actor_configs = [
-                TrialActor(
+                ActorParams(
                     name=f"agent_player_{player_idx}",
                     actor_class="agent",
                     implementation=config.agent_implementation,
@@ -123,8 +123,7 @@ def create_training_run(agent_adapter):
                         model_id=model_id,
                         model_version=np.random.randint(-100, -1),  # TODO this actually won't work anymore
                         run_id=run_id,
-                        env_type=config.environment_type,
-                        env_name=config.environment_name,
+                        environment_implementation=config.environment_implementation,
                         num_input=config.num_input,
                         num_action=config.num_action,
                     ),
@@ -139,15 +138,16 @@ def create_training_run(agent_adapter):
             self_play_trial_configs = [
                 TrialConfig(
                     run_id=run_id,
-                    environment_config=EnvConfig(
-                        player_count=config.player_count,
-                        run_id=run_id,
-                        render=False,
-                        render_width=config.render_width,
-                        env_type=config.environment_type,
-                        env_name=config.environment_name,
-                        flatten=config.flatten,
-                        framestack=config.framestack,
+                    environment=EnvironmentParams(
+                        implementation=config.environment_implementation,
+                        config=EnvironmentConfig(
+                            player_count=config.player_count,
+                            run_id=run_id,
+                            render=False,
+                            render_width=config.render_width,
+                            flatten=config.flatten,
+                            framestack=config.framestack,
+                        ),
                     ),
                     actors=player_actor_configs,
                     distinguished_actor=distinguished_actor,
@@ -158,14 +158,13 @@ def create_training_run(agent_adapter):
             demonstration_trial_configs = []
             if config.demonstration_count > 0:
                 # create the config for the teacher agent
-                teacher_actor_config = TrialActor(
+                teacher_actor_config = ActorParams(
                     name="web_actor",
                     actor_class="teacher_agent",
                     implementation="client",
                     config=ActorConfig(
                         run_id=run_id,
-                        env_type=config.environment_type,
-                        env_name=config.environment_name,
+                        environment_implementation=config.environment_implementation,
                         num_input=config.num_input,
                         num_action=config.num_action,
                     ),
@@ -173,15 +172,16 @@ def create_training_run(agent_adapter):
                 demonstration_trial_configs = [
                     TrialConfig(
                         run_id=run_id,
-                        environment_config=EnvConfig(
-                            player_count=config.player_count,
-                            run_id=run_id,
-                            render=True,
-                            render_width=config.render_width,
-                            env_type=config.environment_type,
-                            env_name=config.environment_name,
-                            flatten=config.flatten,
-                            framestack=config.framestack,
+                        environment=EnvironmentParams(
+                            implementation=config.environment_implementation,
+                            config=EnvironmentConfig(
+                                player_count=config.player_count,
+                                run_id=run_id,
+                                render=True,
+                                render_width=config.render_width,
+                                flatten=config.flatten,
+                                framestack=config.framestack,
+                            ),
                         ),
                         actors=[*player_actor_configs, teacher_actor_config],
                         distinguished_actor=distinguished_actor,
@@ -192,7 +192,7 @@ def create_training_run(agent_adapter):
             def train_model():
                 training_batch = None
                 with TRAINING_SAMPLE_BATCH_TIME.time():
-                    training_batch = model.sample_training_batch(batch_size)
+                    training_batch = model.sample_training_batch(config.batch_size)
 
                 with TRAINING_LEARN_TIME.time():
                     info = model.learn(training_batch, update_schedule=True)
@@ -280,7 +280,7 @@ def create_training_run(agent_adapter):
 
                     TRAINING_REPLAY_BUFFER_SIZE.set(model.replay_buffer_size())
 
-                    if sample.current_player_sample[-1] and model.replay_buffer_size() > batch_size:
+                    if sample.current_player_sample[-1] and model.replay_buffer_size() > config.batch_size:
                         info, training_batch = train_model()
                         samples_seen += get_samples_seen(training_batch)
                         training_step += 1
@@ -297,7 +297,7 @@ def create_training_run(agent_adapter):
 
                     elif (
                         model.replay_buffer_size() > config.min_replay_buffer_size
-                        and model.replay_buffer_size() > batch_size
+                        and model.replay_buffer_size() > config.batch_size
                     ):
                         info, training_batch = train_model()
                         samples_seen += get_samples_seen(training_batch)

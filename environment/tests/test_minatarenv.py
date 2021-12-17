@@ -12,11 +12,39 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from cogment_verse_environment.factory import make_environment
+from data_pb2 import EnvironmentConfig
+from tests.mock_environment_session import ActorInfo
+
+from cogment_verse_environment.utils.serialization_helpers import deserialize_np_array, deserialize_img
+
+import pytest
+
+# pylint: disable=redefined-outer-name
 
 
-def test_render():
-    env = make_environment("minatar", "breakout")
-    env.reset()
-    x = env.render()
-    print(x.shape)
+@pytest.fixture
+@pytest.mark.asyncio
+async def breakout_session(create_mock_environment_session):
+    session = create_mock_environment_session(
+        impl_name="minatar/breakout",
+        trial_id="test_minatar",
+        environment_config=EnvironmentConfig(player_count=1, framestack=4, flatten=True),
+        actor_infos=[ActorInfo("player_1", "player")],
+    )
+
+    yield session
+    await session.terminate()
+
+
+@pytest.mark.asyncio
+async def test_observation(breakout_session):
+    tick_0_events = await breakout_session.receive_events()
+    assert tick_0_events.tick_id == 0
+    assert len(tick_0_events.rewards) == 0
+    assert len(tick_0_events.messages) == 0
+    assert len(tick_0_events.observations) == 1
+
+    tick_0_observation_destination, tick_0_observation = tick_0_events.observations[0]
+    assert tick_0_observation_destination == "*"
+    assert deserialize_np_array(tick_0_observation.vectorized).shape == (1600,)
+    assert deserialize_img(tick_0_observation.pixel_data).shape == (1, 1, 3)

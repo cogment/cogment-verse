@@ -18,8 +18,6 @@ import yaml
 from data_pb2 import RunConfig
 from google.protobuf.json_format import ParseDict, MessageToDict
 
-from cogment_verse_torch_agents.utils.flatten_dict import flatten_dict
-
 
 # for pytest fixtures
 # pylint: disable=redefined-outer-name
@@ -53,8 +51,7 @@ replay_buffer_config:
 num_input: 4
 num_action: 2
 agent_implementation: rainbowtorch
-environment_type: gym
-environment_name: CartPole-v0
+environment_implementation: gym/CartPole-v0
 """
     return yaml.safe_load(config_str)
 
@@ -62,7 +59,7 @@ environment_name: CartPole-v0
 def test_config(config_dict):
     # should not raise exception
     run_config = ParseDict(config_dict, RunConfig())
-    dct = flatten_dict(MessageToDict(run_config, preserving_proto_field_name=True), prefix="abc")
-    print(dct.keys())
-    assert "abc/replay_buffer_config/observation_dtype" in dct
-    assert "abc/environment_type" in dct
+    dct = MessageToDict(run_config, preserving_proto_field_name=True)
+    assert "environment_implementation" in dct
+    assert "replay_buffer_config" in dct
+    assert "observation_dtype" in dct["replay_buffer_config"]

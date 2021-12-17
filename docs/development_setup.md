@@ -74,7 +74,7 @@ Because Cogment Verse already defines unique ports for all the services this sho
 To configure the _developed_ service, we will use a dedicated `.env` file. Let's start by copying the root [`.env`](/.env) to the folder of the developed service. Once this is done we need to edit the file to replace the hostname of the accessed service by `localhost`. For example to work on `torch_agents`, we would edit the following:
 
 ```
-COGMENT_VERSE_TRIAL_DATASTORE_ENDPOINT=trial_datastor:${COGMENT_VERSE_TRIAL_DATASTORE_PORT}
+COGMENT_VERSE_TRIAL_DATASTORE_ENDPOINT=trial_datastore:${COGMENT_VERSE_TRIAL_DATASTORE_PORT}
 COGMENT_VERSE_MODEL_REGISTRY_ENDPOINT=model_registry:${COGMENT_VERSE_MODEL_REGISTRY_PORT}
 COGMENT_VERSE_ORCHESTRATOR_ENDPOINT=orchestrator:${COGMENT_VERSE_ORCHESTRATOR_PORT}
 ```
