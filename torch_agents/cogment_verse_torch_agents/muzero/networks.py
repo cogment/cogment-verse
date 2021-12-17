@@ -93,27 +93,6 @@ class ResidualBlock(torch.nn.Module):
         return self._act(x + y)
 
 
-class DynamicsAdapter(torch.nn.Module):
-    def __init__(self, net, act_dim, num_input, num_latent, reward_dist):
-        super().__init__()
-        self._net = net
-        self._act_dim = act_dim
-        self._num_latent = num_latent
-        self._reward_dist = reward_dist
-        self._state_pred = torch.nn.Linear(num_input, num_latent)
-
-    def forward(self, state, action):
-        """
-        Returns tuple (next_state, reward)
-        """
-        action = torch.nn.functional.one_hot(action, self._act_dim)
-        intermediate = self._net(torch.cat([state, action], dim=1))
-        next_state = self._state_pred(intermediate)
-        reward_probs, reward = self._reward_dist(intermediate)
-
-        return next_state, reward_probs, reward
-
-
 def resnet(num_in, num_hidden, num_out, hidden_layers=1):
     layers = []
     if num_in != num_hidden:
