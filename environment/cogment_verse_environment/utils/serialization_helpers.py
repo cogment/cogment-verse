@@ -12,20 +12,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from cogment_verse_environment.gym_env import GymEnv
-from cogment_verse_environment.atari import AtariEnv
-from cogment_verse_environment.tetris import TetrisEnv
-from cogment_verse_environment.minatarenv import MinAtarEnv
-from cogment_verse_environment.zoo_env import PettingZooEnv
+from data_pb2 import NDArray
 
-ENVIRONMENT_CONSTRUCTORS = {
-    "gym": GymEnv,
-    "atari": AtariEnv,
-    "minatar": MinAtarEnv,
-    "tetris": TetrisEnv,
-    "pettingzoo": PettingZooEnv,
-}
+import numpy as np
+import cv2
 
 
-def make_environment(env_type, env_name, **kwargs):
-    return ENVIRONMENT_CONSTRUCTORS[env_type](env_name=env_name, **kwargs)
+def deserialize_np_array(nd_array):
+    return np.frombuffer(nd_array.data, dtype=nd_array.dtype).reshape(*nd_array.shape)
+
+
+def serialize_np_array(np_array):
+    return NDArray(shape=np_array.shape, dtype=str(np_array.dtype), data=np_array.tobytes())
+
+
+def deserialize_img(img_bytes):
+    return cv2.imdecode(np.frombuffer(img_bytes, dtype=np.uint8), cv2.IMREAD_COLOR)
+
+
+def serialize_img(img):
+    # note rgb -> bgr for cv2
+    result, data = cv2.imencode(".jpg", img[:, :, ::-1])
+    assert result
+    return data.tobytes()

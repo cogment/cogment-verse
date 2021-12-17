@@ -13,14 +13,15 @@
 # limitations under the License.
 
 from data_pb2 import (
-    SimpleA2CTrainingRunConfig,
-    SimpleA2CTrainingConfig,
-    AgentAction,
-    TrialConfig,
-    TrialActor,
-    EnvConfig,
     ActorConfig,
+    ActorParams,
+    AgentAction,
+    EnvironmentConfig,
+    EnvironmentParams,
     MLPNetworkConfig,
+    SimpleA2CTrainingConfig,
+    SimpleA2CTrainingRunConfig,
+    TrialConfig,
 )
 
 from cogment_verse import AgentAdapter
@@ -148,7 +149,7 @@ class SimpleA2CAgentAdapter(AgentAdapter):
             model_id = f"{run_session.run_id}_model"
 
             config = run_session.config
-            assert config.environment.player_count == 1
+            assert config.environment.config.player_count == 1
 
             model, _ = await self.create_and_publish_initial_version(
                 model_id,
@@ -191,9 +192,9 @@ class SimpleA2CAgentAdapter(AgentAdapter):
                     trial_configs=[
                         TrialConfig(
                             run_id=run_session.run_id,
-                            environment_config=config.environment,
+                            environment=config.environment,
                             actors=[
-                                TrialActor(
+                                ActorParams(
                                     name="agent_1",
                                     actor_class="agent",
                                     implementation="simple_a2c",
@@ -202,8 +203,7 @@ class SimpleA2CAgentAdapter(AgentAdapter):
                                         model_version=model_version_number,
                                         num_input=config.actor.num_input,
                                         num_action=config.actor.num_action,
-                                        env_type=config.environment.env_type,
-                                        env_name=config.environment.env_name,
+                                        environment_implementation=config.environment.implementation,
                                     ),
                                 )
                             ],
@@ -284,8 +284,9 @@ class SimpleA2CAgentAdapter(AgentAdapter):
                 sample_producer_impl,
                 run_impl,
                 SimpleA2CTrainingRunConfig(
-                    environment=EnvConfig(
-                        seed=12, env_type="gym", env_name="CartPole-v0", player_count=1, framestack=1
+                    environment=EnvironmentParams(
+                        implementation="gym/CartPole-v0",
+                        config=EnvironmentConfig(seed=12, player_count=1, framestack=1),
                     ),
                     training=SimpleA2CTrainingConfig(
                         epoch_count=100,

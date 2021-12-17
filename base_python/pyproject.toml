@@ -13,14 +13,21 @@ mlflow = "^1.21.0"
 
 [tool.poetry.dev-dependencies]
 taskipy = "^1.8.1"
+pytest = "^6.2.5"
 
 [tool.taskipy.tasks]
-generate = "python -m grpc.tools.protoc --proto_path=. --python_out=. --grpc_python_out=. ./cogment_verse/api/run_api.proto"
+generate = "python -m grpc.tools.protoc --proto_path=. --python_out=. --grpc_python_out=. ./cogment_verse/api/run_api.proto && python -m cogment.generate"
 build = "task generate"
+unit_tests = "python -m pytest"
+test="task unit_tests"
 
 [tool.black]
 line-length = 120
 target-version = ["py37"]
+
+[tool.pytest.ini_options]
+addopts = "-rfs"
+
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

@@ -4,7 +4,7 @@ import:
 
 commands:
   sync: >
-    cogment sync environment torch_agents tf_agents client web_client &&
+    cogment sync base_python environment torch_agents tf_agents client web_client &&
     cp ./run_api.proto ./base_python/cogment_verse/api/ &&
     cp ./run_api.proto ./client/
   build: docker-compose build base_python && docker-compose build
@@ -39,14 +39,13 @@ commands:
   test: cogment run test_torch_agents && cogment run test_environment
   test_torch_agents: >
     docker-compose build base_python &&
-    docker-compose build environment &&
     docker-compose -f docker-compose.yaml -f docker-compose.tests.yaml up --build --abort-on-container-exit test_torch_agents
   test_environment: >
     docker-compose build base_python &&
     docker-compose -f docker-compose.yaml -f docker-compose.tests.yaml up --build --abort-on-container-exit test_environment
 
 environment:
-  config_type: cogment_verse.EnvConfig
+  config_type: cogment_verse.EnvironmentConfig
 
 trial:
   config_type: cogment_verse.TrialConfig

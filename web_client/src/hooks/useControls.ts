@@ -21,13 +21,32 @@ type KeyActionT = {
 };
 
 type KeyMapT = {
-  env_name: string;
+  environment_implementation: string;
   action_map: KeyActionT[];
 };
 
+// https://github.com/openai/procgen/blob/c732194d6f6c929e4295c34f05fc911a1db9c7f4/procgen/env.py#L155
+const procgen_combos = [
+  { id: 0, name: "down left", keys: ["ArrowLeft", "ArrowDown"] },
+  { id: 1, name: "left", keys: ["ArrowLeft"] },
+  { id: 2, name: "up left", keys: ["ArrowLeft", "ArrowUp"] },
+  { id: 3, name: "down", keys: ["ArrowDown"] },
+  { id: 4, name: "nop", keys: ["KeyEscape"] },
+  { id: 5, name: "up", keys: ["ArrowUp"] },
+  { id: 6, name: "down right", keys: ["ArrowRight", "ArrowDown"] },
+  { id: 7, name: "right", keys: ["ArrowRight"] },
+  { id: 8, name: "up right", keys: ["ArrowRight", "ArrowUp"] },
+  { id: 9, name: "action D", keys: ["KeyD"] },
+  { id: 10, name: "action A", keys: ["KeyA"] },
+  { id: 11, name: "action W", keys: ["KeyW"] },
+  { id: 12, name: "action S", keys: ["KeyS"] },
+  { id: 13, name: "action Q", keys: ["KeyQ"] },
+  { id: 14, name: "action E", keys: ["KeyE"] },
+];
+
 const keymaps_json: KeyMapT[] = [
   {
-    env_name: "LunarLander-v2",
+    environment_implementation: "gym/LunarLander-v2",
     action_map: [
       {
         id: 0,
@@ -52,7 +71,7 @@ const keymaps_json: KeyMapT[] = [
     ],
   },
   {
-    env_name: "Breakout",
+    environment_implementation: "atari/Breakout",
     action_map: [
       {
         id: 0,
@@ -77,7 +96,7 @@ const keymaps_json: KeyMapT[] = [
     ],
   },
   {
-    env_name: "TetrisA-v0",
+    environment_implementation: "tetris/TetrisA-v0",
     action_map: [
       {
         id: 0,
@@ -141,11 +160,75 @@ const keymaps_json: KeyMapT[] = [
       },
     ],
   },
+  {
+    environment_implementation: "procgen/bigfish",
+    action_map: procgen_combos,
+  },
+  {
+    environment_implementation: "procgen/bossfight",
+    action_map: procgen_combos,
+  },
+  {
+    environment_implementation: "procgen/caveflyer",
+    action_map: procgen_combos,
+  },
+  {
+    environment_implementation: "procgen/chaser",
+    action_map: procgen_combos,
+  },
+  {
+    environment_implementation: "procgen/climber",
+    action_map: procgen_combos,
+  },
+  {
+    environment_implementation: "procgen/coinrun",
+    action_map: procgen_combos,
+  },
+  {
+    environment_implementation: "procgen/dodgeball",
+    action_map: procgen_combos,
+  },
+  {
+    environment_implementation: "procgen/fruitbot",
+    action_map: procgen_combos,
+  },
+  {
+    environment_implementation: "procgen/heist",
+    action_map: procgen_combos,
+  },
+  {
+    environment_implementation: "procgen/jumper",
+    action_map: procgen_combos,
+  },
+  {
+    environment_implementation: "procgen/leaper",
+    action_map: procgen_combos,
+  },
+  {
+    environment_implementation: "procgen/maze",
+    action_map: procgen_combos,
+  },
+  {
+    environment_implementation: "procgen/miner",
+    action_map: procgen_combos,
+  },
+  {
+    environment_implementation: "procgen/ninja",
+    action_map: procgen_combos,
+  },
+  {
+    environment_implementation: "procgen/plunder",
+    action_map: procgen_combos,
+  },
+  {
+    environment_implementation: "procgen/starpilot",
+    action_map: procgen_combos,
+  },
 ];
 
-export const get_keymap = (envType: string, envName: string): KeyMapT | undefined => {
+export const get_keymap = (environmentImplementation: string): KeyMapT | undefined => {
   for (const keymap of keymaps_json) {
-    if (keymap.env_name === envName) {
+    if (keymap.environment_implementation === environmentImplementation) {
       return keymap;
     }
   }

@@ -19,48 +19,50 @@ from cogment_verse_environment.base import GymObservation
 from cogment_verse_environment.gym_env import GymEnv
 from cogment_verse_environment.env_spec import EnvSpec
 
-from gym.envs import register
+# registers procgen environments
+import procgen  # pylint: disable=unused-import
 
-# Atari-py includes a free Tetris rom for testing without needing to download other ROMs
-register(
-    id="TetrisALENoFrameskip-v0",
-    entry_point="gym.envs.atari:AtariEnv",
-    kwargs={"game": "tetris", "obs_type": "image"},
-    max_episode_steps=10000,
-    nondeterministic=False,
-)
+ENV_NAMES = [
+    "bigfish",
+    "bossfight",
+    "caveflyer",
+    "chaser",
+    "climber",
+    "coinrun",
+    "dodgeball",
+    "fruitbot",
+    "heist",
+    "jumper",
+    "leaper",
+    "maze",
+    "miner",
+    "ninja",
+    "plunder",
+    "starpilot",
+]
 
 
 def _grayscale(image):
     return np.mean(image, axis=2)
 
 
-class AtariEnv(GymEnv):
+class ProcGenEnv(GymEnv):
     """
-    Class for loading Atari environments.
+    Class for loading procgen environments.
     """
 
     def __init__(
         self,
         *,
         env_name,
-        frame_skip=4,
-        screen_size=84,
-        sticky_actions=True,
+        frame_skip=1,
+        screen_size=64,
         flatten=True,
         num_players=1,
         framestack=4,
         **_kwargs,
     ):
-        """
-        Args:
-            env_name (str): Name of the environment
-            sticky_actions (boolean): Whether to use sticky_actions as per Machado et al.
-            frame_skip (int): Number of times the agent takes the same action in the environment
-            screen_size (int): Size of the resized frames from the environment
-        """
-        env_version = "v0" if sticky_actions else "v4"
-        full_env_name = f"{env_name}NoFrameskip-{env_version}"
+        full_env_name = f"procgen:procgen-{env_name}-v0"
 
         self._framestack = framestack
 
@@ -74,6 +76,7 @@ class AtariEnv(GymEnv):
 
         self._flatten = flatten
         self._last_obs = []  # to be used for framestacking
+        self._last_pixels = None
 
         super().__init__(env_name=full_env_name, num_players=num_players, framestack=framestack)
 
@@ -97,8 +100,7 @@ class AtariEnv(GymEnv):
         return obs, self._turn
 
     def reset(self):
-        # Used for storing and pooling over two consecutive observations to reduce flicker
-        self.screen_buffer = [_grayscale(self._env.reset())] * 2
+        self._last_pixels = self._env.reset()
         observation, current_player = self._state()
 
         if self._framestack > 1:
@@ -127,15 +129,12 @@ class AtariEnv(GymEnv):
         accumulated_reward = 0.0
         done = False
         info = {}
-        flicker_frames = 2
 
         for _ in range(self.frame_skip):
             observation, reward, done, info = self._env.step(action)
+            self._last_pixels = observation
             observation = _grayscale(observation)
             accumulated_reward += reward
-
-            self.screen_buffer = [observation] + self.screen_buffer
-            self.screen_buffer = self.screen_buffer[:flicker_frames]
 
             if done:
                 break
@@ -156,22 +155,29 @@ class AtariEnv(GymEnv):
             info=info,
         )
 
-    def _pool_and_resize(self):
+    def _pool_and_resize(self, dtype=np.uint8):
         """Transforms two frames into a Nature DQN observation.
 
         Returns:
           transformed_screen (numpy array): pooled, resized screen.
         """
-        # Pool if there are enough screens to do so.
-        if self.frame_skip > 1:
-            np.maximum(self.screen_buffer[0], self.screen_buffer[1], out=self.screen_buffer[1])
-
-        transformed_image = cv2.resize(
-            self.screen_buffer[1],
-            (self.screen_size, self.screen_size),
-            interpolation=cv2.INTER_AREA,
-        )
-        int_image = np.asarray(transformed_image, dtype=np.uint8)
+        image = _grayscale(self._last_pixels)
+        if image.shape != (self.screen_size, self.screen_size):
+            image = cv2.resize(
+                image,
+                (self.screen_size, self.screen_size),
+                interpolation=cv2.INTER_AREA,
+            )
+        image = np.asarray(image, dtype=dtype)
         if self._flatten:
-            int_image = int_image.reshape(-1)
-        return np.expand_dims(int_image, axis=0)
+            image = image.reshape(-1)
+        return np.expand_dims(image, axis=0)
+
+    def render(self, mode="rgb_array"):
+        assert mode == "rgb_array"
+        return self._last_pixels
+
+    def seed(self, seed=None):
+        # self._env.seed(seed)
+        # todo
+        pass

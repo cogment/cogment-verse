@@ -47,6 +47,7 @@ class MinAtarEnv(BaseEnv):
         flatten=True,
         num_players=1,
         framestack=4,
+        **_kwargs,
     ):
         """
         Args:
@@ -84,7 +85,8 @@ class MinAtarEnv(BaseEnv):
         return state
 
     def seed(self, seed=None):
-        self._env.seed(seed=seed)
+        # TODO make that work, in minatar the seed should be provided in the constructor (cf. https://github.com/kenjyoung/MinAtar/blob/master/minatar/environment.py#L18-L27)
+        pass
 
     def reset(self):
         self._env.reset()
