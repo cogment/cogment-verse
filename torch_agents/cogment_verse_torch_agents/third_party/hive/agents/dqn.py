@@ -6,6 +6,7 @@ import numpy as np
 import torch
 from ..agents.agent import Agent
 from ..agents.qnets.base import FunctionApproximator
+from ..agents.qnets.conv import ConvNetwork
 from ..agents.qnets.qnet_heads import DQNNetwork
 from ..agents.qnets.utils import (
     InitializationFn,
@@ -142,9 +143,9 @@ class DQNAgent(Agent):
 
     def create_q_networks(self, qnet):
         """Creates the qnet and target qnet."""
-        print("in create q_networks qnet = ", qnet)
-        network = ConvNet(self._obs_dim)
-        network = qnet(self._obs_dim)
+        # print("in create q_networks qnet = ", qnet)
+        network = ConvNetwork(self._obs_dim)
+        # network = qnet(self._obs_dim)
         network_output_dim = np.prod(calculate_output_dim(network, self._obs_dim))
         self._qnet = DQNNetwork(network, network_output_dim, self._act_dim).to(
             self._device

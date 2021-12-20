@@ -16,7 +16,7 @@ cartpole_rainbow: &default_params
     render_width: 256
     batch_size: 256
     min_replay_buffer_size: 1000
-    max_parallel_trials: 4
+    max_parallel_trials: 1
     model_kwargs: {}
 #    max_replay_buffer_size: 100000
     flatten: True
@@ -25,8 +25,8 @@ cartpole_rainbow: &default_params
 #    replay_buffer_config:
 #      observation_dtype: float32
 #      action_dtype: int8
-    num_input: 4
-    num_action: 2
+#    num_input: 4
+#    num_action: 2
     agent_implementation: rainbowtorch
     environment_type: gym
     environment_name: CartPole-v0
@@ -184,7 +184,7 @@ atari_breakout_cnn:
     total_trial_count: 100000
     model_publication_interval: 1000
     model_archive_interval_multiplier: 100
-    max_parallel_trials: 2
+    max_parallel_trials: 1
     render_width: 256
     flatten: false
 

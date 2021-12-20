@@ -8,6 +8,10 @@ class DQNNetwork(nn.Module):
         super().__init__()
         self.network = network
         self._linear_fn = linear_fn if linear_fn is not None else nn.Linear
+        print("self._linear_fn = ", self._linear_fn)
+        print("hiden_dim = ", hidden_dim)
+        print("out dim = ", out_dim)
+        hidden_dim = 512
         self.ouput_layer = self._linear_fn(hidden_dim, out_dim)
 
     def forward(self, x):

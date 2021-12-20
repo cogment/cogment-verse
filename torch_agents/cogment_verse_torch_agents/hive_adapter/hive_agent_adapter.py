@@ -134,6 +134,7 @@ class HiveAgentAdapter(AgentAdapter):
                                 action = -1
                             else:
                                 # action = model.act(obs_input, legal_moves_input)
+                                print("obs input shape = ", obs_input.shape)
                                 action = model.act(obs_input)
 
                             cog_action = cog_action_from_torch_action(action)

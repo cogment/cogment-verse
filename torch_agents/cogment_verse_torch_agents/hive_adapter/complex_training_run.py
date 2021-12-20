@@ -77,13 +77,16 @@ def create_training_run(agent_adapter):
             model_kwargs = MessageToDict(config.model_kwargs, preserving_proto_field_name=True)
             model_kwargs["device"] = "cuda" if torch.cuda.is_available() else "cpu"
 
+
+
             model, _ = await agent_adapter.create_and_publish_initial_version(
                 model_id,
                 impl_name=config.agent_implementation,
                 **{
                     "obs_dim": config.num_input,
                     "act_dim": config.num_action,
-                    "qnet": FunctionApproximator(MLPNetwork)(hidden_units=256),
+                    "qnet": FunctionApproximator(config.qnet),
+                    "batch_size": config.batch_size,
                     "epsilon_schedule": LinearSchedule(1, config.epsilon_min, config.epsilon_steps),
                     "learn_schedule": SwitchSchedule(False, True, 1),
                     "target_net_update_schedule": PeriodicSchedule(False, True, config.target_net_update_schedule),
