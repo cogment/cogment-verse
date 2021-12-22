@@ -28,7 +28,7 @@ cartpole_rainbow: &default_params
     num_input: 4
     num_action: 2
     agent_implementation: rainbowtorch
-    environment_implementation: gym/CartPole-v0
+    # environment_implementation: gym/CartPole-v0environment_implementation
 
 cartpole_dqn:
   <<: *default_params
@@ -549,3 +549,33 @@ procgen_bigfish:
     replay_buffer_config:
       observation_dtype: uint8
       action_dtype: int8
+
+driving_td3:
+  <<: *default_params
+  config:
+    <<: *default_config
+    num_input: 7
+    num_input_2: [75,75]
+    num_action: 2
+    agent_implementation: td3
+    environment_implementation: driving/SimpleDriving-v0
+    demonstration_count: 0 #100
+    total_trial_count: 250
+    epsilon_min: 0.0
+    epsilon_steps: 1
+    target_net_update_schedule: 2
+    #learning_rate: 3.0e-4
+    learning_rate: 1.0e-4
+    lr_warmup_steps: 100
+    model_publication_interval: 1000
+    render_width: 1000
+    batch_size: 64
+    min_replay_buffer_size: 64
+    replay_buffer_config:
+      observation_dtype: float32
+      action_dtype: float32
+    model_kwargs:
+      start_timesteps: 5000
+      high_action: [0, -1]
+      low_action: [1, 1]
+      expl_noise: 0.1

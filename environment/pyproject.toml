@@ -19,6 +19,7 @@ python-dotenv = "^0.19.1"
 PyYAML = "^5.4.1"
 filelock = "^3.4.0"
 procgen = "^0.10.4"
+pybullet = "^3.17"
 
 [tool.poetry.dev-dependencies]
 taskipy = "^1.9.0"

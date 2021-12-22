@@ -84,8 +84,8 @@ message ModelArgs {
   float v_min = 1;
   float v_max = 2;
   uint32 start_timesteps = 4;
-  repeated int32 high_action = 5;
-  repeated int32 low_action = 6;
+  repeated float high_action = 5;
+  repeated float low_action = 6;
   float expl_noise = 7;
   bool target_net_soft_update = 8;
   uint32 screensize = 9;
