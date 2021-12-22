@@ -67,6 +67,7 @@ message Observation {
   repeated int32 legal_moves_as_int = 3;
   int32 current_player = 4; // active player for multi-agent turn-based environments
   int32 player_override = 5;  // player that _actually_ acted (in case of override/intervention)
+  NDArray segmentation = 6;
 }
 
 message ContinuousAction {
@@ -123,6 +124,7 @@ message RunConfig {
   uint32 framestack = 27;
   ReplayBufferConfig replay_buffer_config = 28;
   float discount_factor = 29;
+  repeated int32 num_input_2 = 30;
 }
 
 message MLPNetworkConfig {

@@ -28,7 +28,7 @@ cartpole_rainbow: &default_params
     num_input: 4
     num_action: 2
     agent_implementation: rainbowtorch
-    # environment_implementation: gym/CartPole-v0environment_implementation
+    environment_implementation: gym/CartPole-v0environment_implementation
 
 cartpole_dqn:
   <<: *default_params

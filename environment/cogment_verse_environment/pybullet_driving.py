@@ -1,9 +1,10 @@
 import sys
 # inserting pybullet-driving-env to the path
-sys.path.insert(1, '/home/ck/pybullet-driving-env')
+# sys.path.insert(1, '/home/ck/pybullet-driving-env')
 
 import gym
-import pybullet_driving_env
+# import pybullet_driving_env
+from cogment_verse_environment.pybullet_driving_env.envs.simple_driving_env import SimpleDrivingEnv
 from cogment_verse_environment.base import BaseEnv, GymObservation
 from cogment_verse_environment.env_spec import EnvSpec
 
@@ -19,7 +20,7 @@ class DrivingEnv(BaseEnv):
         )
 
     def create_env(self, **_kwargs):
-        self._env = gym.make('SimpleDriving-v0')
+        self._env = SimpleDrivingEnv()
 
     def create_env_spec(self, **_kwargs):
         env_name = 'SimpleDriving-v0'
@@ -29,7 +30,7 @@ class DrivingEnv(BaseEnv):
         
         return EnvSpec(
             env_name=env_name,
-            obs_dim=[space.shape for space in obs_spaces],
+            obs_dim=[obs_spaces[space].shape for space in obs_spaces],
             act_dim=act_dim,
             act_shape=act_shape,
         )

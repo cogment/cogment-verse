@@ -20,7 +20,7 @@ from cogment_verse_environment.tetris import TetrisEnv
 from cogment_verse_environment.minatarenv import MinAtarEnv
 from cogment_verse_environment.zoo_env import PettingZooEnv
 from cogment_verse_environment.procgen_env import ProcGenEnv
-from cogment_verse_environment.pybullet_driving_env import DrivingEnv
+from cogment_verse_environment.pybullet_driving import DrivingEnv
 
 from cogment_verse_environment.utils.serialization_helpers import serialize_np_array, serialize_img
 
