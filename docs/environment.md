@@ -10,13 +10,8 @@ below will need to be updated to reflect any changes in the architecture.
 
 ### Step 1 - Update dependencies
 
-<<<<<<< HEAD
-If your environment has any additional dependencies, you will need to update the [`Dockerfile`](/environment/Dockerfile) and [`pyproject`](/environemtn/pyproject.toml)
-files to reflect this.
-=======
 If your environment has any additional dependencies, you will need to update the [`Dockerfile`](/environment/Dockerfile) (for system dependencies) and [`pyproject.toml`](/environment/pyproject.toml) (for python dependencies) files to reflect this.
 Additional details can be found [here](/docs/development_setup.md#dependencies).
->>>>>>> upstream/main
 
 ### Step 2 - Write an adapter for your environment
 

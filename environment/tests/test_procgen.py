@@ -53,10 +53,6 @@ async def test_observation(create_mock_environment_session, env_name, framestack
 
     await session.terminate()
 
-<<<<<<< HEAD
-=======
-
->>>>>>> upstream/main
 @pytest.mark.asyncio
 @pytest.mark.parametrize("env_name", ENV_NAMES)
 async def test_step(create_mock_environment_session, env_name):
@@ -80,17 +76,9 @@ async def test_step(create_mock_environment_session, env_name):
 def test_render(env_name):
     env = ProcGenEnv(env_name=env_name, flatten=False)
     env.reset()
-<<<<<<< HEAD
-    for i in range(10):
-=======
     for _ in range(10):
->>>>>>> upstream/main
         action = np.random.randint(0, 15)
         obs = env.step(action)
         pixels = env.render()
         assert pixels.shape == (64, 64, 3)
-<<<<<<< HEAD
         assert np.allclose(obs.observation[0], np.mean(pixels, axis=2).astype(np.uint8))
-=======
-        assert np.allclose(obs.observation[0], np.mean(pixels, axis=2).astype(np.uint8))
->>>>>>> upstream/main
