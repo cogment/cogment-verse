@@ -2,8 +2,9 @@ from cogment_verse_torch_agents.third_party.hive.agents.qnets.conv import ConvNe
 
 
 class NatureAtariDQNModel(ConvNetwork):
-    """The convolutional network used to train the DQN agent."""
-
+    """The convolutional network used to train the DQN agent in the original
+    Nature paper: https://www.nature.com/articles/nature14236
+    """
     def __init__(self, in_dim):
         """
         Args:

@@ -1,13 +1,22 @@
-import torch
-from torch import nn
-import torch.nn.functional as F
 import math
+
+import torch
+import torch.nn.functional as F
+from torch import nn
 
 
 class NoisyLinear(nn.Module):
-    """NoisyLinear Layer"""
+    """NoisyLinear Layer. Implements the layer described in
+    https://arxiv.org/abs/1706.10295."""
 
-    def __init__(self, in_dim, out_dim, std_init=0.5):
+    def __init__(self, in_dim: int, out_dim: int, std_init: float = 0.5):
+        """
+        Args:
+            in_dim (int): The dimension of the input.
+            out_dim (int): The desired dimension of the output.
+            std_init (float): The range for the initialization of the standard deviation of the
+                weights.
+        """
         super().__init__()
         self.in_features = in_dim
         self.out_features = out_dim
