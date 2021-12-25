@@ -1,22 +1,23 @@
 import os
-import numpy as np
 import pickle
 
-from cogment_verse_torch_agents.third_party.hive.utils.utils import create_folder
+import numpy as np
+
 from cogment_verse_torch_agents.third_party.hive.replays.replay_buffer import BaseReplayBuffer
+from cogment_verse_torch_agents.third_party.hive.utils.utils import create_folder, seeder
 
 
-class EfficientCircularBuffer(BaseReplayBuffer):
+class CircularReplayBuffer(BaseReplayBuffer):
     """An efficient version of a circular replay buffer that only stores each observation
     once.
     """
 
     def __init__(
         self,
-        capacity=10000,
-        stack_size=1,
-        n_step=1,
-        gamma=0.99,
+        capacity: int = 10000,
+        stack_size: int = 1,
+        n_step: int = 1,
+        gamma: float = 0.99,
         observation_shape=(),
         observation_dtype=np.uint8,
         action_shape=(),
@@ -24,18 +25,17 @@ class EfficientCircularBuffer(BaseReplayBuffer):
         reward_shape=(),
         reward_dtype=np.float32,
         extra_storage_types=None,
-        seed=42,
+        num_players_sharing_buffer: int = None,
     ):
-        """Constructor for EfficientCircularBuffer.
+        """Constructor for CircularReplayBuffer.
+
         Args:
-            capacity: Total number of observations that can be stored in the buffer.
-                Note, this is not the same as the number of transitions that can be
-                stored in the buffer.
-            capacity: Total number of observations that are stacked in the states
-                sampled from the buffer.
-            stack_size: The number of frames to stack to create an observation.
-            n_step: Horizon used to compute n-step return reward
-            gamma: Discounting factor used to compute n-step return reward
+            capacity (int): Total number of observations that can be stored in the
+                buffer. Note, this is not the same as the number of transitions that
+                can be stored in the buffer.
+            stack_size (int): The number of frames to stack to create an observation.
+            n_step (int): Horizon used to compute n-step return reward
+            gamma (float): Discounting factor used to compute n-step return reward
             observation_shape: Shape of observations that will be stored in the buffer.
             observation_dtype: Type of observations that will be stored in the buffer.
                 This can either be the type itself or string representation of the
@@ -51,10 +51,11 @@ class EfficientCircularBuffer(BaseReplayBuffer):
             reward_shape: Shape of rewards that will be stored in the buffer.
             reward_dtype: Type of rewards that will be stored in the buffer. Format is
                 described in the description of observation_dtype.
-            extra_storage_types: A dictionary describing extra items to store in the
-                buffer. The mapping should be from the name of the item to a
+            extra_storage_types (dict): A dictionary describing extra items to store
+                in the buffer. The mapping should be from the name of the item to a
                 (type, shape) tuple.
-            seed: Random seed of numpy random generator used when sampling transitions.
+            num_players_sharing_buffer (int): Number of agents that share their
+                buffers. It is used for self-play.
         """
         self._capacity = capacity
         self._specs = {
@@ -76,7 +77,10 @@ class EfficientCircularBuffer(BaseReplayBuffer):
         self._episode_start = True
         self._cursor = 0
         self._num_added = 0
-        self._rng = np.random.default_rng(seed=seed)
+        self._rng = np.random.default_rng(seed=seeder.get_new_seed())
+        self._num_players_sharing_buffer = num_players_sharing_buffer
+        if num_players_sharing_buffer is not None:
+            self._episode_storage = [[] for _ in range(num_players_sharing_buffer)]
 
     def size(self):
         """Returns the number of transitions stored in the buffer."""
@@ -104,7 +108,8 @@ class EfficientCircularBuffer(BaseReplayBuffer):
     def _add_transition(self, **transition):
         """Internal method to add a transition to the buffer."""
         for key in transition:
-            self._storage[key][self._cursor] = transition[key]
+            if key in self._storage:
+                self._storage[key][self._cursor] = transition[key]
         self._num_added += 1
         self._cursor = (self._cursor + 1) % self._capacity
 
@@ -146,7 +151,14 @@ class EfficientCircularBuffer(BaseReplayBuffer):
                     f"Key {key} has wrong dtype. Expected {self._specs[key][0]},"
                     f"received {type(transition[key])}."
                 )
-        self._add_transition(**transition)
+        if self._num_players_sharing_buffer is None:
+            self._add_transition(**transition)
+        else:
+            self._episode_storage[kwargs["agent_id"]].append(transition)
+            if done:
+                for transition in self._episode_storage[kwargs["agent_id"]]:
+                    self._add_transition(**transition)
+                self._episode_storage[kwargs["agent_id"]] = []
 
         if done:
             self._episode_start = True
@@ -217,6 +229,9 @@ class EfficientCircularBuffer(BaseReplayBuffer):
         """Sample transitions from the buffer. For a given transition, if it's
         done is True, the next_observation value should not be taken to have any
         meaning.
+
+        Args:
+            batch_size (int): Number of transitions to sample.
         """
         if self._num_added < self._stack_size + self._n_step:
             raise ValueError("Not enough transitions added to the buffer to sample")
@@ -267,8 +282,10 @@ class EfficientCircularBuffer(BaseReplayBuffer):
 
     def save(self, dname):
         """Save the replay buffer.
+
         Args:
-            dname: directory where to save buffer. Should already have been created.
+            dname (str): directory where to save buffer. Should already have been
+                created.
         """
         storage_path = os.path.join(dname, "storage")
         create_folder(storage_path)
@@ -289,8 +306,9 @@ class EfficientCircularBuffer(BaseReplayBuffer):
 
     def load(self, dname):
         """Load the replay buffer.
+
         Args:
-            dname: directory where to load buffer from.
+            dname (str): directory where to load buffer from.
         """
         storage_path = os.path.join(dname, "storage")
         for key in self._specs:
@@ -303,6 +321,127 @@ class EfficientCircularBuffer(BaseReplayBuffer):
         self._cursor = state["cursor"]
         self._num_added = state["num_added"]
         self._rng = state["rng"]
+
+
+class SimpleReplayBuffer(BaseReplayBuffer):
+    """A simple circular replay buffers.
+
+    Args:
+            capacity (int): repaly buffer capacity
+            compress (bool): if False, convert data to float32 otherwise keep it as
+                int8.
+            seed (int): Seed for a pseudo-random number generator.
+    """
+
+    def __init__(self, capacity=1e5, compress=False, seed=42, **kwargs):
+
+        self._numpy_rng = np.random.default_rng(seed)
+        self._capacity = int(capacity)
+        self._compress = compress
+
+        self._dtype = {
+            "observation": "int8" if self._compress else "float32",
+            "action": "int8",
+            "reward": "int8" if self._compress else "float32",
+            "next_observation": "int8" if self._compress else "float32",
+            "done": "int8" if self._compress else "float32",
+        }
+
+        self._data = {}
+        for data_key in self._dtype:
+            self._data[data_key] = [None] * int(capacity)
+
+        self._write_index = -1
+        self._n = 0
+        self._previous_transition = None
+
+    def add(self, observation, action, reward, done, **kwargs):
+        """
+        Adds transition to the buffer
+
+        Args:
+            observation: The current observation
+            action: The action taken on the current observation
+            reward: The reward from taking action at current observation
+            done: If current observation was the last observation in the episode
+        """
+        if self._previous_transition is not None:
+            self._previous_transition["next_observation"] = observation
+            self._write_index = (self._write_index + 1) % self._capacity
+            self._n = int(min(self._capacity, self._n + 1))
+            for key in self._data:
+                self._data[key][self._write_index] = np.asarray(
+                    self._previous_transition[key], dtype=self._dtype[key]
+                )
+        self._previous_transition = {
+            "observation": observation,
+            "action": action,
+            "reward": reward,
+            "done": done,
+        }
+
+    def sample(self, batch_size=32):
+        """
+        sample a minibatch
+
+        Args:
+            batch_size (int): The number of examples to sample.
+        """
+        if self.size() == 0:
+            raise ValueError("Buffer does not have any transitions yet." % batch_size)
+
+        indices = self._numpy_rng.integers(self._n, size=batch_size)
+        rval = {}
+        for key in self._data:
+            rval[key] = np.asarray(
+                [self._data[key][idx] for idx in indices], dtype="float32"
+            )
+
+        return rval
+
+    def size(self):
+        """
+        returns the number of transitions stored in the replay buffer
+        """
+        return self._n
+
+    def save(self, dname):
+        """
+        Saves buffer checkpointing information to file for future loading.
+
+        Args:
+            dname (str): directory name where agent should save all relevant info.
+        """
+        create_folder(dname)
+
+        sdict = {}
+        sdict["capacity"] = self._capacity
+        sdict["write_index"] = self._write_index
+        sdict["n"] = self._n
+        sdict["data"] = self._data
+
+        full_name = os.path.join(dname, "meta.ckpt")
+        with open(full_name, "wb") as f:
+            pickle.dump(sdict, f)
+
+    def load(self, dname):
+        """
+        Loads buffer from file.
+
+        Args:
+            dname (str): directory name where buffer checkpoint info is stored.
+
+        Returns:
+            True if successfully loaded the buffer. False otherwise.
+        """
+        full_name = os.path.join(dname, "meta.ckpt")
+        with open(full_name, "rb") as f:
+            sdict = pickle.load(f)
+
+        self._capacity = sdict["capacity"]
+        self._write_index = sdict["write_index"]
+        self._n = sdict["n"]
+        self._data = sdict["data"]
 
 
 def str_to_dtype(dtype):

@@ -1,17 +1,16 @@
-from cogment_verse_torch_agents.third_party.hive.utils import registry
-from cogment_verse_torch_agents.third_party.hive.replays.efficient_replay import EfficientCircularBuffer
+from cogment_verse_torch_agents.third_party.hive.replays.circular_replay import CircularReplayBuffer, SimpleReplayBuffer
+from cogment_verse_torch_agents.third_party.hive.replays.legal_moves_replay import LegalMovesBuffer
 from cogment_verse_torch_agents.third_party.hive.replays.prioritized_replay import PrioritizedReplayBuffer
-from cogment_verse_torch_agents.third_party.hive.replays.replay_buffer import BaseReplayBuffer, CircularReplayBuffer
-from cogment_verse_torch_agents.third_party.hive.replays.hanabi_buffer import HanabiBuffer
+from cogment_verse_torch_agents.third_party.hive.replays.replay_buffer import BaseReplayBuffer
+from cogment_verse_torch_agents.third_party.hive.utils.registry import registry
 
-registry = registry.Registry()
 registry.register_all(
     BaseReplayBuffer,
     {
         "CircularReplayBuffer": CircularReplayBuffer,
-        "EfficientCircularBuffer": EfficientCircularBuffer,
+        "SimpleReplayBuffer": SimpleReplayBuffer,
         "PrioritizedReplayBuffer": PrioritizedReplayBuffer,
-        "HanabiBuffer": HanabiBuffer,
+        "LegalMovesBuffer": LegalMovesBuffer,
     },
 )
 
