@@ -3,7 +3,7 @@ from ..agents.agent import Agent
 from ..agents.dqn import DQNAgent
 from ..agents.rainbow import RainbowDQNAgent
 from ..agents.random import RandomAgent
-from ..agents.hanabi_rainbow import HanabiRainbowAgent
+from ..agents.legal_moves_rainbow import LegalMovesRainbowAgent
 
 
 registry.register_all(
@@ -12,7 +12,7 @@ registry.register_all(
         "DQNAgent": DQNAgent,
         "RandomAgent": RandomAgent,
         "RainbowDQNAgent": RainbowDQNAgent,
-        "HanabiRainbowAgent": HanabiRainbowAgent,
+        "LegalMovesRainbowAgent": LegalMovesRainbowAgent,
     },
 )
 
