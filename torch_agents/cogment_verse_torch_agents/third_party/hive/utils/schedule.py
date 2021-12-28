@@ -1,5 +1,5 @@
 import abc
-from cogment_verse_torch_agents.third_party.hive.utils import Registrable, registry
+from cogment_verse_torch_agents.third_party.hive.utils.registry import Registrable, registry
 
 
 class Schedule(abc.ABC, Registrable):

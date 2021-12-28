@@ -12,7 +12,8 @@ from ..agents.qnets.utils import (
     calculate_output_dim,
     create_init_weights_fn,
 )
-from ..replays.replay_buffer import BaseReplayBuffer, CircularReplayBuffer
+from ..replays.replay_buffer import BaseReplayBuffer
+from ..replays.circular_replay import CircularReplayBuffer
 from ..utils.loggers import Logger, NullLogger
 from ..utils.schedule import (
     LinearSchedule,

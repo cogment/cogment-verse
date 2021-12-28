@@ -16,9 +16,14 @@ from ..agents.qnets.qnet_heads import (
 from ..agents.qnets.utils import InitializationFn, calculate_output_dim
 from ..replays.prioritized_replay import PrioritizedReplayBuffer
 from ..replays.replay_buffer import BaseReplayBuffer
-from ..utils.logging import Logger
-from ..utils.schedule import Schedule
-from ..utils.utils import LossFn, OptimizerFn, seeder
+from ..utils.loggers import Logger, NullLogger
+from ..utils.schedule import (
+    LinearSchedule,
+    PeriodicSchedule,
+    Schedule,
+    SwitchSchedule,
+)
+from ..utils.utils import LossFn, OptimizerFn, create_folder, seeder
 
 
 class RainbowDQNAgent(DQNAgent):

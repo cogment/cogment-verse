@@ -31,7 +31,6 @@ from cogment_verse_torch_agents.third_party.hive.utils.schedule import (
     PeriodicSchedule,
     LinearSchedule,
     SwitchSchedule,
-    CosineSchedule,
 )
 from cogment_verse_torch_agents.third_party.hive.agents.qnets.base import FunctionApproximator
 from cogment_verse_torch_agents.third_party.hive.agents.qnets import MLPNetwork
@@ -94,7 +93,7 @@ def create_training_run(agent_adapter):
                     #     strides = config.representation_net.strides,
                     #     paddings = config.representation_net.paddings,
                     # ),
-                    "qnet": FunctionApproximator(config.representation_net.name),
+                    "representation_net": FunctionApproximator(config.representation_net.name),
                     "epsilon_schedule": LinearSchedule(1, config.epsilon_schedule.init_value, config.epsilon_schedule.steps),
                     "learn_schedule": SwitchSchedule(False, True, 1),
                     "target_net_update_schedule": PeriodicSchedule(False, True, config.target_net_updateschedule.period),
