@@ -25,6 +25,7 @@ from data_pb2 import (
     EnvironmentConfig,
     EnvironmentParams,
     TrialConfig,
+    NDArray,
 )
 from cogment_verse import MlflowExperimentTracker
 from cogment_verse.utils import sizeof_fmt, throttle
@@ -147,6 +148,9 @@ def create_training_run(agent_adapter):
                             render_width=config.render_width,
                             flatten=config.flatten,
                             framestack=config.framestack,
+                            spawn=NDArray(np.random.uniform(-1,1, [1,10])),
+                            goal=NDArray(np.random.uniform(-1,1, [1,10])),
+                            agent="alice",
                         ),
                     ),
                     actors=player_actor_configs,
