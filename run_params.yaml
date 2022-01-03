@@ -554,6 +554,7 @@ driving_td3:
   <<: *default_params
   config:
     <<: *default_config
+    player_count: 2
     num_input: 7
     num_input_2: [75,75]
     num_action: 2

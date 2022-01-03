@@ -11,6 +11,8 @@ class Car:
                               basePosition=[0, 0, 0.1],
                               physicsClientId=client)
         # Joint indices as found by p.getJointInfo()
+        # print(p.getJointInfo(self.get_ids()[0],0))
+        # print(p.getJointInfo(self.get_ids()[0],2))
         self.steering_joints = [0, 2]
         self.drive_joints = [1, 3, 4, 5]
         # Joint speed
@@ -36,10 +38,11 @@ class Car:
         # Clip throttle and steering angle to reasonable values
         throttle = min(max(throttle, 0), 1)
         steering_angle = max(min(steering_angle, 0.6), -0.6)
-        if throttle<0:
-            throttle = 0.2*throttle
+        # if throttle<0:
+        #     throttle = 0.2*throttle
 
         # Set the steering joint positions
+        # print("set joint control")
         p.setJointMotorControlArray(self.car, self.steering_joints,
                                     controlMode=p.POSITION_CONTROL,
                                     targetPositions=[steering_angle] * 2,

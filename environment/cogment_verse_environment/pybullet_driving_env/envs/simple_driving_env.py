@@ -185,7 +185,7 @@ class SimpleDrivingEnv(gym.Env):
         Plane(self.client)
         self.car = Car(self.client, base_position, base_orientation)
 
-        self.goal = deepcopy(goal)
+        self.goal = np.array(deepcopy(goal))
         self.done = False
 
         # Visual element of the goal

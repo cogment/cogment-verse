@@ -7,14 +7,22 @@ import gym
 from cogment_verse_environment.pybullet_driving_env.envs.simple_driving_env import SimpleDrivingEnv
 from cogment_verse_environment.base import BaseEnv, GymObservation
 from cogment_verse_environment.env_spec import EnvSpec
+import numpy as np
 
 
 class DrivingEnv(BaseEnv):
     """
         Class for loading pybullet-driving-env
     """
-    def __init__(self, *, num_players=1, framestack=1, **kwargs):
+    def __init__(self, *, num_players=2, framestack=1, spawn=[10,10], **kwargs):
+        assert num_players>1
         self.create_env()
+
+        # for asymmetric selfplay, self._turn is 0 whenever its Bob's turn to play and [1,num_players] is for each of the alice agents
+        self._turn = 0
+        self._prev_turn = 1
+        self.num_players = num_players
+
         super().__init__(
             env_spec=self.create_env_spec(**kwargs), num_players=num_players, framestack=framestack
         )
@@ -35,10 +43,20 @@ class DrivingEnv(BaseEnv):
             act_shape=act_shape,
         )
     
-    def reset(self, goal, spawn_position, spawn_orientation, agent = "alice"):
-        observation = self._env.reset(goal, spawn_position, spawn_orientation, agent)
+    def reset(self):
+        self.switch_turn()
+        if not self._turn == 0:
+            self.goal = 12*np.ones((2,))
+            self.spawn_position = np.random.uniform(-10,10, (3,))
+            self.spawn_orientation = np.random.uniform(-1,1, (4,))
+            self.spawn_position[2] = 0.5
+            agent = "alice"
+        else:
+            agent = "bob"
+
+        observation = self._env.reset(self.goal, self.spawn_position, self.spawn_orientation, agent)
         return GymObservation(
-            observation=observation,
+            observation=observation['car_qpos'],
             rewards=[0.0],
             current_player=self._turn,
             legal_moves_as_int=[],
@@ -46,10 +64,19 @@ class DrivingEnv(BaseEnv):
             info={},
         )
 
-    def step(self, action = None, step_multiplier = 1, agent = "alice"):
+    def step(self, action = None):
+        if not self._turn == 0:
+            step_multiplier = 1
+            agent = "alice"
+        else:
+            step_multiplier = 1.5
+            agent = "bob"
         observation, reward, done, info = self._env.step(action, step_multiplier, agent)
+        if done:
+            self.goal = observation['car_qpos'][:2]
+
         return GymObservation(
-            observation=observation,
+            observation=observation['car_qpos'],
             current_player=self._turn,
             legal_moves_as_int=[],
             rewards=[reward],
@@ -57,6 +84,15 @@ class DrivingEnv(BaseEnv):
             info=info,
         )
     
+    def switch_turn(self):
+        if not self._turn == 0:
+            # if last player was alice, run bob now
+            self._turn = 0
+        else:
+            # if last player was bob, run one of the alice
+            self._turn = (self._prev_turn-2)%(self.num_players-1)+1
+            self._prev_turn = (self._prev_turn-2)%(self.num_players-1)+1
+
     def seed(self, seed = None):
         self._env.seed(seed=seed)
     

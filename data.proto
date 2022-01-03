@@ -31,9 +31,6 @@ message EnvironmentConfig {
   int32 render_width = 7;
   uint32 framestack = 8;
   uint32 seed = 9;
-  NDArray spawn = 10;
-  NDArray goal = 11;
-  string agent = 12;
 }
 
 message EnvironmentParams {
