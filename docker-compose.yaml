@@ -31,11 +31,19 @@ services:
       - COGMENT_TRIAL_DATASTORE_LOG_LEVEL=info
 
   model_registry:
-    image: cogment/model-registry:v0.2.0
+    image: cogment/model-registry:v0.3.0
     restart: on-failure
     environment:
       - COGMENT_MODEL_REGISTRY_PORT=${COGMENT_VERSE_MODEL_REGISTRY_PORT}
+      # Limit chunk size due to GRPC message size limit
       - COGMENT_MODEL_REGISTRY_SENT_MODEL_VERSION_DATA_CHUNK_SIZE=2097152
+      # Set memory cache maximum size to 1GB
+      - COGMENT_MODEL_REGISTRY_VERSION_CACHE_MAX_SIZE=1073741824
+      # Set memory cache expiration to 1 hour, can be set to any string
+      # that can be parsed by Go's time.ParseDuration
+      - COGMENT_MODEL_REGISTRY_VERSION_CACHE_EXPIRATION=1h
+      # Amount of model versions that are removed from the cache at once
+      - COGMENT_MODEL_REGISTRY_VERSION_CACHE_TO_PRUNE_COUNT=50
     volumes:
       - ./data/model-registry:/data
 
