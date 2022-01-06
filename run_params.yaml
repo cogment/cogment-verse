@@ -566,6 +566,7 @@ driving_td3:
     epsilon_steps: 1
     target_net_update_schedule: 2
     #learning_rate: 3.0e-4
+    max_parallel_trials: 1
     learning_rate: 1.0e-4
     lr_warmup_steps: 100
     model_publication_interval: 1000

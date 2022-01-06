@@ -11,8 +11,6 @@ class Car:
                               basePosition=[0, 0, 0.1],
                               physicsClientId=client)
         # Joint indices as found by p.getJointInfo()
-        # print(p.getJointInfo(self.get_ids()[0],0))
-        # print(p.getJointInfo(self.get_ids()[0],2))
         self.steering_joints = [0, 2]
         self.drive_joints = [1, 3, 4, 5]
         # Joint speed

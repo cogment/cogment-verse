@@ -22,6 +22,7 @@ class DrivingEnv(BaseEnv):
         self._turn = 0
         self._prev_turn = 1
         self.num_players = num_players
+        self._env.reset([10]*2, [10]*3, [0]*4)
 
         super().__init__(
             env_spec=self.create_env_spec(**kwargs), num_players=num_players, framestack=framestack
