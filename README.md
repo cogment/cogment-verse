@@ -59,7 +59,7 @@ cogment run start
 Once the services are running, you can run training with the following command
 
 ```console
-RUN_PARAMS=cartpole_dqn cogment run start_run
+RUN_PARAMS=driving_td3 cogment run start_run
 ```
 
 The available `RUN_PARAMS` are defined in `run_params.yaml`. You can add new parameters as you wish as long as the environments and agents are supported.
