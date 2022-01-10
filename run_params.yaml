@@ -611,10 +611,10 @@ lander_muzero:
   config: &lander_muzero_config
     <<: *default_muzero_config
     environment:
-      env_type: "gym"
-      env_name: "LunarLander-v2"
-      seed: 12
-      render_width: 256
+      implementation: "gym/LunarLander-v2"
+      config:
+        seed: 12
+        render_width: 256
     actor:
       num_input: 8
       num_action: 4
@@ -633,10 +633,10 @@ mountaincar_muzero:
   config:
     <<: *default_muzero_config
     environment:
-      env_type: "gym"
-      env_name: "MountainCar-v0"
-      seed: 12
-      render_width: 256
+      implementation: "gym/MountainCar-v0"
+      config:
+        seed: 12
+        render_width: 256
     actor:
       num_input: 2
       num_action: 3
@@ -665,10 +665,10 @@ breakout_ram_muzero:
   config:
     <<: *default_muzero_config
     environment:
-      env_type: "gym"
-      env_name: "Breakout-ram-v0"
-      seed: 12
-      render_width: 256
+      implementation: "gym/Breakout-ram-v0"
+      config:
+        seed: 12
+        render_width: 256
     actor:
       num_input: 128
       num_action: 4
