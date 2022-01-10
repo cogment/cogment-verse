@@ -27,9 +27,9 @@ from cogment_verse_torch_agents.muzero.agent import MuZeroAgent
 from cogment_verse_torch_agents.muzero.adapter import MuZeroAgentAdapter, DEFAULT_MUZERO_TRAINING_CONFIG
 
 
-# pylint doesn't like test fixtures
 # pylint: disable=redefined-outer-name
 # pylint: disable=invalid-name
+# pylint: disable=protected-access
 
 
 @pytest.fixture
