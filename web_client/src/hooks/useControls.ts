@@ -96,10 +96,7 @@ const keymaps_json: KeyMapT[] = [
     ],
   },
   {
-<<<<<<< HEAD
-    environment_implementation: "tetris/TetrisA-v0",
-=======
-    env_name: "MountainCar-v0",
+    environment_implementation: "gym/MountainCar-v0",
     action_map: [
       {
         id: 0,
@@ -119,8 +116,7 @@ const keymaps_json: KeyMapT[] = [
     ],
   },
   {
-    env_name: "TetrisA-v0",
->>>>>>> 8480e36 (Various improvements, converging for multiple envs)
+    environment_implementation: "tetris/TetrisA-v0",
     action_map: [
       {
         id: 0,
