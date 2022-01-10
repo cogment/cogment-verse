@@ -23,8 +23,6 @@ from dotenv import load_dotenv
 import asyncio
 import logging
 import os
-import multiprocessing as mp
-import queue
 
 load_dotenv()
 

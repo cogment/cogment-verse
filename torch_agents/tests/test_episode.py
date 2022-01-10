@@ -101,14 +101,14 @@ def test_sample(env, policy, zero_probs, distribution):
     batch = episode.sample(4)
 
     # check that we can sample when end padding is necessary
-    N = len(episode) + 10
-    batch = episode.sample(N)
+    length = len(episode) + 10
+    batch = episode.sample(length)
 
     # check that stacking/concatenation is correct
-    assert batch.state.shape == (N, 8)
-    assert batch.action.shape == (N,)
-    assert batch.target_reward.shape == (N,)
+    assert batch.state.shape == (length, 8)
+    assert batch.action.shape == (length,)
+    assert batch.target_reward.shape == (length,)
     assert batch.next_state.shape == batch.state.shape
-    assert batch.target_policy.shape == (N, 4)
-    assert batch.target_value.shape == (N,)
+    assert batch.target_policy.shape == (length, 4)
+    assert batch.target_value.shape == (length,)
     assert torch.allclose(batch.state[1:], batch.next_state[:-1])
