@@ -16,13 +16,13 @@ import { get_keymap } from "./hooks/useControls";
 
 export const ControlList = (props: any) => {
   // const keymaps = keymaps;
-  const { envType, envName } = props;
-  const keymap = get_keymap(envType, envName);
+  const { environmentImplementation } = props;
+  const keymap = get_keymap(environmentImplementation);
 
   if (keymap === undefined) {
     return (
       <div>
-        {/* No control scheme available for `{envType}` environment `{envName}` */}
+        {/* No control scheme available for environment `{environmentImplementation}` */}
         No trial in progress
       </div>
     );
@@ -35,7 +35,7 @@ export const ControlList = (props: any) => {
       <table>
         <thead>
           <tr>
-            <th>{keymap.env_name} Controls</th>
+            <th>{keymap.environment_implementation} Controls</th>
           </tr>
           <tr>
             <th>Action</th>

@@ -21,6 +21,7 @@ Cogment verse includes environments from:
 - Develop 🚧
   - [Development Setup](/docs/development_setup.md)
   - [Debug](#debug)
+  - [Environment development](/docs/environment.md)
 - [Changelog](/CHANGELOG.md)
 - [Contributors guide](/CONTRIBUTING.md)
 - [Community code of conduct](/CODE_OF_CONDUCT.md)

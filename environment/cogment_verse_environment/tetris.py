@@ -37,6 +37,7 @@ class TetrisEnv(AtariEnv):
         flatten=True,
         num_players=1,
         framestack=4,
+        **_kwargs,
     ):  # pylint: disable=super-init-not-called,non-parent-init-called
         """
         Args:

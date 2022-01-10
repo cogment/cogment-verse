@@ -28,8 +28,7 @@ cartpole_rainbow: &default_params
 #    num_input: 4
 #    num_action: 2
     agent_implementation: rainbowtorch
-    environment_type: gym
-    environment_name: CartPole-v0
+    environment_implementation: gym/CartPole-v0
 
 cartpole_dqn:
   <<: *default_params
@@ -77,8 +76,7 @@ pendulum_td3:
     num_input: 3
     num_action: 1
     agent_implementation: td3
-    environment_type: gym
-    environment_name: Pendulum-v0
+    environment_implementation: gym/Pendulum-v0
     epsilon_min: 0.0
     epsilon_steps: 1
     target_net_update_schedule: 2
@@ -101,8 +99,7 @@ minatar_breakout_rainbow:
     num_input: 400
     num_action: 6
     agent_implementation: rainbowtorch
-    environment_type: minatar
-    environment_name: breakout
+    environment_implementation: min/breakout
 
 atari_pitfall_rainbow:
   <<: *default_params
@@ -111,8 +108,7 @@ atari_pitfall_rainbow:
     num_input: 7056
     num_action: 18
     agent_implementation: rainbowtorch
-    environment_type: atari
-    environment_name: Pitfall
+    environment_implementation: ata/Pitfall
 
 atari_breakout_cnn:
   <<: *default_params
@@ -182,6 +178,7 @@ atari_breakout_cnn:
       steps: 20000
 
     total_trial_count: 100000
+
     model_publication_interval: 1000
     model_archive_interval_multiplier: 100
     max_parallel_trials: 1
@@ -209,8 +206,7 @@ minatar_breakout_demo:
     num_input: 400
     num_action: 6
     agent_implementation: rainbowtorch
-    environment_type: minatar
-    environment_name: breakout
+    environment_implementation: min/breakout
     demonstration_count: 0
 
 atari_breakout_demo:
@@ -220,8 +216,7 @@ atari_breakout_demo:
     num_input: 7056
     num_action: 4
     agent_implementation: rainbowtorch
-    environment_type: atari
-    environment_name: Breakout
+    environment_implementation: ata/Breakout
     demonstration_count: 0
     framestack: 4
 
@@ -232,8 +227,7 @@ atari_pitfall_demo:
     num_input: 7056
     num_action: 18
     agent_implementation: rainbowtorch
-    environment_type: atari
-    environment_name: Pitfall
+    environment_implementation: ata/Pitfall
     demonstration_count: 10
 
 lander_rainbow_demo: &lander_rainbow_demo
@@ -243,8 +237,7 @@ lander_rainbow_demo: &lander_rainbow_demo
     num_input: 8
     num_action: 4
     agent_implementation: rainbowtorch
-    environment_type: gym
-    environment_name: LunarLander-v2
+    environment_implementation: gym/LunarLander-v2
     demonstration_count: 20000 #100
     total_trial_count: 20000
     epsilon_min: 0.1
@@ -273,8 +266,7 @@ tetris_rainbow_demo:
     num_input: 7056
     num_action: 12
     agent_implementation: atari_cnn
-    environment_type: tetris
-    environment_name: TetrisA-v0
+    environment_implementation: tet/TetrisA-v0
     demonstration_count: 1000 #100
     total_trial_count: 10000
     epsilon_min: 0.1
@@ -297,8 +289,7 @@ connect_four_rainbow:
     num_action: 7
     player_count: 2
     agent_implementation: rainbowtorch
-    environment_type: pettingzoo
-    environment_name: connect_four_v3
+    environment_implementation: pet/connect_four_v3
     demonstration_count: 0 #100
     total_trial_count: 10000
     epsilon_steps: 5000
@@ -316,8 +307,7 @@ backgammon_rainbow:
     num_action: 1353
     player_count: 2
     agent_implementation: rainbowtorch
-    environment_type: pettingzoo
-    environment_name: backgammon_v3
+    environment_implementation: pet/backgammon_v3
     demonstration_count: 0 #100
     total_trial_count: 10
     model_publication_interval: 100
@@ -329,8 +319,7 @@ benchmark_lander:
     num_input: 8
     num_action: 4
     agent_implementation: rainbowtorch
-    environment_type: gym
-    environment_name: LunarLander-v2
+    environment_implementation: gym/LunarLander-v2
     demonstration_count: 0
     total_trial_count: 250
     epsilon_min: 0.10
@@ -353,8 +342,7 @@ benchmark_lander_hill:
     num_input: 8
     num_action: 4
     agent_implementation: rainbowtorch
-    environment_type: gym
-    environment_name: LunarLander-v2
+    environment_implementation: gym/LunarLander-v2
     demonstration_count: 1000
     total_trial_count: 1000
     epsilon_min: 0.1
@@ -377,8 +365,7 @@ lander_continuous_td3:
     num_input: 8
     num_action: 2
     agent_implementation: td3
-    environment_type: gym
-    environment_name: LunarLanderContinuous-v2
+    environment_implementation: gym/LunarLanderContinuous-v2
     demonstration_count: 0
     total_trial_count: 1000
     epsilon_min: 0.0
@@ -408,8 +395,7 @@ lander_continuous_ddpg:
     num_input: 8
     num_action: 2
     agent_implementation: ddpg
-    environment_type: gym
-    environment_name: LunarLanderContinuous-v2
+    environment_implementation: gym/LunarLanderContinuous-v2
     demonstration_count: 0
     total_trial_count: 1000
     epsilon_min: 0.1
@@ -439,8 +425,7 @@ walker_td3:
     num_input: 8
     num_action: 2
     agent_implementation: td3
-    environment_type: gym
-    environment_name: BipedalWalker-v3
+    environment_implementation: gym/BipedalWalker-v3
     demonstration_count: 0
     total_trial_count: 1000
     epsilon_min: 0.0
@@ -470,8 +455,7 @@ walker_ddpg:
     num_input: 24
     num_action: 4
     agent_implementation: ddpg
-    environment_type: gym
-    environment_name: BipedalWalker-v3
+    environment_implementation: gym/BipedalWalker-v3
     demonstration_count: 0
     total_trial_count: 1000
     epsilon_min: 0.1
@@ -500,8 +484,7 @@ pendulum_td3:
     num_input: 3
     num_action: 1
     agent_implementation: td3
-    environment_type: gym
-    environment_name: Pendulum-v0
+    environment_implementation: gym/Pendulum-v0
     demonstration_count: 0 #100
     total_trial_count: 250
     epsilon_min: 0.0
@@ -530,8 +513,7 @@ pendulum_ddpg:
     num_input: 3
     num_action: 1
     agent_implementation: ddpg
-    environment_type: gym
-    environment_name: Pendulum-v0
+    environment_implementation: gym/Pendulum-v0
     demonstration_count: 0 #100
     total_trial_count: 250
     epsilon_min: 0.0
@@ -561,8 +543,7 @@ benchmark_breakout:
     num_input: 400
     num_action: 6
     agent_implementation: rainbowtorch
-    environment_type: minatar
-    environment_name: breakout
+    environment_implementation: min/breakout
     demonstration_count: 0
     total_trial_count: 1000
     model_publication_interval: 100
@@ -580,8 +561,7 @@ benchmark_connect_four:
     num_action: 7
     player_count: 2
     agent_implementation: rainbowtorch
-    environment_type: pettingzoo
-    environment_name: connect_four_v3
+    environment_implementation: pet/connect_four_v3
     demonstration_count: 0 #100
     total_trial_count: 10
     epsilon_steps: 5000
@@ -598,9 +578,9 @@ simple_a2c_cartpole: &default_simple_a2c_params
   config: &default_simple_a2c_config
     class_name: data_pb2.SimpleA2CTrainingRunConfig
     environment:
-      env_type: "gym"
-      env_name: "CartPole-v0"
-      seed: 12
+      implementation: gym/CartPole-v0
+      config:
+        seed: 12
     actor:
       num_input: 4
       num_action: 2
@@ -618,3 +598,34 @@ simple_a2c_cartpole: &default_simple_a2c_params
     critic_network:
       hidden_size: 64
 
+
+# procgen environments follow
+procgen_bigfish:
+  <<: *default_params
+  config:
+    <<: *default_config
+    num_input: 7056
+    num_action: 15
+    agent_implementation: atari_cnn
+    environment_implementation: procgen/bigfish
+    demonstration_count: 100
+    total_trial_count: 10000
+    model_publication_interval: 1000
+    model_archive_interval_multiplier: 10
+    max_parallel_trials: 2
+    render_width: 64
+    flatten: false
+    batch_size: 32
+    min_replay_buffer_size: 10000
+    max_replay_buffer_size: 350000
+    target_net_update_schedule: 100
+    epsilon_steps: 100000
+    learning_rate: 1.0e-4
+    lr_warmup_steps: 10000
+    framestack: 4
+    model_kwargs:
+      target_net_soft_update: False
+      screensize: 64
+    replay_buffer_config:
+      observation_dtype: uint8
+      action_dtype: int8
