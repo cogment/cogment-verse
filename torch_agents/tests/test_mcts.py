@@ -58,9 +58,6 @@ def mock_dynamics():
 @pytest.fixture
 def mock_value():
     class Value(torch.nn.Module):
-        def __init__(self):
-            super().__init__()
-
         def forward(self, x):
             return torch.zeros(x.shape[0])
 
