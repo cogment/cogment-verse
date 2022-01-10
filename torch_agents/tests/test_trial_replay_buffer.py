@@ -48,22 +48,22 @@ def policy():
 def replay_buffer(env, policy):
     reward_probs = torch.ones(4) / 4
     value_probs = torch.ones(4) / 4
-    rb = TrialReplayBuffer(max_size=1000, discount_rate=0.99, bootstrap_steps=10)
+    replay_buffer = TrialReplayBuffer(max_size=1000, discount_rate=0.99, bootstrap_steps=10)
     for _ in range(10):
         obs = env.reset()
         done = False
-        ep = Episode(obs, 0.99, zero_reward_probs=reward_probs, zero_value_probs=value_probs)
+        episode = Episode(obs, 0.99, zero_reward_probs=reward_probs, zero_value_probs=value_probs)
 
         while not done:
             action = 0
             next_obs, reward, done, _info = env.step(action)
-            ep.add_step(next_obs, action, reward_probs, reward, done, policy, value_probs, 0.0)
+            episode.add_step(next_obs, action, reward_probs, reward, done, policy, value_probs, 0.0)
             obs = next_obs
 
-        ep.bootstrap_value(100, 0.99)
-        rb.add_episode(ep)
+        episode.bootstrap_value(100, 0.99)
+        replay_buffer.add_episode(episode)
 
-    return rb
+    return replay_buffer
 
 
 def test_create(replay_buffer):
