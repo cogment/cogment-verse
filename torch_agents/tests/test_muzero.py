@@ -179,7 +179,7 @@ def test_distributional_transform():
     assert torch.allclose(val, val_4)
 
 
-def test_agentadapter(env):
+def test_agentadapter():
     agent_adapter = MuZeroAgentAdapter()
     agent = agent_adapter._create(
         "dummy_id", obs_dim=8, act_dim=4, device="cpu", training_config=DEFAULT_MUZERO_TRAINING_CONFIG
