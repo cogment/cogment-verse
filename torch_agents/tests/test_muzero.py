@@ -80,7 +80,7 @@ def test_act(device, env):
             state = next_state
 
 
-# todo: fix after refactor
+# todo(jonathan): fix after refactor
 @pytest.mark.skip
 @pytest.mark.parametrize("device", ["cpu", "cuda"])
 @pytest.mark.parametrize("reanalyze_fraction", [0.0])  # , 1.0])
