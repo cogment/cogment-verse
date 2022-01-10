@@ -21,8 +21,6 @@ from cogment_verse_torch_agents.muzero.networks import (
     Distributional,
     reward_transform,
     reward_transform_inverse,
-    resnet,
-    mlp,
 )
 
 from cogment_verse_torch_agents.muzero.agent import MuZeroAgent
@@ -31,6 +29,7 @@ from cogment_verse_torch_agents.muzero.adapter import MuZeroAgentAdapter, DEFAUL
 
 # pylint doesn't like test fixtures
 # pylint: disable=redefined-outer-name
+# pylint: disable=invalid-name
 
 
 @pytest.fixture
@@ -69,7 +68,7 @@ def test_act(device, env):
     model.eval()
     state = env.reset()
 
-    for i in range(100):
+    for _ in range(100):
         observation = torch.from_numpy(state).to(device).float()
         action, _policy, _Q, _value = model.act(observation, 0.1, 0.3, 0.75, 0.995, 4, 32, 1.5, 15000.0)
         next_state, _reward, done, _info = env.step(action)
@@ -80,25 +79,21 @@ def test_act(device, env):
 
 
 # todo(jonathan): fix after refactor
-@pytest.mark.skip
 @pytest.mark.parametrize("device", ["cpu", "cuda"])
-@pytest.mark.parametrize("reanalyze_fraction", [0.0])  # , 1.0])
 def test_learn(
-    obs_dim,
-    act_dim,
     representation,
     dynamics,
     policy,
     value,
     projector,
     predictor,
-    env,
-    batch_size,
     device,
-    reanalyze_fraction,
     reward_distribution,
     value_distribution,
 ):
+    obs_dim = 8
+    act_dim = 4
+
     if device == "cuda" and not torch.cuda.is_available():
         pytest.skip()
 
@@ -113,7 +108,7 @@ def test_learn(
     target_value = torch.rand((4, 3))
     action = torch.randint(low=0, high=act_dim, size=(4, 3))
     importance_weight = 1 / (1 + torch.rand(4) ** 2)
-    priority, info = model.train_step(
+    _priority, _info = model.train_step(
         optimizer, observation, action, reward, next_observation, target_policy, target_value, importance_weight
     )
 
