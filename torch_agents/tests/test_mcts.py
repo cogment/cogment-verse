@@ -19,6 +19,7 @@ from cogment_verse_torch_agents.muzero.mcts import MCTS
 
 # pylint doesn't like test fixtures
 # pylint: disable=redefined-outer-name
+# pylint: disable=no-self-use
 
 
 @pytest.fixture
@@ -44,7 +45,7 @@ def mock_dynamics():
     # - two states 0,1 and two actions 0,1
     # - reward is equal to state xor action
     # - next_state is equal to action
-    class Dynamics(torch.nn.Module):  # pylint: disable=no-self-use
+    class Dynamics(torch.nn.Module):
         def forward(self, state, action):
             action = torch.nn.functional.one_hot(action, 2)
             reward = torch.sum((1 - state) * action, dim=1)
