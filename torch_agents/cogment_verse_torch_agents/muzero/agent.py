@@ -28,7 +28,6 @@ from cogment_verse_torch_agents.muzero.networks import (
     PolicyNetwork,
     ValueNetwork,
     DynamicsNetwork,
-    QNetwork,
 )
 from cogment_verse_torch_agents.muzero.replay_buffer import EpisodeBatch
 
@@ -97,14 +96,6 @@ class MuZeroAgent:
             predictor,
             dynamics.distribution,
             value.distribution,
-            QNetwork(
-                self._act_dim,
-                self.params.hidden_dim,
-                self.params.hidden_layers,
-                self.params.vmin,
-                self.params.vmax,
-                self.params.vbins,
-            ),
         ).to(self._device)
 
         self.target_muzero = copy.deepcopy(self.muzero)

@@ -27,6 +27,7 @@ import json
 import logging
 import os
 import sys
+import multiprocessing as mp
 
 load_dotenv()
 
@@ -70,6 +71,7 @@ async def main():
 
 
 if __name__ == "__main__":
+    mp.set_start_method("spawn")
     loop = asyncio.get_event_loop()
     try:
         loop.run_until_complete(main())

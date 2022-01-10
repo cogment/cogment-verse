@@ -81,35 +81,50 @@ def test_act(device, env):
 # todo(jonathan): fix after refactor
 @pytest.mark.parametrize("device", ["cpu", "cuda"])
 def test_learn(
-    representation,
-    dynamics,
-    policy,
-    value,
-    projector,
-    predictor,
     device,
-    reward_distribution,
-    value_distribution,
 ):
-    obs_dim = 8
-    act_dim = 4
-
     if device == "cuda" and not torch.cuda.is_available():
         pytest.skip()
 
-    model = MuZero(
-        representation, dynamics, policy, value, projector, predictor, reward_distribution, value_distribution
+    obs_dim = 8
+    act_dim = 4
+
+    agent_adapter = MuZeroAgentAdapter()
+    agent = agent_adapter._create(
+        "dummy_id", obs_dim=obs_dim, act_dim=act_dim, device=device, training_config=DEFAULT_MUZERO_TRAINING_CONFIG
     )
+
+    model = agent.muzero
     optimizer = torch.optim.Adam(model.parameters())
     observation = torch.rand((4, 3, obs_dim))
     next_observation = torch.rand((4, 3, obs_dim))
     reward = torch.rand((4, 3))
     target_policy = torch.rand((4, 3, act_dim))
     target_value = torch.rand((4, 3))
+    done = torch.rand((4, 3))
     action = torch.randint(low=0, high=act_dim, size=(4, 3))
     importance_weight = 1 / (1 + torch.rand(4) ** 2)
+
+    target_reward_probs = agent.muzero.reward_distribution.compute_target(reward).to(device)
+    target_value_probs = agent.muzero.value_distribution.compute_target(target_value).to(device)
+
     _priority, _info = model.train_step(
-        optimizer, observation, action, reward, next_observation, target_policy, target_value, importance_weight
+        optimizer,
+        observation,
+        action,
+        target_reward_probs,
+        reward,
+        next_observation,
+        done,
+        target_policy,
+        target_value_probs,
+        target_value,
+        importance_weight,
+        max_norm=1.0,
+        s_weight=1.0,
+        v_weight=1.0,
+        _discount_factor=None,
+        target_muzero=agent.target_muzero,
     )
 
 

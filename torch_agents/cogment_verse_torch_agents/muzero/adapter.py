@@ -179,7 +179,6 @@ class MuZeroAgentAdapter(AgentAdapter):
         super().__init__()
         self._model_cache = LRU(2)  # memory issue?
         self._dtype = torch.float
-        mp.set_start_method("spawn")
 
     def _create(self, model_id, *, obs_dim, act_dim, device, training_config):
         return MuZeroAgent(obs_dim=obs_dim, act_dim=act_dim, device=device, training_config=training_config)

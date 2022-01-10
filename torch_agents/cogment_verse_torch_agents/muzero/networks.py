@@ -286,7 +286,6 @@ class MuZero(torch.nn.Module):
         predictor,
         reward_distribution,
         value_distribution,
-        dqn,
         similarity_loss=cosine_similarity_loss,
     ):
         super().__init__()
@@ -299,7 +298,6 @@ class MuZero(torch.nn.Module):
         self.reward_distribution = reward_distribution
         self.value_distribution = value_distribution
         self._similarity_loss = similarity_loss
-        self._dqn = dqn
 
     def forward(self, _):
         pass
