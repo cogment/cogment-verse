@@ -149,10 +149,24 @@ message SimpleA2CTrainingRunConfig {
   MLPNetworkConfig critic_network = 5;
 }
 
+message SelfPlayActorConfig{
+  uint32 num_input = 1;
+  repeated uint32 num_input_2 = 2;
+  MLPNetworkConfig actor_network = 3;
+  MLPNetworkConfig critic_network = 4;
+  ModelArgs model_kwargs = 5;
+}
+
+message SelfPlayRolloutConfig{
+  uint32 epoch_count = 1;
+  uint32 number_turns_per_trial = 2;
+  uint32 epoch_trial_count = 3;
+  uint32 max_parallel_trials = 4;
+}
+
 message SelfPlayTD3TrainingRunConfig {
   EnvironmentParams environment = 1;
-  ActorConfig actor = 2;
-  SimpleA2CTrainingConfig training = 3;
-  MLPNetworkConfig actor_network = 4;
-  MLPNetworkConfig critic_network = 5;
+  SelfPlayActorConfig actor = 2;
+  SelfPlayRolloutConfig rollout = 3;
+  SimpleA2CTrainingConfig training = 4;
 }
