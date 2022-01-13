@@ -22,7 +22,6 @@ message NDArray {
   bytes data = 3;
 }
 
-
 message EnvironmentConfig {
   string run_id = 1;
   int32 player_count = 2;

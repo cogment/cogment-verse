@@ -113,7 +113,7 @@ def create_training_run(agent_adapter):
                     ),
                     actors=alice_configs,
                 )
-                for _ in range(config.per_episode_trial) #TBD
+                for _ in range(config.epoch_trial_count) #TBD
             ]
 
             # create Bob_config
@@ -151,35 +151,36 @@ def create_training_run(agent_adapter):
                     ),
                     actors=bob_configs,
                 )
-                for _ in range(config.per_episode_trial)  # TBD
+                for _ in range(config.epoch_trial_count)  # TBD
             ]
 
             for epoch in range(config.training.epoch_count): # TBD
-                # Rollout Alice trials
-                async for (
-                    step_idx,
-                    step_timestamp,
-                    _trial_id,
-                    _tick_id,
-                    sample,
-                ) in run_session.start_trials_and_wait_for_termination(
-                    trial_configs=alice_trial_configs,
-                    max_parallel_trials=config.max_parallel_trials,
-                ):
-                    alice.consume_training_sample(sample)
+                for turns in range(config.training.number_turns): # TBD
+                    # Rollout Alice trials
+                    async for (
+                        step_idx,
+                        step_timestamp,
+                        _trial_id,
+                        _tick_id,
+                        sample,
+                    ) in run_session.start_trials_and_wait_for_termination(
+                        trial_configs=alice_trial_configs,
+                        max_parallel_trials=config.max_parallel_trials,
+                    ):
+                        alice.consume_training_sample(sample)
 
-                # Rollout Bob trials
-                async for (
-                    step_idx,
-                    step_timestamp,
-                    _trial_id,
-                    _tick_id,
-                    sample,
-                ) in run_session.start_trials_and_wait_for_termination(
-                    trial_configs=bob_trial_configs,
-                    max_parallel_trials=config.max_parallel_trials,
-                ):
-                    bob.consume_training_sample(sample)
+                    # Rollout Bob trials
+                    async for (
+                        step_idx,
+                        step_timestamp,
+                        _trial_id,
+                        _tick_id,
+                        sample,
+                    ) in run_session.start_trials_and_wait_for_termination(
+                        trial_configs=bob_trial_configs,
+                        max_parallel_trials=config.max_parallel_trials,
+                    ):
+                        bob.consume_training_sample(sample)
 
                 # Train Bob
                 bob.learn()
