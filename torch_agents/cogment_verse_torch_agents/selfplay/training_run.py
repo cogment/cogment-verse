@@ -155,7 +155,7 @@ def create_training_run(agent_adapter):
             ]
 
             for epoch in range(config.training.epoch_count): # TBD
-                for turns in range(config.training.number_turns): # TBD
+                for turns in range(config.training.number_turns_per_trial): # TBD
                     # Rollout Alice trials
                     async for (
                         step_idx,

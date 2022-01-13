@@ -148,3 +148,11 @@ message SimpleA2CTrainingRunConfig {
   MLPNetworkConfig actor_network = 4;
   MLPNetworkConfig critic_network = 5;
 }
+
+message SelfPlayTD3TrainingRunConfig {
+  EnvironmentParams environment = 1;
+  ActorConfig actor = 2;
+  SimpleA2CTrainingConfig training = 3;
+  MLPNetworkConfig actor_network = 4;
+  MLPNetworkConfig critic_network = 5;
+}
