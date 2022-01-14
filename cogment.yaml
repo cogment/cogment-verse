@@ -3,7 +3,7 @@ import:
     - data.proto
 
 commands:
-  sync: >
+  copy: >
     cogment copy cogment.yaml data.proto base_python environment torch_agents tf_agents client web_client &&
     cogment copy run_api.proto base_python/cogment_verse/api client
   build: docker-compose build base_python && docker-compose build
