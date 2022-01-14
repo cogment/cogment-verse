@@ -4,9 +4,8 @@ import:
 
 commands:
   sync: >
-    cogment copy data.proto base_python environment torch_agents tf_agents client web_client &&
+    cogment copy cogment.yaml data.proto base_python environment torch_agents tf_agents client web_client &&
     cogment copy run_api.proto base_python/cogment_verse/api client &&
-    cogment copy cogment.yaml web_client
   build: docker-compose build base_python && docker-compose build
   build_gpu: docker-compose -f docker-compose.yaml -f docker-compose.gpu-override.yaml build base_python && docker-compose -f docker-compose.yaml -f docker-compose.gpu-override.yaml build
   start: >
