@@ -4,7 +4,7 @@ import:
 
 commands:
   sync: >
-    cogment copy base_python environment torch_agents tf_agents client web_client &&
+    cogment copy data.proto base_python environment torch_agents tf_agents client web_client &&
     cp ./run_api.proto ./base_python/cogment_verse/api/ &&
     cp ./run_api.proto ./client/
   build: docker-compose build base_python && docker-compose build
