@@ -92,7 +92,7 @@ COGMENT_VERSE_ORCHESTRATOR_ENDPOINT=localhost:${COGMENT_VERSE_ORCHESTRATOR_PORT}
 Now that everything is configured, we can build and run the service we rely on in Docker. To do that we will rely directly on `docker-compose up --build`. For example to work on `torch_agents`, we would run:
 
 ```
-cogment run sync && docker-compose -f docker-compose.yaml -f docker-compose.local.yaml up --build trial_datastore model_registry orchestrator environment tf_agents mlflow grafana prometheus
+cogment run copy && docker-compose -f docker-compose.yaml -f docker-compose.local.yaml up --build trial_datastore model_registry orchestrator environment tf_agents mlflow grafana prometheus
 ```
 
 ### Developing!
