@@ -41,7 +41,7 @@ Cogment verse includes environments from:
 First run code generation and build the docker images
 
 ```console
-cogment run sync && cogment run build
+cogment run copy && cogment run build
 ```
 
 #### Troubleshooting
