@@ -549,3 +549,24 @@ procgen_bigfish:
     replay_buffer_config:
       observation_dtype: uint8
       action_dtype: int8
+
+
+simple_bc_lander:
+  implementation: simple_bc_training
+  config:
+    class_name: data_pb2.SimpleBCTrainingRunConfig
+    environment:
+      implementation: gym/LunarLander-v2
+      config:
+        seed: 12
+    actor:
+      num_input: 8
+      num_action: 4
+    training:
+      trial_count: 1000
+      max_parallel_trials: 1
+      discount_factor: 0.95
+      learning_rate: 0.001
+      batch_size: 32
+    policy_network:
+      hidden_size: 64
