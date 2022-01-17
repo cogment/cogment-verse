@@ -583,7 +583,7 @@ driving_td3:
       expl_noise: 0.1
 
 selfplay_td3_driving: &default_selfplay_td3_params
-  implementation: selfplay_run_impl
+  implementation: selfplay_training
   config: &default_elfplay_td3_config
     class_name: data_pb2.SelfPlayTD3TrainingRunConfig
     environment:
@@ -593,6 +593,7 @@ selfplay_td3_driving: &default_selfplay_td3_params
     actor:
       num_input: 7
       num_input_2: [ 75,75 ]
+      num_action: 2
       actor_network:
         hidden_size: 64
       critic_network:
@@ -607,9 +608,23 @@ selfplay_td3_driving: &default_selfplay_td3_params
       number_turns_per_trial: 5
       epoch_trial_count: 15
       max_parallel_trials: 8
+      model_publication_interval: 1000
     training:
+      batch_size: 64
       discount_factor: 0.95
       entropy_coef: 0.01
       value_loss_coef: 0.5
       action_loss_coef: 1.0
       learning_rate: 0.01
+      lr_warmup_steps: 100
+      demonstration_count: 0 #100
+      epsilon_min: 0.0
+      epsilon_steps: 1
+      target_net_update_schedule: 2
+    replaybuffer:
+      min_replay_buffer_size: 64
+      replay_buffer_config:
+        observation_dtype: float32
+        action_dtype: float32
+    render_width: 1000
+
