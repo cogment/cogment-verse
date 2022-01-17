@@ -1,5 +1,5 @@
 cff-version: "1.2.0"
-message: "If you use this Cogment in your research, please cite the article from `preferred-citation`."
+message: "If you use Cogment in your research, please cite the article from `preferred-citation`."
 title: "Cogment-Verse"
 authors:
   - family-names: AI Redefined
@@ -11,7 +11,7 @@ preferred-citation:
   type: "article"
   title: "Cogment: Open Source Framework For Distributed Multi-actor Training, Deployment & Operations"
   year: 2021
-  url: "https://arxiv.org/abs/2106.11345v1"
+  url: https://arxiv.org/abs/2106.11345v1
   authors:
     - family-names: AI Redefined
       website: https://ai-r.com
