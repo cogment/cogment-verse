@@ -12,8 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { Message } from "google-protobuf";
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import "./App.css";
 import { cogSettings } from "./CogSettings";
 import { ControlList } from "./ControlList";
@@ -21,6 +20,8 @@ import * as data_pb from "./data_pb";
 import { useActions } from "./hooks/useActions";
 import { get_keymap, useControls } from "./hooks/useControls";
 import { useWindowSize } from "./hooks/useWindowSize";
+
+const decoder = new TextDecoder('utf8');
 
 const setContains = <T extends unknown>(A: Set<T>, B: Set<T>): boolean => {
   if (A.size > B.size) {
@@ -49,7 +50,7 @@ const setIsEndOfArray = <T extends unknown>(A: Set<T>, B: T[]): boolean => {
 
 function App() {
   const [canStartTrial, setCanStartTrial] = useState(true);
-  const [pixelData, setPixelData] = useState<string | undefined>();
+  const [pixelData, setPixelData] = useState<Uint8Array | undefined>();
   const [trialStatus, setTrialStatus] = useState("no trial started");
   const [watching, setWatching] = useState(false);
   const [currentTrialId, setCurrentTrialId] = useState<string | undefined>();
@@ -67,10 +68,8 @@ function App() {
   // cogment stuff
   const COGMENT_VERSE_GRPCWEBPROXY_PUBLIC_URL = process.env.REACT_APP_GRPCWEBPROXY_URL || "http://localhost:8081";
 
-  type ObservationT = data_pb.Observation.AsObject;
-  type ActionT = data_pb.AgentAction;
-  type RewardT = Message;
-  type ActorConfigT = data_pb.ActorConfig.AsObject;
+  type ObservationT = data_pb.cogment_verse.Observation;
+  type ActionT = data_pb.cogment_verse.AgentAction;
 
   useEffect(() => {
     //const canvas = canvasRef.current;
@@ -81,14 +80,12 @@ function App() {
     if (!pixelData || !img) {
       return;
     }
-    img.src = "data:image/png;base64," + pixelData;
+    img.src = "data:image/png;base64," + btoa(decoder.decode(pixelData));
   });
 
   const [event, joinTrial, _sendAction, reset, trialJoined, watchTrials, trialStateList, actorConfig] = useActions<
     ObservationT,
-    ActionT,
-    RewardT,
-    ActorConfigT
+    ActionT
   >(
     cogSettings,
     "web_actor", // actor name
@@ -116,14 +113,14 @@ function App() {
 
   useEffect(() => {
     if (trialJoined && actorConfig && event.observation && event.observation.pixelData) {
-      setPixelData(event.observation.pixelData as string);
+      setPixelData(event.observation.pixelData);
     }
   }, [event, actorConfig, trialJoined]);
 
   useEffect(() => {
     if (trialJoined && actorConfig && event.observation && event.observation.pixelData) {
       if (!event.last) {
-        const action = new data_pb.AgentAction();
+        const action = new data_pb.cogment_verse.AgentAction();
         let action_int = -1;
         const keymap = get_keymap(actorConfig.environmentImplementation);
 
@@ -139,7 +136,7 @@ function App() {
           }
         }
 
-        action.setDiscreteAction(action_int);
+        action.discreteAction = action_int;
         if (sendAction) {
           sendAction(action);
         }

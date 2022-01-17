@@ -1,4 +1,4 @@
-FROM cogment/orchestrator:v1.0.3
+FROM cogment/orchestrator:v2.0.0
 
 RUN apt-get update && apt-get -y install gettext-base
 
@@ -11,4 +11,4 @@ ENV TRIAL_ACTOR_PORT=9000
 
 # Didn't manage to setup envsubst in the ENTRYPOINT
 ENTRYPOINT []
-CMD envsubst < /app/cogment.yaml > /app/cogment.yaml.out && orchestrator --config=/app/cogment.yaml.out
+CMD envsubst < /app/cogment.yaml > /app/cogment.yaml.out && orchestrator --config=/app/cogment.yaml.out --params=/app/cogment.yaml.out
