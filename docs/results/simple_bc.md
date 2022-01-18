@@ -82,4 +82,4 @@ RUN_PARAMS=simple_bc_lander cogment run start_run
 
 and open the web client to start interacting with the agent while it trains.
 
-You can view the logged metrics (e.g. training loss) by opening `localhost:5000`.
+You can view the logged metrics (e.g. training loss) by opening `localhost:3000`.

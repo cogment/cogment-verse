@@ -80,7 +80,7 @@ Ongoing run identifiers to define `RUN_ID` can be retrieved by listing the ongoi
 
 #### Run monitoring
 
-You can monitor ongoing run using [mlflow](https://mlflow.org). By default a local instance of mlflow is started by cogment-verse and is accessible at <http://localhost:5000>.
+You can monitor ongoing run using [mlflow](https://mlflow.org). By default a local instance of mlflow is started by cogment-verse and is accessible at <http://localhost:3000>.
 
 #### Human player
 
@@ -110,7 +110,7 @@ Instead of using `cogment run build` and `cogment run start` use `cogment run bu
 
 Cogment verse comes with [prometheus](https://prometheus.io), in [`/prometheus`](/prometheus), and [grafana](https://grafana.com), in [`/grafana`](/grafana), services to facilitate the monitoring of the cluster.
 
-When running with the default `cogment run start`, the grafana dashboard can be accessed at <http://localhost:3000>.
+When running with the default `cogment run start`, the grafana dashboard can be accessed at <http://localhost:3001>.
 
 ### Profiling
 
