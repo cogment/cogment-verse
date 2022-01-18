@@ -55,7 +55,8 @@ class SimpleBCAgentAdapter(AgentAdapter):
         np_array = np.frombuffer(pb_array.data, dtype=pb_array.dtype).reshape(*pb_array.shape)
         return torch.tensor(np_array, dtype=self._dtype, device=device)
 
-    def tensor_from_cog_action(self, cog_action, device=None):
+    @staticmethod
+    def tensor_from_cog_action(cog_action, device=None):
         return torch.tensor(cog_action.discrete_action, dtype=torch.long, device=device)
 
     @staticmethod
