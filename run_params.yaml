@@ -627,4 +627,6 @@ selfplay_td3_driving: &default_selfplay_td3_params
         observation_dtype: float32
         action_dtype: float32
     render_width: 1000
+    agent_implementation: selfplay_td3
+    environment_implementation: driving/SimpleDriving-v0
 

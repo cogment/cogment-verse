@@ -188,4 +188,6 @@ message SelfPlayTD3TrainingRunConfig {
   SelfPlayTrainingConfig training = 4;
   SelfPlayReplaybufferConfig replaybuffer = 5;
   uint32 render_width = 6;
+  string agent_implementation = 7;
+  string environment_implementation = 8;
 }

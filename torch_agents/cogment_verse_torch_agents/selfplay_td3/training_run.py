@@ -41,17 +41,17 @@ def create_training_run(agent_adapter):
             alice_id = f"{run_id}_alice"
             alice_version_number = 1
             # TBD: hyperparameters, model kwargs
-            alice_kwargs = MessageToDict(config.model_kwargs, preserving_proto_field_name=True)
+            # alice_kwargs = MessageToDict(config.model_kwargs, preserving_proto_field_name=True)
             alice, _ = await agent_adapter.create_and_publish_initial_version(
                 alice_id,
-                **{
-                    "obs_dim": config.num_input,
-                    "act_dim": config.num_action,
-                    "max_replay_buffer_size": config.max_replay_buffer_size,
-                    "lr": config.learning_rate,
-                    "gamma": config.discount_factor,
-                },
-                **alice_kwargs,
+                # **{
+                #     "obs_dim": config.num_input,
+                #     "act_dim": config.num_action,
+                #     "max_replay_buffer_size": config.max_replay_buffer_size,
+                #     "lr": config.learning_rate,
+                #     "gamma": config.discount_factor,
+                # },
+                # **alice_kwargs,
             )
 
 
@@ -62,18 +62,18 @@ def create_training_run(agent_adapter):
             bob_kwargs = MessageToDict(config.model_kwargs, preserving_proto_field_name=True)
             bob, _ = await agent_adapter.create_and_publish_initial_version(
                 bob_id,
-                **{
-                    "obs_dim": config.num_input,
-                    "act_dim": config.num_action,
-                    "max_replay_buffer_size": config.max_replay_buffer_size,
-                    "lr": config.learning_rate,
-                    "gamma": config.discount_factor,
-                },
-                **bob_kwargs,
+                # **{
+                #     "obs_dim": config.num_input,
+                #     "act_dim": config.num_action,
+                #     "max_replay_buffer_size": config.max_replay_buffer_size,
+                #     "lr": config.learning_rate,
+                #     "gamma": config.discount_factor,
+                # },
+                # **bob_kwargs,
             )
 
-            run_xp_tracker.log_params(alice._params)
-            run_xp_tracker.log_params(bob._params)
+            # run_xp_tracker.log_params(alice._params)
+            # run_xp_tracker.log_params(bob._params)
 
             trials_completed = 0
             all_trials_reward = 0
