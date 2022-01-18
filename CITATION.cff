@@ -1,0 +1,32 @@
+cff-version: "1.2.0"
+message: "If you use Cogment in your research, please cite the article from `preferred-citation`."
+title: "Cogment-Verse"
+authors:
+  - family-names: AI Redefined
+    website: https://ai-r.com
+license: Apache-2.0
+url: https://cogment.ai
+repository: https://github.com/cogment/cogment-verse
+preferred-citation:
+  type: "article"
+  title: "Cogment: Open Source Framework For Distributed Multi-actor Training, Deployment & Operations"
+  year: 2021
+  url: https://arxiv.org/abs/2106.11345v1
+  authors:
+    - family-names: AI Redefined
+      website: https://ai-r.com
+    - affiliation: AI Redefined
+      family-names: Gottipati
+      given-names: Sai Krishna
+    - affiliation: AI Redefined
+      family-names: Kurandwad
+      given-names: Sagar
+    - affiliation: AI Redefined
+      family-names: Mars
+      given-names: "Clodéric"
+    - affiliation: AI Redefined
+      family-names: Szriftgiser
+      given-names: Gregory
+    - affiliation: AI Redefined
+      family-names: Chabot
+      given-names: "François"
