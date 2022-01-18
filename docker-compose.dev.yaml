@@ -1,0 +1,10 @@
+version: "3.7"
+
+services:
+  # development version of the web client
+  web_client:
+    build:
+      context: web_client
+      target: dev
+    volumes:
+      - ./web_client:/cogment-verse/web_client:cached

@@ -63,7 +63,7 @@ cogment run copy && cogment run build && cogment run start
 Once the services are running, start the web client:
 
 ```
-cogment run web_client
+cogment run start_web_client
 ```
 
 Once the web client builds and is running, open `localhost:8080`.

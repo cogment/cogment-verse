@@ -81,6 +81,7 @@ export const useActions: UseActions = <ObservationT, ActionT extends Message, Re
 
   //Set up the connection and register the actor only once, regardless of re-rendering
   useEffect(() => {
+    console.log(`Setting up connection to ${grpcURL}`)
     const service = cogment.createService({
       cogSettings,
       grpcURL,

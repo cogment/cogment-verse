@@ -155,16 +155,12 @@ services:
   web_client:
     build: web_client
     environment:
-      - NODE_ENV=development
-      - CHOKIDAR_USEPOLLING=true
-      - REACT_APP_APP_VERSION=dev
+      - COGMENT_VERSE_GRPCWEBPROXY_PUBLIC_URL
       - REACT_APP_GRPCWEBPROXY_URL=${COGMENT_VERSE_GRPCWEBPROXY_PUBLIC_URL}
       - PORT=${COGMENT_VERSE_WEBCLIENT_PORT}
     restart: on-failure
     ports:
       - ${COGMENT_VERSE_WEBCLIENT_EXPOSED_PORT}:${COGMENT_VERSE_WEBCLIENT_PORT}/tcp
-    depends_on:
-      - grpcwebproxy
 
   grpcwebproxy:
     build:

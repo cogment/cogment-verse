@@ -89,7 +89,7 @@ Some of the availabe run involve a human player, for example `benchmark_lander_h
 To let a human interact in the training process, first start the web client
 
 ```console
-cogment run web_client
+cogment run start_web_client
 ```
 
 Then start the run
