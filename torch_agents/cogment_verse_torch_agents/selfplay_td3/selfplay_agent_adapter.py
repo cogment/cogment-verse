@@ -12,11 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from data_pb2 import RunConfig
+from data_pb2 import SelfPlayTD3TrainingRunConfig
 
 from cogment_verse_torch_agents.selfplay_td3.selfplay_td3 import SelfPlayTD3
-from cogment_verse_tf_agents.reinforce.sample_producer import sample_producer
-from cogment_verse_tf_agents.reinforce.training_run import create_training_run
+from cogment_verse_tf_agents.selfplay_td3.sample_producer import sample_producer
+from cogment_verse_tf_agents.selfplay_td3.training_run import create_training_run
 from cogment_verse_tf_agents.wrapper import cog_action_from_tf_action, tf_obs_from_cog_obs
 
 from cogment_verse import AgentAdapter
@@ -49,7 +49,7 @@ class SelfPlayAgentAdapter(AgentAdapter):
 
     def _create_actor_implementations(self):
         async def impl(actor_session):
-            log.debug(f"[reinforce - {actor_session.name}] trial {actor_session.get_trial_id()} starts")
+            log.debug(f"[selfplay_td3 - {actor_session.name}] trial {actor_session.get_trial_id()} starts")
             actor_session.start()
 
             # Retrieve the latest version of the agent model (asynchronous so needs to be done after the start)
@@ -87,8 +87,9 @@ class SelfPlayAgentAdapter(AgentAdapter):
                         cog_action = cog_action_from_tf_action(action)
                         actor_session.do_action(cog_action)
 
-        return {"reinforce": (impl, ["agent"])}
+        return {"selfplay_td3": (impl, ["agent"])}
 
     def _create_run_implementations(self):
-        return {"reinforce_training": (sample_producer, create_training_run(self), RunConfig())}
+        return {"selfplay_td3_training": (sample_producer, create_training_run(self),
+                                      SelfPlayTD3TrainingRunConfig())}
 
