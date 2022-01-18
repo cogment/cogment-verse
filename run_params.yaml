@@ -551,9 +551,9 @@ procgen_bigfish:
       action_dtype: int8
 
 
-simple_bc_lander:
+simple_bc_lander: &simple_bc_experiment
   implementation: simple_bc_training
-  config:
+  config: &simple_bc_config
     class_name: data_pb2.SimpleBCTrainingRunConfig
     environment:
       implementation: gym/LunarLander-v2
@@ -565,8 +565,34 @@ simple_bc_lander:
     training:
       trial_count: 1000
       max_parallel_trials: 1
-      discount_factor: 0.95
       learning_rate: 0.001
       batch_size: 32
     policy_network:
       hidden_size: 64
+
+simple_bc_cartpole:
+  <<: *simple_bc_experiment
+  implementation: simple_bc_training
+  config:
+    <<: *simple_bc_config
+    environment:
+      implementation: gym/CartPole-v0
+      config:
+        seed: 12
+    actor:
+        num_input: 4
+        num_action: 2
+
+simple_bc_mountaincar:
+  <<: *simple_bc_experiment
+  implementation: simple_bc_training
+  config:
+    <<: *simple_bc_config
+    environment:
+      implementation: gym/MountainCar-v0
+      config:
+        seed: 12
+    actor:
+        num_input: 2
+        num_action: 3
+
