@@ -59,7 +59,7 @@ class SelfPlayAgentAdapter(AgentAdapter):
 
             version_number = version_info["version_number"]
             log.debug(
-                f"[reinforce - {actor_session.name}] model {actor_session.config.model_id}@v{version_number} retrieved"
+                f"[selfplay_td3 - {actor_session.name}] model {actor_session.config.model_id}@v{version_number} retrieved"
             )
 
             actor_map = {actor.actor_name: idx for idx, actor in enumerate(actor_session.get_active_actors())}
@@ -72,7 +72,7 @@ class SelfPlayAgentAdapter(AgentAdapter):
                     total_reward += reward.value
 
                 if event.observation and event.type == cogment.EventType.ACTIVE:
-                    with COMPUTE_NEXT_ACTION_TIME.labels(impl_name="reinforce").time():
+                    with COMPUTE_NEXT_ACTION_TIME.labels(impl_name="selfplay_td3").time():
                         obs = event.observation.snapshot
                         obs = tf_obs_from_cog_obs(obs)
 

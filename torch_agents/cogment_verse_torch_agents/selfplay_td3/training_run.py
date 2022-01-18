@@ -156,6 +156,7 @@ def create_training_run(agent_adapter):
 
             for epoch in range(config.training.epoch_count): # TBD
                 for turns in range(config.training.number_turns_per_trial): # TBD
+                    
                     # Rollout Alice trials
                     async for (
                         step_idx,
@@ -183,9 +184,12 @@ def create_training_run(agent_adapter):
                         bob.consume_training_sample(sample)
 
                 # Train Bob
-                bob.learn()
+                # bob.learn()
                 # Train Alice
-                alice.learn()
+                # alice.learn()
+
+                alice_version_info = await agent_adapter.publish_version(alice_id, alice)
+                bob_version_info = await agent_adapter.publish_version(bob_id, bob)
 
             run_xp_tracker.terminate_success()
 
