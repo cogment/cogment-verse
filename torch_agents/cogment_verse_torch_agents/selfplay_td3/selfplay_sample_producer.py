@@ -13,18 +13,18 @@
 # limitations under the License.
 
 import cogment.api.common_pb2 as common_api
-from cogment_verse_tf_agents.wrapper import (
-    tf_obs_from_cog_obs,
-    tf_action_from_cog_action,
+from cogment_verse_torch_agents.selfplay_td3.wrapper import (
+    tensor_from_cog_obs,
+    tensor_from_cog_action,
 )
 
 from collections import namedtuple
 
 
 def vectorized_training_sample_from_samples(sample, next_sample, last_tick):
-    vectorized_observation = tf_obs_from_cog_obs(sample.get_actor_observation(0))
-    vectorized_next_observation = tf_obs_from_cog_obs(next_sample.get_actor_observation(0))
-    action = tf_action_from_cog_action(sample.get_actor_action(0))
+    vectorized_observation = tensor_from_cog_obs(sample.get_actor_observation(0))
+    vectorized_next_observation = tensor_from_cog_obs(next_sample.get_actor_observation(0))
+    action = tensor_from_cog_action(sample.get_actor_action(0))
     reward = sample.get_actor_reward(0, default=0.0)
 
     return (

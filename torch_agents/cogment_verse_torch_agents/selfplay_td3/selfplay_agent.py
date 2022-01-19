@@ -15,9 +15,9 @@
 from data_pb2 import SelfPlayTD3TrainingRunConfig
 
 from cogment_verse_torch_agents.selfplay_td3.selfplay_td3 import SelfPlayTD3
-from cogment_verse_tf_agents.selfplay_td3.selfplay_sample_producer import sample_producer
-from cogment_verse_tf_agents.selfplay_td3.selfplay_training_run import create_training_run
-from cogment_verse_tf_agents.wrapper import cog_action_from_tf_action, tf_obs_from_cog_obs
+from cogment_verse_torch_agents.selfplay_td3.selfplay_sample_producer import sample_producer
+from cogment_verse_torch_agents.selfplay_td3.selfplay_training_run import create_training_run
+from cogment_verse_torch_agents.selfplay_td3.wrapper import cog_action_from_tensor, tensor_from_cog_obs
 
 from cogment_verse import AgentAdapter
 import cogment
@@ -26,11 +26,6 @@ from prometheus_client import Summary
 
 import logging
 
-COMPUTE_NEXT_ACTION_TIME = Summary(
-    "actor_implementation_compute_next_action_seconds",
-    "Time spent computing the next action",
-    ["impl_name"],
-)
 
 log = logging.getLogger(__name__)
 
@@ -72,20 +67,19 @@ class SelfPlayAgentAdapter(AgentAdapter):
                     total_reward += reward.value
 
                 if event.observation and event.type == cogment.EventType.ACTIVE:
-                    with COMPUTE_NEXT_ACTION_TIME.labels(impl_name="selfplay_td3").time():
-                        obs = event.observation.snapshot
-                        obs = tf_obs_from_cog_obs(obs)
+                    obs = event.observation.snapshot
+                    obs = tensor_from_cog_obs(obs)
 
-                        obs_input = obs["vectorized"]
+                    obs_input = obs["vectorized"]
 
-                        if obs["current_player"] != actor_index:
-                            # Use -1 to indicate no action, since not active player
-                            action = -1
-                        else:
-                            action = model.act(obs_input)
+                    if obs["current_player"] != actor_index:
+                        # Use -1 to indicate no action, since not active player
+                        action = -1
+                    else:
+                        action = model.act(obs_input)
 
-                        cog_action = cog_action_from_tf_action(action)
-                        actor_session.do_action(cog_action)
+                    cog_action = cog_action_from_tensor(action)
+                    actor_session.do_action(cog_action)
 
         return {"selfplay_td3": (impl, ["agent"])}
 

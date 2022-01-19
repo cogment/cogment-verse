@@ -15,7 +15,6 @@
 # from cogment_verse_tf_agents.reinforce.replaybuffer import Memory
 # from cogment_verse_tf_agents.reinforce.model import PolicyNetwork
 import numpy as np
-import tensorflow as tf
 # import tensorflow_probability as tfp
 import pickle as pkl
 
