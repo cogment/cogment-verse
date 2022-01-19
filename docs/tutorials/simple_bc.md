@@ -2,13 +2,14 @@
 
 ## About
 
-This is a interactive implementation of behavioral cloning (BC) that can be thought of as a simplified version of the DAGGER algorithm, intended to demonstrate the human-in-the-loop learning within Cogverse.
+This is a interactive implementation of behavioral cloning (BC) that can be thought of as a simplified version of the DAGGER algorithm, intended to demonstrate the human-in-the-loop learning within Cogment Verse.
 
-## The algorithm
+The overall architecture involves two actors
 
-Each training trial involves two agents: (1) the AI agent represented by a policy network and (2) a human observer. The action space of the the AI agent is determined by the environment. The action space of the human observer consists of the union of this action space together with a single `NOP` action.
+1. An AI agent uing a simple a policy network whose action space is determined by the environment.
+2. A human _teacher_ having the same action space extended by a single "take-no-action" `NO-OP` action.
 
-The human observer and AI agent cooperate by the following rule: if the observer takes the `NOP` action, then we sample an action from the AI agent's policy, otherwise we take the action specified by the human. In this way, the human provides feedback to the agent in the form of implicit approval (by taking `NOP`) or by demonstration by overriding the agent's actions. Running trials in this way we generate a sequence of pairs `(state, perfomed_action)`. We train the AI agent by using the performed actions as target labels
+The two actors cooperate during training by the following rule: if the teacher takes the `NO-OP` action, then we sample an action from the AI agent's policy, otherwise we use the action specified by the human. In this way, the human provides feedback to the agent in the form of implicit approval (by taking `NO-OP`) or by demonstration by overriding the agent's actions. Running trials in this way we generate a sequence of pairs `(state, perfomed_action)`. We train the AI agent by using the performed actions as target labels
 with a categorical cross-entropy loss.
 
 We train the agent online as trials are running and each trial uses the latest snapshot of the agent's policy network. As the agent learns to mimic the human demonstrations, the human's task becomes easier as fewer interventions are required to correct the agent's behavior.

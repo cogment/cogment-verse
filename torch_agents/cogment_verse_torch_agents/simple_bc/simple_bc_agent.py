@@ -15,7 +15,6 @@
 from data_pb2 import (
     ActorConfig,
     ActorParams,
-    AgentAction,
     EnvironmentConfig,
     EnvironmentParams,
     MLPNetworkConfig,
@@ -23,6 +22,8 @@ from data_pb2 import (
     SimpleBCTrainingRunConfig,
     TrialConfig,
 )
+
+from cogment_verse_torch_agents.utils.tensors import tensor_from_cog_obs, tensor_from_cog_action, cog_action_from_tensor
 
 from cogment_verse import AgentAdapter
 from cogment_verse import MlflowExperimentTracker
@@ -50,18 +51,11 @@ class SimpleBCAgentAdapter(AgentAdapter):
         super().__init__()
         self._dtype = torch.float
 
-    def tensor_from_cog_obs(self, cog_obs, device=None):
-        pb_array = cog_obs.vectorized
-        np_array = np.frombuffer(pb_array.data, dtype=pb_array.dtype).reshape(*pb_array.shape)
-        return torch.tensor(np_array, dtype=self._dtype, device=device)
-
     @staticmethod
-    def tensor_from_cog_action(cog_action, device=None):
-        return torch.tensor(cog_action.discrete_action, dtype=torch.long, device=device)
-
-    @staticmethod
-    def cog_action_from_tensor(tensor):
-        return AgentAction(discrete_action=tensor.item())
+    async def run_async(func, *args):
+        """Run a given function asynchronously in the default thread pool"""
+        event_loop = asyncio.get_running_loop()
+        return await event_loop.run_in_executor(None, func, *args)
 
     def _create(
         self,
@@ -102,13 +96,14 @@ class SimpleBCAgentAdapter(AgentAdapter):
             config = actor_session.config
 
             model, _ = await self.retrieve_version(config.model_id, config.model_version)
-            event_loop = asyncio.get_running_loop()
+
+            # Retrieve the policy network and set it to "eval" mode
             policy_network = copy.deepcopy(model.policy_network)
             policy_network.eval()
 
             @torch.no_grad()
-            def act(event):
-                obs = self.tensor_from_cog_obs(event.observation.snapshot)
+            def compute_action(event):
+                obs = tensor_from_cog_obs(event.observation.snapshot, dtype=self._dtype)
                 scores = policy_network(obs.view(1, -1))
                 probs = torch.softmax(scores, dim=-1)
                 action = torch.distributions.Categorical(probs).sample()
@@ -116,8 +111,8 @@ class SimpleBCAgentAdapter(AgentAdapter):
 
             async for event in actor_session.event_loop():
                 if event.observation and event.type == cogment.EventType.ACTIVE:
-                    action = await event_loop.run_in_executor(None, act, event)
-                    actor_session.do_action(self.cog_action_from_tensor(action))
+                    action = await self.run_async(compute_action, event)
+                    actor_session.do_action(cog_action_from_tensor(action))
 
         return {
             "simple_bc": (impl, ["agent"]),
@@ -133,20 +128,20 @@ class SimpleBCAgentAdapter(AgentAdapter):
                 if sample.get_trial_state() == TrialState.ENDED:
                     break
 
+                observation = tensor_from_cog_obs(sample.get_actor_observation(0), dtype=self._dtype)
+
                 agent_action = sample.get_actor_action(0)
                 teacher_action = sample.get_actor_action(1)
 
                 # Check for teacher override.
-                # Teacher action -1 corresponeds to teacher approval,
+                # Teacher action -1 corresponds to teacher approval,
                 # i.e. the teacher considers the action taken by the agent to be correct
                 if teacher_action.discrete_action != -1:
-                    action = teacher_action
+                    action = tensor_from_cog_action(teacher_action)
+                    run_sample_producer_session.produce_training_sample((True, observation, action))
                 else:
-                    action = agent_action
-
-                action = self.tensor_from_cog_action(action)
-                observation = self.tensor_from_cog_obs(sample.get_actor_observation(0))
-                run_sample_producer_session.produce_training_sample((observation, action))
+                    action = tensor_from_cog_action(agent_action)
+                    run_sample_producer_session.produce_training_sample((False, observation, action))
 
         async def run_impl(run_session):
             xp_tracker = MlflowExperimentTracker(run_session.params_name, run_session.run_id)
@@ -167,7 +162,8 @@ class SimpleBCAgentAdapter(AgentAdapter):
 
             xp_tracker.log_params(
                 config.training,
-                config.environment,
+                config.environment.config,
+                environment=config.environment.implementation,
                 policy_network_hidden_size=config.policy_network.hidden_size,
             )
 
@@ -177,51 +173,49 @@ class SimpleBCAgentAdapter(AgentAdapter):
                 lr=config.training.learning_rate,
             )
 
-            agent_actor_config = ActorParams(
-                name="agent_1",
-                actor_class="agent",
-                implementation="simple_bc",
-                config=ActorConfig(
-                    model_id=model_id,
-                    model_version=model_version_number,
-                    num_input=config.actor.num_input,
-                    num_action=config.actor.num_action,
-                    environment_implementation=config.environment.implementation,
-                ),
-            )
+            # Helper function to create a trial configuration
+            def create_trial_config(trial_idx):
+                env_params = copy.deepcopy(config.environment)
+                env_params.config.seed = env_params.config.seed + trial_idx
+                agent_actor_params = ActorParams(
+                    name="agent_1",
+                    actor_class="agent",
+                    implementation="simple_bc",
+                    config=ActorConfig(
+                        model_id=model_id,
+                        model_version=model_version_number,
+                        num_input=config.actor.num_input,
+                        num_action=config.actor.num_action,
+                        environment_implementation=config.environment.implementation,
+                    ),
+                )
 
-            teacher_actor_config = ActorParams(
-                name="web_actor",
-                actor_class="teacher_agent",
-                implementation="client",
-                config=ActorConfig(
-                    model_id=model_id,
-                    model_version=model_version_number,
-                    num_input=config.actor.num_input,
-                    num_action=config.actor.num_action,
-                    environment_implementation=config.environment.implementation,
-                ),
-            )
+                teacher_actor_params = ActorParams(
+                    name="web_actor",
+                    actor_class="teacher_agent",
+                    implementation="client",
+                    config=ActorConfig(
+                        num_input=config.actor.num_input,
+                        num_action=config.actor.num_action,
+                        environment_implementation=config.environment.implementation,
+                    ),
+                )
 
-            batch_size = config.training.batch_size
-            total_samples = 0
+                return TrialConfig(
+                    run_id=run_session.run_id,
+                    environment=env_params,
+                    actors=[agent_actor_params, teacher_actor_params],
+                )
+
             observations = []
             actions = []
 
             loss_fn = torch.nn.CrossEntropyLoss()
 
-            # Rollout a bunch of trials
-            def modify_seed(env_config, offset):
-                env_config = copy.deepcopy(env_config)
-                env_config.config.seed = env_config.config.seed + offset
-                env_config.config.render = True
-                env_config.config.render_width = 256
-                return env_config
-
             def train_step():
-                batch_idx = np.random.randint(0, len(observations), batch_size)
-                batch_obs = torch.vstack([observations[i] for i in batch_idx])
-                batch_act = torch.vstack([actions[i] for i in batch_idx]).view(-1)
+                batch_indices = np.random.randint(0, len(observations), config.training.batch_size)
+                batch_obs = torch.vstack([observations[i] for i in batch_indices])
+                batch_act = torch.vstack([actions[i] for i in batch_indices]).view(-1)
 
                 model.policy_network.train()
                 pred_policy = model.policy_network(batch_obs)
@@ -234,8 +228,7 @@ class SimpleBCAgentAdapter(AgentAdapter):
 
                 return loss.item()
 
-            event_loop = asyncio.get_running_loop()
-
+            # Rollout a bunch of trials
             async for (
                 step_idx,
                 step_timestamp,
@@ -243,26 +236,23 @@ class SimpleBCAgentAdapter(AgentAdapter):
                 _tick_id,
                 sample,
             ) in run_session.start_trials_and_wait_for_termination(
-                trial_configs=[
-                    TrialConfig(
-                        run_id=run_session.run_id,
-                        environment=modify_seed(config.environment, trial_ids),
-                        actors=[agent_actor_config, teacher_actor_config],
-                    )
-                    for trial_ids in range(config.training.trial_count)
-                ],
+                trial_configs=[create_trial_config(trial_idx) for trial_idx in range(config.training.trial_count)],
                 max_parallel_trials=config.training.max_parallel_trials,
             ):
-                (observation, action) = sample
+                (_, observation, action) = sample
+                # Can be uncommented to only use samples coming from the teacher
+                # (demonstration, observation, action) = sample
+                # if not demonstration:
+                #     continue
                 observations.append(observation)
                 actions.append(action)
 
-                if len(observations) < 2 * batch_size:
+                if len(observations) < config.training.batch_size:
                     continue
 
-                loss = await event_loop.run_in_executor(None, train_step)
+                loss = await self.run_async(train_step)
 
-                # Publish the newly trained version
+                # Publish the newly trained version every 100 steps
                 if step_idx % 100 == 0:
                     version_info = await self.publish_version(model_id, model)
                     model_version_number = version_info["version_number"]
@@ -272,7 +262,7 @@ class SimpleBCAgentAdapter(AgentAdapter):
                         step_idx,
                         model_version_number=model_version_number,
                         loss=loss,
-                        total_samples=total_samples,
+                        total_samples=len(observations),
                     )
 
         return {
@@ -282,7 +272,7 @@ class SimpleBCAgentAdapter(AgentAdapter):
                 SimpleBCTrainingRunConfig(
                     environment=EnvironmentParams(
                         implementation="gym/LunarLander-v2",
-                        config=EnvironmentConfig(seed=12, player_count=1, framestack=1),
+                        config=EnvironmentConfig(seed=12, player_count=1, framestack=1, render=True, render_width=256),
                     ),
                     training=SimpleBCTrainingConfig(
                         trial_count=100,

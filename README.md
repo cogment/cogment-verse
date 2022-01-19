@@ -15,6 +15,8 @@ Cogment verse includes environments from:
 ## Documentation table of contents
 
 - [Getting started](#getting-started)
+- Tutorials 🚧
+  - [Simple Behavior Cloning](/docs/tutorials/simple_bc.md)
 - Experimental results 🚧
   - [A2C](/docs/results/a2c.md)
   - [REINFORCE](/docs/results/REINFORCE.md)

@@ -15,7 +15,6 @@
 from data_pb2 import (
     ActorConfig,
     ActorParams,
-    AgentAction,
     EnvironmentConfig,
     EnvironmentParams,
     MLPNetworkConfig,
@@ -23,6 +22,8 @@ from data_pb2 import (
     SimpleA2CTrainingRunConfig,
     TrialConfig,
 )
+
+from cogment_verse_torch_agents.utils.tensors import tensor_from_cog_obs, tensor_from_cog_action, cog_action_from_tensor
 
 from cogment_verse import AgentAdapter
 from cogment_verse import MlflowExperimentTracker
@@ -32,7 +33,6 @@ import cogment
 
 import logging
 import torch
-import numpy as np
 
 from collections import namedtuple
 
@@ -47,18 +47,6 @@ class SimpleA2CAgentAdapter(AgentAdapter):
     def __init__(self):
         super().__init__()
         self._dtype = torch.float
-
-    def tensor_from_cog_obs(self, cog_obs, device=None):
-        pb_array = cog_obs.vectorized
-        np_array = np.frombuffer(pb_array.data, dtype=pb_array.dtype).reshape(*pb_array.shape)
-        return torch.tensor(np_array, dtype=self._dtype, device=device)
-
-    def tensor_from_cog_action(self, cog_action, device=None):
-        return torch.tensor(cog_action.discrete_action, dtype=self._dtype, device=device)
-
-    @staticmethod
-    def cog_action_from_tensor(tensor):
-        return AgentAction(discrete_action=tensor.item())
 
     def _create(
         self,
@@ -111,11 +99,11 @@ class SimpleA2CAgentAdapter(AgentAdapter):
 
             async for event in actor_session.event_loop():
                 if event.observation and event.type == cogment.EventType.ACTIVE:
-                    obs = self.tensor_from_cog_obs(event.observation.snapshot)
+                    obs = tensor_from_cog_obs(event.observation.snapshot, dtype=self._dtype)
                     scores = model.actor_network(obs)
                     probs = torch.softmax(scores, dim=-1)
                     action = torch.distributions.Categorical(probs).sample()
-                    actor_session.do_action(self.cog_action_from_tensor(action))
+                    actor_session.do_action(cog_action_from_tensor(action))
 
         return {
             "simple_a2c": (impl, ["agent"]),
@@ -134,8 +122,8 @@ class SimpleA2CAgentAdapter(AgentAdapter):
                     # The last sample was the last useful one
                     done[-1] = torch.ones(1, dtype=self._dtype)
                     break
-                observation.append(self.tensor_from_cog_obs(sample.get_actor_observation(0)))
-                action.append(self.tensor_from_cog_action(sample.get_actor_action(0)))
+                observation.append(tensor_from_cog_obs(sample.get_actor_observation(0), dtype=self._dtype))
+                action.append(tensor_from_cog_action(sample.get_actor_action(0)))
                 reward.append(torch.tensor(sample.get_actor_reward(0), dtype=self._dtype))
                 done.append(torch.zeros(1, dtype=self._dtype))
 
@@ -162,9 +150,9 @@ class SimpleA2CAgentAdapter(AgentAdapter):
 
             xp_tracker.log_params(
                 config.training,
-                config.environment,
-                actor_network_hidden_size=config.actor_network.hidden_size,
-                critic_network_hidden_size=config.critic_network.hidden_size,
+                config.environment.config,
+                environment=config.environment.implementation,
+                policy_network_hidden_size=config.policy_network.hidden_size,
             )
 
             # Configure the optimizer over the two models
@@ -208,7 +196,7 @@ class SimpleA2CAgentAdapter(AgentAdapter):
                                 )
                             ],
                         )
-                        for trial_ids in range(config.training.epoch_trial_count)
+                        for trial_idx in range(config.training.epoch_trial_count)
                     ],
                     max_parallel_trials=config.training.max_parallel_trials,
                 ):
