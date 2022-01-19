@@ -59,7 +59,7 @@ def create_training_run(agent_adapter):
             bob_id = f"{run_id}_bob"
             bob_version_number = 1
             # TBD: hyperparameters, model kwargs
-            bob_kwargs = MessageToDict(config.model_kwargs, preserving_proto_field_name=True)
+            # bob_kwargs = MessageToDict(config.model_kwargs, preserving_proto_field_name=True)
             bob, _ = await agent_adapter.create_and_publish_initial_version(
                 bob_id,
                 # **{
@@ -89,8 +89,8 @@ def create_training_run(agent_adapter):
                         model_version=alice_version_number,
                         run_id=run_id,
                         environment_implementation=config.environment_implementation,
-                        num_input=config.num_input,
-                        num_action=config.num_action,
+                        num_input=config.actor.num_input,
+                        num_action=config.actor.num_action,
                     ),
                 )
             ]
@@ -103,17 +103,17 @@ def create_training_run(agent_adapter):
                     environment=EnvironmentParams(
                         implementation=config.environment_implementation,
                         config=EnvironmentConfig(
-                            player_count=config.player_count,
+                            player_count=config.environment.config.player_count,
                             run_id=run_id,
                             render=False,
-                            render_width=config.render_width,
-                            flatten=config.flatten,
-                            framestack=config.framestack,
+                            render_width=config.environment.config.render_width,
+                            flatten=config.environment.config.flatten,
+                            framestack=config.environment.config.framestack,
                         ),
                     ),
                     actors=alice_configs,
                 )
-                for _ in range(config.epoch_trial_count) #TBD
+                for _ in range(config.rollout.epoch_trial_count) #TBD
             ]
 
             # create Bob_config
@@ -127,8 +127,8 @@ def create_training_run(agent_adapter):
                         model_version=bob_version_number,
                         run_id=run_id,
                         environment_implementation=config.environment_implementation,
-                        num_input=config.num_input,
-                        num_action=config.num_action,
+                        num_input=config.actor.num_input,
+                        num_action=config.actor.num_action,
                     ),
                 )
             ]
@@ -141,21 +141,21 @@ def create_training_run(agent_adapter):
                     environment=EnvironmentParams(
                         implementation=config.environment_implementation,
                         config=EnvironmentConfig(
-                            player_count=config.player_count,
+                            player_count=config.environment.config.player_count,
                             run_id=run_id,
                             render=False,
-                            render_width=config.render_width,
-                            flatten=config.flatten,
-                            framestack=config.framestack,
+                            render_width=config.environment.config.render_width,
+                            flatten=config.environment.config.flatten,
+                            framestack=config.environment.config.framestack,
                         ),
                     ),
                     actors=bob_configs,
                 )
-                for _ in range(config.epoch_trial_count)  # TBD
+                for _ in range(config.rollout.epoch_trial_count)  # TBD
             ]
 
-            for epoch in range(config.training.epoch_count): # TBD
-                for turns in range(config.training.number_turns_per_trial): # TBD
+            for epoch in range(config.rollout.epoch_count): # TBD
+                for turns in range(config.rollout.number_turns_per_trial): # TBD
 
                     # Rollout Alice trials
                     async for (
@@ -166,7 +166,7 @@ def create_training_run(agent_adapter):
                         sample,
                     ) in run_session.start_trials_and_wait_for_termination(
                         trial_configs=alice_trial_configs,
-                        max_parallel_trials=config.max_parallel_trials,
+                        max_parallel_trials=config.rollout.max_parallel_trials,
                     ):
                         # alice.consume_training_sample(sample)
                         pass
@@ -180,7 +180,7 @@ def create_training_run(agent_adapter):
                         sample,
                     ) in run_session.start_trials_and_wait_for_termination(
                         trial_configs=bob_trial_configs,
-                        max_parallel_trials=config.max_parallel_trials,
+                        max_parallel_trials=config.rollout.max_parallel_trials,
                     ):
                         # bob.consume_training_sample(sample)
                         pass

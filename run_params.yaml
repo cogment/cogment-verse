@@ -590,6 +590,9 @@ selfplay_td3_driving: &default_selfplay_td3_params
       implementation: driving/SimpleDriving-v0
       config:
         seed: 12
+        player_count: 1
+        render_width: 1000
+        framestack: 4
     actor:
       num_input: 7
       num_input_2: [ 75,75 ]
@@ -607,7 +610,7 @@ selfplay_td3_driving: &default_selfplay_td3_params
       epoch_count: 1000
       number_turns_per_trial: 5
       epoch_trial_count: 15
-      max_parallel_trials: 8
+      max_parallel_trials: 1
       model_publication_interval: 1000
     training:
       batch_size: 64
@@ -626,7 +629,6 @@ selfplay_td3_driving: &default_selfplay_td3_params
       replay_buffer_config:
         observation_dtype: float32
         action_dtype: float32
-    render_width: 1000
     agent_implementation: selfplay_td3
     environment_implementation: driving/SimpleDriving-v0
 
