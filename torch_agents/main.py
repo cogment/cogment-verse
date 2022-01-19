@@ -16,7 +16,7 @@ import cog_settings
 
 from cogment_verse_torch_agents.hive_adapter.hive_agent_adapter import HiveAgentAdapter
 from cogment_verse_torch_agents.simple_a2c.simple_a2c_agent import SimpleA2CAgentAdapter
-from cogment_verse_torch_agents.simple_bc.simple_bc_agent import SimpleBCAgentAdapter
+from cogment_verse_torch_agents.simple_bc import SimpleBCAgentAdapter
 
 from dotenv import load_dotenv
 import cogment

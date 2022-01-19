@@ -15,18 +15,19 @@
 from data_pb2 import (
     ActorConfig,
     ActorParams,
+    AgentAction,
     EnvironmentConfig,
     EnvironmentParams,
-    MLPNetworkConfig,
-    SimpleBCTrainingConfig,
     SimpleBCTrainingRunConfig,
     TrialConfig,
 )
 
-from cogment_verse_torch_agents.utils.tensors import tensor_from_cog_obs, tensor_from_cog_action, cog_action_from_tensor
+############ TUTORIAL STEP 2 ############
+from cogment_verse_torch_agents.utils.tensors import tensor_from_cog_obs, tensor_from_cog_action
 
-from cogment_verse import AgentAdapter
-from cogment_verse import MlflowExperimentTracker
+##########################################
+
+from cogment_verse import AgentAdapter, MlflowExperimentTracker
 
 from cogment.api.common_pb2 import TrialState
 import cogment
@@ -37,16 +38,12 @@ import torch
 import numpy as np
 import copy
 
-from collections import namedtuple
-
 log = logging.getLogger(__name__)
-
-SimpleBCModel = namedtuple("SimpleBCModel", ["model_id", "version_number", "policy_network"])
 
 # pylint: disable=arguments-differ
 
 
-class SimpleBCAgentAdapter(AgentAdapter):
+class SimpleBCAgentAdapterTutorialStep2(AgentAdapter):
     def __init__(self):
         super().__init__()
         self._dtype = torch.float
@@ -60,34 +57,15 @@ class SimpleBCAgentAdapter(AgentAdapter):
     def _create(
         self,
         model_id,
-        observation_size,
-        action_count,
-        policy_network_hidden_size=64,
         **kwargs,
     ):
-        return SimpleBCModel(
-            model_id=model_id,
-            version_number=1,
-            policy_network=torch.nn.Sequential(
-                torch.nn.Linear(observation_size, policy_network_hidden_size),
-                torch.nn.BatchNorm1d(policy_network_hidden_size),
-                torch.nn.ReLU(),
-                torch.nn.Linear(policy_network_hidden_size, policy_network_hidden_size),
-                torch.nn.BatchNorm1d(policy_network_hidden_size),
-                torch.nn.ReLU(),
-                torch.nn.Linear(policy_network_hidden_size, action_count),
-            ).to(self._dtype),
-        )
+        raise NotImplementedError
 
     def _load(self, model_id, version_number, version_user_data, model_data_f):
-        policy_network = torch.load(model_data_f)
-        assert isinstance(policy_network, torch.nn.Sequential)
-        return SimpleBCModel(model_id=model_id, version_number=version_number, policy_network=policy_network)
+        raise NotImplementedError
 
     def _save(self, model, model_data_f):
-        assert isinstance(model, SimpleBCModel)
-        torch.save(model.policy_network, model_data_f)
-        return {}
+        raise NotImplementedError
 
     def _create_actor_implementations(self):
         async def impl(actor_session):
@@ -95,24 +73,10 @@ class SimpleBCAgentAdapter(AgentAdapter):
 
             config = actor_session.config
 
-            model, _ = await self.retrieve_version(config.model_id, config.model_version)
-
-            # Retrieve the policy network and set it to "eval" mode
-            policy_network = copy.deepcopy(model.policy_network)
-            policy_network.eval()
-
-            @torch.no_grad()
-            def compute_action(event):
-                obs = tensor_from_cog_obs(event.observation.snapshot, dtype=self._dtype)
-                scores = policy_network(obs.view(1, -1))
-                probs = torch.softmax(scores, dim=-1)
-                action = torch.distributions.Categorical(probs).sample()
-                return action
-
             async for event in actor_session.event_loop():
                 if event.observation and event.type == cogment.EventType.ACTIVE:
-                    action = await self.run_async(compute_action, event)
-                    actor_session.do_action(cog_action_from_tensor(action))
+                    action = np.random.default_rng().integers(0, config.num_action)
+                    actor_session.do_action(AgentAction(discrete_action=action))
 
         return {
             "simple_bc": (impl, ["agent"]),
@@ -121,15 +85,15 @@ class SimpleBCAgentAdapter(AgentAdapter):
     def _create_run_implementations(self):
         async def sample_producer_impl(run_sample_producer_session):
             assert run_sample_producer_session.count_actors() == 2
-            observation = None
-            action = None
 
             async for sample in run_sample_producer_session.get_all_samples():
                 if sample.get_trial_state() == TrialState.ENDED:
                     break
 
+                ############ TUTORIAL STEP 2 ############
                 observation = tensor_from_cog_obs(sample.get_actor_observation(0), dtype=self._dtype)
 
+                # The actor order matches the order in the trial configuration
                 agent_action = sample.get_actor_action(0)
                 teacher_action = sample.get_actor_action(1)
 
@@ -142,35 +106,19 @@ class SimpleBCAgentAdapter(AgentAdapter):
                 else:
                     action = tensor_from_cog_action(agent_action)
                     run_sample_producer_session.produce_training_sample((False, observation, action))
+                ##########################################
 
         async def run_impl(run_session):
             xp_tracker = MlflowExperimentTracker(run_session.params_name, run_session.run_id)
 
-            # Initializing a model
-            model_id = f"{run_session.run_id}_model"
-
             config = run_session.config
             assert config.environment.config.player_count == 1
-
-            model, _ = await self.create_and_publish_initial_version(
-                model_id,
-                observation_size=config.actor.num_input,
-                action_count=config.actor.num_action,
-                policy_network_hidden_size=config.policy_network.hidden_size,
-            )
-            model_version_number = 1
 
             xp_tracker.log_params(
                 config.training,
                 config.environment.config,
                 environment=config.environment.implementation,
                 policy_network_hidden_size=config.policy_network.hidden_size,
-            )
-
-            # Configure the optimizer
-            optimizer = torch.optim.Adam(
-                model.policy_network.parameters(),
-                lr=config.training.learning_rate,
             )
 
             # Helper function to create a trial configuration
@@ -182,8 +130,6 @@ class SimpleBCAgentAdapter(AgentAdapter):
                     actor_class="agent",
                     implementation="simple_bc",
                     config=ActorConfig(
-                        model_id=model_id,
-                        model_version=model_version_number,
                         num_input=config.actor.num_input,
                         num_action=config.actor.num_action,
                         environment_implementation=config.environment.implementation,
@@ -207,31 +153,10 @@ class SimpleBCAgentAdapter(AgentAdapter):
                     actors=[agent_actor_params, teacher_actor_params],
                 )
 
-            observations = []
-            actions = []
-
-            loss_fn = torch.nn.CrossEntropyLoss()
-
-            def train_step():
-                batch_indices = np.random.randint(0, len(observations), config.training.batch_size)
-                batch_obs = torch.vstack([observations[i] for i in batch_indices])
-                batch_act = torch.vstack([actions[i] for i in batch_indices]).view(-1)
-
-                model.policy_network.train()
-                pred_policy = model.policy_network(batch_obs)
-                loss = loss_fn(pred_policy, batch_act)
-
-                # Backprop!
-                optimizer.zero_grad()
-                loss.backward()
-                optimizer.step()
-
-                return loss.item()
-
             # Rollout a bunch of trials
             async for (
-                step_idx,
-                step_timestamp,
+                _step_idx,
+                _step_timestamp,
                 _trial_id,
                 _tick_id,
                 sample,
@@ -239,31 +164,7 @@ class SimpleBCAgentAdapter(AgentAdapter):
                 trial_configs=[create_trial_config(trial_idx) for trial_idx in range(config.training.trial_count)],
                 max_parallel_trials=config.training.max_parallel_trials,
             ):
-                (_, observation, action) = sample
-                # Can be uncommented to only use samples coming from the teacher
-                # (demonstration, observation, action) = sample
-                # if not demonstration:
-                #     continue
-                observations.append(observation)
-                actions.append(action)
-
-                if len(observations) < config.training.batch_size:
-                    continue
-
-                loss = await self.run_async(train_step)
-
-                # Publish the newly trained version every 100 steps
-                if step_idx % 100 == 0:
-                    version_info = await self.publish_version(model_id, model)
-                    model_version_number = version_info["version_number"]
-
-                    xp_tracker.log_metrics(
-                        step_timestamp,
-                        step_idx,
-                        model_version_number=model_version_number,
-                        loss=loss,
-                        total_samples=len(observations),
-                    )
+                log.info(f"Got sample {sample}")
 
         return {
             "simple_bc_training": (
@@ -273,14 +174,7 @@ class SimpleBCAgentAdapter(AgentAdapter):
                     environment=EnvironmentParams(
                         implementation="gym/LunarLander-v2",
                         config=EnvironmentConfig(seed=12, player_count=1, framestack=1, render=True, render_width=256),
-                    ),
-                    training=SimpleBCTrainingConfig(
-                        trial_count=100,
-                        max_parallel_trials=1,
-                        discount_factor=0.95,
-                        learning_rate=0.01,
-                    ),
-                    policy_network=MLPNetworkConfig(hidden_size=64),
+                    )
                 ),
             )
         }
