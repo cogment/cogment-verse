@@ -156,7 +156,7 @@ def create_training_run(agent_adapter):
 
             for epoch in range(config.training.epoch_count): # TBD
                 for turns in range(config.training.number_turns_per_trial): # TBD
-                    
+
                     # Rollout Alice trials
                     async for (
                         step_idx,
@@ -168,7 +168,8 @@ def create_training_run(agent_adapter):
                         trial_configs=alice_trial_configs,
                         max_parallel_trials=config.max_parallel_trials,
                     ):
-                        alice.consume_training_sample(sample)
+                        # alice.consume_training_sample(sample)
+                        pass
 
                     # Rollout Bob trials
                     async for (
@@ -181,7 +182,8 @@ def create_training_run(agent_adapter):
                         trial_configs=bob_trial_configs,
                         max_parallel_trials=config.max_parallel_trials,
                     ):
-                        bob.consume_training_sample(sample)
+                        # bob.consume_training_sample(sample)
+                        pass
 
                 # Train Bob
                 # bob.learn()

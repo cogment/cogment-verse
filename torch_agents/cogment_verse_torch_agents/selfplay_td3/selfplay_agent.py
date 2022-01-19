@@ -15,8 +15,8 @@
 from data_pb2 import SelfPlayTD3TrainingRunConfig
 
 from cogment_verse_torch_agents.selfplay_td3.selfplay_td3 import SelfPlayTD3
-from cogment_verse_tf_agents.selfplay_td3.sample_producer import sample_producer
-from cogment_verse_tf_agents.selfplay_td3.training_run import create_training_run
+from cogment_verse_tf_agents.selfplay_td3.selfplay_sample_producer import sample_producer
+from cogment_verse_tf_agents.selfplay_td3.selfplay_training_run import create_training_run
 from cogment_verse_tf_agents.wrapper import cog_action_from_tf_action, tf_obs_from_cog_obs
 
 from cogment_verse import AgentAdapter
