@@ -7,10 +7,11 @@ RUN apt-get update && apt-get install -y python3-opengl xvfb git tk swig wget un
 RUN apt-get install -y g++ cmake
 
 # Install poetry
-RUN apt-get update && apt-get install -y curl
-RUN curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/install-poetry.py | python -
-ENV PATH="/root/.local/bin:${PATH}"
-RUN poetry config virtualenvs.create false
+ENV POETRY_VERSION=1.1.11
+ENV POETRY_HOME="/usr/local/"
+ENV POETRY_NO_INTERACTION=1
+RUN curl -sSL https://install.python-poetry.org | python3 -
+ENV POETRY_VIRTUALENVS_CREATE=false
 
 COPY --from=base /base_python /base_python
 
