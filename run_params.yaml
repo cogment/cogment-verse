@@ -590,7 +590,7 @@ selfplay_td3_driving: &default_selfplay_td3_params
       implementation: driving/SimpleDriving-v0
       config:
         seed: 12
-        player_count: 1
+        player_count: 2
         render_width: 1000
         framestack: 4
     actor:
