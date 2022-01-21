@@ -42,6 +42,8 @@ from cogment_verse import MlflowExperimentTracker
 from cogment_verse_torch_agents.wrapper import np_array_from_proto_array, proto_array_from_np_array
 from cogment_verse_torch_agents.muzero.replay_buffer import Episode, TrialReplayBuffer, EpisodeBatch
 from cogment_verse_torch_agents.muzero.agent import MuZeroAgent
+from cogment_verse_torch_agents.muzero.schedule import LinearScheduleWithWarmup
+from cogment_verse_torch_agents.muzero.stats import RunningStats
 
 from cogment.api.common_pb2 import TrialState
 import cogment
@@ -53,63 +55,6 @@ log = logging.getLogger(__name__)
 
 
 MuZeroSample = namedtuple("MuZeroSample", ["state", "action", "reward", "next_state", "done", "policy", "value"])
-
-
-class LinearScheduleWithWarmup:
-    """Defines a linear schedule between two values over some number of steps.
-
-    If updated more than the defined number of steps, the schedule stays at the
-    end value.
-    """
-
-    def __init__(self, init_value, end_value, total_steps, warmup_steps):
-        """
-        Args:
-            init_value (Union[int, float]): starting value for schedule.
-            end_value (Union[int, float]): end value for schedule.
-            steps (int): Number of steps for schedule. Should be positive.
-        """
-        self._warmup_steps = max(warmup_steps, 0)
-        self._total_steps = max(total_steps, self._warmup_steps)
-        self._init_value = init_value
-        self._end_value = end_value
-        self._current_step = 0
-        self._value = 0
-
-    def get_value(self):
-        return self._value
-
-    def update(self):
-        # pylint: disable=invalid-name
-        if self._current_step < self._warmup_steps:
-            t = np.clip(self._current_step / (self._warmup_steps + 1), 0, 1)
-            self._value = self._init_value * t
-        else:
-            t = np.clip(
-                (self._current_step - self._warmup_steps) / max(1, self._total_steps - self._warmup_steps), 0, 1
-            )
-            self._value = self._init_value + t * (self._end_value - self._init_value)
-
-        self._current_step += 1
-        return self._value
-
-
-class RunningStats:
-    def __init__(self):
-        self.reset()
-
-    def reset(self):
-        self._running_stats = defaultdict(int)
-        self._running_counts = defaultdict(int)
-
-    def update(self, info):
-        for key, val in info.items():
-            self._running_stats[key] += val
-            self._running_counts[key] += 1
-
-    def get(self):
-        return {key: self._running_stats[key] / count for key, count in self._running_counts.items()}
-
 
 DEFAULT_MUZERO_TRAINING_CONFIG = MuZeroTrainingConfig(
     model_publication_interval=500,
