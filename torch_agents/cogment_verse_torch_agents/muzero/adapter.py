@@ -354,11 +354,6 @@ async def single_agent_muzero_sample_producer_implementation(agent_adapter, run_
         reward = sample.get_actor_reward(player_override)
 
 
-def run_implementation_loop_body():
-
-    pass
-
-
 def compute_targets(reward, value, reward_distribution, value_distribution):
     with torch.no_grad():
         reward_probs = reward_distribution.compute_target(torch.tensor(reward)).cpu()
