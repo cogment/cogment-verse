@@ -389,7 +389,6 @@ async def single_agent_muzero_run_implementation(agent_adapter, run_session):
             worker.start()
 
         start_time = time.time()
-        samples = 0
 
         sample_generator = run_session.start_trials_and_wait_for_termination(
             trial_configs,
@@ -397,7 +396,6 @@ async def single_agent_muzero_run_implementation(agent_adapter, run_session):
         )
 
         async for _step, timestamp, trial_id, _tick, (sample, total_reward) in sample_generator:
-            samples += 1
             replay_buffer.add_sample(trial_id, sample)
             total_samples += 1
 
