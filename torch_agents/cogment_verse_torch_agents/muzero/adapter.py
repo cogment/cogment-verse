@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import asyncio
-from collections import defaultdict, namedtuple
+from collections import namedtuple
 import ctypes
 import copy
 import time
