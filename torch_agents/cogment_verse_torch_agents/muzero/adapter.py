@@ -299,10 +299,10 @@ async def single_agent_muzero_sample_producer_implementation(agent_adapter, run_
         reward = sample.get_actor_reward(player_override)
 
 
+@torch.no_grad()
 def compute_targets(reward, value, reward_distribution, value_distribution):
-    with torch.no_grad():
-        reward_probs = reward_distribution.compute_target(torch.tensor(reward)).cpu()
-        value_probs = value_distribution.compute_target(torch.tensor(value)).cpu()
+    reward_probs = reward_distribution.compute_target(torch.tensor(reward)).cpu()
+    value_probs = value_distribution.compute_target(torch.tensor(value)).cpu()
     return reward_probs, value_probs
 
 
@@ -389,14 +389,12 @@ async def single_agent_muzero_run_implementation(agent_adapter, run_session):
             worker.start()
 
         start_time = time.time()
+        samples = 0
 
         sample_generator = run_session.start_trials_and_wait_for_termination(
             trial_configs,
             max_parallel_trials=config.training.max_parallel_trials,
         )
-
-        start_time = time.time()
-        samples = 0
 
         async for _step, timestamp, trial_id, _tick, (sample, total_reward) in sample_generator:
             samples += 1
