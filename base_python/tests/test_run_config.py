@@ -35,7 +35,7 @@ lr_warmup_steps: 10000
 demonstration_count: 0
 total_trial_count: 10000
 model_publication_interval: 1000
-model_archive_interval: 4000 # Archive every fourth published model
+model_archive_interval: 4000 # Archive every 4000 training steps
 render_width: 256
 batch_size: 256
 min_replay_buffer_size: 1000
