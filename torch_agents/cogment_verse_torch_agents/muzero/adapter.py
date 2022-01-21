@@ -160,23 +160,204 @@ class MuZeroAgentAdapter(AgentAdapter):
             "muzero_mlp": (_single_agent_muzero_actor_implementation, ["agent"]),
         }
 
+    async def single_agent_muzero_sample_producer_implementation(self, run_sample_producer_session):
+        # allow up to two players for human/expert intervention
+        assert run_sample_producer_session.count_actors() in (1, 2)
+        state = None
+        step = 0
+        total_reward = 0
+        state, action, reward, policy, value = None, None, None, None, None
+        player_override = None
+
+        async for sample in run_sample_producer_session.get_all_samples():
+            observation = sample.get_actor_observation(0)
+            next_state = self.tensor_from_cog_obs(observation)
+            done = sample.get_trial_state() == TrialState.ENDED
+            player_override = (
+                observation.current_player if observation.player_override == -1 else observation.player_override
+            )
+
+            if state is not None:
+                total_reward += reward
+
+                run_sample_producer_session.produce_training_sample(
+                    (MuZeroSample(state, action, reward, next_state, done, policy, value), total_reward)
+                )
+
+            if done:
+                break
+
+            step += 1
+            state = next_state
+            action = self.decode_cog_action(sample.get_actor_action(player_override))
+
+            if action < 0:
+                print("WARNING: override action is invalid, ignoring!")
+                action = self.decode_cog_action(sample.get_actor_action(observation.current_player))
+
+            assert action >= 0
+
+            policy, value = self.decode_cog_policy_value(sample.get_actor_action(observation.current_player))
+            reward = sample.get_actor_reward(player_override)
+
+    async def single_agent_muzero_run_implementation(self, run_session):
+        xp_tracker = MlflowExperimentTracker(run_session.params_name, run_session.run_id)
+
+        # Initializing a model
+        model_id = f"{run_session.run_id}_model"
+
+        config = run_session.config
+        assert config.environment.config.player_count == 1
+
+        agent, version_info = await self.create_and_publish_initial_version(
+            model_id=model_id,
+            obs_dim=config.actor.num_input,
+            act_dim=config.actor.num_action,
+            device=config.training.train_device,
+            training_config=config.training,
+        )
+
+        num_reanalyze_workers = config.training.reanalyze_workers
+
+        max_prefetch_batch = 128
+        sample_queue = mp.Queue()
+        priority_update_queue = mp.Queue()
+        reanalyze_update_queue = mp.Queue()
+        reanalyze_queue = mp.Queue(num_reanalyze_workers + 1)
+
+        batch_queue = mp.Queue(max_prefetch_batch)
+        reanalyze_queue = mp.Queue()
+        agent_update_queue = mp.Queue()
+        # limit to small size so that training and sample generation don't get out of sync
+        info_queue = mp.Queue(max_prefetch_batch)
+
+        agent_queue = mp.Queue()
+        reanalyze_agent_queue = mp.Queue()
+
+        reward_distribution = copy.deepcopy(agent.muzero.reward_distribution).cpu()
+        value_distribution = copy.deepcopy(agent.muzero.value_distribution).cpu()
+
+        train_worker = TrainWorker(agent, batch_queue, agent_update_queue, info_queue, config)
+        replay_buffer = ReplayBufferWorker(
+            sample_queue,
+            priority_update_queue,
+            batch_queue,
+            reanalyze_queue,
+            reanalyze_update_queue,
+            config.training,
+            reward_distribution,
+            value_distribution,
+        )
+        reanalyze_agent_queue = [mp.Queue() for _ in range(num_reanalyze_workers)]
+        reanalyze_workers = [
+            ReanalyzeWorker(
+                reanalyze_queue,
+                reanalyze_update_queue,
+                reanalyze_agent_queue[i],
+                config.training.reanalyze_device,
+                reward_distribution,
+                value_distribution,
+            )
+            for i in range(num_reanalyze_workers)
+        ]
+
+        trials_completed = 0
+        running_stats = RunningStats()
+
+        xp_tracker.log_params(
+            config.environment,
+            config.actor,
+            config.training,
+        )
+
+        trial_configs = make_trial_configs(run_session, config, model_id, -1)
+
+        total_samples = 0
+        training_step = 0
+        run_total_reward = 0
+
+        workers = [train_worker, replay_buffer] + reanalyze_workers
+
+        try:
+            for worker in workers:
+                worker.start()
+
+            start_time = time.time()
+
+            sample_generator = run_session.start_trials_and_wait_for_termination(
+                trial_configs,
+                max_parallel_trials=config.training.max_parallel_trials,
+            )
+
+            async for _step, timestamp, trial_id, _tick, (sample, total_reward) in sample_generator:
+                replay_buffer.add_sample(trial_id, sample)
+                total_samples += 1
+
+                for worker in workers:
+                    assert worker.is_alive()
+
+                if sample.done:
+                    trials_completed += 1
+                    xp_tracker.log_metrics(
+                        timestamp, total_samples, trial_total_reward=total_reward, trials_completed=trials_completed
+                    )
+                    run_total_reward += total_reward
+
+                if replay_buffer.size() <= config.training.min_replay_buffer_size:
+                    continue
+
+                # get latest online model
+                try:
+                    agent = agent_update_queue.get_nowait()
+                    cpu_agent = copy.deepcopy(agent)
+                    cpu_agent.set_device("cpu")
+                    for agent_queue in reanalyze_agent_queue:
+                        agent_queue.put(cpu_agent)
+                except queue.Empty:
+                    pass
+
+                while not info_queue.empty():
+                    try:
+                        info = info_queue.get_nowait()
+                    except queue.Empty:
+                        continue
+
+                    training_step += 1
+                    info["model_version"] = version_info["version_number"]
+                    info["training_step"] = training_step
+                    info["mean_trial_reward"] = run_total_reward / max(1, trials_completed)
+                    info["samples_per_sec"] = total_samples / max(1, time.time() - start_time)
+                    info["reanalyzed_samples"] = sum([worker.reanalyzed_samples() for worker in reanalyze_workers])
+                    running_stats.update(info)
+
+                if total_samples % config.training.model_publication_interval == 0:
+                    version_info = await self.publish_version(model_id, agent)
+
+                if total_samples % config.training.log_interval == 0:
+                    xp_tracker.log_metrics(
+                        timestamp,
+                        total_samples,
+                        total_samples=total_samples,
+                        **running_stats.get(),
+                    )
+                    running_stats.reset()
+
+        finally:
+            for worker in workers:
+                worker.terminate()
+
+        log.info(f"[{run_session.params_name}/{run_session.run_id}] finished ({total_samples} samples seen)")
+
     def _create_run_implementations(self):
         """
         Create all the available run implementation for this adapter
         Returns:
             dict[impl_name: string, (sample_producer_impl: Callable, run_impl: Callable, default_run_config)]: key/value definition for the available run implementations.
         """
-
-        async def _single_agent_muzero_sample_producer_implementation(run_sample_producer_session):
-            return await single_agent_muzero_sample_producer_implementation(self, run_sample_producer_session)
-
-        async def _single_agent_muzero_run_implementation(run_session):
-            return await single_agent_muzero_run_implementation(self, run_session)
-
         return {
             "muzero_mlp_training": (
-                _single_agent_muzero_sample_producer_implementation,
-                _single_agent_muzero_run_implementation,
+                self.single_agent_muzero_sample_producer_implementation,
+                self.single_agent_muzero_run_implementation,
                 MuZeroTrainingRunConfig(
                     environment=EnvironmentParams(
                         implementation="gym/CartPole-v0",
@@ -258,201 +439,11 @@ def make_trial_configs(run_session, config, model_id, model_version_number):
     return demonstration_configs + trial_configs
 
 
-async def single_agent_muzero_sample_producer_implementation(agent_adapter, run_sample_producer_session):
-    # allow up to two players for human/expert intervention
-    assert run_sample_producer_session.count_actors() in (1, 2)
-    state = None
-    step = 0
-    total_reward = 0
-    state, action, reward, policy, value = None, None, None, None, None
-    player_override = None
-
-    async for sample in run_sample_producer_session.get_all_samples():
-        observation = sample.get_actor_observation(0)
-        next_state = agent_adapter.tensor_from_cog_obs(observation)
-        done = sample.get_trial_state() == TrialState.ENDED
-        player_override = (
-            observation.current_player if observation.player_override == -1 else observation.player_override
-        )
-
-        if state is not None:
-            total_reward += reward
-
-            run_sample_producer_session.produce_training_sample(
-                (MuZeroSample(state, action, reward, next_state, done, policy, value), total_reward)
-            )
-
-        if done:
-            break
-
-        step += 1
-        state = next_state
-        action = agent_adapter.decode_cog_action(sample.get_actor_action(player_override))
-
-        if action < 0:
-            print("WARNING: override action is invalid, ignoring!")
-            action = agent_adapter.decode_cog_action(sample.get_actor_action(observation.current_player))
-
-        assert action >= 0
-
-        policy, value = agent_adapter.decode_cog_policy_value(sample.get_actor_action(observation.current_player))
-        reward = sample.get_actor_reward(player_override)
-
-
 @torch.no_grad()
 def compute_targets(reward, value, reward_distribution, value_distribution):
     reward_probs = reward_distribution.compute_target(torch.tensor(reward)).cpu()
     value_probs = value_distribution.compute_target(torch.tensor(value)).cpu()
     return reward_probs, value_probs
-
-
-async def single_agent_muzero_run_implementation(agent_adapter, run_session):
-    xp_tracker = MlflowExperimentTracker(run_session.params_name, run_session.run_id)
-
-    # Initializing a model
-    model_id = f"{run_session.run_id}_model"
-
-    config = run_session.config
-    assert config.environment.config.player_count == 1
-
-    agent, version_info = await agent_adapter.create_and_publish_initial_version(
-        model_id=model_id,
-        obs_dim=config.actor.num_input,
-        act_dim=config.actor.num_action,
-        device=config.training.train_device,
-        training_config=config.training,
-    )
-
-    num_reanalyze_workers = config.training.reanalyze_workers
-
-    max_prefetch_batch = 128
-    sample_queue = mp.Queue()
-    priority_update_queue = mp.Queue()
-    reanalyze_update_queue = mp.Queue()
-    reanalyze_queue = mp.Queue(num_reanalyze_workers + 1)
-
-    batch_queue = mp.Queue(max_prefetch_batch)
-    reanalyze_queue = mp.Queue()
-    agent_update_queue = mp.Queue()
-    # limit to small size so that training and sample generation don't get out of sync
-    info_queue = mp.Queue(max_prefetch_batch)
-
-    agent_queue = mp.Queue()
-    reanalyze_agent_queue = mp.Queue()
-
-    reward_distribution = copy.deepcopy(agent.muzero.reward_distribution).cpu()
-    value_distribution = copy.deepcopy(agent.muzero.value_distribution).cpu()
-
-    train_worker = TrainWorker(agent, batch_queue, agent_update_queue, info_queue, config)
-    replay_buffer = ReplayBufferWorker(
-        sample_queue,
-        priority_update_queue,
-        batch_queue,
-        reanalyze_queue,
-        reanalyze_update_queue,
-        config.training,
-        reward_distribution,
-        value_distribution,
-    )
-    reanalyze_agent_queue = [mp.Queue() for _ in range(num_reanalyze_workers)]
-    reanalyze_workers = [
-        ReanalyzeWorker(
-            reanalyze_queue,
-            reanalyze_update_queue,
-            reanalyze_agent_queue[i],
-            config.training.reanalyze_device,
-            reward_distribution,
-            value_distribution,
-        )
-        for i in range(num_reanalyze_workers)
-    ]
-
-    trials_completed = 0
-    running_stats = RunningStats()
-
-    xp_tracker.log_params(
-        config.environment,
-        config.actor,
-        config.training,
-    )
-
-    trial_configs = make_trial_configs(run_session, config, model_id, -1)
-
-    total_samples = 0
-    training_step = 0
-    run_total_reward = 0
-
-    workers = [train_worker, replay_buffer] + reanalyze_workers
-
-    try:
-        for worker in workers:
-            worker.start()
-
-        start_time = time.time()
-
-        sample_generator = run_session.start_trials_and_wait_for_termination(
-            trial_configs,
-            max_parallel_trials=config.training.max_parallel_trials,
-        )
-
-        async for _step, timestamp, trial_id, _tick, (sample, total_reward) in sample_generator:
-            replay_buffer.add_sample(trial_id, sample)
-            total_samples += 1
-
-            for worker in workers:
-                assert worker.is_alive()
-
-            if sample.done:
-                trials_completed += 1
-                xp_tracker.log_metrics(
-                    timestamp, total_samples, trial_total_reward=total_reward, trials_completed=trials_completed
-                )
-                run_total_reward += total_reward
-
-            if replay_buffer.size() <= config.training.min_replay_buffer_size:
-                continue
-
-            # get latest online model
-            try:
-                agent = agent_update_queue.get_nowait()
-                cpu_agent = copy.deepcopy(agent)
-                cpu_agent.set_device("cpu")
-                for agent_queue in reanalyze_agent_queue:
-                    agent_queue.put(cpu_agent)
-            except queue.Empty:
-                pass
-
-            while not info_queue.empty():
-                try:
-                    info = info_queue.get_nowait()
-                except queue.Empty:
-                    continue
-
-                training_step += 1
-                info["model_version"] = version_info["version_number"]
-                info["training_step"] = training_step
-                info["mean_trial_reward"] = run_total_reward / max(1, trials_completed)
-                info["samples_per_sec"] = total_samples / max(1, time.time() - start_time)
-                info["reanalyzed_samples"] = sum([worker.reanalyzed_samples() for worker in reanalyze_workers])
-                running_stats.update(info)
-
-            if total_samples % config.training.model_publication_interval == 0:
-                version_info = await agent_adapter.publish_version(model_id, agent)
-
-            if total_samples % config.training.log_interval == 0:
-                xp_tracker.log_metrics(
-                    timestamp,
-                    total_samples,
-                    total_samples=total_samples,
-                    **running_stats.get(),
-                )
-                running_stats.reset()
-
-    finally:
-        for worker in workers:
-            worker.terminate()
-
-    log.info(f"[{run_session.params_name}/{run_session.run_id}] finished ({total_samples} samples seen)")
 
 
 class ReplayBufferWorker(mp.Process):
