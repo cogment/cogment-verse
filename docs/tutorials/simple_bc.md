@@ -59,19 +59,13 @@ In the first step, the run implementation is pretty minimal. It setup an experim
 
 Make sure you are using step 1 version of the adapter by editing the "default" export in `/torch_agents/cogment_verse_torch_agents/simple_bc/__init__.py`.
 
-First build and start up the services:
+First copy the project specification files and start the service in development mode:
 
 ```
-cogment run copy && cogment run build && cogment run start
+cogment run copy && cogment run dev
 ```
 
-Once the services are running, start the web client:
-
-```
-cogment run start_web_client
-```
-
-Once the web client builds and is running, open `localhost:8080`.
+Open `localhost:8080`.
 
 Now we can launch a training run. There are three configurations provided:
 

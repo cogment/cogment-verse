@@ -15,6 +15,7 @@ python-dotenv = "^0.19.1"
 
 [tool.poetry.dev-dependencies]
 taskipy = "^1.9.0"
+watchdog = {extras = ["watchmedo"], version = "^2.1.6"}
 
 [tool.poetry.extras]
 with_tf = ["tensorflow"]
@@ -23,6 +24,7 @@ with_tf = ["tensorflow"]
 generate = "python -m cogment.generate"
 build = "task generate"
 start="python -m main"
+dev="../base_python/scripts/autoreload.sh"
 
 [tool.black]
 line-length = 120

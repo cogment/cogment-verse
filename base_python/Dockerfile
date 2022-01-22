@@ -1,6 +1,6 @@
 FROM python:3.7-slim
 
-WORKDIR /base_python
+WORKDIR /cogment-verse/base_python
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y curl

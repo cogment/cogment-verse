@@ -38,27 +38,51 @@ Cogment verse includes environments from:
 3. Install [cogment](https://docs.cogment.ai/introduction/installation/) (⚠️ version > 1.2.0 is required)
 4. Clone this repository
 
-### Build
+### Copy the shared definitions
 
-First run code generation and build the docker images
+After a fresh close or whenever either the `cogment.yaml` or any protobuf file in the root directory is changed, you need to copy those changes to the different services source directories. This is achieved with the following.
 
 ```console
-cogment run copy && cogment run build
+cogment run copy
+```
+### Start development _auto-reload_ mode
+
+Cogment verse can be started in development mode where the services restart whenever a source is edited without needing to restart the docker images. It can be started with the following
+
+```console
+cogment run dev
 ```
 
 #### Troubleshooting
 
 This project is using rather large libraries such as tensorflow and pytorch, because of that the build might fail if docker doesn't have access to sufficient memory.
 
-### Run
+### Build production images
 
-Start the services
+```console
+cogment run build
+```
+#### Build the GPU versions
+
+```console
+cogment run build_gpu
+```
+
+### Start the production images
 
 ```console
 cogment run start
 ```
 
-Once the services are running, you can run training with the following command
+#### Start the GPU versions
+
+```console
+cogment run start_gpu
+```
+
+### Start and stop runs
+
+Once the services are running in either production or development mode, you can launch a _run_ with the following command
 
 ```console
 RUN_PARAMS=cartpole_dqn cogment run start_run
@@ -88,12 +112,6 @@ You can monitor ongoing run using [mlflow](https://mlflow.org). By default a loc
 
 Some of the availabe run involve a human player, for example `benchmark_lander_hill` enables a human player to momentarily take control of the lunar lander to help the AI agents during the training process.
 
-To let a human interact in the training process, first start the web client
-
-```console
-cogment run start_web_client
-```
-
 Then start the run
 
 ```console
@@ -101,10 +119,6 @@ RUN_PARAMS=benchmark_lander_hill cogment run start_run
 ```
 
 and access the playing interface, by default at <http://localhost:8080>
-
-#### GPU
-
-Instead of using `cogment run build` and `cogment run start` use `cogment run build_gpu` and `cogment run start_gpu`.
 
 ## Debug
 

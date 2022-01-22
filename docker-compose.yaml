@@ -62,8 +62,8 @@ services:
   torch_agents: &torch_agents
     build:
       context: torch_agents
-      dockerfile: cpu.dockerfile
       args:
+        DEVICE: cpu
         BASE_PYTHON_IMAGE: cogment/cogment-verse-python-sdk:${IMAGE_TAG:-local}
     restart: on-failure
     environment:

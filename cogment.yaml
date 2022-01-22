@@ -6,8 +6,22 @@ commands:
   copy: >
     cogment copy cogment.yaml data.proto base_python environment torch_agents tf_agents client web_client &&
     cogment copy run_api.proto base_python/cogment_verse/api client
+  dev: >
+    docker-compose build base_python &&
+    docker-compose -f docker-compose.yaml -f docker-compose.dev.yaml up --build --abort-on-container-exit
+    grafana
+    prometheus
+    orchestrator
+    grpcwebproxy
+    model_registry
+    trial_datastore
+    environment
+    torch_agents
+    tf_agents
+    web_client
+
   build: docker-compose build base_python && docker-compose build
-  build_gpu: docker-compose -f docker-compose.yaml -f docker-compose.gpu-override.yaml build base_python && docker-compose -f docker-compose.yaml -f docker-compose.gpu-override.yaml build
+  build_gpu: docker-compose -f docker-compose.yaml -f docker-compose.gpu.yaml build base_python && docker-compose -f docker-compose.yaml -f docker-compose.gpu.yaml build
   start: >
     docker-compose up
     grafana
@@ -19,8 +33,9 @@ commands:
     environment
     torch_agents
     tf_agents
+    web_client
   start_gpu: >
-    docker-compose -f docker-compose.yaml -f docker-compose.gpu-override.yaml up
+    docker-compose -f docker-compose.yaml -f docker-compose.gpu.yaml up
     grafana
     prometheus
     orchestrator
@@ -30,14 +45,12 @@ commands:
     environment
     torch_agents
     tf_agents
+    web_client
   down: docker-compose down
+
   list_runs: docker-compose run client list
   start_run: docker-compose run client start $RUN_PARAMS
   terminate_run: docker-compose run client terminate $RUN_ID
-
-  # web client
-  start_web_client: docker-compose up --build --abort-on-container-exit web_client
-  dev_web_client: docker-compose -f docker-compose.yaml -f docker-compose.dev.yaml up --build --abort-on-container-exit web_client
 
   test: cogment run test_torch_agents && cogment run test_environment
   test_torch_agents: >

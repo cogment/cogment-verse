@@ -1,6 +1,9 @@
 ARG BASE_PYTHON_IMAGE
-FROM ${BASE_PYTHON_IMAGE} as base_python
-FROM python:3.7-slim
+FROM ${BASE_PYTHON_IMAGE} as base
+
+#########
+# "dev" is the developpment image
+FROM python:3.7-slim as dev
 
 # Install tensorflow as early as possible to help with cache
 RUN pip install tensorflow==2.6.2
@@ -16,17 +19,26 @@ RUN curl -sSL https://install.python-poetry.org | python3 -
 ENV POETRY_VIRTUALENVS_CREATE=false
 
 # Copy the `base_python` library
-COPY --from=base_python /base_python /base_python
+COPY --from=base /cogment-verse/base_python /cogment-verse/base_python
 
-WORKDIR /tf_agents
+WORKDIR /cogment-verse/tf_agents
 
 # Install dependencies (w/o tf)
 COPY pyproject.toml poetry.lock ./
 RUN poetry install --no-root
 
+# start the server in development mode
+ENTRYPOINT [ "poetry", "run" ]
+CMD ["task", "dev"]
+#########
+
+#########
+# "prod" is the production image
+FROM dev as prod
+
 # Copy the sources and build the package
 COPY . ./
 RUN poetry run task build
 
-ENTRYPOINT [ "poetry", "run" ]
 CMD [ "task", "start" ]
+#########

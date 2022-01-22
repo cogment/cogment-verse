@@ -1,6 +1,30 @@
 version: "3.7"
 
 services:
+  # development version of the environment
+  environment:
+    build:
+      context: environment
+      target: dev
+    volumes:
+      - ./:/cogment-verse/
+
+  # development version of the torch agents
+  torch_agents: &torch_agents
+    build:
+      context: torch_agents
+      target: dev
+    volumes:
+      - ./:/cogment-verse/
+
+  # development version of the tensorflow agents
+  tf_agents: &tf_agents
+    build:
+      context: tf_agents
+      target: dev
+    volumes:
+      - ./:/cogment-verse/
+
   # development version of the web client
   web_client:
     build:

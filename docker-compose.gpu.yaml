@@ -4,8 +4,8 @@ services:
   torch_agents: &torch_agents
     build:
       context: torch_agents
-      dockerfile: gpu.dockerfile
       args:
+        DEVICE: gpu
         BASE_PYTHON_IMAGE: cogment/cogment-verse-python-sdk:${IMAGE_TAG:-local}
     deploy:
       resources:

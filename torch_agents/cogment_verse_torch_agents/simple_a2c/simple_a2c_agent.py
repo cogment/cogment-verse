@@ -152,7 +152,8 @@ class SimpleA2CAgentAdapter(AgentAdapter):
                 config.training,
                 config.environment.config,
                 environment=config.environment.implementation,
-                policy_network_hidden_size=config.policy_network.hidden_size,
+                actor_network_hidden_size=config.actor_network.hidden_size,
+                critic_network_hidden_size=config.critic_network.hidden_size,
             )
 
             # Configure the optimizer over the two models
