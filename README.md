@@ -45,12 +45,19 @@ After a fresh close or whenever either the `cogment.yaml` or any protobuf file i
 ```console
 cogment run copy
 ```
+
 ### Start development _auto-reload_ mode
 
 Cogment verse can be started in development mode where the services restart whenever a source is edited without needing to restart the docker images. It can be started with the following
 
 ```console
 cogment run dev
+```
+
+To be able to use the client properly, you'll need to build it whenever something changes using
+
+```console
+cogment run build_client
 ```
 
 #### Troubleshooting
@@ -62,6 +69,7 @@ This project is using rather large libraries such as tensorflow and pytorch, bec
 ```console
 cogment run build
 ```
+
 #### Build the GPU versions
 
 ```console
