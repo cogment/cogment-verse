@@ -6,10 +6,10 @@ This is a interactive implementation of behavioral cloning (BC) that can be thou
 
 The overall architecture involves two actors
 
-1. An AI agent uing a simple a policy network whose action space is determined by the environment.
+1. An AI agent uing a simple policy network whose action space is determined by the environment.
 2. A human _teacher_ having the same action space extended by a single "take-no-action" `NO-OP` action.
 
-The two actors cooperate during training by the following rule: if the teacher takes the `NO-OP` action, then we sample an action from the AI agent's policy, otherwise we use the action specified by the human. In this way, the human provides feedback to the agent in the form of implicit approval (by taking `NO-OP`) or by demonstration by overriding the agent's actions. Running trials in this way we generate a sequence of pairs `(observation, perfomed_action)`. We train the AI agent by using the performed actions as target labels with a categorical cross-entropy loss.
+The two actors cooperate during training by the following rule: if the teacher takes the `NO-OP` action, then we sample an action from the AI agent's policy, otherwise we use the action specified by the human. In this way, the human provides feedback to the agent in the form of implicit approval (by taking `NO-OP`) or by demonstration by overriding the agent's actions. By running trials in this way, we generate a sequence of pairs `(observation, perfomed_action)`. We train the AI agent by using the performed actions as target labels with a categorical cross-entropy loss.
 
 We train the agent online as trials are running and each trial uses the latest snapshot of the agent's policy network. As the agent learns to mimic the human demonstrations, the human's task becomes easier as fewer interventions are required to correct the agent's behavior.
 
@@ -23,9 +23,9 @@ We train the agent online as trials are running and each trial uses the latest s
 
 In this step we create a dedicated **agent adapter** to implement behavior cloning. **Agent adapters** are a lightweight formalism to help implement agents and training algorithms together. 
 
-Ours is pretty simple, it defines two Cogment implementations: an actor called `simple_bc` that is using the trained model, in this case a simple policy network, to take actions and a run called `simple_bc_training` that is orchestrating the training of the model.
+In this case, it defines two Cogment implementations: an actor called `simple_bc` that is using the trained model, in this case a simple policy network, to take actions and a run called `simple_bc_training` that is orchestrating the training of the model.
 
-- The agent adapter itself is defined in `/torch_agents/cogment_verse_torch_agents/simple_bc/tutorial_1.py`. Because we intend on using **PyTorch** to defined and train the policy network we defines the adapter inside the `torch_agents` folder (and as the consequence as a part of the `torch_agents` service), that way it already has access to the needed dependencies. More details about the initial implementation will be found below.
+- The agent adapter itself is defined in `/torch_agents/cogment_verse_torch_agents/simple_bc/tutorial_1.py`. Because we intend on using **PyTorch** to define and train the policy network, we define the adapter inside the `torch_agents` folder (and as a consequence - as a part of the `torch_agents` service). That way it already has access to the needed dependencies. More details about the initial implementation will be found below.
 - The adapter is registered with the service in `/torch_agents/main.py`
 - The actor implementations `simple_bc` is added to the list of actor endpoints `COGMENT_VERSE_ACTOR_ENDPOINTS` in `/.env`. This enables Cogment to access the service(s) providing this implementation.
 - Similarly, the run implementtion `simple_bc_training` is added to the list of run endpoints `COGMENT_VERSE_RUN_ENDPOINTS` in `/.env`.
