@@ -14,6 +14,7 @@
 
 import cv2
 import numpy as np
+
 # registers procgen environments
 import procgen  # pylint: disable=unused-import
 from cogment_verse_environment.base import GymObservation

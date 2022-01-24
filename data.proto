@@ -33,25 +33,38 @@ message EnvironmentConfig {
   uint32 seed = 9;
 }
 
-message EnvironmentParams {
+message EnvironmentSpecs {
   string implementation = 1;
-  EnvironmentConfig config = 2;
+  int32 num_input = 2;
+  int32 num_action = 3;
 }
-message ActorConfig {
+
+message EnvironmentParams {
+  EnvironmentSpecs specs = 2; // Keeping that here for the moment, could probably be defined somewhere else with only the implementation name defined in the params
+  EnvironmentConfig config = 3;
+}
+
+message AgentConfig {
   string run_id = 1;
-  string model_id = 2;
-  int32 model_version = 3;
-  int32 num_input = 4;
-  int32 num_action = 5;
-  string environment_implementation = 6; // TODO Remove by retrieving info from the environment instead
-  int32 actor_index = 7; //Used to figure out if an agent is the current_player in the observation space
+  EnvironmentSpecs environment_specs = 2;
+  string model_id = 3;
+  int32 model_version = 4;
+  int32 actor_index = 5; // Used to figure out if an agent is the current_player in the observation space
+}
+
+message TeacherConfig {
+  string run_id = 1;
+  EnvironmentSpecs environment_specs = 2;
 }
 
 message ActorParams {
   string name = 1;
   string actor_class = 2;
   string implementation = 3;
-  ActorConfig config = 4;
+  oneof config_oneof {
+    AgentConfig agent_config = 4;
+    TeacherConfig teacher_config = 5;
+  }
 }
 
 message TrialConfig {
@@ -142,10 +155,9 @@ message SimpleA2CTrainingConfig {
 
 message SimpleA2CTrainingRunConfig {
   EnvironmentParams environment = 1;
-  ActorConfig actor = 2;
-  SimpleA2CTrainingConfig training = 3;
-  MLPNetworkConfig actor_network = 4;
-  MLPNetworkConfig critic_network = 5;
+  SimpleA2CTrainingConfig training = 2;
+  MLPNetworkConfig actor_network = 3;
+  MLPNetworkConfig critic_network = 4;
 }
 
 message SimpleBCTrainingConfig {
@@ -158,7 +170,6 @@ message SimpleBCTrainingConfig {
 
 message SimpleBCTrainingRunConfig {
   EnvironmentParams environment = 1;
-  ActorConfig actor = 2;
-  SimpleBCTrainingConfig training = 3;
-  MLPNetworkConfig policy_network = 4;
+  SimpleBCTrainingConfig training = 2;
+  MLPNetworkConfig policy_network = 3;
 }

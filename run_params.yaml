@@ -498,12 +498,12 @@ simple_a2c_cartpole: &default_simple_a2c_params
   config: &default_simple_a2c_config
     class_name: data_pb2.SimpleA2CTrainingRunConfig
     environment:
-      implementation: gym/CartPole-v0
+      specs:
+        implementation: gym/CartPole-v0
+        num_input: 4
+        num_action: 2
       config:
         seed: 12
-    actor:
-      num_input: 4
-      num_action: 2
     training:
       epoch_count: 100
       epoch_trial_count: 15
@@ -556,12 +556,12 @@ simple_bc_lander: &simple_bc_experiment
   config: &simple_bc_config
     class_name: data_pb2.SimpleBCTrainingRunConfig
     environment:
-      implementation: gym/LunarLander-v2
+      specs:
+        implementation: gym/LunarLander-v2
+        num_input: 8
+        num_action: 4
       config:
         seed: 12
-    actor:
-      num_input: 8
-      num_action: 4
     training:
       trial_count: 1000
       max_parallel_trials: 1
@@ -576,12 +576,12 @@ simple_bc_cartpole:
   config:
     <<: *simple_bc_config
     environment:
-      implementation: gym/CartPole-v0
-      config:
-        seed: 12
-    actor:
+      specs:
+        implementation: gym/CartPole-v0
         num_input: 4
         num_action: 2
+      config:
+        seed: 12
 
 simple_bc_mountaincar:
   <<: *simple_bc_experiment
@@ -589,10 +589,10 @@ simple_bc_mountaincar:
   config:
     <<: *simple_bc_config
     environment:
-      implementation: gym/MountainCar-v0
-      config:
-        seed: 12
-    actor:
+      specs:
+        implementation: gym/MountainCar-v0
         num_input: 2
         num_action: 3
+      config:
+        seed: 12
 

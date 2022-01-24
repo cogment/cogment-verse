@@ -15,7 +15,7 @@
 import logging
 
 from cogment_verse import MlflowExperimentTracker
-from data_pb2 import ActorConfig, ActorParams, EnvironmentConfig, EnvironmentParams, TrialConfig
+from data_pb2 import AgentConfig, ActorParams, EnvironmentConfig, EnvironmentParams, EnvironmentSpecs, TrialConfig
 from google.protobuf.json_format import MessageToDict
 
 # pylint: disable=protected-access
@@ -51,19 +51,23 @@ def create_training_run(agent_adapter):
             trials_completed = 0
             all_trials_reward = 0
 
+            environment_specs = EnvironmentSpecs(
+                implementation=config.environment_implementation,
+                num_input=config.num_input,
+                num_action=config.num_action,
+            )
+
             # Create config for the actor
             actor_configs = [
                 ActorParams(
                     name=f"reinforce_player_{player_idx}",
                     actor_class="agent",
                     implementation=config.agent_implementation,
-                    config=ActorConfig(
+                    agent_config=AgentConfig(
+                        run_id=run_id,
                         model_id=model_id,
                         model_version=model_version_number,
-                        run_id=run_id,
-                        environment_implementation=config.environment_implementation,
-                        num_input=config.num_input,
-                        num_action=config.num_action,
+                        environment_specs=environment_specs,
                     ),
                 )
                 for player_idx in range(config.player_count)
@@ -74,7 +78,7 @@ def create_training_run(agent_adapter):
                 TrialConfig(
                     run_id=run_id,
                     environment=EnvironmentParams(
-                        implementation=config.environment_implementation,
+                        specs=environment_specs,
                         config=EnvironmentConfig(
                             player_count=config.player_count,
                             run_id=run_id,

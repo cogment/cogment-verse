@@ -19,7 +19,6 @@ commands:
     torch_agents
     tf_agents
     web_client
-
   build: docker-compose build base_python && docker-compose build
   build_gpu: docker-compose -f docker-compose.yaml -f docker-compose.gpu.yaml build base_python && docker-compose -f docker-compose.yaml -f docker-compose.gpu.yaml build
   start: >
@@ -74,11 +73,11 @@ actor_classes:
       space: cogment_verse.AgentAction
     observation:
       space: cogment_verse.Observation
-    config_type: cogment_verse.ActorConfig
+    config_type: cogment_verse.AgentConfig
 
   - name: teacher_agent
     action:
       space: cogment_verse.AgentAction
     observation:
       space: cogment_verse.Observation
-    config_type: cogment_verse.ActorConfig
+    config_type: cogment_verse.TeacherConfig

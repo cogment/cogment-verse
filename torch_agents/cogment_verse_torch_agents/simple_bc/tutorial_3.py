@@ -15,18 +15,33 @@
 import asyncio
 import copy
 import logging
+
 ############ TUTORIAL STEP 3 ############
 from collections import namedtuple
+
+##########################################
 
 import cogment
 import torch
 from cogment.api.common_pb2 import TrialState
 from cogment_verse import AgentAdapter, MlflowExperimentTracker
-from cogment_verse_torch_agents.utils.tensors import cog_action_from_tensor, tensor_from_cog_action, tensor_from_cog_obs
-from data_pb2 import (  # ########### TUTORIAL STEP 3 ############; #########################################
-    ActorConfig, ActorParams, EnvironmentConfig, EnvironmentParams, MLPNetworkConfig, SimpleBCTrainingRunConfig,
-    TrialConfig)
 
+############ TUTORIAL STEP 3 ############
+from cogment_verse_torch_agents.utils.tensors import cog_action_from_tensor, tensor_from_cog_action, tensor_from_cog_obs
+from data_pb2 import (
+    ActorParams,
+    AgentConfig,
+    EnvironmentConfig,
+    EnvironmentParams,
+    EnvironmentSpecs,
+    MLPNetworkConfig,
+    SimpleBCTrainingRunConfig,
+    TrialConfig,
+)
+
+##########################################
+
+############ TUTORIAL STEP 3 ############
 SimpleBCModel = namedtuple("SimpleBCModel", ["model_id", "version_number", "policy_network"])
 ##########################################
 
@@ -144,7 +159,7 @@ class SimpleBCAgentAdapterTutorialStep3(AgentAdapter):
             xp_tracker.log_params(
                 config.training,
                 config.environment.config,
-                environment=config.environment.implementation,
+                environment=config.environment.specs.implementation,
                 policy_network_hidden_size=config.policy_network.hidden_size,
             )
 
@@ -154,8 +169,8 @@ class SimpleBCAgentAdapterTutorialStep3(AgentAdapter):
             # Initializing a model
             _model, _version_info = await self.create_and_publish_initial_version(
                 model_id,
-                observation_size=config.actor.num_input,
-                action_count=config.actor.num_action,
+                observation_size=config.environment.specs.num_input,
+                action_count=config.environment.specs.num_action,
                 policy_network_hidden_size=config.policy_network.hidden_size,
             )
             ##########################################
@@ -168,14 +183,13 @@ class SimpleBCAgentAdapterTutorialStep3(AgentAdapter):
                     name="agent_1",
                     actor_class="agent",
                     implementation="simple_bc",
-                    config=ActorConfig(
+                    agent_config=AgentConfig(
+                        run_id=run_session.run_id,
                         ############ TUTORIAL STEP 3 ############
                         model_id=model_id,
                         model_version=-1,
                         ##########################################
-                        num_input=config.actor.num_input,
-                        num_action=config.actor.num_action,
-                        environment_implementation=config.environment.implementation,
+                        environment_specs=env_params.specs,
                     ),
                 )
 
@@ -183,10 +197,8 @@ class SimpleBCAgentAdapterTutorialStep3(AgentAdapter):
                     name="web_actor",
                     actor_class="teacher_agent",
                     implementation="client",
-                    config=ActorConfig(
-                        num_input=config.actor.num_input,
-                        num_action=config.actor.num_action,
-                        environment_implementation=config.environment.implementation,
+                    agent_config=AgentConfig(
+                        environment_specs=env_params.specs,
                     ),
                 )
 
@@ -215,7 +227,7 @@ class SimpleBCAgentAdapterTutorialStep3(AgentAdapter):
                 run_impl,
                 SimpleBCTrainingRunConfig(
                     environment=EnvironmentParams(
-                        implementation="gym/LunarLander-v2",
+                        specs=EnvironmentSpecs(implementation="gym/LunarLander-v2", num_input=8, num_action=4),
                         config=EnvironmentConfig(seed=12, player_count=1, framestack=1, render=True, render_width=256),
                     ),
                     ############ TUTORIAL STEP 3 ############

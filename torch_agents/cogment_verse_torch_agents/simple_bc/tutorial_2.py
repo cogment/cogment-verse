@@ -21,14 +21,22 @@ import numpy as np
 import torch
 from cogment.api.common_pb2 import TrialState
 from cogment_verse import AgentAdapter, MlflowExperimentTracker
+
 ############ TUTORIAL STEP 2 ############
 from cogment_verse_torch_agents.utils.tensors import tensor_from_cog_action, tensor_from_cog_obs
-from data_pb2 import (ActorConfig, ActorParams, AgentAction, EnvironmentConfig, EnvironmentParams,
-                      SimpleBCTrainingRunConfig, TrialConfig)
+from data_pb2 import (
+    ActorParams,
+    AgentAction,
+    AgentConfig,
+    EnvironmentConfig,
+    EnvironmentParams,
+    EnvironmentSpecs,
+    SimpleBCTrainingRunConfig,
+    TeacherConfig,
+    TrialConfig,
+)
 
 ##########################################
-
-
 
 
 log = logging.getLogger(__name__)
@@ -68,7 +76,7 @@ class SimpleBCAgentAdapterTutorialStep2(AgentAdapter):
 
             async for event in actor_session.event_loop():
                 if event.observation and event.type == cogment.EventType.ACTIVE:
-                    action = np.random.default_rng().integers(0, config.num_action)
+                    action = np.random.default_rng().integers(0, config.environment_specs.num_action)
                     actor_session.do_action(AgentAction(discrete_action=action))
 
         return {
@@ -110,7 +118,7 @@ class SimpleBCAgentAdapterTutorialStep2(AgentAdapter):
             xp_tracker.log_params(
                 config.training,
                 config.environment.config,
-                environment=config.environment.implementation,
+                environment=config.environment.specs.implementation,
                 policy_network_hidden_size=config.policy_network.hidden_size,
             )
 
@@ -122,10 +130,9 @@ class SimpleBCAgentAdapterTutorialStep2(AgentAdapter):
                     name="agent_1",
                     actor_class="agent",
                     implementation="simple_bc",
-                    config=ActorConfig(
-                        num_input=config.actor.num_input,
-                        num_action=config.actor.num_action,
-                        environment_implementation=config.environment.implementation,
+                    agent_config=AgentConfig(
+                        run_id=run_session.run_id,
+                        environment_specs=env_params.specs,
                     ),
                 )
 
@@ -133,10 +140,8 @@ class SimpleBCAgentAdapterTutorialStep2(AgentAdapter):
                     name="web_actor",
                     actor_class="teacher_agent",
                     implementation="client",
-                    config=ActorConfig(
-                        num_input=config.actor.num_input,
-                        num_action=config.actor.num_action,
-                        environment_implementation=config.environment.implementation,
+                    teacher_config=TeacherConfig(
+                        environment_specs=env_params.specs,
                     ),
                 )
 
@@ -165,7 +170,7 @@ class SimpleBCAgentAdapterTutorialStep2(AgentAdapter):
                 run_impl,
                 SimpleBCTrainingRunConfig(
                     environment=EnvironmentParams(
-                        implementation="gym/LunarLander-v2",
+                        specs=EnvironmentSpecs(implementation="gym/LunarLander-v2", num_input=8, num_action=4),
                         config=EnvironmentConfig(seed=12, player_count=1, framestack=1, render=True, render_width=256),
                     )
                 ),

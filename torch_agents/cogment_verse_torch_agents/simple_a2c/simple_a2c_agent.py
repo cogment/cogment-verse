@@ -20,8 +20,17 @@ import torch
 from cogment.api.common_pb2 import TrialState
 from cogment_verse import AgentAdapter, MlflowExperimentTracker
 from cogment_verse_torch_agents.utils.tensors import cog_action_from_tensor, tensor_from_cog_action, tensor_from_cog_obs
-from data_pb2 import (ActorConfig, ActorParams, EnvironmentConfig, EnvironmentParams, MLPNetworkConfig,
-                      SimpleA2CTrainingConfig, SimpleA2CTrainingRunConfig, TrialConfig)
+from data_pb2 import (
+    AgentConfig,
+    ActorParams,
+    EnvironmentConfig,
+    EnvironmentParams,
+    EnvironmentSpecs,
+    MLPNetworkConfig,
+    SimpleA2CTrainingConfig,
+    SimpleA2CTrainingRunConfig,
+    TrialConfig,
+)
 
 log = logging.getLogger(__name__)
 
@@ -128,8 +137,8 @@ class SimpleA2CAgentAdapter(AgentAdapter):
 
             model, _ = await self.create_and_publish_initial_version(
                 model_id,
-                observation_size=config.actor.num_input,
-                action_count=config.actor.num_action,
+                observation_size=config.environment.specs.num_input,
+                action_count=config.environment.specs.num_action,
                 actor_network_hidden_size=config.actor_network.hidden_size,
                 critic_network_hidden_size=config.critic_network.hidden_size,
             )
@@ -138,7 +147,7 @@ class SimpleA2CAgentAdapter(AgentAdapter):
             xp_tracker.log_params(
                 config.training,
                 config.environment.config,
-                environment=config.environment.implementation,
+                environment=config.environment.specs.implementation,
                 actor_network_hidden_size=config.actor_network.hidden_size,
                 critic_network_hidden_size=config.critic_network.hidden_size,
             )
@@ -174,12 +183,11 @@ class SimpleA2CAgentAdapter(AgentAdapter):
                                     name="agent_1",
                                     actor_class="agent",
                                     implementation="simple_a2c",
-                                    config=ActorConfig(
+                                    agent_config=AgentConfig(
+                                        run_id=run_session.run_id,
                                         model_id=model_id,
                                         model_version=model_version_number,
-                                        num_input=config.actor.num_input,
-                                        num_action=config.actor.num_action,
-                                        environment_implementation=config.environment.implementation,
+                                        environment_specs=config.environment.specs,
                                     ),
                                 )
                             ],
@@ -261,7 +269,11 @@ class SimpleA2CAgentAdapter(AgentAdapter):
                 run_impl,
                 SimpleA2CTrainingRunConfig(
                     environment=EnvironmentParams(
-                        implementation="gym/CartPole-v0",
+                        specs=EnvironmentSpecs(
+                            implementation="gym/CartPole-v0",
+                            num_input=4,
+                            num_action=2,
+                        ),
                         config=EnvironmentConfig(seed=12, player_count=1, framestack=1),
                     ),
                     training=SimpleA2CTrainingConfig(

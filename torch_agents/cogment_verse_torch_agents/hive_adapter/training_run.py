@@ -17,11 +17,24 @@ import time
 
 import numpy as np
 import torch
+
 from cogment_verse import MlflowExperimentTracker
 from cogment_verse.utils import sizeof_fmt, throttle
-from cogment_verse_torch_agents.third_party.hive.utils.schedule import (CosineSchedule, LinearSchedule,
-                                                                        PeriodicSchedule, SwitchSchedule)
-from data_pb2 import ActorConfig, ActorParams, EnvironmentConfig, EnvironmentParams, TrialConfig
+from cogment_verse_torch_agents.third_party.hive.utils.schedule import (
+    CosineSchedule,
+    LinearSchedule,
+    PeriodicSchedule,
+    SwitchSchedule,
+)
+from data_pb2 import (
+    AgentConfig,
+    ActorParams,
+    EnvironmentConfig,
+    EnvironmentParams,
+    EnvironmentSpecs,
+    TeacherConfig,
+    TrialConfig,
+)
 from google.protobuf.json_format import MessageToDict
 from prometheus_client import Gauge, Summary
 
@@ -101,19 +114,23 @@ def create_training_run(agent_adapter):
             all_trials_reward = 0
             start_time = time.time()
 
+            environment_specs = EnvironmentSpecs(
+                implementation=config.environment_implementation,
+                num_input=config.num_input,
+                num_action=config.num_action,
+            )
+
             # Create the config for the player agents
             player_actor_configs = [
                 ActorParams(
                     name=f"agent_player_{player_idx}",
                     actor_class="agent",
                     implementation=config.agent_implementation,
-                    config=ActorConfig(
+                    agent_config=AgentConfig(
+                        run_id=run_id,
                         model_id=model_id,
                         model_version=np.random.randint(-100, -1),  # TODO this actually won't work anymore
-                        run_id=run_id,
-                        environment_implementation=config.environment_implementation,
-                        num_input=config.num_input,
-                        num_action=config.num_action,
+                        environment_specs=environment_specs,
                     ),
                 )
                 for player_idx in range(config.player_count)
@@ -121,13 +138,13 @@ def create_training_run(agent_adapter):
             # for self-play, randomly select one player to use latest model version
             # if there is only one player then it will always use the latest
             distinguished_actor = np.random.randint(0, config.player_count)
-            player_actor_configs[distinguished_actor].config.model_version = -1
+            player_actor_configs[distinguished_actor].agent_config.model_version = -1
 
             self_play_trial_configs = [
                 TrialConfig(
                     run_id=run_id,
                     environment=EnvironmentParams(
-                        implementation=config.environment_implementation,
+                        specs=environment_specs,
                         config=EnvironmentConfig(
                             player_count=config.player_count,
                             run_id=run_id,
@@ -150,18 +167,16 @@ def create_training_run(agent_adapter):
                     name="web_actor",
                     actor_class="teacher_agent",
                     implementation="client",
-                    config=ActorConfig(
+                    teacher_config=TeacherConfig(
                         run_id=run_id,
-                        environment_implementation=config.environment_implementation,
-                        num_input=config.num_input,
-                        num_action=config.num_action,
+                        environment_specs=environment_specs,
                     ),
                 )
                 demonstration_trial_configs = [
                     TrialConfig(
                         run_id=run_id,
                         environment=EnvironmentParams(
-                            implementation=config.environment_implementation,
+                            specs=environment_specs,
                             config=EnvironmentConfig(
                                 player_count=config.player_count,
                                 run_id=run_id,

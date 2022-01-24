@@ -62,9 +62,9 @@ class RunContext(cogment.Context):
 
             environment_params = pre_trial_hook_session.trial_config.environment
             pre_trial_hook_session.environment_config = environment_params.config
-            pre_trial_hook_session.environment_implementation = environment_params.implementation
+            pre_trial_hook_session.environment_implementation = environment_params.specs.implementation
             pre_trial_hook_session.environment_endpoint = "grpc://" + self._get_service_endpoint(
-                environment_params.implementation
+                pre_trial_hook_session.environment_implementation
             )
             pre_trial_hook_session.datalog_endpoint = "grpc://" + services_endpoints["trial_datastore"]
             pre_trial_hook_session.actors = [
@@ -75,7 +75,7 @@ class RunContext(cogment.Context):
                     if actor.implementation == "client"
                     else ("grpc://" + self._get_service_endpoint(actor.implementation)),
                     "implementation": "" if actor.implementation == "client" else actor.implementation,
-                    "config": set_config_index(actor.config, actor_idx),
+                    "config": set_config_index(getattr(actor, actor.WhichOneof("config_oneof")), actor_idx),
                 }
                 for actor_idx, actor in enumerate(pre_trial_hook_session.trial_config.actors)
             ]

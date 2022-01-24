@@ -18,8 +18,14 @@ import os
 import time
 
 import grpc.aio
-from cogment.api.model_registry_pb2 import (CreateOrUpdateModelRequest, CreateVersionRequestChunk, ModelInfo,
-                                            ModelVersionInfo, RetrieveVersionDataRequest, RetrieveVersionInfosRequest)
+from cogment.api.model_registry_pb2 import (
+    CreateOrUpdateModelRequest,
+    CreateVersionRequestChunk,
+    ModelInfo,
+    ModelVersionInfo,
+    RetrieveVersionDataRequest,
+    RetrieveVersionInfosRequest,
+)
 from cogment.api.model_registry_pb2_grpc import ModelRegistrySPStub
 from google.protobuf.json_format import MessageToDict
 from prometheus_client import Summary
