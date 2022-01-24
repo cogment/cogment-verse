@@ -28,9 +28,9 @@ RUN poetry install --no-root
 # Download the atari roms
 RUN poetry run task retrieve_roms
 
+ENTRYPOINT ["xvfb-run", "-e", "/dev/stdout", "-a"]
 # start the server in development mode
-ENTRYPOINT []
-CMD [ "poetry", "run", "task", "dev"]
+CMD ["poetry", "run", "task", "dev"]
 #########
 
 #########
@@ -41,5 +41,5 @@ FROM dev as prod
 COPY . ./
 RUN poetry run task build
 
-CMD ["xvfb-run", "-e", "/dev/stdout", "-a", "python", "-m", "main"]
+CMD ["poetry", "run", "task", "start"]
 #########
