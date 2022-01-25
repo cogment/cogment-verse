@@ -58,7 +58,7 @@ class ReinforceAgentAdapter(AgentAdapter):
             log.debug(
                 f"[reinforce - {actor_session.name}] model {actor_session.config.model_id}@v{version_number} retrieved"
             )
-            
+
             actor_index = actor_session.config.actor_index
 
             total_reward = 0

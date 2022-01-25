@@ -21,7 +21,7 @@ import { useActions } from "./hooks/useActions";
 import { get_keymap, useControls } from "./hooks/useControls";
 import { useWindowSize } from "./hooks/useWindowSize";
 
-const decoder = new TextDecoder('utf8');
+const decoder = new TextDecoder("utf8");
 
 const setContains = <T extends unknown>(A: Set<T>, B: Set<T>): boolean => {
   if (A.size > B.size) {
@@ -68,11 +68,13 @@ function App() {
   // cogment stuff
 
   function bufferToBase64(buf: Uint8Array) {
-    var binstr = Array.prototype.map.call(buf, function (ch) {
+    var binstr = Array.prototype.map
+      .call(buf, function (ch) {
         return String.fromCharCode(ch);
-    }).join('');
+      })
+      .join("");
     return btoa(binstr);
-}
+  }
 
   const grpcURL = process.env.REACT_APP_GRPCWEBPROXY_URL || "http://localhost:8081";
 
@@ -88,7 +90,7 @@ function App() {
     if (!pixelData || !img) {
       return;
     }
-    
+
     img.src = "data:image/png;base64," + bufferToBase64(pixelData);
   });
 
@@ -195,7 +197,7 @@ function App() {
 
   useEffect(() => {
     if (watchTrials && !watching) {
-      console.log("watching")
+      console.log("watching");
       watchTrials();
       setWatching(true);
     }
@@ -225,7 +227,7 @@ function App() {
       }
     }
 
-    console.log(trialStateList, trialIdToJoin)
+    console.log(trialStateList, trialIdToJoin);
 
     if (trialIdToJoin === undefined) {
       console.log("no trial to join");
