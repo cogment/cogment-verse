@@ -35,7 +35,7 @@ Cogment verse includes environments from:
 
 1. Install [docker](https://docs.docker.com/desktop/#download-and-install)
 2. Install [docker-compose](https://docs.docker.com/compose/install/#install-compose) (⚠️ you'll need version > 1.29.2 for this project)
-3. Install [cogment](https://docs.cogment.ai/introduction/installation/) (⚠️ version > 1.2.0 is required)
+3. Install [cogment](https://docs.cogment.ai/introduction/installation/) (⚠️ version >= 2.0.0 is required)
 4. Clone this repository
 
 ### Copy the shared definitions
