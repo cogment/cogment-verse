@@ -34,16 +34,16 @@ class DrivingEnv(BaseEnv):
     def create_env_spec(self, **_kwargs):
         env_name = 'SimpleDriving-v0'
         obs_spaces = self._env.observation_space.spaces
-        act_dim = [self._env.action_space.shape]        
-        act_shape = [self._env.action_space.shape]        
-        
+        act_dim = [self._env.action_space.shape]
+        act_shape = [self._env.action_space.shape]
+
         return EnvSpec(
             env_name=env_name,
             obs_dim=[obs_spaces[space].shape for space in obs_spaces],
             act_dim=act_dim,
             act_shape=act_shape,
         )
-    
+
     def reset(self):
         self.switch_turn()
         if not self._turn == 0:
@@ -84,7 +84,7 @@ class DrivingEnv(BaseEnv):
             done=done,
             info=info,
         )
-    
+
     def switch_turn(self):
         if not self._turn == 0:
             # if last player was alice, run bob now
@@ -96,6 +96,6 @@ class DrivingEnv(BaseEnv):
 
     def seed(self, seed = None):
         self._env.seed(seed=seed)
-    
+
     def close(self):
         self._env.close()

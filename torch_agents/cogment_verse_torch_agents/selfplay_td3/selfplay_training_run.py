@@ -83,12 +83,12 @@ def create_training_run(agent_adapter):
                 ActorParams(
                     name=f"selfplayRL_Alice",
                     actor_class="agent",
-                    implementation=config.agent_implementation,
+                    implementation=config.actor.implementation,
                     config=ActorConfig(
                         model_id=alice_id,
                         model_version=alice_version_number,
                         run_id=run_id,
-                        environment_implementation=config.environment_implementation,
+                        environment_implementation=config.environment.implementation,
                         num_input=config.actor.num_input,
                         num_action=config.actor.num_action,
                     ),
@@ -101,7 +101,7 @@ def create_training_run(agent_adapter):
                 TrialConfig(
                     run_id=run_id,
                     environment=EnvironmentParams(
-                        implementation=config.environment_implementation,
+                        implementation=config.implementation.implementation,
                         config=EnvironmentConfig(
                             player_count=config.environment.config.player_count,
                             run_id=run_id,
@@ -121,12 +121,12 @@ def create_training_run(agent_adapter):
                 ActorParams(
                     name=f"selfplayRL_Bob",
                     actor_class="agent",
-                    implementation=config.agent_implementation,
+                    implementation=config.actor.implementation,
                     config=ActorConfig(
                         model_id=bob_id,
                         model_version=bob_version_number,
                         run_id=run_id,
-                        environment_implementation=config.environment_implementation,
+                        environment_implementation=config.environment.implementation,
                         num_input=config.actor.num_input,
                         num_action=config.actor.num_action,
                     ),
@@ -139,7 +139,7 @@ def create_training_run(agent_adapter):
                 TrialConfig(
                     run_id=run_id,
                     environment=EnvironmentParams(
-                        implementation=config.environment_implementation,
+                        implementation=config.environment.implementation,
                         config=EnvironmentConfig(
                             player_count=config.environment.config.player_count,
                             run_id=run_id,

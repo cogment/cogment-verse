@@ -156,14 +156,17 @@ message SelfPlayActorConfig{
   MLPNetworkConfig actor_network = 4;
   MLPNetworkConfig critic_network = 5;
   ModelArgs model_kwargs = 6;
+  string run_id = 7;
+  string model_id = 8;
+  int32 model_version = 9;
+  string environment_implementation = 10;
 }
 
 message SelfPlayRolloutConfig{
   uint32 epoch_count = 1;
-  uint32 number_turns_per_trial = 2;
-  uint32 epoch_trial_count = 3;
-  uint32 max_parallel_trials = 4;
-  uint32 model_publication_interval = 5;
+  uint32 epoch_trial_count = 2;
+  uint32 max_parallel_trials = 3;
+  uint32 model_publication_interval = 4;
 }
 
 message SelfPlayReplaybufferConfig{
@@ -185,12 +188,33 @@ message SelfPlayTrainingConfig{
   uint32 batch_size = 11;
 }
 
+message SelfPlayEnvironmentConfig {
+  string run_id = 1;
+  int32 player_count = 2;
+  bool render = 5;
+  bool flatten = 6;
+  int32 render_width = 7;
+  uint32 framestack = 8;
+  uint32 seed = 9;
+  uint32 num_turns_per_trial = 10;
+}
+
+message SelfPlayEnvironmentParams {
+  string implementation = 1;
+  SelfPlayEnvironmentConfig config = 2;
+}
+
+message SelfPlayActorParams{
+  string name = 1;
+  string actor_class = 2;
+  string implementation = 3;
+  SelfPlayActorConfig config = 4;
+}
+
 message SelfPlayTD3TrainingRunConfig {
-  EnvironmentParams environment = 1;
-  SelfPlayActorConfig actor = 2;
+  SelfPlayEnvironmentParams environment = 1;
+  SelfPlayActorParams actor = 2;
   SelfPlayRolloutConfig rollout = 3;
   SelfPlayTrainingConfig training = 4;
   SelfPlayReplaybufferConfig replaybuffer = 5;
-  string agent_implementation = 6;
-  string environment_implementation = 7;
 }
