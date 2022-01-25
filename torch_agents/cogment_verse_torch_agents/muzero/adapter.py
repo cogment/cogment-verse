@@ -44,6 +44,7 @@ from cogment_verse_torch_agents.muzero.replay_buffer import Episode, TrialReplay
 from cogment_verse_torch_agents.muzero.agent import MuZeroAgent
 from cogment_verse_torch_agents.muzero.schedule import LinearScheduleWithWarmup
 from cogment_verse_torch_agents.muzero.stats import RunningStats
+from cogment_verse.model_registry_client import get_model_registry_client
 
 from cogment.api.common_pb2 import TrialState
 import cogment
@@ -227,17 +228,13 @@ class MuZeroAgentAdapter(AgentAdapter):
 
         batch_queue = mp.Queue(max_prefetch_batch)
         reanalyze_queue = mp.Queue()
-        agent_update_queue = mp.Queue()
         # limit to small size so that training and sample generation don't get out of sync
         info_queue = mp.Queue(max_prefetch_batch)
-
-        agent_queue = mp.Queue()
-        reanalyze_agent_queue = mp.Queue()
 
         reward_distribution = copy.deepcopy(agent.muzero.reward_distribution).cpu()
         value_distribution = copy.deepcopy(agent.muzero.value_distribution).cpu()
 
-        train_worker = TrainWorker(agent, batch_queue, agent_update_queue, info_queue, config)
+        train_worker = TrainWorker(agent, batch_queue, info_queue, config)
         replay_buffer = ReplayBufferWorker(
             sample_queue,
             priority_update_queue,
@@ -248,12 +245,11 @@ class MuZeroAgentAdapter(AgentAdapter):
             reward_distribution,
             value_distribution,
         )
-        reanalyze_agent_queue = [mp.Queue() for _ in range(num_reanalyze_workers)]
         reanalyze_workers = [
             ReanalyzeWorker(
                 reanalyze_queue,
                 reanalyze_update_queue,
-                reanalyze_agent_queue[i],
+                model_id,
                 config.training.reanalyze_device,
                 reward_distribution,
                 value_distribution,
@@ -306,19 +302,11 @@ class MuZeroAgentAdapter(AgentAdapter):
                 if replay_buffer.size() <= config.training.min_replay_buffer_size:
                     continue
 
-                # get latest online model
-                try:
-                    agent = agent_update_queue.get_nowait()
-                    cpu_agent = copy.deepcopy(agent)
-                    cpu_agent.set_device("cpu")
-                    for agent_queue in reanalyze_agent_queue:
-                        agent_queue.put(cpu_agent)
-                except queue.Empty:
-                    pass
-
                 while not info_queue.empty():
                     try:
-                        info = info_queue.get_nowait()
+                        info, agent_update = info_queue.get_nowait()
+                        if agent_update is not None:
+                            agent = agent_update
                     except queue.Empty:
                         continue
 
@@ -621,11 +609,10 @@ class AgentTrialWorker(mp.Process):
 
 
 class TrainWorker(mp.Process):
-    def __init__(self, agent, batch_queue, agent_update_queue, info_queue, config):
+    def __init__(self, agent, batch_queue, info_queue, config):
         super().__init__()
         self.batch_queue = batch_queue
         self.agent = agent
-        self.agent_update_queue = agent_update_queue
         self.info_queue = info_queue
         self.config = config
         self.steps_per_update = 200
@@ -674,41 +661,48 @@ class TrainWorker(mp.Process):
                 temperature=temperature,
                 **info,
             )
-            self.info_queue.put(info)
 
             step += 1
             if step % self.steps_per_update == 0:
                 cpu_agent = copy.deepcopy(self.agent)
                 cpu_agent.set_device("cpu")
-                self.agent_update_queue.put(cpu_agent)
+                self.info_queue.put((info, cpu_agent))
+            else:
+                self.info_queue.put((info, None))
 
 
 class ReanalyzeWorker(mp.Process):
     def __init__(
-        self, reanalyze_queue, reanalyze_update_queue, agent_queue, device, reward_distribution, value_distribution
+        self, reanalyze_queue, reanalyze_update_queue, model_id, device, reward_distribution, value_distribution
     ):
         super().__init__()
         self._reanalyze_queue = reanalyze_queue
         self._reanalyze_update_queue = reanalyze_update_queue
-        self._agent_queue = agent_queue
         self._device = device
         self._reanalyzed_samples = mp.Value(ctypes.c_uint64, 0)
         self.reward_distribution = reward_distribution
         self.value_distribution = value_distribution
+        self._model_cache = LRU(1)
+        self._model_id = model_id
+
+    async def get_latest_agent(self):
+        def load_agent(model_id, version_number, version_user_data, model_data_f):
+            return MuZeroAgent.load(model_data_f, "cpu")
+
+        return await get_model_registry_client().retrieve_model_version(
+            self._model_id, load_agent, self._model_cache, version_number=-1
+        )
 
     def reanalyzed_samples(self):
         return self._reanalyzed_samples.value
 
     def run(self):
-        agent = self._agent_queue.get()
-        agent.set_device(self._device)
+        asyncio.run(self.main())
 
+    async def main(self):
         while True:
-            try:
-                agent = self._agent_queue.get_nowait()
-                agent.set_device(self._device)
-            except queue.Empty:
-                pass
+            agent, _ = await self.get_latest_agent()
+            agent.set_device(self._device)
 
             episode_id, episode = self._reanalyze_queue.get()
             reanalyze_episode = Episode(episode.states[0], agent.params.discount_rate)
