@@ -12,15 +12,15 @@ services:
       context: .
       dockerfile: orchestrator.dockerfile
     environment:
-      - COGMENT_VERSE_PRETRIAL_HOOK_ENDPOINT
       - COGMENT_VERSE_TRIAL_DATASTORE_ENDPOINT
-      - TRIAL_LIFECYCLE_PORT=${COGMENT_VERSE_ORCHESTRATOR_PORT}
-      - TRIAL_ACTOR_PORT=${COGMENT_VERSE_ORCHESTRATOR_PORT}
+      - COGMENT_LIFECYCLE_PORT=${COGMENT_VERSE_ORCHESTRATOR_PORT}
+      - COGMENT_ACTOR_PORT=${COGMENT_VERSE_ORCHESTRATOR_PORT}
+      - COGMENT_PRE_TRIAL_HOOKS=grpc://${COGMENT_VERSE_PRETRIAL_HOOK_ENDPOINT}
     depends_on:
       - trial_datastore
 
   trial_datastore:
-    image: cogment/trial-datastore:v0.1.2
+    image: cogment/trial-datastore:v0.2.0
     restart: on-failure
     environment:
       - COGMENT_TRIAL_DATASTORE_PORT=${COGMENT_VERSE_TRIAL_DATASTORE_PORT}
@@ -31,7 +31,7 @@ services:
       - COGMENT_TRIAL_DATASTORE_LOG_LEVEL=info
 
   model_registry:
-    image: cogment/model-registry:v0.3.0
+    image: cogment/model-registry:v0.4.0
     restart: on-failure
     environment:
       - COGMENT_MODEL_REGISTRY_PORT=${COGMENT_VERSE_MODEL_REGISTRY_PORT}

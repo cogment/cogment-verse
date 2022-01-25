@@ -127,6 +127,7 @@ export const useActions: UseActions = <ObservationT, ActionT extends MessageBase
     setJoinTrial(() => async (trialId: string) => {
       try {
         setTrialJoined(true);
+        console.log("joining trial", trialId);
         await context.joinTrial(trialId, grpcURL, actor.name);
         console.log("completed trial", trialId);
       } catch (error) {
@@ -135,11 +136,15 @@ export const useActions: UseActions = <ObservationT, ActionT extends MessageBase
       setTrialJoined(false);
     });
     setWatchTrials(() => async () => {
+      console.log("watching trials");
       const trialStateList = new Map<string, number>();
+      const watchTrialsGenerator = trialController.watchTrials();
       try {
-        for await (const trialStateMsg of trialController.watchTrials()) {
+        for await (const trialStateMsg of watchTrialsGenerator) {
           const { trialId, state } = trialStateMsg;
           trialStateList.set(trialId, state);
+          console.log("trial state", trialId, state);
+          console.log(trialStateList)
           setTrialStateList(trialStateList);
         }
       } catch (error) {

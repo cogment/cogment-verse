@@ -48,12 +48,10 @@ environment:
 
 trial:
   config_type: cogment_verse.TrialConfig
-  pre_hooks:
-    - grpc://${COGMENT_VERSE_PRETRIAL_HOOK_ENDPOINT}
 
 datalog:
   type: grpc
-  url: ${COGMENT_VERSE_TRIAL_DATASTORE_ENDPOINT}
+  url: grpc://${COGMENT_VERSE_TRIAL_DATASTORE_ENDPOINT}
 
 # Static configuration
 actor_classes:

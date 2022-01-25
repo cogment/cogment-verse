@@ -37,7 +37,6 @@ message EnvironmentParams {
   string implementation = 1;
   EnvironmentConfig config = 2;
 }
-
 message ActorConfig {
   string run_id = 1;
   string model_id = 2;
@@ -45,6 +44,7 @@ message ActorConfig {
   int32 num_input = 4;
   int32 num_action = 5;
   string environment_implementation = 6; // TODO Remove by retrieving info from the environment instead
+  int32 actor_index = 7;
 }
 
 message ActorParams {

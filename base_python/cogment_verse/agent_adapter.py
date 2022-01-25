@@ -12,12 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from cogment_verse.model_registry_client import get_model_registry_client
-
-from cogment_verse.utils import LRU
-
 import abc
 import logging
+
+from cogment_verse.model_registry_client import get_model_registry_client
+from cogment_verse.utils import LRU
 
 log = logging.getLogger(__name__)
 

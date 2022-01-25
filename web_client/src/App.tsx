@@ -67,6 +67,13 @@ function App() {
 
   // cogment stuff
 
+  function bufferToBase64(buf: Uint8Array) {
+    var binstr = Array.prototype.map.call(buf, function (ch) {
+        return String.fromCharCode(ch);
+    }).join('');
+    return btoa(binstr);
+}
+
   const grpcURL = process.env.REACT_APP_GRPCWEBPROXY_URL || "http://localhost:8081";
 
   type ObservationT = data_pb.cogment_verse.Observation;
@@ -81,7 +88,8 @@ function App() {
     if (!pixelData || !img) {
       return;
     }
-    img.src = "data:image/png;base64," + btoa(decoder.decode(pixelData));
+    
+    img.src = "data:image/png;base64," + bufferToBase64(pixelData);
   });
 
   const [event, joinTrial, _sendAction, reset, trialJoined, watchTrials, trialStateList, actorConfig] = useActions<
@@ -187,6 +195,7 @@ function App() {
 
   useEffect(() => {
     if (watchTrials && !watching) {
+      console.log("watching")
       watchTrials();
       setWatching(true);
     }
@@ -215,6 +224,8 @@ function App() {
         break;
       }
     }
+
+    console.log(trialStateList, trialIdToJoin)
 
     if (trialIdToJoin === undefined) {
       console.log("no trial to join");
