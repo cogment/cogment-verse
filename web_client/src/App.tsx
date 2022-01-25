@@ -21,8 +21,6 @@ import { useActions } from "./hooks/useActions";
 import { get_keymap, useControls } from "./hooks/useControls";
 import { useWindowSize } from "./hooks/useWindowSize";
 
-const decoder = new TextDecoder("utf8");
-
 const setContains = <T extends unknown>(A: Set<T>, B: Set<T>): boolean => {
   if (A.size > B.size) {
     return false;
