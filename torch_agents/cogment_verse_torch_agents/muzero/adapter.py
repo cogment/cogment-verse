@@ -229,12 +229,12 @@ class MuZeroAgentAdapter(AgentAdapter):
         batch_queue = mp.Queue(max_prefetch_batch)
         reanalyze_queue = mp.Queue()
         # limit to small size so that training and sample generation don't get out of sync
-        info_queue = mp.Queue(max_prefetch_batch)
+        results_queue = mp.Queue(max_prefetch_batch)
 
         reward_distribution = copy.deepcopy(agent.muzero.reward_distribution).cpu()
         value_distribution = copy.deepcopy(agent.muzero.value_distribution).cpu()
 
-        train_worker = TrainWorker(agent, batch_queue, info_queue, config)
+        train_worker = TrainWorker(agent, batch_queue, results_queue, config)
         replay_buffer = ReplayBufferWorker(
             sample_queue,
             priority_update_queue,
@@ -302,9 +302,9 @@ class MuZeroAgentAdapter(AgentAdapter):
                 if replay_buffer.size() <= config.training.min_replay_buffer_size:
                     continue
 
-                while not info_queue.empty():
+                while not results_queue.empty():
                     try:
-                        info, agent_update = info_queue.get_nowait()
+                        info, agent_update = results_queue.get_nowait()
                         if agent_update is not None:
                             agent = agent_update
                     except queue.Empty:
@@ -609,11 +609,11 @@ class AgentTrialWorker(mp.Process):
 
 
 class TrainWorker(mp.Process):
-    def __init__(self, agent, batch_queue, info_queue, config):
+    def __init__(self, agent, batch_queue, results_queue, config):
         super().__init__()
         self.batch_queue = batch_queue
         self.agent = agent
-        self.info_queue = info_queue
+        self.results_queue = results_queue
         self.config = config
         self.steps_per_update = 200
 
@@ -666,9 +666,9 @@ class TrainWorker(mp.Process):
             if step % self.steps_per_update == 0:
                 cpu_agent = copy.deepcopy(self.agent)
                 cpu_agent.set_device("cpu")
-                self.info_queue.put((info, cpu_agent))
+                self.results_queue.put((info, cpu_agent))
             else:
-                self.info_queue.put((info, None))
+                self.results_queue.put((info, None))
 
 
 class ReanalyzeWorker(mp.Process):
