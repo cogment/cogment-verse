@@ -12,10 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from cogment.session import ActorInfo, RecvEvent, RecvAction, EventType
-
 import asyncio
 from collections import namedtuple
+
+from cogment.session import ActorInfo, EventType, RecvAction, RecvEvent
 
 SentReward = namedtuple("SentReward", ["value", "confidence", "to", "tick_id", "user_data"])
 SentEvent = namedtuple(
@@ -45,9 +45,9 @@ class MockEnvironmentSession:
         async def environment_impl_worker():
             try:
                 await environment_impl(self)
-            except asyncio.CancelledError:
+            except asyncio.CancelledError as cancelled_error:
                 # Raising cancellation
-                raise
+                raise cancelled_error
             except Exception as err:
                 self._sent_events_queue.put_nowait(SentEvent(tick_id=self._tick_id, error=err))
 

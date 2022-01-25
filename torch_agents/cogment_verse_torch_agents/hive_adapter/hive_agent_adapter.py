@@ -104,7 +104,7 @@ class HiveAgentAdapter(AgentAdapter):
                 )
 
                 actor_index = actor_session.config.actor_index
-                
+
                 total_reward = 0
 
                 async for event in actor_session.event_loop():

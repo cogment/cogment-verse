@@ -81,45 +81,46 @@ export const useActions: UseActions = <ObservationT, ActionT extends MessageBase
   useEffect(() => {
     const actor = { name: actorName, actorClass: actorClass };
 
-    const context = new Context<ActionT, ObservationT>(
-      cogSettings,
-      actorName,
-    );
+    const context = new Context<ActionT, ObservationT>(cogSettings, actorName);
 
-    context.registerActor(async (actorSession) => {
-      let tickId = 0;
+    context.registerActor(
+      async (actorSession) => {
+        let tickId = 0;
 
-      actorSession.start();
+        actorSession.start();
 
-      // todo: figure out why this cast is necessary (wrong template argument somewhere?)
-      setActorConfig(actorSession.config);
+        // todo: figure out why this cast is necessary (wrong template argument somewhere?)
+        setActorConfig(actorSession.config);
 
-      //Double arrow function here beause react will turn a single one into a lazy loaded function
-      setSendAction(() => (action: ActionT) => {
-        actorSession.doAction(action);
-      });
+        //Double arrow function here beause react will turn a single one into a lazy loaded function
+        setSendAction(() => (action: ActionT) => {
+          actorSession.doAction(action);
+        });
 
-      for await (const { observation, messages, rewards, type } of actorSession.eventLoop()) {
-        //Parse the observation into a regular JS object
-        //TODO: this will eventually be part of the API
+        for await (const { observation, messages, rewards, type } of actorSession.eventLoop()) {
+          //Parse the observation into a regular JS object
+          //TODO: this will eventually be part of the API
 
-        let observationOBJ = observation && (observation as ObservationT | undefined);
+          let observationOBJ = observation && (observation as ObservationT | undefined);
 
-        let next_event = {
-          observation: observationOBJ,
-          message: messages[0],
-          reward: rewards[0],
-          last: type === 3,
-          tickId: tickId++,
-        };
+          let next_event = {
+            observation: observationOBJ,
+            message: messages[0],
+            reward: rewards[0],
+            last: type === 3,
+            tickId: tickId++,
+          };
 
-        setEvent(next_event);
+          setEvent(next_event);
 
-        if (next_event.last) {
-          break;
+          if (next_event.last) {
+            break;
+          }
         }
-      }
-    }, actor.name, actor.actorClass);
+      },
+      actor.name,
+      actor.actorClass
+    );
 
     //Creating the trial controller must happen after actors are registered
     const trialController = context.getController(grpcURL);
@@ -144,7 +145,7 @@ export const useActions: UseActions = <ObservationT, ActionT extends MessageBase
           const { trialId, state } = trialStateMsg;
           trialStateList.set(trialId, state);
           console.log("trial state", trialId, state);
-          console.log(trialStateList)
+          console.log(trialStateList);
           setTrialStateList(trialStateList);
         }
       } catch (error) {
