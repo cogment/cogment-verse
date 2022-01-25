@@ -5,8 +5,8 @@ RUN apt-get update && apt-get -y install gettext-base
 ADD cogment.yaml ./
 ADD *.proto ./
 
-ENV TRIAL_LIFECYCLE_PORT=9000
-ENV TRIAL_ACTOR_PORT=9000
+ENV COGMENT_LIFECYCLE_PORT=9000
+ENV COGMENT_ACTOR_PORT=9000
 #ENV PROMETHEUS_PORT=8000
 
 # Didn't manage to setup envsubst in the ENTRYPOINT

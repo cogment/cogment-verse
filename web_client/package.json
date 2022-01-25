@@ -3,14 +3,14 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
-    "@cogment/cogment-js-sdk": "^2.0.0",
+    "@cogment/cogment-js-sdk": "^2.0.1",
     "@testing-library/jest-dom": "^5.14.1",
     "@testing-library/react": "^11.2.7",
     "@testing-library/user-event": "^12.8.3",
     "@types/google-protobuf": "^3.15.5",
     "google-protobuf": "^3.18.0-rc.2",
     "grpc-tools": "^1.11.2",
-    "jsdoc": "^3.6.7",
+    "jsdoc": "^3.6.10",
     "prettier": "^2.4.1",
     "protobufjs": "git+https://github.com/protobufjs/protobuf.js.git#d13d5d5688052e366aa2e9169f50dfca376b32cf",
     "react": "^17.0.2",
@@ -23,7 +23,7 @@
     "web-vitals": "^1.1.2"
   },
   "scripts": {
-    "cogment_generate": "cogment-js-sdk-generate",
+    "cogment_generate": "npx cogment-js-sdk-generate cogment.yaml",
     "start": "npm run cogment_generate && react-scripts start",
     "build": "npm run cogment_generate && react-scripts build",
     "test": "react-scripts test",
