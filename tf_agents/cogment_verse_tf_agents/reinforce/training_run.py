@@ -37,8 +37,8 @@ def create_training_run(agent_adapter):
             model, _ = await agent_adapter.create_and_publish_initial_version(
                 model_id,
                 **{
-                    "obs_dim": config.num_input,
-                    "act_dim": config.num_action,
+                    "obs_dim": config.environment.specs.num_input,
+                    "act_dim": config.environment.specs.num_action,
                     "max_replay_buffer_size": config.max_replay_buffer_size,
                     "lr": config.learning_rate,
                     "gamma": config.discount_factor,
@@ -51,12 +51,6 @@ def create_training_run(agent_adapter):
             trials_completed = 0
             all_trials_reward = 0
 
-            environment_specs = EnvironmentSpecs(
-                implementation=config.environment_implementation,
-                num_input=config.num_input,
-                num_action=config.num_action,
-            )
-
             # Create config for the actor
             actor_configs = [
                 ActorParams(
@@ -67,10 +61,10 @@ def create_training_run(agent_adapter):
                         run_id=run_id,
                         model_id=model_id,
                         model_version=model_version_number,
-                        environment_specs=environment_specs,
+                        environment_specs=config.environment.specs,
                     ),
                 )
-                for player_idx in range(config.player_count)
+                for player_idx in range(config.environment.config.player_count)
             ]
 
             # Create configs for trials
@@ -78,14 +72,14 @@ def create_training_run(agent_adapter):
                 TrialConfig(
                     run_id=run_id,
                     environment=EnvironmentParams(
-                        specs=environment_specs,
+                        specs=config.environment.specs,
                         config=EnvironmentConfig(
-                            player_count=config.player_count,
+                            player_count=config.environment.config.player_count,
                             run_id=run_id,
                             render=False,
-                            render_width=config.render_width,
-                            flatten=config.flatten,
-                            framestack=config.framestack,
+                            render_width=config.environment.config.render_width,
+                            flatten=config.environment.config.flatten,
+                            framestack=config.environment.config.framestack,
                         ),
                     ),
                     actors=actor_configs,

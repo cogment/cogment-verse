@@ -22,7 +22,6 @@ message NDArray {
   bytes data = 3;
 }
 
-
 message EnvironmentConfig {
   string run_id = 1;
   int32 player_count = 2;
@@ -110,32 +109,25 @@ message ReplayBufferConfig {
 }
 
 message RunConfig {
-  string name = 1;
-  uint32 num_input = 2;
-  uint32 num_action = 3;
-  string agent_implementation = 4;
-  string environment_implementation = 5;
-  uint32 player_count = 8;
-  float epsilon_min = 9;
-  uint32 epsilon_steps = 10;
-  uint32 target_net_update_schedule = 11;
-  float learning_rate = 12;
-  uint32 lr_warmup_steps = 13;
-  uint32 demonstration_count = 14;
-  uint32 total_trial_count = 15;
-  uint32 model_publication_interval = 16;
-  uint32 model_archive_interval_multiplier = 17; // Archive every fourth published model
-  uint32 render_width = 18;
-  uint32 batch_size = 19;
-  uint32 min_replay_buffer_size = 20;
-  uint32 max_parallel_trials = 21;
-  ModelArgs model_kwargs = 22;
-  uint32 max_replay_buffer_size = 23;
-  bool flatten = 24;
-  bool aggregate_by_actor = 26;
-  uint32 framestack = 27;
-  ReplayBufferConfig replay_buffer_config = 28;
-  float discount_factor = 29;
+  EnvironmentParams environment = 1;
+  string agent_implementation = 2;
+  float epsilon_min = 3;
+  uint32 epsilon_steps = 4;
+  uint32 target_net_update_schedule = 5;
+  float learning_rate = 6;
+  uint32 lr_warmup_steps = 7;
+  uint32 demonstration_count = 8;
+  uint32 total_trial_count = 9;
+  uint32 model_publication_interval = 10;
+  uint32 model_archive_interval_multiplier = 11; // Archive every fourth published model
+  uint32 batch_size = 12;
+  uint32 min_replay_buffer_size = 13;
+  uint32 max_parallel_trials = 14;
+  ModelArgs model_kwargs = 15;
+  uint32 max_replay_buffer_size = 16;
+  bool aggregate_by_actor = 17;
+  ReplayBufferConfig replay_buffer_config = 18;
+  float discount_factor = 19;
 }
 
 message MLPNetworkConfig {

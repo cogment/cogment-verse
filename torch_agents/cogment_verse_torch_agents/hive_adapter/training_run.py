@@ -80,8 +80,8 @@ def create_training_run(agent_adapter):
                 model_id,
                 impl_name=config.agent_implementation,
                 **{
-                    "obs_dim": config.num_input,
-                    "act_dim": config.num_action,
+                    "obs_dim": config.environment.specs.num_input,
+                    "act_dim": config.environment.specs.num_action,
                     "epsilon_schedule": LinearSchedule(1, config.epsilon_min, config.epsilon_steps),
                     "learn_schedule": SwitchSchedule(False, True, 1),
                     "target_net_update_schedule": PeriodicSchedule(False, True, config.target_net_update_schedule),
@@ -92,11 +92,11 @@ def create_training_run(agent_adapter):
             )
             run_xp_tracker.log_params(
                 model._params,
-                player_count=config.player_count,
+                player_count=config.environment.config.player_count,
                 batch_size=config.batch_size,
                 model_publication_interval=config.model_publication_interval,
                 model_archive_interval_multiplier=config.model_archive_interval_multiplier,
-                environment=config.environment_implementation,
+                environment=config.environment.specs.implementation,
                 agent_implmentation=config.agent_implementation,
             )
 
@@ -114,12 +114,6 @@ def create_training_run(agent_adapter):
             all_trials_reward = 0
             start_time = time.time()
 
-            environment_specs = EnvironmentSpecs(
-                implementation=config.environment_implementation,
-                num_input=config.num_input,
-                num_action=config.num_action,
-            )
-
             # Create the config for the player agents
             player_actor_configs = [
                 ActorParams(
@@ -130,28 +124,28 @@ def create_training_run(agent_adapter):
                         run_id=run_id,
                         model_id=model_id,
                         model_version=np.random.randint(-100, -1),  # TODO this actually won't work anymore
-                        environment_specs=environment_specs,
+                        environment_specs=config.environment.specs,
                     ),
                 )
-                for player_idx in range(config.player_count)
+                for player_idx in range(config.environment.config.player_count)
             ]
             # for self-play, randomly select one player to use latest model version
             # if there is only one player then it will always use the latest
-            distinguished_actor = np.random.randint(0, config.player_count)
+            distinguished_actor = np.random.randint(0, config.environment.config.player_count)
             player_actor_configs[distinguished_actor].agent_config.model_version = -1
 
             self_play_trial_configs = [
                 TrialConfig(
                     run_id=run_id,
                     environment=EnvironmentParams(
-                        specs=environment_specs,
+                        specs=config.environment.specs,
                         config=EnvironmentConfig(
-                            player_count=config.player_count,
+                            player_count=config.environment.config.player_count,
                             run_id=run_id,
                             render=False,
-                            render_width=config.render_width,
-                            flatten=config.flatten,
-                            framestack=config.framestack,
+                            render_width=config.environment.config.render_width,
+                            flatten=config.environment.config.flatten,
+                            framestack=config.environment.config.framestack,
                         ),
                     ),
                     actors=player_actor_configs,
@@ -169,21 +163,21 @@ def create_training_run(agent_adapter):
                     implementation="client",
                     teacher_config=TeacherConfig(
                         run_id=run_id,
-                        environment_specs=environment_specs,
+                        environment_specs=config.environment.specs,
                     ),
                 )
                 demonstration_trial_configs = [
                     TrialConfig(
                         run_id=run_id,
                         environment=EnvironmentParams(
-                            specs=environment_specs,
+                            specs=config.environment.specs,
                             config=EnvironmentConfig(
-                                player_count=config.player_count,
+                                player_count=config.environment.config.player_count,
                                 run_id=run_id,
                                 render=True,
-                                render_width=config.render_width,
-                                flatten=config.flatten,
-                                framestack=config.framestack,
+                                render_width=config.environment.config.render_width,
+                                flatten=config.environment.config.flatten,
+                                framestack=config.environment.config.framestack,
                             ),
                         ),
                         actors=[*player_actor_configs, teacher_actor_config],
