@@ -29,10 +29,9 @@ pytest-asyncio = "^0.16.0"
 watchdog = {extras = ["watchmedo"], version = "^2.1.6"}
 
 [tool.taskipy.tasks]
-retrieve_roms = "mkdir -p .atari_roms && curl -s http://www.atarimania.com/roms/Roms.rar -o .atari_roms/roms.rar && unrar x -r .atari_roms/roms.rar .atari_roms/"
-import_roms = "python -m atari_py.import_roms .atari_roms"
+import_atari_roms = "mkdir -p .atari_roms && curl -s http://www.atarimania.com/roms/Roms.rar -o .atari_roms/roms.rar && unrar x -r .atari_roms/roms.rar .atari_roms/ && python -m atari_py.import_roms .atari_roms"
 generate = "python -m cogment.generate"
-build = "task import_roms && task generate"
+build = "task generate"
 start = "python -m main"
 dev="../base_python/scripts/autoreload.sh"
 unit_tests = "python -m pytest --cov=. --cov-report term-missing tests"

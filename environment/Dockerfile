@@ -25,8 +25,8 @@ WORKDIR /cogment-verse/environment
 COPY pyproject.toml poetry.lock ./
 RUN poetry install --no-root
 
-# Download the atari roms
-RUN poetry run task retrieve_roms
+# Download & import the atari roms
+RUN poetry run task import_atari_roms
 
 ENTRYPOINT ["xvfb-run", "-e", "/dev/stdout", "-a"]
 # start the server in development mode
