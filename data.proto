@@ -165,3 +165,10 @@ message SimpleBCTrainingRunConfig {
   SimpleBCTrainingConfig training = 2;
   MLPNetworkConfig policy_network = 3;
 }
+
+message PlayRunConfig {
+  EnvironmentParams environment = 1;
+  repeated ActorParams actors = 2;
+  bool observer = 3;
+  uint32 trial_count = 4;
+}

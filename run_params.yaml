@@ -677,3 +677,27 @@ simple_bc_mountaincar:
       config:
         seed: 12
 
+play:
+  implementation: play
+  config:
+    class_name: data_pb2.PlayRunConfig
+    # Set to true to have the ability to observe the run in the web client
+    observer: true
+    trial_count: 10
+    environment:
+      specs:
+        implementation: gym/LunarLander-v2
+        num_input: 8
+        num_action: 4
+      config:
+        player_count: 1
+    actors:
+    - name: player_1
+      actor_class: agent
+      implementation: random
+      # To use an already trained agent use the following.
+      # Make sure the model is compatible with the implementation and the environment
+      #implementation: dqn
+      #agent_config:
+      #  model_id: dreamy_lamarr_model
+      #  model_version: 5

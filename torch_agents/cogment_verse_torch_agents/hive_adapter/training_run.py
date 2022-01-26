@@ -31,7 +31,6 @@ from data_pb2 import (
     ActorParams,
     EnvironmentConfig,
     EnvironmentParams,
-    EnvironmentSpecs,
     TeacherConfig,
     TrialConfig,
 )

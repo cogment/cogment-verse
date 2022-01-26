@@ -9,8 +9,8 @@ services:
 
   orchestrator:
     image: cogment/orchestrator:v2.0.0
+    restart: on-failure
     environment:
-      - COGMENT_VERSE_TRIAL_DATASTORE_ENDPOINT
       - COGMENT_LIFECYCLE_PORT=${COGMENT_VERSE_ORCHESTRATOR_PORT}
       - COGMENT_ACTOR_PORT=${COGMENT_VERSE_ORCHESTRATOR_PORT}
       - COGMENT_PRE_TRIAL_HOOKS=grpc://${COGMENT_VERSE_PRETRIAL_HOOK_ENDPOINT}
@@ -51,6 +51,7 @@ services:
       context: ./environment
       args:
         BASE_PYTHON_IMAGE: cogment/cogment-verse-python-sdk:${IMAGE_TAG:-local}
+    restart: on-failure
     environment:
       - COGMENT_VERSE_ENVIRONMENT_PORT
       - COGMENT_VERSE_ENVIRONMENT_PROMETHEUS_PORT

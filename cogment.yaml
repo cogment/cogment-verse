@@ -8,7 +8,7 @@ commands:
     cogment copy run_api.proto base_python/cogment_verse/api client
   dev: >
     docker-compose build base_python &&
-    docker-compose -f docker-compose.yaml -f docker-compose.dev.yaml up --build --abort-on-container-exit
+    docker-compose -f docker-compose.yaml -f docker-compose.dev.yaml up --build
     grafana
     prometheus
     orchestrator

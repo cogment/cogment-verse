@@ -15,7 +15,7 @@
 import logging
 
 from cogment_verse import MlflowExperimentTracker
-from data_pb2 import AgentConfig, ActorParams, EnvironmentConfig, EnvironmentParams, EnvironmentSpecs, TrialConfig
+from data_pb2 import AgentConfig, ActorParams, EnvironmentConfig, EnvironmentParams, TrialConfig
 from google.protobuf.json_format import MessageToDict
 
 # pylint: disable=protected-access
