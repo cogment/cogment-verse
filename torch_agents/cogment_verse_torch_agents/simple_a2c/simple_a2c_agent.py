@@ -133,7 +133,7 @@ class SimpleA2CAgentAdapter(AgentAdapter):
             model_id = f"{run_session.run_id}_model"
 
             config = run_session.config
-            assert config.environment.config.player_count == 1
+            assert config.environment.specs.num_players == 1
 
             model, _ = await self.create_and_publish_initial_version(
                 model_id,
@@ -274,7 +274,7 @@ class SimpleA2CAgentAdapter(AgentAdapter):
                             num_input=4,
                             num_action=2,
                         ),
-                        config=EnvironmentConfig(seed=12, player_count=1, framestack=1),
+                        config=EnvironmentConfig(seed=12, framestack=1),
                     ),
                     training=SimpleA2CTrainingConfig(
                         epoch_count=100,

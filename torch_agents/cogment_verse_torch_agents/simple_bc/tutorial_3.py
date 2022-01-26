@@ -154,7 +154,7 @@ class SimpleBCAgentAdapterTutorialStep3(AgentAdapter):
             xp_tracker = MlflowExperimentTracker(run_session.params_name, run_session.run_id)
 
             config = run_session.config
-            assert config.environment.config.player_count == 1
+            assert config.environment.specs.num_players == 1
 
             xp_tracker.log_params(
                 config.training,
@@ -228,7 +228,7 @@ class SimpleBCAgentAdapterTutorialStep3(AgentAdapter):
                 SimpleBCTrainingRunConfig(
                     environment=EnvironmentParams(
                         specs=EnvironmentSpecs(implementation="gym/LunarLander-v2", num_input=8, num_action=4),
-                        config=EnvironmentConfig(seed=12, player_count=1, framestack=1, render=True, render_width=256),
+                        config=EnvironmentConfig(seed=12, framestack=1, render=True, render_width=256),
                     ),
                     ############ TUTORIAL STEP 3 ############
                     policy_network=MLPNetworkConfig(hidden_size=64),

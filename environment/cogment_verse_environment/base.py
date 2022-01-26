@@ -23,7 +23,7 @@ GymObservation = namedtuple(
 class BaseEnv(ABC):
     def __init__(self, *, env_spec, num_players, framestack):
         self._env_spec = env_spec
-        self._num_players = num_players
+        self.num_players = num_players
         self._turn = 0
         self._framestack = framestack
         assert framestack >= 1

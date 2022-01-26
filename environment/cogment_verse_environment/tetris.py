@@ -33,7 +33,6 @@ class TetrisEnv(AtariEnv):
         screen_size=84,
         _sticky_actions=True,
         flatten=True,
-        num_players=1,
         framestack=4,
         **_kwargs,
     ):  # pylint: disable=super-init-not-called,non-parent-init-called
@@ -52,7 +51,7 @@ class TetrisEnv(AtariEnv):
         self._framestack = framestack
         self._flatten = flatten
 
-        GymEnv.__init__(self, env_name=env_name, num_players=num_players, framestack=framestack)
+        GymEnv.__init__(self, env_name=env_name, num_players=1, framestack=framestack)
 
     def create_env(self, env_name, **_kwargs):
         """Function used to create the environment. Subclasses can override this method

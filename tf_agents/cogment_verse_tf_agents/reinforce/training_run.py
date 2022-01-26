@@ -64,7 +64,7 @@ def create_training_run(agent_adapter):
                         environment_specs=config.environment.specs,
                     ),
                 )
-                for player_idx in range(config.environment.config.player_count)
+                for player_idx in range(config.environment.specs.num_players)
             ]
 
             # Create configs for trials
@@ -74,7 +74,6 @@ def create_training_run(agent_adapter):
                     environment=EnvironmentParams(
                         specs=config.environment.specs,
                         config=EnvironmentConfig(
-                            player_count=config.environment.config.player_count,
                             run_id=run_id,
                             render=False,
                             render_width=config.environment.config.render_width,

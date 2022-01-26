@@ -2,54 +2,67 @@
 environment_specs:
   cartpole_specs: &cartpole_specs
     implementation: gym/CartPole-v0
+    num_players: 1
     num_input: 4
     num_action: 2
   pendulum_specs: &pendulum_specs
     implementation: gym/Pendulum-v0
+    num_players: 1
     num_input: 3
     num_action: 1
   mountain_car_specs: &mountain_car_specs
     implementation: gym/MountainCar-v0
+    num_players: 1
     num_input: 2
     num_action: 3
   lander_specs: &lander_specs
     implementation: gym/LunarLander-v2
+    num_players: 1
     num_input: 8
     num_action: 4
   lander_continuous_specs: &lander_continuous_specs
     implementation: gym/LunarLanderContinuous-v2
+    num_players: 1
     num_input: 8
     num_action: 2
   bipedal_walker_specs: &bipedal_walker_specs
     implementation: gym/BipedalWalker-v3
+    num_players: 1
     num_input: 24
     num_action: 4
   minatar_breakout_specs: &minatar_breakout_specs
     implementation: minatar/breakout
+    num_players: 1
     num_input: 500
     num_action: 6
   atari_pitfall_specs: &atari_pitfall_specs
     implementation: atari/Pitfall
+    num_players: 1
     num_input: 7056
     num_action: 18
   atari_breakout_specs: &atari_breakout_specs
     implementation: atari/Breakout
+    num_players: 1
     num_input: 7056
     num_action: 4
   tetris_specs: &tetris_specs
     implementation: tetris/TetrisA-v0
+    num_players: 1
     num_input: 7056
     num_action: 12
   procgen_bigfish_specs: &procgen_bigfish_specs
     implementation: procgen/bigfish
+    num_players: 1
     num_input: 7056
     num_action: 15
   pettingzoo_connect_four_specs: &pettingzoo_connect_four_specs
     implementation: pettingzoo/connect_four_v3
+    num_players: 2
     num_input: 84
     num_action: 7
   pettingzoo_backgammon_specs: &pettingzoo_backgammon_specs
     implementation: pettingzoo/backgammon_v3
+    num_players: 2
     num_input: 198
     num_action: 1353
 
@@ -62,8 +75,6 @@ play:
     trial_count: 10
     environment:
       specs: *atari_pitfall_specs
-      config:
-        player_count: 1
     actors:
     # Configure the players (only the first ones are used, up to the number of required players)
     - name: agent_1
@@ -86,7 +97,6 @@ cartpole_rainbow: &default_params
     environment:
       specs: *cartpole_specs
       config: &default_env_config
-        player_count: 1
         render_width: 256
         flatten: True
         framestack: 1
@@ -285,9 +295,7 @@ connect_four_rainbow:
     <<: *default_config
     environment:
       specs: *pettingzoo_connect_four_specs
-      config:
-        <<: *default_env_config
-        player_count: 2
+      config: *default_env_config
     agent_implementation: rainbowtorch
     demonstration_count: 0 #100
     total_trial_count: 10000
@@ -307,9 +315,7 @@ backgammon_rainbow:
         implementation: pet/backgammon_v3
         num_input: 198
         num_action: 1353
-      config:
-        <<: *default_env_config
-        player_count: 2
+      config: *default_env_config
     demonstration_count: 0 #100
     total_trial_count: 10
     model_publication_interval: 100
@@ -576,9 +582,7 @@ benchmark_connect_four:
     <<: *default_config
     environment:
       specs: *pettingzoo_connect_four_specs
-      config:
-        <<: *default_env_config
-        player_count: 2
+      config: *default_env_config
     agent_implementation: rainbowtorch
     environment_implementation:
     demonstration_count: 0 #100

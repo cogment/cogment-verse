@@ -82,9 +82,9 @@ class BaseAgentAdapter(AgentAdapter):
 
             config = run_session.config
             # We ignore additional actor configs
-            if config.environment.config.player_count > len(config.actors):
+            if config.environment.specs.num_players > len(config.actors):
                 raise RuntimeError(
-                    f"Expecting at least {config.environment.config.player_count} configured actors, got {len(config.actors)}"
+                    f"Expecting at least {config.environment.specs.num_players} configured actors, got {len(config.actors)}"
                 )
 
             actors_params = [
@@ -99,7 +99,7 @@ class BaseAgentAdapter(AgentAdapter):
                         model_version=actor_params.agent_config.model_version,
                     ),
                 )
-                for actor_params in config.actors[: config.environment.config.player_count]
+                for actor_params in config.actors[: config.environment.specs.num_players]
             ]
 
             xp_tracker.log_params(
@@ -162,7 +162,7 @@ class BaseAgentAdapter(AgentAdapter):
                     step_idx,
                     **{
                         f"actor_{actor_idx}_reward": sample[actor_idx]
-                        for actor_idx in range(config.environment.config.player_count)
+                        for actor_idx in range(config.environment.specs.num_players)
                     },
                     total_reward=sum(sample),
                 )
@@ -173,8 +173,10 @@ class BaseAgentAdapter(AgentAdapter):
                 play_impl,
                 PlayRunConfig(
                     environment=EnvironmentParams(
-                        specs=EnvironmentSpecs(implementation="gym/LunarLander-v2", num_input=8, num_action=4),
-                        config=EnvironmentConfig(seed=12, player_count=1, framestack=1, render=True, render_width=256),
+                        specs=EnvironmentSpecs(
+                            implementation="gym/LunarLander-v2", num_input=8, num_action=4, num_players=1
+                        ),
+                        config=EnvironmentConfig(seed=12, framestack=1, render=True, render_width=256),
                     ),
                     actors=[],
                     trial_count=5,

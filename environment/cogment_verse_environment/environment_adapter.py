@@ -128,7 +128,6 @@ class EnvironmentAdapter:
                 env = ENVIRONMENT_CONSTRUCTORS[env_type](
                     env_type=env_type,
                     env_name=env_name,
-                    num_players=env_config.player_count,
                     flatten=env_config.flatten,
                     framestack=env_config.framestack,
                 )
@@ -149,10 +148,9 @@ class EnvironmentAdapter:
                 # If there is an extra player, it must be the teacher/expert
                 # and it must be the _last_ player this is only supported form of HILL at the moment)
                 # todo: Make this more general and configurable (via TrialConfig)
-                num_players = env_config.player_count
-                if len(actors) != num_players:
-                    log.debug(len(actors), num_players)
-                    assert len(actors) == num_players + 1
+                if len(actors) != env.num_players:
+                    log.debug(len(actors), env.num_players)
+                    assert len(actors) == env.num_players + 1
                     for idx, actor in enumerate(actors):
                         log.debug(idx, actor.actor_name, actor.actor_class_name)
                     steerable = True
