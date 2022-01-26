@@ -24,6 +24,8 @@ class DrivingEnv(BaseEnv):
         self._prev_turn = 1
         self.num_players = num_players
         self._env.reset([10] * 2, [10] * 3, [0] * 4)
+        self.agent_done = False
+        self.trial_done = False
 
         super().__init__(
             env_spec=self.create_env_spec(**kwargs), num_players=num_players, framestack=framestack
@@ -67,6 +69,22 @@ class DrivingEnv(BaseEnv):
         )
 
     def step(self, action=None):
+
+        if self.agent_done:
+            self.switch_turn()
+            if self._turn == 0:
+                agent = "bob"
+            observation = self._env.reset(self.goal, self.spawn_position, self.spawn_orientation, agent)
+            self.agent_done = False
+            return GymObservation(
+                observation=observation['car_qpos'],
+                rewards=[0.0],
+                current_player=self._turn,
+                legal_moves_as_int=[],
+                done=self.trial_done,
+                info={},
+            )
+
         if not self._turn == 0:
             step_multiplier = 1
             agent = "alice"
@@ -74,22 +92,20 @@ class DrivingEnv(BaseEnv):
             step_multiplier = 1.5
             agent = "bob"
 
-        trial_done = False
-        observation, reward, agent_done, info = self._env.step(action, step_multiplier, agent)
+        observation, reward, self.agent_done, info = self._env.step(action, step_multiplier, agent)
 
-        if agent_done:
+        if self.agent_done:
             self.goal = observation['car_qpos'][:2]
-            if agent == "alice":
-                self._turn = 0
-            else:
-                trial_done = True
+            if agent == "bob":
+                self.trial_done = True
 
+        print(f"%%%%%%%%%%%% {agent, self.agent_done, self.trial_done}")
         return GymObservation(
             observation=observation['car_qpos'],
             current_player=self._turn,
             legal_moves_as_int=[],
             rewards=[reward],
-            done=trial_done,
+            done=self.trial_done,
             info=info,
         )
 
