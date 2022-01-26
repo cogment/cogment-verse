@@ -73,16 +73,23 @@ class DrivingEnv(BaseEnv):
         else:
             step_multiplier = 1.5
             agent = "bob"
-        observation, reward, done, info = self._env.step(action, step_multiplier, agent)
-        if done:
+
+        trial_done = False
+        observation, reward, agent_done, info = self._env.step(action, step_multiplier, agent)
+
+        if agent_done:
             self.goal = observation['car_qpos'][:2]
+            if agent == "alice":
+                self._turn = 0
+            else:
+                trial_done = True
 
         return GymObservation(
             observation=observation['car_qpos'],
             current_player=self._turn,
             legal_moves_as_int=[],
             rewards=[reward],
-            done=done,
+            done=trial_done,
             info=info,
         )
 

@@ -217,6 +217,7 @@ def create_training_run(agent_adapter):
                     max_parallel_trials=config.rollout.max_parallel_trials,
                 ):
                     # alice.consume_training_sample(sample)
+                    # print(f"$$$$$$$$$$$$ {sample} $$$$$$$$$$$$$$")
                     pass
                 # Train Bob
                 # bob.learn()
