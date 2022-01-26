@@ -99,7 +99,6 @@ class DrivingEnv(BaseEnv):
             if agent == "bob":
                 self.trial_done = True
 
-        print(f"%%%%%%%%%%%% {agent, self.agent_done, self.trial_done}")
         return GymObservation(
             observation=observation['car_qpos'],
             current_player=self._turn,
