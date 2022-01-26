@@ -14,15 +14,16 @@ class DrivingEnv(BaseEnv):
     """
         Class for loading pybullet-driving-env
     """
-    def __init__(self, *, num_players=2, framestack=1, spawn=[10,10], **kwargs):
-        assert num_players>1
+
+    def __init__(self, *, num_players=2, framestack=1, spawn=[10, 10], **kwargs):
+        assert num_players > 1
         self.create_env()
 
         # for asymmetric selfplay, self._turn is 0 whenever its Bob's turn to play and [1,num_players] is for each of the alice agents
         self._turn = 0
         self._prev_turn = 1
         self.num_players = num_players
-        self._env.reset([10]*2, [10]*3, [0]*4)
+        self._env.reset([10] * 2, [10] * 3, [0] * 4)
 
         super().__init__(
             env_spec=self.create_env_spec(**kwargs), num_players=num_players, framestack=framestack
@@ -47,9 +48,9 @@ class DrivingEnv(BaseEnv):
     def reset(self):
         self.switch_turn()
         if not self._turn == 0:
-            self.goal = 12*np.ones((2,))
-            self.spawn_position = np.random.uniform(-10,10, (3,))
-            self.spawn_orientation = np.random.uniform(-1,1, (4,))
+            self.goal = 12 * np.ones((2,))
+            self.spawn_position = np.random.uniform(-10, 10, (3,))
+            self.spawn_orientation = np.random.uniform(-1, 1, (4,))
             self.spawn_position[2] = 0.5
             agent = "alice"
         else:
@@ -65,7 +66,7 @@ class DrivingEnv(BaseEnv):
             info={},
         )
 
-    def step(self, action = None):
+    def step(self, action=None):
         if not self._turn == 0:
             step_multiplier = 1
             agent = "alice"
@@ -91,10 +92,10 @@ class DrivingEnv(BaseEnv):
             self._turn = 0
         else:
             # if last player was bob, run one of the alice
-            self._turn = (self._prev_turn-2)%(self.num_players-1)+1
-            self._prev_turn = (self._prev_turn-2)%(self.num_players-1)+1
+            self._turn = (self._prev_turn - 2) % (self.num_players - 1) + 1
+            self._prev_turn = (self._prev_turn - 2) % (self.num_players - 1) + 1
 
-    def seed(self, seed = None):
+    def seed(self, seed=None):
         self._env.seed(seed=seed)
 
     def close(self):

@@ -167,6 +167,7 @@ message SelfPlayRolloutConfig{
   uint32 epoch_trial_count = 2;
   uint32 max_parallel_trials = 3;
   uint32 model_publication_interval = 4;
+  uint32 number_turns_per_trial = 5;
 }
 
 message SelfPlayReplaybufferConfig{
@@ -196,7 +197,6 @@ message SelfPlayEnvironmentConfig {
   int32 render_width = 7;
   uint32 framestack = 8;
   uint32 seed = 9;
-  uint32 num_turns_per_trial = 10;
 }
 
 message SelfPlayEnvironmentParams {

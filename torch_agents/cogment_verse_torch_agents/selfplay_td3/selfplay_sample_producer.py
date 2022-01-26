@@ -28,10 +28,10 @@ def vectorized_training_sample_from_samples(sample, next_sample, last_tick):
     reward = sample.get_actor_reward(0, default=0.0)
 
     return (
-        vectorized_observation["vectorized"],
+        vectorized_observation,
         action,
         reward,
-        vectorized_next_observation["vectorized"],
+        vectorized_next_observation,
         1 if last_tick else 0,
     )
 

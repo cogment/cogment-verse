@@ -593,7 +593,6 @@ selfplay_td3_driving: &default_selfplay_td3_params
         player_count: 2
         render_width: 1000
         framestack: 4
-        num_turns_per_trial: 5
     actor:
       implementation: selfplay_td3
       config:
@@ -614,6 +613,7 @@ selfplay_td3_driving: &default_selfplay_td3_params
       epoch_trial_count: 15
       max_parallel_trials: 1
       model_publication_interval: 1000
+      number_turns_per_trial: 5
     training:
       batch_size: 64
       discount_factor: 0.95

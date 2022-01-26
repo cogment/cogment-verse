@@ -44,13 +44,13 @@ def create_training_run(agent_adapter):
             # alice_kwargs = MessageToDict(config.model_kwargs, preserving_proto_field_name=True)
             alice, _ = await agent_adapter.create_and_publish_initial_version(
                 alice_id,
-                # **{
-                #     "obs_dim": config.num_input,
-                #     "act_dim": config.num_action,
+                **{
+                    "obs_dim": config.actor.config.num_input,
+                    "act_dim": config.actor.config.num_action,
                 #     "max_replay_buffer_size": config.max_replay_buffer_size,
                 #     "lr": config.learning_rate,
                 #     "gamma": config.discount_factor,
-                # },
+                },
                 # **alice_kwargs,
             )
 
@@ -62,13 +62,13 @@ def create_training_run(agent_adapter):
             # bob_kwargs = MessageToDict(config.model_kwargs, preserving_proto_field_name=True)
             bob, _ = await agent_adapter.create_and_publish_initial_version(
                 bob_id,
-                # **{
-                #     "obs_dim": config.num_input,
-                #     "act_dim": config.num_action,
+                **{
+                    "obs_dim": config.actor.config.num_input,
+                    "act_dim": config.actor.config.num_action,
                 #     "max_replay_buffer_size": config.max_replay_buffer_size,
                 #     "lr": config.learning_rate,
                 #     "gamma": config.discount_factor,
-                # },
+                },
                 # **bob_kwargs,
             )
 
@@ -89,32 +89,32 @@ def create_training_run(agent_adapter):
                         model_version=alice_version_number,
                         run_id=run_id,
                         environment_implementation=config.environment.implementation,
-                        num_input=config.actor.num_input,
-                        num_action=config.actor.num_action,
+                        num_input=config.actor.config.num_input,
+                        num_action=config.actor.config.num_action,
                     ),
                 )
             ]
 
             # Create trial config for Alice
             # TBD: change to relevant configs
-            alice_trial_configs = [
-                TrialConfig(
-                    run_id=run_id,
-                    environment=EnvironmentParams(
-                        implementation=config.implementation.implementation,
-                        config=EnvironmentConfig(
-                            player_count=config.environment.config.player_count,
-                            run_id=run_id,
-                            render=False,
-                            render_width=config.environment.config.render_width,
-                            flatten=config.environment.config.flatten,
-                            framestack=config.environment.config.framestack,
-                        ),
-                    ),
-                    actors=alice_configs,
-                )
-                for _ in range(config.rollout.epoch_trial_count) #TBD
-            ]
+            # alice_trial_configs = [
+            #     TrialConfig(
+            #         run_id=run_id,
+            #         environment=EnvironmentParams(
+            #             implementation=config.environment.implementation,
+            #             config=EnvironmentConfig(
+            #                 player_count=config.environment.config.player_count,
+            #                 run_id=run_id,
+            #                 render=False,
+            #                 render_width=config.environment.config.render_width,
+            #                 flatten=config.environment.config.flatten,
+            #                 framestack=config.environment.config.framestack,
+            #             ),
+            #         ),
+            #         actors=alice_configs,
+            #     )
+            #     for _ in range(config.rollout.epoch_trial_count) #TBD
+            # ]
 
             # create Bob_config
             bob_configs = [
@@ -127,15 +127,34 @@ def create_training_run(agent_adapter):
                         model_version=bob_version_number,
                         run_id=run_id,
                         environment_implementation=config.environment.implementation,
-                        num_input=config.actor.num_input,
-                        num_action=config.actor.num_action,
+                        num_input=config.actor.config.num_input,
+                        num_action=config.actor.config.num_action,
                     ),
                 )
             ]
 
             # Create trial config for Bob
             # TBD: change to relevant configs
-            bob_trial_configs = [
+            # bob_trial_configs = [
+            #     TrialConfig(
+            #         run_id=run_id,
+            #         environment=EnvironmentParams(
+            #             implementation=config.environment.implementation,
+            #             config=EnvironmentConfig(
+            #                 player_count=config.environment.config.player_count,
+            #                 run_id=run_id,
+            #                 render=False,
+            #                 render_width=config.environment.config.render_width,
+            #                 flatten=config.environment.config.flatten,
+            #                 framestack=config.environment.config.framestack,
+            #             ),
+            #         ),
+            #         actors=bob_configs,
+            #     )
+            #     for _ in range(config.rollout.epoch_trial_count)  # TBD
+            # ]
+
+            trial_configs = [
                 TrialConfig(
                     run_id=run_id,
                     environment=EnvironmentParams(
@@ -149,42 +168,56 @@ def create_training_run(agent_adapter):
                             framestack=config.environment.config.framestack,
                         ),
                     ),
-                    actors=bob_configs,
+                    actors=alice_configs + bob_configs,
                 )
-                for _ in range(config.rollout.epoch_trial_count)  # TBD
+                for _ in range(config.rollout.epoch_trial_count) #TBD
             ]
 
+
+
             for epoch in range(config.rollout.epoch_count): # TBD
-                for turns in range(config.rollout.number_turns_per_trial): # TBD
-
-                    # Rollout Alice trials
-                    async for (
-                        step_idx,
-                        step_timestamp,
-                        _trial_id,
-                        _tick_id,
-                        sample,
-                    ) in run_session.start_trials_and_wait_for_termination(
-                        trial_configs=alice_trial_configs,
-                        max_parallel_trials=config.rollout.max_parallel_trials,
-                    ):
-                        # alice.consume_training_sample(sample)
-                        pass
-
-                    # Rollout Bob trials
-                    async for (
-                        step_idx,
-                        step_timestamp,
-                        _trial_id,
-                        _tick_id,
-                        sample,
-                    ) in run_session.start_trials_and_wait_for_termination(
-                        trial_configs=bob_trial_configs,
-                        max_parallel_trials=config.rollout.max_parallel_trials,
-                    ):
-                        # bob.consume_training_sample(sample)
-                        pass
-
+            #     for turns in range(config.rollout.number_turns_per_trial): # TBD
+            #
+            #         # Rollout Alice trials
+            #         async for (
+            #             step_idx,
+            #             step_timestamp,
+            #             _trial_id,
+            #             _tick_id,
+            #             sample,
+            #         ) in run_session.start_trials_and_wait_for_termination(
+            #             trial_configs=alice_trial_configs,
+            #             max_parallel_trials=config.rollout.max_parallel_trials,
+            #         ):
+            #             # alice.consume_training_sample(sample)
+            #             pass
+            #
+            #         # Rollout Bob trials
+            #         async for (
+            #             step_idx,
+            #             step_timestamp,
+            #             _trial_id,
+            #             _tick_id,
+            #             sample,
+            #         ) in run_session.start_trials_and_wait_for_termination(
+            #             trial_configs=bob_trial_configs,
+            #             max_parallel_trials=config.rollout.max_parallel_trials,
+            #         ):
+            #             # bob.consume_training_sample(sample)
+            #             pass
+                # Rollout Alice trials
+                async for (
+                    step_idx,
+                    step_timestamp,
+                    _trial_id,
+                    _tick_id,
+                    sample,
+                ) in run_session.start_trials_and_wait_for_termination(
+                    trial_configs=trial_configs,
+                    max_parallel_trials=config.rollout.max_parallel_trials,
+                ):
+                    # alice.consume_training_sample(sample)
+                    pass
                 # Train Bob
                 # bob.learn()
                 # Train Alice

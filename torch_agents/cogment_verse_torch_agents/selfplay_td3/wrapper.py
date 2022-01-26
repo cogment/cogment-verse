@@ -25,8 +25,9 @@ def tensor_from_cog_obs(cog_obs, dtype=torch.float, device=None):
 
 
 def tensor_from_cog_action(cog_action, dtype=torch.float, device=None):
-    return torch.tensor(cog_action.discrete_action, dtype=dtype, device=device)
+    return torch.tensor(cog_action.continuous_action.data, dtype=dtype, device=device)
 
 
 def cog_action_from_tensor(tensor):
-    return AgentAction(discrete_action=tensor.item())
+    return AgentAction(continuous_action=ContinuousAction(
+        data=tensor.tolist()))

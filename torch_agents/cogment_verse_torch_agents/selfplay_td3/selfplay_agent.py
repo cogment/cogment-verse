@@ -70,14 +70,7 @@ class SelfPlayAgentAdapter(AgentAdapter):
                     obs = event.observation.snapshot
                     obs = tensor_from_cog_obs(obs)
 
-                    obs_input = obs["vectorized"]
-
-                    if obs["current_player"] != actor_index:
-                        # Use -1 to indicate no action, since not active player
-                        action = -1
-                    else:
-                        action = model.act(obs_input)
-
+                    action = model.act(obs)
                     cog_action = cog_action_from_tensor(action)
                     actor_session.do_action(cog_action)
 
