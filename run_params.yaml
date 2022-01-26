@@ -1,13 +1,90 @@
 
+environment_specs:
+  cartpole_specs: &cartpole_specs
+    implementation: gym/CartPole-v0
+    num_input: 4
+    num_action: 2
+  pendulum_specs: &pendulum_specs
+    implementation: gym/Pendulum-v0
+    num_input: 3
+    num_action: 1
+  mountain_car_specs: &mountain_car_specs
+    implementation: gym/MountainCar-v0
+    num_input: 2
+    num_action: 3
+  lander_specs: &lander_specs
+    implementation: gym/LunarLander-v2
+    num_input: 8
+    num_action: 4
+  lander_continuous_specs: &lander_continuous_specs
+    implementation: gym/LunarLanderContinuous-v2
+    num_input: 8
+    num_action: 2
+  bipedal_walker_specs: &bipedal_walker_specs
+    implementation: gym/BipedalWalker-v3
+    num_input: 24
+    num_action: 4
+  minatar_breakout_specs: &minatar_breakout_specs
+    implementation: minatar/breakout
+    num_input: 500
+    num_action: 6
+  atari_pitfall_specs: &atari_pitfall_specs
+    implementation: atari/Pitfall
+    num_input: 7056
+    num_action: 18
+  atari_breakout_specs: &atari_breakout_specs
+    implementation: atari/Breakout
+    num_input: 7056
+    num_action: 4
+  tetris_specs: &tetris_specs
+    implementation: tetris/TetrisA-v0
+    num_input: 7056
+    num_action: 12
+  procgen_bigfish_specs: &procgen_bigfish_specs
+    implementation: procgen/bigfish
+    num_input: 7056
+    num_action: 15
+  pettingzoo_connect_four_specs: &pettingzoo_connect_four_specs
+    implementation: pettingzoo/connect_four_v3
+    num_input: 84
+    num_action: 7
+  pettingzoo_backgammon_specs: &pettingzoo_backgammon_specs
+    implementation: pettingzoo/backgammon_v3
+    num_input: 198
+    num_action: 1353
+
+play:
+  implementation: play
+  config:
+    class_name: data_pb2.PlayRunConfig
+    # Set to true to have the ability to observe the run in the web client
+    observer: true
+    trial_count: 10
+    environment:
+      specs: *atari_pitfall_specs
+      config:
+        player_count: 1
+    actors:
+    # Configure the players (only the first ones are used, up to the number of required players)
+    - name: agent_1
+      actor_class: agent
+      implementation: random
+      # To use an already trained agent use the following.
+      # Make sure the model is compatible with the implementation and the environment
+      #implementation: dqn
+      #agent_config:
+      #  model_id: dreamy_lamarr_model
+      #  model_version: 5
+    - name: agent_2
+      actor_class: agent
+      implementation: random
+
 cartpole_rainbow: &default_params
   implementation: "cogment_verse_run_impl"
   config: &default_config
     class_name: data_pb2.RunConfig
     environment:
-      specs:
-        implementation: gym/CartPole-v0
-        num_input: 4
-        num_action: 2
+      specs: *cartpole_specs
       config: &default_env_config
         player_count: 1
         render_width: 256
@@ -54,10 +131,7 @@ pendulum_td3:
   config:
     <<: *default_config
     environment:
-      specs:
-        implementation: gym/Pendulum-v0
-        num_input: 3
-        num_action: 1
+      specs: *pendulum_specs
       config: *default_env_config
     agent_implementation: td3
     epsilon_min: 0.0
@@ -80,10 +154,7 @@ minatar_breakout_rainbow:
   config:
     <<: *default_config
     environment:
-      specs:
-        implementation: min/breakout
-        num_input: 500
-        num_action: 6
+      specs: *minatar_breakout_specs
       config: *default_env_config
     agent_implementation: rainbowtorch
 
@@ -92,10 +163,7 @@ atari_pitfall_rainbow:
   config:
     <<: *default_config
     environment:
-      specs:
-        implementation: ata/Pitfall
-        num_input: 7056
-        num_action: 18
+      specs: *atari_pitfall_specs
       config: *default_env_config
     agent_implementation: rainbowtorch
 
@@ -104,10 +172,7 @@ atari_breakout_cnn:
   config:
     <<: *default_config
     environment:
-      specs:
-        implementation: ata/Breakout
-        num_input: 7056
-        num_action: 4
+      specs: *atari_breakout_specs
       config:
         <<: *default_env_config
         flatten: false
@@ -136,10 +201,7 @@ minatar_breakout_demo:
   config:
     <<: *default_config
     environment:
-      specs:
-        implementation: min/breakout
-        num_input: 400
-        num_action: 6
+      specs: *minatar_breakout_specs
       config: *default_env_config
     agent_implementation: rainbowtorch
 
@@ -148,10 +210,7 @@ atari_breakout_demo:
   config:
     <<: *default_config
     environment:
-      specs:
-        implementation: ata/Breakout
-        num_input: 7056
-        num_action: 4
+      specs: *atari_breakout_specs
       config:
         <<: *default_env_config
         framestack: 4
@@ -162,10 +221,7 @@ atari_pitfall_demo:
   config:
     <<: *default_config
     environment:
-      specs:
-        implementation: ata/Pitfall
-        num_input: 7056
-        num_action: 18
+      specs: *atari_pitfall_specs
       config: *default_env_config
     agent_implementation: rainbowtorch
     demonstration_count: 10
@@ -175,10 +231,7 @@ lander_rainbow_demo: &lander_rainbow_demo
   config: &lander_rainbow_config
     <<: *default_config
     environment:
-      specs:
-        implementation: gym/LunarLander-v2
-        num_input: 8
-        num_action: 4
+      specs: *lander_specs
       config:
         <<: *default_env_config
         render_width: 1000
@@ -208,10 +261,7 @@ tetris_rainbow_demo:
   config:
     <<: *default_config
     environment:
-      specs:
-        implementation: tet/TetrisA-v0
-        num_input: 7056
-        num_action: 12
+      specs: *tetris_specs
       config:
         <<: *default_env_config
         render_width: 1000
@@ -234,10 +284,7 @@ connect_four_rainbow:
   config:
     <<: *default_config
     environment:
-      specs:
-        implementation: pet/connect_four_v3
-        num_input: 84
-        num_action: 7
+      specs: *pettingzoo_connect_four_specs
       config:
         <<: *default_env_config
         player_count: 2
@@ -272,10 +319,7 @@ benchmark_lander:
   config:
     <<: *default_config
     environment:
-      specs:
-        implementation: gym/LunarLander-v2
-        num_input: 8
-        num_action: 4
+      specs: *lander_specs
       config:
         <<: *default_env_config
         render_width: 1000
@@ -299,10 +343,7 @@ benchmark_lander_hill:
   config:
     <<: *default_config
     environment:
-      specs:
-        implementation: gym/LunarLander-v2
-        num_input: 8
-        num_action: 4
+      specs: *lander_specs
       config:
         <<: *default_env_config
         render_width: 1000
@@ -326,10 +367,7 @@ lander_continuous_td3:
   config:
     <<: *default_config
     environment:
-      specs:
-        implementation: gym/LunarLanderContinuous-v2
-        num_input: 8
-        num_action: 2
+      specs: *lander_continuous_specs
       config:
         <<: *default_env_config
         render_width: 1000
@@ -361,10 +399,7 @@ lander_continuous_ddpg:
   config:
     <<: *default_config
     environment:
-      specs:
-        implementation: gym/LunarLanderContinuous-v2
-        num_input: 8
-        num_action: 2
+      specs: *lander_continuous_specs
       config:
         <<: *default_env_config
         render_width: 1000
@@ -395,10 +430,7 @@ walker_td3:
   config:
     <<: *default_config
     environment:
-      specs:
-        implementation: gym/BipedalWalker-v3
-        num_input: 8
-        num_action: 2
+      specs: *bipedal_walker_specs
       config:
         <<: *default_env_config
         render_width: 1000
@@ -429,10 +461,7 @@ walker_ddpg:
   config:
     <<: *default_config
     environment:
-      specs:
-        implementation: gym/BipedalWalker-v3
-        num_input: 24
-        num_action: 4
+      specs: *bipedal_walker_specs
       config:
         <<: *default_env_config
         render_width: 1000
@@ -529,10 +558,7 @@ benchmark_breakout:
   config:
     <<: *default_config
     environment:
-      specs:
-        implementation: min/breakout
-        num_input: 400
-        num_action: 6
+      specs: *minatar_breakout_specs
       config: *default_env_config
     agent_implementation: rainbowtorch
     demonstration_count: 0
@@ -549,10 +575,7 @@ benchmark_connect_four:
   config:
     <<: *default_config
     environment:
-      specs:
-        implementation: pet/connect_four_v3
-        num_input: 84
-        num_action: 7
+      specs: *pettingzoo_connect_four_specs
       config:
         <<: *default_env_config
         player_count: 2
@@ -574,10 +597,7 @@ simple_a2c_cartpole: &default_simple_a2c_params
   config: &default_simple_a2c_config
     class_name: data_pb2.SimpleA2CTrainingRunConfig
     environment:
-      specs:
-        implementation: gym/CartPole-v0
-        num_input: 4
-        num_action: 2
+      specs: *cartpole_specs
       config:
         <<: *default_env_config
         seed: 12
@@ -602,10 +622,7 @@ procgen_bigfish:
   config:
     <<: *default_config
     environment:
-      specs:
-        implementation: procgen/bigfish
-        num_input: 7056
-        num_action: 15
+      specs: *procgen_bigfish_specs
       config:
         <<: *default_env_config
         render_width: 64
@@ -637,10 +654,7 @@ simple_bc_lander: &simple_bc_experiment
   config: &simple_bc_config
     class_name: data_pb2.SimpleBCTrainingRunConfig
     environment:
-      specs:
-        implementation: gym/LunarLander-v2
-        num_input: 8
-        num_action: 4
+      specs: *lander_specs
       config:
         seed: 12
     training:
@@ -657,10 +671,7 @@ simple_bc_cartpole:
   config:
     <<: *simple_bc_config
     environment:
-      specs:
-        implementation: gym/CartPole-v0
-        num_input: 4
-        num_action: 2
+      specs: *cartpole_specs
       config:
         seed: 12
 
@@ -670,34 +681,6 @@ simple_bc_mountaincar:
   config:
     <<: *simple_bc_config
     environment:
-      specs:
-        implementation: gym/MountainCar-v0
-        num_input: 2
-        num_action: 3
+      specs: *mountain_car_specs
       config:
         seed: 12
-
-play:
-  implementation: play
-  config:
-    class_name: data_pb2.PlayRunConfig
-    # Set to true to have the ability to observe the run in the web client
-    observer: true
-    trial_count: 10
-    environment:
-      specs:
-        implementation: gym/LunarLander-v2
-        num_input: 8
-        num_action: 4
-      config:
-        player_count: 1
-    actors:
-    - name: player_1
-      actor_class: agent
-      implementation: random
-      # To use an already trained agent use the following.
-      # Make sure the model is compatible with the implementation and the environment
-      #implementation: dqn
-      #agent_config:
-      #  model_id: dreamy_lamarr_model
-      #  model_version: 5
