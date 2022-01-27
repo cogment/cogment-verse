@@ -26,6 +26,8 @@ class DrivingEnv(BaseEnv):
         self._env.reset([10] * 2, [10] * 3, [0] * 4)
         self.agent_done = False
         self.trial_done = False
+        self.current_turn = 0
+        self.total_num_turns = 4
 
         super().__init__(
             env_spec=self.create_env_spec(**kwargs), num_players=num_players, framestack=framestack
@@ -71,19 +73,13 @@ class DrivingEnv(BaseEnv):
     def step(self, action=None):
 
         if self.agent_done:
-            self.switch_turn()
-            if self._turn == 0:
-                agent = "bob"
-            observation = self._env.reset(self.goal, self.spawn_position, self.spawn_orientation, agent)
+            gym_observation = self.reset()
             self.agent_done = False
-            return GymObservation(
-                observation=observation['car_qpos'],
-                rewards=[0.0],
-                current_player=self._turn,
-                legal_moves_as_int=[],
-                done=self.trial_done,
-                info={},
-            )
+
+            if self._turn == 0:
+                self.current_turn += 1
+
+            return gym_observation
 
         if not self._turn == 0:
             step_multiplier = 1
@@ -96,7 +92,7 @@ class DrivingEnv(BaseEnv):
 
         if self.agent_done:
             self.goal = observation['car_qpos'][:2]
-            if agent == "bob":
+            if agent == "bob" and self.current_turn == self.total_num_turns:
                 self.trial_done = True
 
         return GymObservation(
