@@ -54,6 +54,8 @@ Cogment verse can be started in development mode where the services restart when
 cogment run dev
 ```
 
+> 🚧 In this mode, changes to the source files in the shared `base_dev` directory won't be reflected in the running services until you re-start `cogment run dev`.
+
 To be able to use the client properly, you'll need to build it whenever something changes using
 
 ```console

@@ -7,7 +7,7 @@ services:
       context: environment
       target: dev
     volumes:
-      - ./:/cogment-verse/
+      - ./environment:/cogment-verse/environment:cached
 
   # development version of the torch agents
   torch_agents: &torch_agents
@@ -15,7 +15,7 @@ services:
       context: torch_agents
       target: dev
     volumes:
-      - ./:/cogment-verse/
+      - ./torch_agents:/cogment-verse/torch_agents:cached
 
   # development version of the tensorflow agents
   tf_agents: &tf_agents
@@ -23,7 +23,7 @@ services:
       context: tf_agents
       target: dev
     volumes:
-      - ./:/cogment-verse/
+      - ./tf_agents:/cogment-verse/tf_agents:cached
 
   # development version of the web client
   web_client:
