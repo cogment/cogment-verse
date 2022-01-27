@@ -1,6 +1,7 @@
 # Generated files
 *_pb2.py
 cog_settings.py
+autoreload.yaml
 
 # Caches
 __pycache__

@@ -97,6 +97,7 @@ class EnvironmentAdapter:
             "gym/BipedalWalker-v3",
             "gym/CartPole-v0",
             "gym/LunarLander-v2",
+            "gym/MountainCar-v0",
             "gym/LunarLanderContinuous-v2",
             "gym/Pendulum-v0",
             "minatar/breakout",
