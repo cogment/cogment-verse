@@ -126,7 +126,7 @@ function App() {
         <img height={windowSize.height * 2} src={`${process.env.PUBLIC_URL}/assets/Arcade.png`} alt="arcade machine" />
         <div id="screen" className="screen">
           {countdown && <Countdown onAfterCountdown={joinTrial} />}
-          {pixelData && <img style={{ filter: countdown ? "blur(1px)" : "none" }} ref={imgRef} className="display" tabIndex={0} alt="current trial observation" />}
+          {pixelData && <img style={{ filter: countdown ? "blur(3px)" : "none" }} ref={imgRef} className="display" tabIndex={0} alt="current trial observation" />}
         </div>
         <button onClick={joinTrial} className="pushable">
           <span className="front">Join Trial</span>
