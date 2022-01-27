@@ -89,7 +89,6 @@ class DrivingEnv(BaseEnv):
             agent = "bob"
 
         observation, reward, self.agent_done, info = self._env.step(action, step_multiplier, agent)
-
         if self.agent_done:
             self.goal = observation['car_qpos'][:2]
             if agent == "bob" and self.current_turn == self.total_num_turns:
