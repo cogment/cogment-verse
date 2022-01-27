@@ -24,6 +24,7 @@ import asyncio
 import json
 import logging
 import os
+import sys
 
 load_dotenv()
 
@@ -61,4 +62,9 @@ async def main():
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    loop = asyncio.get_event_loop()
+    try:
+        loop.run_until_complete(main())
+    except KeyboardInterrupt:
+        print("process interrupted")
+        sys.exit(-1)
