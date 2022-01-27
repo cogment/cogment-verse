@@ -23,6 +23,8 @@ def tensor_from_cog_obs(cog_obs, dtype=torch.float, device=None):
     np_array = np.frombuffer(pb_array.data, dtype=pb_array.dtype).reshape(*pb_array.shape)
     return torch.tensor(np_array, dtype=dtype, device=device)
 
+def current_player_from_obs(cog_obs):
+    return cog_obs.current_player
 
 def tensor_from_cog_action(cog_action, dtype=torch.float, device=None):
     return torch.tensor(cog_action.continuous_action.data, dtype=dtype, device=device)

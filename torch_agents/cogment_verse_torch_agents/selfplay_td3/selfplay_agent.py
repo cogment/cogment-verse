@@ -20,7 +20,7 @@ from cogment_verse_torch_agents.selfplay_td3.selfplay_training_run import create
 from cogment_verse_torch_agents.selfplay_td3.wrapper import cog_action_from_tensor, tensor_from_cog_obs
 
 from cogment_verse import AgentAdapter
-import cogment
+import cogment, torch
 
 from prometheus_client import Summary
 
@@ -57,6 +57,7 @@ class SelfPlayAgentAdapter(AgentAdapter):
                 f"[selfplay_td3 - {actor_session.name}] model {actor_session.config.model_id}@v{version_number} retrieved"
             )
 
+            agent = actor_session.config.model_id.split("_")[-1]
             actor_map = {actor.actor_name: idx for idx, actor in enumerate(actor_session.get_active_actors())}
             actor_index = actor_map[actor_session.name]
 
@@ -68,11 +69,18 @@ class SelfPlayAgentAdapter(AgentAdapter):
 
                 if event.observation and event.type == cogment.EventType.ACTIVE:
                     obs = event.observation.snapshot
-                    obs = tensor_from_cog_obs(obs)
+                    # agent act when its turn
+                    if (obs.current_player == 1 and agent == "alice") or \
+                        (obs.current_player == 0 and agent == "bob"):
+                            observation = tensor_from_cog_obs(obs)
+                            action = model.act(observation)
+                            cog_action = cog_action_from_tensor(action)
+                            actor_session.do_action(cog_action)
 
-                    action = model.act(obs)
-                    cog_action = cog_action_from_tensor(action)
-                    actor_session.do_action(cog_action)
+                    else: # agent stays put when not its turn
+                        cog_action = cog_action_from_tensor(torch.tensor([0.0, 0.0]))
+                        actor_session.do_action(cog_action)
+                        print(f"%$$$$$$$$$$$ {agent} stay put %%%%%%%%%%%")
 
         return {"selfplay_td3": (impl, ["agent"])}
 
