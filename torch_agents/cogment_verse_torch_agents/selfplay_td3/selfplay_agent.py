@@ -80,7 +80,6 @@ class SelfPlayAgentAdapter(AgentAdapter):
                     else: # agent stays put when not its turn
                         cog_action = cog_action_from_tensor(torch.tensor([0.0, 0.0]))
                         actor_session.do_action(cog_action)
-                        print(f"%$$$$$$$$$$$ {agent} stay put %%%%%%%%%%%")
 
         return {"selfplay_td3": (impl, ["agent"])}
 
