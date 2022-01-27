@@ -1,6 +1,6 @@
 # "dev" is the developpment image
-FROM node:14 as dev
-
+#FROM node:14 as dev
+FROM node:14-bullseye-slim as dev
 WORKDIR /cogment-verse/web_client
 
 # Install dependencies

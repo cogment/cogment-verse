@@ -6,8 +6,8 @@ FROM ${BASE_PYTHON_IMAGE} as base
 FROM python:3.7-slim as dev
 
 # Install system dependencies
-RUN apt-get update && apt-get install -y software-properties-common && apt-add-repository non-free
-RUN apt-get update && apt-get install -y curl xvfb python3-opengl xvfb git tk swig wget unrar libglib2.0-0 g++ cmake
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y software-properties-common && apt-add-repository non-free
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y curl xvfb python3-opengl xvfb git tk swig wget unrar libglib2.0-0 g++ cmake
 
 # Install poetry
 ENV POETRY_VERSION=1.1.11

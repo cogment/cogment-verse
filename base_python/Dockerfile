@@ -3,7 +3,7 @@ FROM python:3.7-slim
 WORKDIR /cogment-verse/base_python
 
 # Install system dependencies
-RUN apt-get update && apt-get install -y curl
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y curl
 
 # Install poetry
 ENV POETRY_VERSION=1.1.11

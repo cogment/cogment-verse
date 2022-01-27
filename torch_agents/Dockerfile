@@ -10,7 +10,7 @@ FROM python:3.7-slim as cpu
 RUN pip install torch==1.8.1+cpu -f https://download.pytorch.org/whl/cpu/torch_stable.html
 
 # Install system dependencies
-RUN apt-get update && apt-get install -y curl xvfb
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y curl xvfb
 #########
 
 #########
@@ -18,8 +18,7 @@ RUN apt-get update && apt-get install -y curl xvfb
 FROM nvcr.io/nvidia/pytorch:21.08-py3 as gpu
 
 # Install the rest of the dependencies
-RUN apt-get update && apt-get install -y python3-opengl xvfb git tk swig wget unrar libglib2.0-0
-RUN apt-get install -y g++ cmake
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y python3-opengl xvfb git tk swig wget unrar libglib2.0-0 g++ cmake
 #########
 
 #########

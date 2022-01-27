@@ -19,7 +19,7 @@
     "web-vitals": "^1.1.2"
   },
   "scripts": {
-    "cogment_generate": "npx cogment-js-sdk-generate",
+    "cogment_generate": "cogment-js-sdk-generate",
     "start": "npm run cogment_generate && react-scripts start",
     "build": "npm run cogment_generate && react-scripts build",
     "test": "react-scripts test",
