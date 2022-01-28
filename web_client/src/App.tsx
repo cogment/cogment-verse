@@ -128,7 +128,13 @@ function App() {
   }, [event, actorConfig, trialJoined]);
 
   useEffect(() => {
-    if (trialJoined && actorConfig && actorConfig.environmentSpecs && event.observation && event.observation.pixelData) {
+    if (
+      trialJoined &&
+      actorConfig &&
+      actorConfig.environmentSpecs &&
+      event.observation &&
+      event.observation.pixelData
+    ) {
       if (!event.last) {
         const action = new data_pb.cogment_verse.AgentAction();
         let action_int = -1;
