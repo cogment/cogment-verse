@@ -1,7 +1,8 @@
-import os
 import abc
-import numpy as np
+import os
+
 import _pickle as pickle
+import numpy as np
 
 from .utils.utils import create_folder
 

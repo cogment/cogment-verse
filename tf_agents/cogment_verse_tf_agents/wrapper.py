@@ -12,9 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import numpy as np
 import cv2
-
+import numpy as np
 from data_pb2 import AgentAction, ContinuousAction
 
 # TODO directly use tf tensors

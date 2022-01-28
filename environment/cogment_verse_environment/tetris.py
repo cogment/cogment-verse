@@ -12,13 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import numpy as np
-
 import gym_tetris
+import numpy as np
+from cogment_verse_environment.atari import AtariEnv, GymEnv
 from gym_tetris.actions import MOVEMENT
 from nes_py.wrappers import JoypadSpace
-
-from cogment_verse_environment.atari import AtariEnv, GymEnv
 
 
 class TetrisEnv(AtariEnv):

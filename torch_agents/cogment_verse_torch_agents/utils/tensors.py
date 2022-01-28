@@ -12,10 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from data_pb2 import AgentAction
-
-import torch
 import numpy as np
+import torch
+from data_pb2 import AgentAction
 
 
 def tensor_from_cog_obs(cog_obs, device=None, dtype=torch.float):

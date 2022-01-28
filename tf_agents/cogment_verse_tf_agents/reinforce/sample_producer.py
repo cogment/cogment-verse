@@ -12,13 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import cogment.api.common_pb2 as common_api
-from cogment_verse_tf_agents.wrapper import (
-    tf_obs_from_cog_obs,
-    tf_action_from_cog_action,
-)
-
 from collections import namedtuple
+
+import cogment.api.common_pb2 as common_api
+from cogment_verse_tf_agents.wrapper import tf_action_from_cog_action, tf_obs_from_cog_obs
 
 
 def vectorized_training_sample_from_samples(sample, next_sample, last_tick):

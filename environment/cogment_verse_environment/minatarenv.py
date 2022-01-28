@@ -12,21 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import numpy as np
-
-from cogment_verse_environment.base import BaseEnv, GymObservation
-from cogment_verse_environment.env_spec import EnvSpec
-
 # Workaround for minatar's unnecessary tkagg dependency
 # (this needs to be done before the minatar import)
 # pylint: disable=wrong-import-position
 import matplotlib
+import numpy as np
+from cogment_verse_environment.base import BaseEnv, GymObservation
+from cogment_verse_environment.env_spec import EnvSpec
 
 matplotlib.use("Agg")
 matplotlib_use = matplotlib.use
 matplotlib.use = lambda *args, **kwargs: None
 import matplotlib.pyplot
-
 from minatar.environment import Environment
 
 matplotlib.use = matplotlib_use

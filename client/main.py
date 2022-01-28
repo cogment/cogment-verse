@@ -12,18 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from run_controller import RunController, RunStatus
+import asyncio
+import datetime
+import functools
+import json
+import os
 
 import click
 import yaml
 from google.protobuf.json_format import ParseDict
-
-import asyncio
-import datetime
-import os
-import functools
-import json
-
+from run_controller import RunController, RunStatus
 
 # pylint: disable=too-many-arguments,import-outside-toplevel
 

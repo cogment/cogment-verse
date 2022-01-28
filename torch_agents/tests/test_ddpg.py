@@ -12,10 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import pytest
 import os
 from tempfile import TemporaryDirectory
 
+import pytest
 from cogment_verse_torch_agents.third_party.hive.ddpg import DDPGAgent
 
 # pylint doesn't like test fixtures

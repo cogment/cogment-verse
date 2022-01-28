@@ -12,10 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from data_pb2 import NDArray
-
-import numpy as np
 import cv2
+import numpy as np
+from data_pb2 import NDArray
 
 
 def deserialize_np_array(nd_array):

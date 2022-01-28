@@ -1,11 +1,12 @@
 import copy
+
 import numpy as np
 import torch
 
-from .utils.utils import get_optimizer_fn
-from .utils.schedule import PeriodicSchedule, get_schedule
 from .agent import Agent
 from .mlp import SimpleMLP
+from .utils.schedule import PeriodicSchedule, get_schedule
+from .utils.utils import get_optimizer_fn
 
 
 def legal_moves_adapter(cls):

@@ -19,10 +19,11 @@ import os
 
 from google.protobuf.json_format import MessageToDict
 from google.protobuf.message import Message
+from prometheus_client import Counter, Summary
+
 from mlflow.entities import Metric, Param, RunStatus
 from mlflow.tracking import MlflowClient
 from mlflow.utils.mlflow_tags import MLFLOW_RUN_NAME
-from prometheus_client import Counter, Summary
 
 log = logging.getLogger(__name__)
 

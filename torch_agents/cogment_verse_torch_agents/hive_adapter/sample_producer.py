@@ -12,15 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import cogment.api.common_pb2 as common_api
-
-from cogment_verse_torch_agents.wrapper import (
-    format_legal_moves,
-    torch_obs_from_cog_obs,
-    torch_action_from_cog_action,
-)
-
 from collections import namedtuple
+
+import cogment.api.common_pb2 as common_api
+from cogment_verse_torch_agents.wrapper import format_legal_moves, torch_action_from_cog_action, torch_obs_from_cog_obs
 
 
 def vectorized_training_sample_from_samples(

@@ -12,26 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from data_pb2 import (
-    ActorConfig,
-    ActorParams,
-    AgentAction,
-    EnvironmentConfig,
-    EnvironmentParams,
-    SimpleBCTrainingRunConfig,
-    TrialConfig,
-)
-
-from cogment_verse import AgentAdapter, MlflowExperimentTracker
-
-from cogment.api.common_pb2 import TrialState
-import cogment
-
 import asyncio
-import logging
-import torch
-import numpy as np
 import copy
+import logging
+
+import cogment
+import numpy as np
+import torch
+from cogment.api.common_pb2 import TrialState
+from cogment_verse import AgentAdapter, MlflowExperimentTracker
+from data_pb2 import (ActorConfig, ActorParams, AgentAction, EnvironmentConfig, EnvironmentParams,
+                      SimpleBCTrainingRunConfig, TrialConfig)
 
 log = logging.getLogger(__name__)
 

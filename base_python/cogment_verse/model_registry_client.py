@@ -12,24 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from cogment.api.model_registry_pb2_grpc import ModelRegistrySPStub
-from cogment.api.model_registry_pb2 import (
-    ModelInfo,
-    ModelVersionInfo,
-    CreateOrUpdateModelRequest,
-    CreateVersionRequestChunk,
-    RetrieveVersionInfosRequest,
-    RetrieveVersionDataRequest,
-)
-
-import grpc.aio
-from google.protobuf.json_format import MessageToDict
-from prometheus_client import Summary
-
 import io
 import logging
 import os
 import time
+
+import grpc.aio
+from cogment.api.model_registry_pb2 import (CreateOrUpdateModelRequest, CreateVersionRequestChunk, ModelInfo,
+                                            ModelVersionInfo, RetrieveVersionDataRequest, RetrieveVersionInfosRequest)
+from cogment.api.model_registry_pb2_grpc import ModelRegistrySPStub
+from google.protobuf.json_format import MessageToDict
+from prometheus_client import Summary
 
 MODEL_REGISTRY_PUBLISH_VERSION_TIME = Summary(
     "model_registry_publish_version_seconds",
