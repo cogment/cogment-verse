@@ -55,6 +55,11 @@ services:
     environment:
       - COGMENT_VERSE_ENVIRONMENT_PORT
       - COGMENT_VERSE_ENVIRONMENT_PROMETHEUS_PORT
+      - COGMENT_VERSE_TRIAL_DATASTORE_ENDPOINT
+      - COGMENT_VERSE_ENVIRONMENT_ENDPOINTS
+      - COGMENT_VERSE_ORCHESTRATOR_ENDPOINT
+      - COGMENT_VERSE_ACTOR_ENDPOINTS
+      - MLFLOW_TRACKING_URI
     init: true # xvfb-run hang fix?
     tty: true
 
@@ -76,7 +81,6 @@ services:
       - COGMENT_VERSE_ORCHESTRATOR_ENDPOINT
       - COGMENT_VERSE_ACTOR_ENDPOINTS
       - MLFLOW_TRACKING_URI
-      - MPLBACKEND=Agg
     depends_on:
       - orchestrator
       - environment
@@ -101,7 +105,6 @@ services:
       - COGMENT_VERSE_ORCHESTRATOR_ENDPOINT
       - COGMENT_VERSE_ACTOR_ENDPOINTS
       - MLFLOW_TRACKING_URI
-      - MPLBACKEND=Agg
     depends_on:
       - orchestrator
       - environment
