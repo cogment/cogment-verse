@@ -36,15 +36,15 @@ export type UseActions = <ObservationT, ActionT extends MessageBase>(
   actorClass: string,
   grpcURL: string
 ) => [
-  event: Event<ObservationT>,
-  JoinTrial: JoinTrial | undefined,
-  sendAction: SendAction<ActionT> | undefined,
-  reset: () => void,
-  trialJoined: boolean,
-  watchTrials: WatchTrials | undefined,
-  trialStateList: TrialStateList | undefined,
-  actorConfig: any | undefined
-];
+    event: Event<ObservationT>,
+    JoinTrial: JoinTrial | undefined,
+    sendAction: SendAction<ActionT> | undefined,
+    reset: () => void,
+    trialJoined: boolean,
+    watchTrials: WatchTrials | undefined,
+    trialStateList: TrialStateList | undefined,
+    actorConfig: any | undefined
+  ];
 
 export const useActions: UseActions = <ObservationT, ActionT extends MessageBase>(
   _cogSettings: CogSettings,
@@ -137,15 +137,12 @@ export const useActions: UseActions = <ObservationT, ActionT extends MessageBase
       setTrialJoined(false);
     });
     setWatchTrials(() => async () => {
-      console.log("watching trials");
       const trialStateList = new Map<string, number>();
       const watchTrialsGenerator = trialController.watchTrials();
       try {
         for await (const trialStateMsg of watchTrialsGenerator) {
           const { trialId, state } = trialStateMsg;
           trialStateList.set(trialId, state);
-          console.log("trial state", trialId, state);
-          console.log(trialStateList);
           setTrialStateList(trialStateList);
         }
       } catch (error) {
