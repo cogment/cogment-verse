@@ -36,15 +36,15 @@ export type UseActions = <ObservationT, ActionT extends MessageBase>(
   actorClass: string,
   grpcURL: string
 ) => [
-    event: Event<ObservationT>,
-    JoinTrial: JoinTrial | undefined,
-    sendAction: SendAction<ActionT> | undefined,
-    reset: () => void,
-    trialJoined: boolean,
-    watchTrials: WatchTrials | undefined,
-    trialStateList: TrialStateList | undefined,
-    actorConfig: any | undefined
-  ];
+  event: Event<ObservationT>,
+  JoinTrial: JoinTrial | undefined,
+  sendAction: SendAction<ActionT> | undefined,
+  reset: () => void,
+  trialJoined: boolean,
+  watchTrials: WatchTrials | undefined,
+  trialStateList: TrialStateList | undefined,
+  actorConfig: any | undefined
+];
 
 export const useActions: UseActions = <ObservationT, ActionT extends MessageBase>(
   _cogSettings: CogSettings,

@@ -67,9 +67,11 @@ function App() {
   const COGMENT_VERSE_GRPCWEBPROXY_PUBLIC_URL = process.env.REACT_APP_GRPCWEBPROXY_URL || "http://localhost:8081";
 
   function bufferToBase64(buf: Uint8Array) {
-    var binstr = Array.prototype.map.call(buf, function (ch) {
-      return String.fromCharCode(ch);
-    }).join('');
+    var binstr = Array.prototype.map
+      .call(buf, function (ch) {
+        return String.fromCharCode(ch);
+      })
+      .join("");
     return btoa(binstr);
   }
 
