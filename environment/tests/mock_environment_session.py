@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import asyncio
+import time
 from collections import namedtuple
 
 from cogment.session import ActorInfo, EventType, RecvAction, RecvEvent
@@ -26,6 +27,12 @@ SentEvent = namedtuple(
 # Make it explicit we reexport ActorInfo
 # pylint: disable=self-assigning-variable
 ActorInfo = ActorInfo
+
+
+class ActionData:
+    def __init__(self, tick_id, timestamp):
+        self.tick_id = tick_id
+        self.timestamp = timestamp
 
 
 class MockEnvironmentSession:
@@ -121,5 +128,10 @@ class MockEnvironmentSession:
     def send_events(self, etype=EventType.ACTIVE, actions=[]):
         # No support for messages yet, to be added later
         event = RecvEvent(etype)
-        event.actions = [RecvAction(actor_index=i, action=action) for i, action in enumerate(actions)]
+
+        action_data = ActionData(self._tick_id, time.time())
+
+        event.actions = [
+            RecvAction(actor_index=i, action_data=action_data, action=action) for i, action in enumerate(actions)
+        ]
         self._recv_events_queue.put_nowait(event)

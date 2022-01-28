@@ -12,14 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from data_pb2 import EnvironmentConfig, AgentAction
-from tests.mock_environment_session import ActorInfo
-
-from cogment_verse_environment.utils.serialization_helpers import deserialize_np_array, deserialize_img
-from cogment_verse_environment.procgen_env import ENV_NAMES, ProcGenEnv
-
 import numpy as np
 import pytest
+from cogment_verse_environment.procgen_env import ENV_NAMES, ProcGenEnv
+from cogment_verse_environment.utils.serialization_helpers import deserialize_img, deserialize_np_array
+from data_pb2 import AgentAction, EnvironmentConfig
+from tests.mock_environment_session import ActorInfo
 
 # pylint doesn't like test fixtures
 # pylint: disable=redefined-outer-name
@@ -71,7 +69,7 @@ async def test_step(create_mock_environment_session, env_name):
 
     tick_1_events = await session.receive_events()
     assert tick_1_events.tick_id == 1
-    session.terminate()
+    await session.terminate()
 
 
 @pytest.mark.parametrize("env_name", ENV_NAMES)

@@ -224,7 +224,7 @@ class EnvironmentAdapter:
                             log.debug(
                                 f"[Environment] ending trial [{environment_session.get_trial_id()}] @ tick #{environment_session.get_tick_id()}..."
                             )
-                            environment_session.end(final_observations=observations)
+                            environment_session.end(observations)
                         else:
                             environment_session.produce_observations(observations=observations)
 
