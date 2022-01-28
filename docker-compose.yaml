@@ -59,7 +59,8 @@ services:
     init: true # xvfb-run hang fix?
     tty: true
 
-  torch_agents: &torch_agents
+  torch_agents:
+    &torch_agents
     build:
       context: torch_agents
       args:
@@ -84,7 +85,8 @@ services:
       - trial_datastore
       - mlflow
 
-  tf_agents: &tf_agents
+  tf_agents:
+    &tf_agents
     build:
       context: tf_agents
       args:
@@ -152,15 +154,15 @@ services:
     volumes:
       - ./data/mlflow:/data
 
-  web_client:
-    build: web_client
-    environment:
-      - COGMENT_VERSE_GRPCWEBPROXY_PUBLIC_URL
-      - REACT_APP_GRPCWEBPROXY_URL=${COGMENT_VERSE_GRPCWEBPROXY_PUBLIC_URL}
-      - PORT=${COGMENT_VERSE_WEBCLIENT_PORT}
-    restart: on-failure
-    ports:
-      - ${COGMENT_VERSE_WEBCLIENT_EXPOSED_PORT}:${COGMENT_VERSE_WEBCLIENT_PORT}/tcp
+  # web_client:
+  #   build: web_client
+  #   environment:
+  #     - COGMENT_VERSE_GRPCWEBPROXY_PUBLIC_URL
+  #     - REACT_APP_GRPCWEBPROXY_URL=${COGMENT_VERSE_GRPCWEBPROXY_PUBLIC_URL}
+  #     - PORT=${COGMENT_VERSE_WEBCLIENT_PORT}
+  #   restart: on-failure
+  #   ports:
+  #     - ${COGMENT_VERSE_WEBCLIENT_EXPOSED_PORT}:${COGMENT_VERSE_WEBCLIENT_PORT}/tcp
 
   grpcwebproxy:
     build:
