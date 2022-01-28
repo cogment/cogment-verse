@@ -30,23 +30,23 @@ export type TrialStateList = Map<string, number>;
 
 export type Policy<ObservationT, ActionT> = (event: Event<ObservationT>) => ActionT;
 export type WatchTrials = () => void;
-export type UseActions = <ObservationT, ActionT extends MessageBase>(
+export type UseActions = <ObservationT, ActionT extends MessageBase, ConfigT extends MessageBase>(
   _cogSettings: CogSettings,
   actorName: string,
   actorClass: string,
   grpcURL: string
 ) => [
-    event: Event<ObservationT>,
-    JoinTrial: JoinTrial | undefined,
-    sendAction: SendAction<ActionT> | undefined,
-    reset: () => void,
-    trialJoined: boolean,
-    watchTrials: WatchTrials | undefined,
-    trialStateList: TrialStateList | undefined,
-    actorConfig: any | undefined
-  ];
+  event: Event<ObservationT>,
+  JoinTrial: JoinTrial | undefined,
+  sendAction: SendAction<ActionT> | undefined,
+  reset: () => void,
+  trialJoined: boolean,
+  watchTrials: WatchTrials | undefined,
+  trialStateList: TrialStateList | undefined,
+  actorConfig: ConfigT | undefined
+];
 
-export const useActions: UseActions = <ObservationT, ActionT extends MessageBase>(
+export const useActions: UseActions = <ObservationT, ActionT extends MessageBase, ConfigT extends MessageBase>(
   _cogSettings: CogSettings,
   actorName: string,
   actorClass: string,

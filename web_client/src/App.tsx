@@ -77,6 +77,7 @@ function App() {
 
   type ObservationT = data_pb.cogment_verse.Observation;
   type ActionT = data_pb.cogment_verse.AgentAction;
+  type ConfigT = data_pb.cogment_verse.ActorConfig;
 
   useEffect(() => {
     //const canvas = canvasRef.current;
@@ -93,7 +94,8 @@ function App() {
 
   const [event, joinTrial, _sendAction, reset, trialJoined, watchTrials, trialStateList, actorConfig] = useActions<
     ObservationT,
-    ActionT
+    ActionT,
+    ConfigT
   >(
     cogSettings,
     "web_actor", // actor name
