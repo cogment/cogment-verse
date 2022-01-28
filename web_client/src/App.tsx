@@ -194,7 +194,6 @@ function App() {
 
   useEffect(() => {
     if (watchTrials && !watching) {
-      console.log("watching");
       watchTrials();
       setWatching(true);
     }
@@ -223,8 +222,6 @@ function App() {
         break;
       }
     }
-
-    console.log(trialStateList, trialIdToJoin);
 
     if (trialIdToJoin === undefined) {
       console.log("no trial to join");

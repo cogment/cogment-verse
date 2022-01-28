@@ -136,7 +136,7 @@ npm i
 npm run start
 ```
 
-And navigating to the URL that appers in the terminal.
+And navigating to <http://localhost:8080>
 
 ## Debug
 

@@ -30,9 +30,11 @@ log = logging.getLogger(__name__)
 
 # pylint: disable=too-many-arguments
 
-def set_config_index(config, index):
-    config.actor_index = index
+
+def set_config_index(config, actor_idx):
+    config.actor_index = actor_idx
     return config
+
 
 # RunContext holds the context information to exectute runs
 class RunContext(cogment.Context):
@@ -73,9 +75,9 @@ class RunContext(cogment.Context):
                     if actor.implementation == "client"
                     else ("grpc://" + self._get_service_endpoint(actor.implementation)),
                     "implementation": "" if actor.implementation == "client" else actor.implementation,
-                    "config": set_config_index(actor.config, index),
+                    "config": set_config_index(actor.config, actor_idx),
                 }
-                for index, actor in enumerate(pre_trial_hook_session.trial_config.actors)
+                for actor_idx, actor in enumerate(pre_trial_hook_session.trial_config.actors)
             ]
 
             pre_trial_hook_session.validate()

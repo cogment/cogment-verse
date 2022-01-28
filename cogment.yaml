@@ -67,10 +67,6 @@ environment:
 trial:
   config_type: cogment_verse.TrialConfig
 
-datalog:
-  type: grpc
-  url: grpc://${COGMENT_VERSE_TRIAL_DATASTORE_ENDPOINT}
-
 # Static configuration
 actor_classes:
   - name: agent

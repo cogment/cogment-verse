@@ -11,4 +11,4 @@ ENV COGMENT_ACTOR_PORT=9000
 
 # Didn't manage to setup envsubst in the ENTRYPOINT
 ENTRYPOINT []
-CMD envsubst < /app/cogment.yaml > /app/cogment.yaml.out && orchestrator --config=/app/cogment.yaml.out --params=/app/cogment.yaml.out
+CMD envsubst < /app/cogment.yaml > /app/cogment.yaml.out && orchestrator --params=/app/cogment.yaml.out
