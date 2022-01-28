@@ -1,34 +1,45 @@
 ARG BASE_PYTHON_IMAGE
-FROM ${BASE_PYTHON_IMAGE} as base_python
-FROM python:3.7-slim
+FROM ${BASE_PYTHON_IMAGE} as base
+
+#########
+# "dev" is the developpment image
+FROM python:3.7-slim as dev
 
 # Install system dependencies
-RUN apt-get update && apt-get install -y software-properties-common && apt-add-repository non-free
-RUN apt-get update && apt-get install -y curl xvfb python3-opengl xvfb git tk swig wget unrar libglib2.0-0 g++ cmake
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y software-properties-common && apt-add-repository non-free
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y curl xvfb python3-opengl xvfb git tk swig wget unrar libglib2.0-0 g++ cmake
 
 # Install poetry
 ENV POETRY_VERSION=1.1.11
-ENV POETRY_HOME="/opt/poetry"
-ENV POETRY_VIRTUALENVS_CREATE=false
+ENV POETRY_HOME="/usr/local/"
 ENV POETRY_NO_INTERACTION=1
-ENV PATH="$POETRY_HOME/bin:$PATH"
-RUN curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/install-poetry.py | python -
+RUN curl -sSL https://install.python-poetry.org | python3 -
+ENV POETRY_VIRTUALENVS_CREATE=false
 
 # Copy the `base_python` library
-COPY --from=base_python /base_python /base_python
+COPY --from=base /cogment-verse/base_python /cogment-verse/base_python
 
-WORKDIR /environment
+WORKDIR /cogment-verse/environment
 
 # Install dependencies
 COPY pyproject.toml poetry.lock ./
 RUN poetry install --no-root
 
-# Download the atari roms
-RUN poetry run task retrieve_roms
+# Download & import the atari roms
+RUN poetry run task import_atari_roms
+
+ENTRYPOINT ["xvfb-run", "-e", "/dev/stdout", "-a"]
+# start the server in development mode
+CMD ["poetry", "run", "task", "dev"]
+#########
+
+#########
+# "prod" is the production image
+FROM dev as prod
 
 # Build the package
 COPY . ./
 RUN poetry run task build
 
-ENTRYPOINT []
-CMD ["xvfb-run", "-e", "/dev/stdout", "-a", "python", "-m", "main"]
+CMD ["poetry", "run", "task", "start"]
+#########

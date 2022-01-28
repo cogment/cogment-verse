@@ -207,3 +207,17 @@ message MuZeroTrainingRunConfig {
   ActorConfig actor = 2;
   MuZeroTrainingConfig training = 3;
 }
+message SimpleBCTrainingConfig {
+  uint32 trial_count = 2;
+  uint32 max_parallel_trials = 3;
+  float discount_factor = 4;
+  float learning_rate = 8;
+  uint32 batch_size = 5;
+}
+
+message SimpleBCTrainingRunConfig {
+  EnvironmentParams environment = 1;
+  ActorConfig actor = 2;
+  SimpleBCTrainingConfig training = 3;
+  MLPNetworkConfig policy_network = 4;
+}

@@ -6,3 +6,6 @@ src/CogSettings.*
 src/data_pb.*
 src/data.*
 src/data_pb_service.*
+
+Dockerfile
+.dockerignore

@@ -17,6 +17,7 @@ import cog_settings
 from cogment_verse_torch_agents.hive_adapter.hive_agent_adapter import HiveAgentAdapter
 from cogment_verse_torch_agents.simple_a2c.simple_a2c_agent import SimpleA2CAgentAdapter
 from cogment_verse_torch_agents.muzero.adapter import MuZeroAgentAdapter
+from cogment_verse_torch_agents.simple_bc import SimpleBCAgentAdapter
 
 from dotenv import load_dotenv
 import cogment
@@ -64,6 +65,8 @@ async def main():
 
     muzero_adapter = MuZeroAgentAdapter()
     muzero_adapter.register_implementations(context)
+    simple_bc_adapter = SimpleBCAgentAdapter()
+    simple_bc_adapter.register_implementations(context)
 
     log.info(f"Torch agents service starts on {PORT}...")
 

@@ -65,8 +65,7 @@ function App() {
   const fpsEmaWeight = 1 / 60.0;
 
   // cogment stuff
-
-  const grpcURL = process.env.REACT_APP_GRPCWEBPROXY_URL || "http://localhost:8081";
+  const COGMENT_VERSE_GRPCWEBPROXY_PUBLIC_URL = process.env.REACT_APP_GRPCWEBPROXY_URL || "http://localhost:8081";
 
   type ObservationT = data_pb.Observation.AsObject;
   type ActionT = data_pb.AgentAction;
@@ -94,7 +93,7 @@ function App() {
     cogSettings,
     "web_actor", // actor name
     "teacher_agent", // actor class
-    grpcURL
+    COGMENT_VERSE_GRPCWEBPROXY_PUBLIC_URL
   );
 
   const actionLock = useRef(false);

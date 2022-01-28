@@ -116,6 +116,21 @@ const keymaps_json: KeyMapT[] = [
     ],
   },
   {
+    environment_implementation: "gym/CartPole-v0",
+    action_map: [
+      {
+        id: 0,
+        name: "Accelerate left",
+        keys: ["ArrowLeft"],
+      },
+      {
+        id: 1,
+        name: "Accelerate right",
+        keys: ["ArrowRight"],
+      },
+    ],
+  },
+  {
     environment_implementation: "tetris/TetrisA-v0",
     action_map: [
       {

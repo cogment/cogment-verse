@@ -62,8 +62,8 @@ services:
   torch_agents: &torch_agents
     build:
       context: torch_agents
-      dockerfile: cpu.dockerfile
       args:
+        DEVICE: cpu
         BASE_PYTHON_IMAGE: cogment/cogment-verse-python-sdk:${IMAGE_TAG:-local}
     shm_size: "8gb"
     restart: on-failure
@@ -156,16 +156,12 @@ services:
   web_client:
     build: web_client
     environment:
-      - NODE_ENV=development
-      - CHOKIDAR_USEPOLLING=true
-      - REACT_APP_APP_VERSION=dev
+      - COGMENT_VERSE_GRPCWEBPROXY_PUBLIC_URL
       - REACT_APP_GRPCWEBPROXY_URL=${COGMENT_VERSE_GRPCWEBPROXY_PUBLIC_URL}
       - PORT=${COGMENT_VERSE_WEBCLIENT_PORT}
     restart: on-failure
     ports:
       - ${COGMENT_VERSE_WEBCLIENT_EXPOSED_PORT}:${COGMENT_VERSE_WEBCLIENT_PORT}/tcp
-    depends_on:
-      - grpcwebproxy
 
   grpcwebproxy:
     build:
