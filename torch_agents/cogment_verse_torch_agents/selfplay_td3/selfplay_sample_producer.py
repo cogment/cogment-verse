@@ -17,35 +17,26 @@ from cogment_verse_torch_agents.selfplay_td3.wrapper import (
     tensor_from_cog_obs,
     tensor_from_cog_action,
     current_player_from_obs,
+    tensor_from_cog_goal,
 )
 
-from collections import namedtuple
 
-
-def get_agent_SARSD(sample, next_sample, last_tick):
-    state = tensor_from_cog_obs(sample.get_actor_observation(1))
-    next_state = tensor_from_cog_obs(next_sample.get_actor_observation(1))
-    action = tensor_from_cog_action(sample.get_actor_action(1))
-    reward = sample.get_actor_reward(1, default=0.0)
-    agent = current_player_from_obs(sample.get_actor_observation(1))
-
-    return (
-        agent,
-        state,
-        action,
-        reward,
-        next_state,
-        1 if last_tick else 0,
-    )
-
-
-TrainingSample = namedtuple(
-    "TrainingSample",
-    ["player_sample", "trial_cumulative_reward"],
-)
+def get_SARSDG(sample, next_sample, last_tick, num_trials):
+    SARSDG = []
+    for trial_num in range(num_trials):
+        SARSDG.append((int(current_player_from_obs(sample.get_actor_observation(trial_num))), # TBD: function names
+                        tensor_from_cog_obs(sample.get_actor_observation(trial_num)),
+                        tensor_from_cog_action(sample.get_actor_action(trial_num)),
+                        sample.get_actor_reward(trial_num, default=0.0),
+                        tensor_from_cog_obs(next_sample.get_actor_observation(trial_num)),
+                        1 if last_tick else 0,
+                        tensor_from_cog_goal(sample.get_actor_observation(trial_num)),
+                          ))
+    return SARSDG
 
 
 async def sample_producer(run_sample_producer_session):
+    num_trials = run_sample_producer_session.count_actors()
     previous_sample = None
     last_tick = False
 
@@ -55,11 +46,5 @@ async def sample_producer(run_sample_producer_session):
             last_tick = True
 
         if previous_sample:
-            # run_sample_producer_session.produce_training_sample(
-            #     TrainingSample(
-            #         player_sample=get_agent_SARSD(previous_sample, sample, last_tick),
-            #         trial_cumulative_reward = 0,
-            #     ),
-            # )
-            run_sample_producer_session.produce_training_sample(get_agent_SARSD(previous_sample, sample, last_tick))
+            run_sample_producer_session.produce_training_sample(get_SARSDG(previous_sample, sample, last_tick, num_trials))
         previous_sample = sample

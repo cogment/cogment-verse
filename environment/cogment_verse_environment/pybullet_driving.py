@@ -62,7 +62,7 @@ class DrivingEnv(BaseEnv):
 
         observation = self._env.reset(self.goal, self.spawn_position, self.spawn_orientation, agent)
         return GymObservation(
-            observation=observation['car_qpos'],
+            observation=np.concatenate((observation['car_qpos'], self.goal)),
             rewards=[0.0],
             current_player=self._turn,
             legal_moves_as_int=[],
@@ -95,7 +95,7 @@ class DrivingEnv(BaseEnv):
                 self.trial_done = True
 
         return GymObservation(
-            observation=observation['car_qpos'],
+            observation=np.concatenate((observation['car_qpos'], self.goal)),
             current_player=self._turn,
             legal_moves_as_int=[],
             rewards=[reward],
