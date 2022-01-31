@@ -31,7 +31,7 @@ from data_pb2 import (
     ActorParams,
     EnvironmentConfig,
     EnvironmentParams,
-    TeacherConfig,
+    HumanConfig,
     TrialConfig,
 )
 from google.protobuf.json_format import MessageToDict
@@ -78,9 +78,8 @@ def create_training_run(agent_adapter):
             model, _ = await agent_adapter.create_and_publish_initial_version(
                 model_id,
                 impl_name=config.agent_implementation,
+                environment_specs=config.environment.specs,
                 **{
-                    "obs_dim": config.environment.specs.num_input,
-                    "act_dim": config.environment.specs.num_action,
                     "epsilon_schedule": LinearSchedule(1, config.epsilon_min, config.epsilon_steps),
                     "learn_schedule": SwitchSchedule(False, True, 1),
                     "target_net_update_schedule": PeriodicSchedule(False, True, config.target_net_update_schedule),
@@ -158,7 +157,7 @@ def create_training_run(agent_adapter):
                     name="web_actor",
                     actor_class="teacher_agent",
                     implementation="client",
-                    teacher_config=TeacherConfig(
+                    human_config=HumanConfig(
                         run_id=run_id,
                         environment_specs=config.environment.specs,
                     ),

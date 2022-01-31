@@ -61,15 +61,24 @@ class HiveAgentAdapter(AgentAdapter):
         return impl_names[0]
 
     # pylint: disable=arguments-differ
-    def _create(self, model_id, impl_name, **kwargs):
-        return self.agent_class_from_impl_name(impl_name)(id=model_id, **kwargs)
-
-    def _load(self, model_id, version_number, version_user_data, model_data_f):
-        impl_name = version_user_data["impl_name"]
+    def _create(self, model_id, impl_name, environment_specs, **kwargs):
         model = self.agent_class_from_impl_name(impl_name)(
+            id=model_id, obs_dim=environment_specs.num_input, act_dim=environment_specs.num_action, **kwargs
+        )
+
+        model_user_data = {
+            "environment_implementation": environment_specs.implementation,
+            "num_input": environment_specs.num_input,
+            "num_action": environment_specs.num_action,
+        }
+
+        return model, model_user_data
+
+    def _load(self, model_id, version_number, model_user_data, version_user_data, model_data_f, **kwargs):
+        model = self.agent_class_from_impl_name(model_user_data["agent_implementation"])(
             id=model_id,
-            obs_dim=int(version_user_data["obs_dim"]),
-            act_dim=int(version_user_data["act_dim"]),
+            obs_dim=int(model_user_data["num_input"]),
+            act_dim=int(model_user_data["num_action"]),
         )
 
         model.load(model_data_f)
@@ -77,15 +86,11 @@ class HiveAgentAdapter(AgentAdapter):
 
         return model
 
-    def _save(self, model, model_data_f):
+    def _save(self, model, model_user_data, model_data_f, **kwargs):
         model.save(model_data_f)
 
         # pylint: disable=protected-access
-        return {
-            "impl_name": self.impl_name_from_agent_class(model.__class__),
-            "obs_dim": model._params["obs_dim"],
-            "act_dim": model._params["act_dim"],
-        }
+        return {}
 
     def _create_actor_implementations(self):
         def create_actor_impl(impl_name):
@@ -94,7 +99,7 @@ class HiveAgentAdapter(AgentAdapter):
                 actor_session.start()
 
                 # Retrieve the latest version of the agent model (asynchronous so needs to be done after the start)
-                model, version_info = await self.retrieve_version(
+                model, _, version_info = await self.retrieve_version(
                     actor_session.config.model_id, actor_session.config.model_version
                 )
 

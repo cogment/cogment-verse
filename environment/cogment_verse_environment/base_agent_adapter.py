@@ -28,7 +28,7 @@ from data_pb2 import (
     EnvironmentParams,
     EnvironmentSpecs,
     PlayRunConfig,
-    TeacherConfig,
+    HumanConfig,
     TrialConfig,
 )
 
@@ -37,19 +37,6 @@ log = logging.getLogger(__name__)
 
 # pylint: disable=arguments-differ
 class BaseAgentAdapter(AgentAdapter):
-    def _create(
-        self,
-        model_id,
-        **kwargs,
-    ):
-        raise NotImplementedError
-
-    def _load(self, model_id, version_number, version_user_data, model_data_f):
-        raise NotImplementedError
-
-    def _save(self, model, model_data_f):
-        raise NotImplementedError
-
     def _create_actor_implementations(self):
         async def random_impl(actor_session):
             actor_session.start()
@@ -126,14 +113,12 @@ class BaseAgentAdapter(AgentAdapter):
                         name="web_actor",
                         actor_class="teacher_agent",
                         implementation="client",
-                        teacher_config=TeacherConfig(
+                        human_config=HumanConfig(
                             run_id=run_session.run_id,
                             environment_specs=config.environment.specs,
                         ),
                     )
                 )
-
-            print("actors_params", actors_params)
 
             # Helper function to create a trial configuration
             def create_trial_config(trial_idx):

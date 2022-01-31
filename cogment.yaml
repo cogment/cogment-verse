@@ -80,4 +80,4 @@ actor_classes:
       space: cogment_verse.AgentAction
     observation:
       space: cogment_verse.Observation
-    config_type: cogment_verse.TeacherConfig
+    config_type: cogment_verse.HumanConfig

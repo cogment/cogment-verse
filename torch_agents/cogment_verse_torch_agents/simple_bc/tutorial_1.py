@@ -29,7 +29,7 @@ from data_pb2 import (
     EnvironmentParams,
     EnvironmentSpecs,
     SimpleBCTrainingRunConfig,
-    TeacherConfig,
+    HumanConfig,
     TrialConfig,
 )
 
@@ -48,19 +48,6 @@ class SimpleBCAgentAdapterTutorialStep1(AgentAdapter):
         """Run a given function asynchronously in the default thread pool"""
         event_loop = asyncio.get_running_loop()
         return await event_loop.run_in_executor(None, func, *args)
-
-    def _create(
-        self,
-        model_id,
-        **kwargs,
-    ):
-        raise NotImplementedError
-
-    def _load(self, model_id, version_number, version_user_data, model_data_f):
-        raise NotImplementedError
-
-    def _save(self, model, model_data_f):
-        raise NotImplementedError
 
     def _create_actor_implementations(self):
         async def impl(actor_session):
@@ -118,7 +105,7 @@ class SimpleBCAgentAdapterTutorialStep1(AgentAdapter):
                     name="web_actor",
                     actor_class="teacher_agent",
                     implementation="client",
-                    teacher_config=TeacherConfig(
+                    human_config=HumanConfig(
                         environment_specs=env_params.specs,
                     ),
                 )

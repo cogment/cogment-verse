@@ -36,9 +36,8 @@ def create_training_run(agent_adapter):
             model_kwargs = MessageToDict(config.model_kwargs, preserving_proto_field_name=True)
             model, _ = await agent_adapter.create_and_publish_initial_version(
                 model_id,
+                environment_specs=config.environment.specs,
                 **{
-                    "obs_dim": config.environment.specs.num_input,
-                    "act_dim": config.environment.specs.num_action,
                     "max_replay_buffer_size": config.max_replay_buffer_size,
                     "lr": config.learning_rate,
                     "gamma": config.discount_factor,

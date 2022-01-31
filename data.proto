@@ -51,9 +51,10 @@ message AgentConfig {
   int32 actor_index = 5; // Used to figure out if an agent is the current_player in the observation space
 }
 
-message TeacherConfig {
+message HumanConfig {
   string run_id = 1;
   EnvironmentSpecs environment_specs = 2;
+  int32 actor_index = 3; // Used to figure out if an agent is the current_player in the observation space
 }
 
 message ActorParams {
@@ -62,7 +63,7 @@ message ActorParams {
   string implementation = 3;
   oneof config_oneof {
     AgentConfig agent_config = 4;
-    TeacherConfig teacher_config = 5;
+    HumanConfig human_config = 5;
   }
 }
 

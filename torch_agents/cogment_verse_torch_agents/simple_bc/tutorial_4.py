@@ -60,31 +60,38 @@ class SimpleBCAgentAdapterTutorialStep4(AgentAdapter):
     def _create(
         self,
         model_id,
-        observation_size,
-        action_count,
+        environment_specs,
         policy_network_hidden_size=64,
         **kwargs,
     ):
-        return SimpleBCModel(
+        model = SimpleBCModel(
             model_id=model_id,
             version_number=1,
             policy_network=torch.nn.Sequential(
-                torch.nn.Linear(observation_size, policy_network_hidden_size),
+                torch.nn.Linear(environment_specs.num_input, policy_network_hidden_size),
                 torch.nn.BatchNorm1d(policy_network_hidden_size),
                 torch.nn.ReLU(),
                 torch.nn.Linear(policy_network_hidden_size, policy_network_hidden_size),
                 torch.nn.BatchNorm1d(policy_network_hidden_size),
                 torch.nn.ReLU(),
-                torch.nn.Linear(policy_network_hidden_size, action_count),
+                torch.nn.Linear(policy_network_hidden_size, environment_specs.num_action),
             ).to(self._dtype),
         )
 
-    def _load(self, model_id, version_number, version_user_data, model_data_f):
+        model_user_data = {
+            "environment_implementation": environment_specs.implementation,
+            "num_input": environment_specs.num_input,
+            "num_action": environment_specs.num_action,
+        }
+
+        return model, model_user_data
+
+    def _load(self, model_id, version_number, model_user_data, version_user_data, model_data_f, **kwargs):
         policy_network = torch.load(model_data_f)
         assert isinstance(policy_network, torch.nn.Sequential)
         return SimpleBCModel(model_id=model_id, version_number=version_number, policy_network=policy_network)
 
-    def _save(self, model, model_data_f):
+    def _save(self, model, model_user_data, model_data_f, **kwargs):
         assert isinstance(model, SimpleBCModel)
         torch.save(model.policy_network, model_data_f)
         return {}
@@ -95,7 +102,7 @@ class SimpleBCAgentAdapterTutorialStep4(AgentAdapter):
 
             config = actor_session.config
 
-            model, version_info = await self.retrieve_version(config.model_id, config.model_version)
+            model, _model_info, version_info = await self.retrieve_version(config.model_id, config.model_version)
             model_version_number = version_info["version_number"]
             log.info(f"Starting trial with model v{model_version_number}")
 
@@ -161,8 +168,7 @@ class SimpleBCAgentAdapterTutorialStep4(AgentAdapter):
             # Initializing a model
             model, _version_info = await self.create_and_publish_initial_version(
                 model_id,
-                observation_size=config.environment.specs.num_input,
-                action_count=config.environment.specs.num_action,
+                environment_specs=config.environment.specs,
                 policy_network_hidden_size=config.policy_network.hidden_size,
             )
 

@@ -20,9 +20,11 @@ import random
 import cogment
 from cogment_verse.api.run_api_pb2 import DESCRIPTOR as RUN_DESCRIPTOR
 from cogment_verse.api.run_api_pb2_grpc import add_RunServicer_to_server
+from cogment_verse.model_registry_client import ModelRegistryClient
 from cogment_verse.run.run_servicer import RunServicer
 from cogment_verse.run.run_session import RunSession
 from cogment_verse.trial_datastore_client import TrialDatastoreClient
+from cogment_verse.utils import LRU
 from grpc_reflection.v1alpha import reflection
 from prometheus_client.core import REGISTRY
 
@@ -86,6 +88,9 @@ class RunContext(cogment.Context):
 
         self._run_impls = {}
 
+        # Cache used by the model registry
+        self._model_registry_cache = LRU()
+
     def _get_service_endpoint(self, services_name):
         if services_name not in self._services_endpoints:
             raise Exception(f"unknown service [{services_name}]")
@@ -115,6 +120,12 @@ class RunContext(cogment.Context):
 
     def _get_trial_datastore_client(self):
         return TrialDatastoreClient(endpoint=self._get_service_endpoint("trial_datastore"))
+
+    def get_model_registry_client(self):
+        return ModelRegistryClient(
+            endpoint=self._get_service_endpoint("model_registry"),
+            cache=self._model_registry_cache,
+        )
 
     def _create_run_session(self, run_params_name, run_implementation, serialized_config, run_id=None):
         if run_implementation not in self._run_impls:

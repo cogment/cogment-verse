@@ -77,7 +77,7 @@ function App() {
 
   type ObservationT = data_pb.cogment_verse.Observation;
   type ActionT = data_pb.cogment_verse.AgentAction;
-  type TeacherConfigT = data_pb.cogment_verse.TeacherConfig;
+  type HumanConfigT = data_pb.cogment_verse.HumanConfig;
 
   useEffect(() => {
     //const canvas = canvasRef.current;
@@ -95,7 +95,7 @@ function App() {
   const [event, joinTrial, _sendAction, reset, trialJoined, watchTrials, trialStateList, actorConfig] = useActions<
     ObservationT,
     ActionT,
-    TeacherConfigT
+    HumanConfigT
   >(
     cogSettings,
     "web_actor", // actor name
@@ -138,7 +138,10 @@ function App() {
       if (!event.last) {
         const action = new data_pb.cogment_verse.AgentAction();
         let action_int = -1;
-        const keymap = get_keymap(actorConfig.environmentSpecs.implementation);
+        let keymap = undefined;
+        if (actorConfig.environmentSpecs.implementation) {
+          keymap = get_keymap(actorConfig.environmentSpecs.implementation);
+        }
 
         if (keymap === undefined) {
           console.log(`no keymap defined for actor config ${actorConfig}`);
@@ -190,7 +193,7 @@ function App() {
     if (trialJoined) {
       setTrialStatus("trial joined");
       setCanStartTrial(false);
-      if (actorConfig && actorConfig.environmentSpecs) {
+      if (actorConfig && actorConfig.environmentSpecs && actorConfig.environmentSpecs.implementation) {
         setEnvironmentImplementation(actorConfig.environmentSpecs.implementation);
       }
     } else {
