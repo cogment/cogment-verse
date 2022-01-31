@@ -128,15 +128,7 @@ Then start the run
 RUN_PARAMS=benchmark_lander_hill cogment run start_run
 ```
 
-Access the playing interface by running
-
-```console
-cd web_client
-npm i
-npm run start
-```
-
-And navigating to <http://localhost:8080>
+Access the playing interface by navigating to <http://localhost:8080>
 
 ## Debug
 
