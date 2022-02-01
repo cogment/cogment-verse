@@ -104,5 +104,5 @@ npm_build:
   script:
     - cd web_client
     - npm install
-    - npx cogment-js-sdk-generate
+    - npx cogment-js-sdk-generate cogment.yaml
     - npm run build

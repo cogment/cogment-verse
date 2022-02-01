@@ -12,11 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from cogment_verse_torch_agents.wrapper import format_legal_moves
-from cogment_verse_torch_agents.atari_cnn import NatureAtariDQNModel
-
-import pytest
 import numpy as np
+import pytest
+from cogment_verse_torch_agents.atari_cnn import NatureAtariDQNModel
+from cogment_verse_torch_agents.wrapper import format_legal_moves
 
 # pylint doesn't like test fixtures
 # pylint: disable=redefined-outer-name

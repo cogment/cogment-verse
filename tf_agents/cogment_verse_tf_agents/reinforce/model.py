@@ -16,6 +16,7 @@ import tensorflow as tf
 from tensorflow.keras import layers
 from tensorflow.keras.models import Model
 
+
 # pylint: disable=R1725
 class PolicyNetwork(Model):
     def __init__(self, number_features, number_actions):

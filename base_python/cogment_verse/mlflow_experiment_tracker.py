@@ -12,18 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from mlflow.tracking import MlflowClient
-from mlflow.utils.mlflow_tags import MLFLOW_RUN_NAME
-from mlflow.entities import Metric, RunStatus, Param
+import asyncio
+import logging
+import numbers
+import os
 
-from prometheus_client import Counter, Summary
 from google.protobuf.json_format import MessageToDict
 from google.protobuf.message import Message
+from prometheus_client import Counter, Summary
 
-import asyncio
-import numbers
-import logging
-import os
+from mlflow.entities import Metric, Param, RunStatus
+from mlflow.tracking import MlflowClient
+from mlflow.utils.mlflow_tags import MLFLOW_RUN_NAME
 
 log = logging.getLogger(__name__)
 
@@ -105,9 +105,9 @@ class MlflowExperimentTracker:
             while True:
                 try:
                     self._flush_metrics()
-                except asyncio.CancelledError:
+                except asyncio.CancelledError as cancelled_error:
                     # Raising cancellation
-                    raise
+                    raise cancelled_error
                 except Exception as err:
                     log.warning(
                         f"Error while sending metrics to mlflow server {MLFLOW_TRACKING_URI}. Will retry later in {self._flush_metrics_worker_frequency}s.",

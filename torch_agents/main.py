@@ -12,23 +12,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import cog_settings
-
-from cogment_verse_torch_agents.hive_adapter.hive_agent_adapter import HiveAgentAdapter
-from cogment_verse_torch_agents.simple_a2c.simple_a2c_agent import SimpleA2CAgentAdapter
-from cogment_verse_torch_agents.muzero.adapter import MuZeroAgentAdapter
-from cogment_verse_torch_agents.simple_bc import SimpleBCAgentAdapter
-
-from dotenv import load_dotenv
-import cogment
-from cogment_verse import RunContext
-
 import asyncio
 import json
 import logging
 import os
 import sys
 import multiprocessing as mp
+
+import cog_settings
+import cogment
+from cogment_verse import RunContext
+from cogment_verse_torch_agents.hive_adapter.hive_agent_adapter import HiveAgentAdapter
+from cogment_verse_torch_agents.muzero.adapter import MuZeroAgentAdapter
+from cogment_verse_torch_agents.simple_a2c.simple_a2c_agent import SimpleA2CAgentAdapter
+from cogment_verse_torch_agents.simple_bc import SimpleBCAgentAdapter
+from dotenv import load_dotenv
 
 load_dotenv()
 
@@ -50,7 +48,7 @@ async def main():
         cog_settings=cog_settings,
         user_id="cogment_verse_torch_agents",
         services_endpoints={
-            "orchestrator": ORCHESTRATOR_ENDPOINT,
+            "orchestrator": "grpc://" + ORCHESTRATOR_ENDPOINT,
             "trial_datastore": TRIAL_DATASTORE_ENDPOINT,
             **ACTOR_ENDPOINTS,
             **ENVIRONMENT_ENDPOINTS,

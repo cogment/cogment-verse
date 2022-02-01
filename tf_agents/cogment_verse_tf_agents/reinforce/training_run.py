@@ -12,18 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from google.protobuf.json_format import MessageToDict
-
-from data_pb2 import (
-    ActorConfig,
-    ActorParams,
-    EnvironmentConfig,
-    EnvironmentParams,
-    TrialConfig,
-)
-from cogment_verse import MlflowExperimentTracker
-
 import logging
+
+from cogment_verse import MlflowExperimentTracker
+from data_pb2 import ActorConfig, ActorParams, EnvironmentConfig, EnvironmentParams, TrialConfig
+from google.protobuf.json_format import MessageToDict
 
 # pylint: disable=protected-access
 log = logging.getLogger(__name__)

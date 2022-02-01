@@ -1,9 +1,9 @@
 import abc
 
 import numpy as np
-
-from .utils.schedule import CosineSchedule, get_schedule, LinearSchedule, SwitchSchedule
 from cogment_verse_torch_agents.third_party.hive.replay_buffer import CircularReplayBuffer
+
+from .utils.schedule import CosineSchedule, LinearSchedule, SwitchSchedule, get_schedule
 
 
 class Agent(abc.ABC):

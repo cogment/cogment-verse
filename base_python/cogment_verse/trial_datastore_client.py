@@ -12,10 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from cogment.api.trial_datastore_pb2_grpc import TrialDatastoreSPStub
-from cogment.api.trial_datastore_pb2 import RetrieveTrialsRequest, RetrieveSamplesRequest
-
 import grpc.aio
+from cogment.api.trial_datastore_pb2 import RetrieveSamplesRequest, RetrieveTrialsRequest
+from cogment.api.trial_datastore_pb2_grpc import TrialDatastoreSPStub
 
 
 class TrialDatastoreClient:

@@ -12,10 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import numpy as np
 import cv2
-
+import numpy as np
 from data_pb2 import AgentAction, ContinuousAction, Observation, NDArray
+
+# TODO directly use torch tensors
 
 
 def np_array_from_proto_array(arr):

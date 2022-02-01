@@ -3,6 +3,7 @@ from typing import ValuesView
 
 import numpy as np
 
+
 def create_class_constructor(base_class, class_dict):
     """Creates a constructor function for subclasses of base_class.
 

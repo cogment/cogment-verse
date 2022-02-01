@@ -12,30 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
 import time
 
-import torch
 import numpy as np
-from prometheus_client import Summary, Gauge
-from google.protobuf.json_format import MessageToDict
-
-from data_pb2 import (
-    ActorConfig,
-    ActorParams,
-    EnvironmentConfig,
-    EnvironmentParams,
-    TrialConfig,
-)
+import torch
 from cogment_verse import MlflowExperimentTracker
 from cogment_verse.utils import sizeof_fmt, throttle
-from cogment_verse_torch_agents.third_party.hive.utils.schedule import (
-    PeriodicSchedule,
-    LinearSchedule,
-    SwitchSchedule,
-    CosineSchedule,
-)
-
-import logging
+from cogment_verse_torch_agents.third_party.hive.utils.schedule import (CosineSchedule, LinearSchedule,
+                                                                        PeriodicSchedule, SwitchSchedule)
+from data_pb2 import ActorConfig, ActorParams, EnvironmentConfig, EnvironmentParams, TrialConfig
+from google.protobuf.json_format import MessageToDict
+from prometheus_client import Gauge, Summary
 
 # pylint: disable=protected-access
 

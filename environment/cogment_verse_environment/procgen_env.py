@@ -12,15 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import numpy as np
 import cv2
-
-from cogment_verse_environment.base import GymObservation
-from cogment_verse_environment.gym_env import GymEnv
-from cogment_verse_environment.env_spec import EnvSpec
-
+import numpy as np
 # registers procgen environments
 import procgen  # pylint: disable=unused-import
+from cogment_verse_environment.base import GymObservation
+from cogment_verse_environment.env_spec import EnvSpec
+from cogment_verse_environment.gym_env import GymEnv
 
 ENV_NAMES = [
     "bigfish",

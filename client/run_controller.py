@@ -12,19 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from run_api_pb2_grpc import RunStub
-from run_api_pb2 import (
-    RunParams,
-    StartRunRequest,
-    ListRunsRequest,
-    TerminateRunRequest,
-    RunStatus,
-)
+import logging
 
 import grpc.aio
 from google.protobuf.json_format import MessageToDict
-
-import logging
+from run_api_pb2 import ListRunsRequest, RunParams, RunStatus, StartRunRequest, TerminateRunRequest
+from run_api_pb2_grpc import RunStub
 
 log = logging.getLogger(__name__)
 

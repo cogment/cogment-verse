@@ -12,18 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import cog_settings
-
-from cogment_verse_environment.environment_adapter import EnvironmentAdapter
-
-import cogment
-
-from dotenv import load_dotenv
-
 import asyncio
 import logging
 import os
 import sys
+
+import cog_settings
+import cogment
+from cogment_verse_environment.environment_adapter import EnvironmentAdapter
+from dotenv import load_dotenv
 
 load_dotenv()
 

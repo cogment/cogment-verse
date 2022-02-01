@@ -12,13 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import numpy as np
 import cv2
-
+import numpy as np
 from cogment_verse_environment.base import GymObservation
-from cogment_verse_environment.gym_env import GymEnv
 from cogment_verse_environment.env_spec import EnvSpec
-
+from cogment_verse_environment.gym_env import GymEnv
 from gym.envs import register
 
 # Atari-py includes a free Tetris rom for testing without needing to download other ROMs

@@ -17,5 +17,4 @@ from cogment_verse_torch_agents.simple_bc.tutorial_2 import SimpleBCAgentAdapter
 from cogment_verse_torch_agents.simple_bc.tutorial_3 import SimpleBCAgentAdapterTutorialStep3
 from cogment_verse_torch_agents.simple_bc.tutorial_4 import SimpleBCAgentAdapterTutorialStep4
 
-
 SimpleBCAgentAdapter = SimpleBCAgentAdapterTutorialStep4

@@ -12,12 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from cogment_verse_tf_agents.reinforce.replaybuffer import Memory
-from cogment_verse_tf_agents.reinforce.model import PolicyNetwork
+import pickle as pkl
+
 import numpy as np
 import tensorflow as tf
 import tensorflow_probability as tfp
-import pickle as pkl
+from cogment_verse_tf_agents.reinforce.model import PolicyNetwork
+from cogment_verse_tf_agents.reinforce.replaybuffer import Memory
 
 
 # pylint: disable=C0103
