@@ -17,6 +17,7 @@ WORKDIR /cogment-verse/web_client
 # Install dependencies
 COPY package.json package-lock.json ./
 RUN npm install
+RUN npx cogment-js-sdk-generate cogment.yaml
 
 # Use polling to catch file changes from inside the container
 # cf. https://stackoverflow.com/questions/44643045/running-development-server-with-create-react-app-inside-of-a-docker-container
