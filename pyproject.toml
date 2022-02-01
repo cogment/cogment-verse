@@ -32,7 +32,7 @@ extend-exclude = '''
 
 [tool.pylint.MASTER]
 disable=[
-  "C0330", "C0326", "C0199", "C0411", # Disable checks in conflict with black
+  "C0330", "C0326", "C0199", "C0412", # Disable checks in conflict with black
   "line-too-long", # Dealt with by black
   "import-error", "no-name-in-module", # Import checks don't work given the way the projects are setup
   "missing-module-docstring", "missing-function-docstring", "missing-class-docstring", # Don't require docstrings for this demo code

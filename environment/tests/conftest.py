@@ -12,10 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from tests.mock_environment_session import MockEnvironmentSession
-from cogment_verse_environment.environment_adapter import EnvironmentAdapter
-
 import pytest
+from cogment_verse_environment.environment_adapter import EnvironmentAdapter
+from tests.mock_environment_session import MockEnvironmentSession
 
 # pylint: disable=protected-access
 

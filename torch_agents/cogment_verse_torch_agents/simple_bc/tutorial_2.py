@@ -12,31 +12,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from data_pb2 import (
-    ActorConfig,
-    ActorParams,
-    AgentAction,
-    EnvironmentConfig,
-    EnvironmentParams,
-    SimpleBCTrainingRunConfig,
-    TrialConfig,
-)
+import asyncio
+import copy
+import logging
 
+import cogment
+import numpy as np
+import torch
+from cogment.api.common_pb2 import TrialState
+from cogment_verse import AgentAdapter, MlflowExperimentTracker
 ############ TUTORIAL STEP 2 ############
-from cogment_verse_torch_agents.utils.tensors import tensor_from_cog_obs, tensor_from_cog_action
+from cogment_verse_torch_agents.utils.tensors import tensor_from_cog_action, tensor_from_cog_obs
+from data_pb2 import (ActorConfig, ActorParams, AgentAction, EnvironmentConfig, EnvironmentParams,
+                      SimpleBCTrainingRunConfig, TrialConfig)
 
 ##########################################
 
-from cogment_verse import AgentAdapter, MlflowExperimentTracker
 
-from cogment.api.common_pb2 import TrialState
-import cogment
 
-import asyncio
-import logging
-import torch
-import numpy as np
-import copy
 
 log = logging.getLogger(__name__)
 

@@ -12,22 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from data_pb2 import Observation
-
-from cogment_verse_environment.gym_env import GymEnv
-from cogment_verse_environment.atari import AtariEnv
-from cogment_verse_environment.tetris import TetrisEnv
-from cogment_verse_environment.minatarenv import MinAtarEnv
-from cogment_verse_environment.zoo_env import PettingZooEnv
-from cogment_verse_environment.procgen_env import ProcGenEnv
-
-from cogment_verse_environment.utils.serialization_helpers import serialize_np_array, serialize_img
-
-import numpy as np
+import logging
 
 import cv2
-
-import logging
+import numpy as np
+from cogment_verse_environment.atari import AtariEnv
+from cogment_verse_environment.gym_env import GymEnv
+from cogment_verse_environment.minatarenv import MinAtarEnv
+from cogment_verse_environment.procgen_env import ProcGenEnv
+from cogment_verse_environment.tetris import TetrisEnv
+from cogment_verse_environment.utils.serialization_helpers import serialize_img, serialize_np_array
+from cogment_verse_environment.zoo_env import PettingZooEnv
+from data_pb2 import Observation
 
 ENVIRONMENT_CONSTRUCTORS = {
     "gym": GymEnv,
@@ -228,7 +224,7 @@ class EnvironmentAdapter:
                             log.debug(
                                 f"[Environment] ending trial [{environment_session.get_trial_id()}] @ tick #{environment_session.get_tick_id()}..."
                             )
-                            environment_session.end(observations=observations)
+                            environment_session.end(observations)
                         else:
                             environment_session.produce_observations(observations=observations)
 

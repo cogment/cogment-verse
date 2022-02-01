@@ -1,13 +1,11 @@
-import numpy as np
 import random
 
-from cogment_verse_torch_agents.third_party.td3.td3_mlp import ActorMLP, CriticMLP
-
+import numpy as np
 import torch
 import torch.nn.functional as F
 import torch.optim as optim
-
 from cogment_verse_torch_agents.third_party.hive.agent import Agent
+from cogment_verse_torch_agents.third_party.td3.td3_mlp import ActorMLP, CriticMLP
 
 
 class DDPGAgent(Agent):

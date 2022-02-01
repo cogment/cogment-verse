@@ -12,8 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from datetime import timedelta, datetime
+from datetime import datetime, timedelta
 from functools import wraps
+
 
 # pylint: disable=invalid-name
 class throttle:

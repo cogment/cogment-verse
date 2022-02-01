@@ -1,15 +1,13 @@
 import copy
+
 import numpy as np
 import torch
 
-from .utils.utils import get_optimizer_fn
-from .utils.schedule import (
-    PeriodicSchedule,
-    get_schedule,
-)
 from .agent import Agent
 from .dqn import legal_moves_adapter
-from .mlp import DistributionalMLP, ComplexMLP
+from .mlp import ComplexMLP, DistributionalMLP
+from .utils.schedule import PeriodicSchedule, get_schedule
+from .utils.utils import get_optimizer_fn
 
 
 class RainbowDQNAgent(Agent):

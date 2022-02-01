@@ -12,10 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from cogment.session import ActorInfo, RecvEvent, RecvAction, EventType
-
 import asyncio
+import time
 from collections import namedtuple
+
+from cogment.session import ActorInfo, EventType, RecvAction, RecvEvent
 
 SentReward = namedtuple("SentReward", ["value", "confidence", "to", "tick_id", "user_data"])
 SentEvent = namedtuple(
@@ -26,6 +27,12 @@ SentEvent = namedtuple(
 # Make it explicit we reexport ActorInfo
 # pylint: disable=self-assigning-variable
 ActorInfo = ActorInfo
+
+
+class ActionData:
+    def __init__(self, tick_id, timestamp):
+        self.tick_id = tick_id
+        self.timestamp = timestamp
 
 
 class MockEnvironmentSession:
@@ -45,9 +52,9 @@ class MockEnvironmentSession:
         async def environment_impl_worker():
             try:
                 await environment_impl(self)
-            except asyncio.CancelledError:
+            except asyncio.CancelledError as cancelled_error:
                 # Raising cancellation
-                raise
+                raise cancelled_error
             except Exception as err:
                 self._sent_events_queue.put_nowait(SentEvent(tick_id=self._tick_id, error=err))
 
@@ -121,5 +128,10 @@ class MockEnvironmentSession:
     def send_events(self, etype=EventType.ACTIVE, actions=[]):
         # No support for messages yet, to be added later
         event = RecvEvent(etype)
-        event.actions = [RecvAction(actor_index=i, action=action) for i, action in enumerate(actions)]
+
+        action_data = ActionData(self._tick_id, time.time())
+
+        event.actions = [
+            RecvAction(actor_index=i, action_data=action_data, action=action) for i, action in enumerate(actions)
+        ]
         self._recv_events_queue.put_nowait(event)

@@ -12,29 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from data_pb2 import (
-    ActorConfig,
-    ActorParams,
-    EnvironmentConfig,
-    EnvironmentParams,
-    MLPNetworkConfig,
-    SimpleA2CTrainingConfig,
-    SimpleA2CTrainingRunConfig,
-    TrialConfig,
-)
-
-from cogment_verse_torch_agents.utils.tensors import tensor_from_cog_obs, tensor_from_cog_action, cog_action_from_tensor
-
-from cogment_verse import AgentAdapter
-from cogment_verse import MlflowExperimentTracker
-
-from cogment.api.common_pb2 import TrialState
-import cogment
-
 import logging
-import torch
-
 from collections import namedtuple
+
+import cogment
+import torch
+from cogment.api.common_pb2 import TrialState
+from cogment_verse import AgentAdapter, MlflowExperimentTracker
+from cogment_verse_torch_agents.utils.tensors import cog_action_from_tensor, tensor_from_cog_action, tensor_from_cog_obs
+from data_pb2 import (ActorConfig, ActorParams, EnvironmentConfig, EnvironmentParams, MLPNetworkConfig,
+                      SimpleA2CTrainingConfig, SimpleA2CTrainingRunConfig, TrialConfig)
 
 log = logging.getLogger(__name__)
 

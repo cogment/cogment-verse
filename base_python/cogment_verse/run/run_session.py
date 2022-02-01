@@ -12,18 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from cogment_verse.run.run_stepper import RunStepper
-from cogment_verse.run.run_sample_producer_session import RunSampleProducerSession
+import asyncio
+import logging
+import time
+from datetime import datetime
+from enum import Enum, auto
 
 import cogment
-from prometheus_client import Counter, Gauge, Summary
+from cogment_verse.run.run_sample_producer_session import RunSampleProducerSession
+from cogment_verse.run.run_stepper import RunStepper
 from names_generator import generate_name
-
-import asyncio
-from datetime import datetime
-import time
-from enum import Enum, auto
-import logging
+from prometheus_client import Counter, Gauge, Summary
 
 log = logging.getLogger(__name__)
 

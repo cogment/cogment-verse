@@ -14,13 +14,11 @@
 
 import importlib
 
-import numpy as np
-
 import gym
-
+import numpy as np
 from cogment_verse_environment.base import GymObservation
-from cogment_verse_environment.gym_env import GymEnv
 from cogment_verse_environment.env_spec import EnvSpec
+from cogment_verse_environment.gym_env import GymEnv
 
 
 def legal_moves_from_mask(action_mask):

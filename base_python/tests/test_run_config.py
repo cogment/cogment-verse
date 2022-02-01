@@ -14,10 +14,8 @@
 
 import pytest
 import yaml
-
 from data_pb2 import RunConfig
-from google.protobuf.json_format import ParseDict, MessageToDict
-
+from google.protobuf.json_format import MessageToDict, ParseDict
 
 # for pytest fixtures
 # pylint: disable=redefined-outer-name

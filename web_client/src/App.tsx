@@ -12,8 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { Message } from "google-protobuf";
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import "./App.css";
 import { cogSettings } from "./CogSettings";
 import { ControlList } from "./ControlList";
@@ -49,7 +48,7 @@ const setIsEndOfArray = <T extends unknown>(A: Set<T>, B: T[]): boolean => {
 
 function App() {
   const [canStartTrial, setCanStartTrial] = useState(true);
-  const [pixelData, setPixelData] = useState<string | undefined>();
+  const [pixelData, setPixelData] = useState<Uint8Array | undefined>();
   const [trialStatus, setTrialStatus] = useState("no trial started");
   const [watching, setWatching] = useState(false);
   const [currentTrialId, setCurrentTrialId] = useState<string | undefined>();
@@ -67,10 +66,18 @@ function App() {
   // cogment stuff
   const COGMENT_VERSE_GRPCWEBPROXY_PUBLIC_URL = process.env.REACT_APP_GRPCWEBPROXY_URL || "http://localhost:8081";
 
-  type ObservationT = data_pb.Observation.AsObject;
-  type ActionT = data_pb.AgentAction;
-  type RewardT = Message;
-  type ActorConfigT = data_pb.ActorConfig.AsObject;
+  function bufferToBase64(buf: Uint8Array) {
+    var binstr = Array.prototype.map
+      .call(buf, function (ch) {
+        return String.fromCharCode(ch);
+      })
+      .join("");
+    return btoa(binstr);
+  }
+
+  type ObservationT = data_pb.cogment_verse.Observation;
+  type ActionT = data_pb.cogment_verse.AgentAction;
+  type ConfigT = data_pb.cogment_verse.ActorConfig;
 
   useEffect(() => {
     //const canvas = canvasRef.current;
@@ -81,14 +88,14 @@ function App() {
     if (!pixelData || !img) {
       return;
     }
-    img.src = "data:image/png;base64," + pixelData;
+
+    img.src = "data:image/png;base64," + bufferToBase64(pixelData);
   });
 
   const [event, joinTrial, _sendAction, reset, trialJoined, watchTrials, trialStateList, actorConfig] = useActions<
     ObservationT,
     ActionT,
-    RewardT,
-    ActorConfigT
+    ConfigT
   >(
     cogSettings,
     "web_actor", // actor name
@@ -116,14 +123,14 @@ function App() {
 
   useEffect(() => {
     if (trialJoined && actorConfig && event.observation && event.observation.pixelData) {
-      setPixelData(event.observation.pixelData as string);
+      setPixelData(event.observation.pixelData);
     }
   }, [event, actorConfig, trialJoined]);
 
   useEffect(() => {
     if (trialJoined && actorConfig && event.observation && event.observation.pixelData) {
       if (!event.last) {
-        const action = new data_pb.AgentAction();
+        const action = new data_pb.cogment_verse.AgentAction();
         let action_int = -1;
         const keymap = get_keymap(actorConfig.environmentImplementation);
 
@@ -139,7 +146,7 @@ function App() {
           }
         }
 
-        action.setDiscreteAction(action_int);
+        action.discreteAction = action_int;
         if (sendAction) {
           sendAction(action);
         }

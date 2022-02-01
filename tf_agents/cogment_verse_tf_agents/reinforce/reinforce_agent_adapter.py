@@ -12,19 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from data_pb2 import RunConfig
+import logging
 
+import cogment
+from cogment_verse import AgentAdapter
 from cogment_verse_tf_agents.reinforce.reinforce import ReinforceAgent
 from cogment_verse_tf_agents.reinforce.sample_producer import sample_producer
 from cogment_verse_tf_agents.reinforce.training_run import create_training_run
 from cogment_verse_tf_agents.wrapper import cog_action_from_tf_action, tf_obs_from_cog_obs
-
-from cogment_verse import AgentAdapter
-import cogment
-
+from data_pb2 import RunConfig
 from prometheus_client import Summary
-
-import logging
 
 COMPUTE_NEXT_ACTION_TIME = Summary(
     "actor_implementation_compute_next_action_seconds",
@@ -62,8 +59,7 @@ class ReinforceAgentAdapter(AgentAdapter):
                 f"[reinforce - {actor_session.name}] model {actor_session.config.model_id}@v{version_number} retrieved"
             )
 
-            actor_map = {actor.actor_name: idx for idx, actor in enumerate(actor_session.get_active_actors())}
-            actor_index = actor_map[actor_session.name]
+            actor_index = actor_session.config.actor_index
 
             total_reward = 0
 

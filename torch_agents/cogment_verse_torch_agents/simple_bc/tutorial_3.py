@@ -12,32 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from data_pb2 import (
-    ActorConfig,
-    ActorParams,
-    EnvironmentConfig,
-    EnvironmentParams,
-    ############ TUTORIAL STEP 3 ############
-    MLPNetworkConfig,
-    ##########################################
-    SimpleBCTrainingRunConfig,
-    TrialConfig,
-)
-
-from cogment_verse_torch_agents.utils.tensors import tensor_from_cog_obs, tensor_from_cog_action, cog_action_from_tensor
-
-from cogment_verse import AgentAdapter, MlflowExperimentTracker
-
-from cogment.api.common_pb2 import TrialState
-import cogment
-
 import asyncio
-import logging
-import torch
 import copy
-
+import logging
 ############ TUTORIAL STEP 3 ############
 from collections import namedtuple
+
+import cogment
+import torch
+from cogment.api.common_pb2 import TrialState
+from cogment_verse import AgentAdapter, MlflowExperimentTracker
+from cogment_verse_torch_agents.utils.tensors import cog_action_from_tensor, tensor_from_cog_action, tensor_from_cog_obs
+from data_pb2 import (  # ########### TUTORIAL STEP 3 ############; #########################################
+    ActorConfig, ActorParams, EnvironmentConfig, EnvironmentParams, MLPNetworkConfig, SimpleBCTrainingRunConfig,
+    TrialConfig)
 
 SimpleBCModel = namedtuple("SimpleBCModel", ["model_id", "version_number", "policy_network"])
 ##########################################
