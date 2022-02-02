@@ -17,7 +17,7 @@ from data_pb2 import SelfPlayTD3TrainingRunConfig
 from cogment_verse_torch_agents.selfplay_td3.selfplay_td3 import SelfPlayTD3
 from cogment_verse_torch_agents.selfplay_td3.selfplay_sample_producer import sample_producer
 from cogment_verse_torch_agents.selfplay_td3.selfplay_training_run import create_training_run
-from cogment_verse_torch_agents.selfplay_td3.wrapper import cog_action_from_tensor, tensor_from_cog_obs
+from cogment_verse_torch_agents.selfplay_td3.wrapper import cog_action_from_tensor, tensor_from_cog_state
 
 from cogment_verse import AgentAdapter
 import cogment, torch
@@ -72,7 +72,7 @@ class SelfPlayAgentAdapter(AgentAdapter):
                     # agent act when its turn
                     if (obs.current_player == 1 and agent == "alice") or \
                         (obs.current_player == 0 and agent == "bob"):
-                            observation = tensor_from_cog_obs(obs)
+                            observation = tensor_from_cog_state(obs)
                             action = model.act(observation)
                             cog_action = cog_action_from_tensor(action)
                             actor_session.do_action(cog_action)

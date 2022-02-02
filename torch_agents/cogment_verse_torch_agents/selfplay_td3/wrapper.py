@@ -18,10 +18,21 @@ import torch
 from data_pb2 import AgentAction, ContinuousAction
 
 
-def tensor_from_cog_obs(cog_obs, dtype=torch.float, device=None):
+def tensor_from_cog_state(cog_obs, dtype=torch.float, device=None):
     pb_array = cog_obs.vectorized
     np_array = np.frombuffer(pb_array.data, dtype=pb_array.dtype).reshape(*pb_array.shape)
-    return torch.tensor(np_array[:-2], dtype=dtype, device=device)
+    return torch.tensor(np_array[:7], dtype=dtype, device=device)
+
+def tensor_from_cog_img(cog_obs, dtype=torch.float, device=None):
+    pb_array = cog_obs.vectorized
+    np_array = np.frombuffer(pb_array.data, dtype=pb_array.dtype).reshape(*pb_array.shape)
+    return torch.tensor(np_array[7:-2], dtype=dtype, device=device)
+
+def current_player_done_flag(cog_obs):
+    return cog_obs.legal_moves_as_int[-1]
+
+def trial_done_flag(cog_obs):
+    return int(cog_obs.done)
 
 def tensor_from_cog_goal(cog_obs, dtype=torch.float, device=None):
     pb_array = cog_obs.vectorized

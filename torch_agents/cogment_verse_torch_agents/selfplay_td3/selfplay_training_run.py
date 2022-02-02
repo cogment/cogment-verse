@@ -131,9 +131,8 @@ def create_training_run(agent_adapter):
                 for _ in range(config.rollout.epoch_trial_count)
             ]
 
-            alice_samples = []
             bob_samples = []
-
+            alice_samples = []
             for epoch in range(config.rollout.epoch_count):
                 # Rollout Alice trials
                 async for (
@@ -146,22 +145,21 @@ def create_training_run(agent_adapter):
                     trial_configs=trial_configs,
                     max_parallel_trials=config.rollout.max_parallel_trials,
                 ):
-                    # alice.consume_training_sample(sample)
-                    sample1, sample2 = sample
-                    if sample1[0] == 0:
-                        bob_samples.append(sample1)
-                    else:
-                        alice_samples.append(sample1)
-
-                    if sample2[0] == 0:
-                        bob_samples.append(sample2)
-                    else:
-                        alice_samples.append(sample2)
+                    if sample.current_player == 0: # bob's sample
+                        bob_samples.append(sample)
+                        # penalize/reward alice if bob does/doesn't achieve goal
+                        if sample.player_done:
+                            if int(sample.reward) == 5:
+                                alice_samples[-1] = alice_samples[-1]._replace(reward=-2.0)
+                            else:
+                                alice_samples[-1] = alice_samples[-1]._replace(reward=5.0)
+                    else: # alice's sample
+                        alice_samples.append(sample)
 
                 # Train Bob
                 # bob.learn()
                 # Train Alice
-                # alice.learn()
+                # alice.learn()x
 
                 alice_version_info = await agent_adapter.publish_version(alice_id, alice)
                 bob_version_info = await agent_adapter.publish_version(bob_id, bob)

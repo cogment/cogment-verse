@@ -62,19 +62,21 @@ class DrivingEnv(BaseEnv):
 
         observation = self._env.reset(self.goal, self.spawn_position, self.spawn_orientation, agent)
         return GymObservation(
-            observation=np.concatenate((observation['car_qpos'], self.goal)),
+            observation=np.concatenate((observation['car_qpos'],
+                                        np.ndarray.flatten(observation['segmentation'].astype('int32')),
+                                        self.goal)),
             rewards=[0.0],
             current_player=self._turn,
-            legal_moves_as_int=[],
-            done=False,
+            legal_moves_as_int=[int(self.agent_done)],
+            done=self.trial_done,
             info={},
         )
 
     def step(self, action=None):
 
         if self.agent_done:
-            gym_observation = self.reset()
             self.agent_done = False
+            gym_observation = self.reset()
 
             if self._turn == 0:
                 self.current_turn += 1
@@ -95,9 +97,11 @@ class DrivingEnv(BaseEnv):
                 self.trial_done = True
 
         return GymObservation(
-            observation=np.concatenate((observation['car_qpos'], self.goal)),
+            observation=np.concatenate((observation['car_qpos'],
+                                        np.ndarray.flatten(observation['segmentation'].astype('int32')),
+                                        self.goal)),
             current_player=self._turn,
-            legal_moves_as_int=[],
+            legal_moves_as_int=[int(self.agent_done)],
             rewards=[reward],
             done=self.trial_done,
             info=info,

@@ -14,37 +14,59 @@
 
 import cogment.api.common_pb2 as common_api
 from cogment_verse_torch_agents.selfplay_td3.wrapper import (
-    tensor_from_cog_obs,
+    tensor_from_cog_state,
+    tensor_from_cog_img,
     tensor_from_cog_action,
     current_player_from_obs,
     tensor_from_cog_goal,
+    current_player_done_flag,
+    trial_done_flag,
 )
+from collections import namedtuple
 
+Sample = namedtuple("Sample", ["current_player", "state", "img",
+                                "action", "reward", "next_state",
+                                "next_img", "player_done", "trial_done",
+                                "goal"])
 
-def get_SARSDG(sample, next_sample, last_tick, num_trials):
-    SARSDG = []
-    for trial_num in range(num_trials):
-        SARSDG.append((int(current_player_from_obs(sample.get_actor_observation(trial_num))), # TBD: function names
-                        tensor_from_cog_obs(sample.get_actor_observation(trial_num)),
-                        tensor_from_cog_action(sample.get_actor_action(trial_num)),
-                        sample.get_actor_reward(trial_num, default=0.0),
-                        tensor_from_cog_obs(next_sample.get_actor_observation(trial_num)),
-                        1 if last_tick else 0,
-                        tensor_from_cog_goal(sample.get_actor_observation(trial_num)),
-                          ))
-    return SARSDG
+# def print_stuff(sample, next_sample):
+#     print(f"\n\n\n&&&&&&&&&&&&&&&&&&&&&&&&&&&& START &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&")
+#     print(f"0th player: {int(current_player_from_obs(sample.get_actor_observation(0)))}, 1st player: {int(current_player_from_obs(sample.get_actor_observation(1)))}")
+#     print(f"0th state: {tensor_from_cog_state(sample.get_actor_observation(0))}, 1st state: {tensor_from_cog_state(sample.get_actor_observation(1))}")
+#     print(f"0th action: {tensor_from_cog_action(sample.get_actor_action(0))}, 1st action: {tensor_from_cog_action(sample.get_actor_action(1))}")
+#     print(f"0th next state: {tensor_from_cog_state(next_sample.get_actor_observation(0))}, 1st next state: {tensor_from_cog_state(next_sample.get_actor_observation(1))}")
+#     print(f"0th player done: {current_player_done_flag(next_sample.get_actor_observation(0))}, 1st player done: {current_player_done_flag(next_sample.get_actor_observation(1))}")
+#     print(f"&&&&&&&&&&&&&&&&&&&&&&&&&&&& END &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&\n\n\n")
+
+def get_samples(sample, next_sample):
+    sample_player_done = current_player_done_flag(sample.get_actor_observation(0)),
+    next_sample_player_done = current_player_done_flag(next_sample.get_actor_observation(0)),
+
+    if not (sample_player_done and not next_sample_player_done):
+        current_player = int(current_player_from_obs(sample.get_actor_observation(0)))
+        return Sample(
+            current_player=current_player, # TBD: function names
+            state=tensor_from_cog_state(sample.get_actor_observation(current_player)),
+            img=tensor_from_cog_img(sample.get_actor_observation(current_player)),
+            action=tensor_from_cog_action(sample.get_actor_action(current_player)),
+            reward=sample.get_actor_reward(current_player, default=0.0),
+            next_state=tensor_from_cog_state(next_sample.get_actor_observation(current_player)),
+            next_img=tensor_from_cog_img(next_sample.get_actor_observation(current_player)),
+            player_done=current_player_done_flag(next_sample.get_actor_observation(current_player)),
+            trial_done=1 if sample.get_trial_state() == common_api.TrialState.ENDED else 0,  # trial end flag never set,
+            goal=tensor_from_cog_goal(sample.get_actor_observation(current_player)),
+                          )
+    else:
+        return ()
 
 
 async def sample_producer(run_sample_producer_session):
-    num_trials = run_sample_producer_session.count_actors()
+    # num_player_sessions = run_sample_producer_session.count_actors()
     previous_sample = None
-    last_tick = False
 
     async for sample in run_sample_producer_session.get_all_samples():
-
-        if sample.get_trial_state() == common_api.TrialState.ENDED:
-            last_tick = True
-
         if previous_sample:
-            run_sample_producer_session.produce_training_sample(get_SARSDG(previous_sample, sample, last_tick, num_trials))
+            Sample = get_samples(previous_sample, sample)
+            if Sample:
+                run_sample_producer_session.produce_training_sample(Sample)
         previous_sample = sample
