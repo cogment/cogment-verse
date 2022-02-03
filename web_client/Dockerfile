@@ -15,22 +15,22 @@ RUN set -x \
 WORKDIR /cogment-verse/web_client
 
 # Install dependencies
-COPY package.json package-lock.json ./
+COPY package.json package-lock.json cogment.yaml data.proto ./
 RUN npm install
-RUN npx cogment-js-sdk-generate cogment.yaml
 
 # Use polling to catch file changes from inside the container
 # cf. https://stackoverflow.com/questions/44643045/running-development-server-with-create-react-app-inside-of-a-docker-container
 ENV CHOKIDAR_USEPOLLING=true
 
+COPY . .
+
 # start the web client in development mode
-CMD ["npm", "start"]
+CMD ["sh", "-c", "npx cogment-js-sdk-generate cogment.yaml && npm start"]
 
 # "prod" is the production image
 FROM dev as prod
 
-# Copy sources within the image and build the web app
-COPY . ./
+RUN npx cogment-js-sdk-generate cogment.yaml
 RUN npm run build
 
 # start image in production mode
