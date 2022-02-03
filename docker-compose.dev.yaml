@@ -31,4 +31,5 @@ services:
       context: web_client
       target: dev
     volumes:
-      - ./web_client:/cogment-verse/web_client:cached
+      - ./web_client/src:/cogment-verse/web_client/src:cached
+      - ./web_client/public:/cogment-verse/web_client/public:cached
