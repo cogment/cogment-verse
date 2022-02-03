@@ -31,8 +31,8 @@ Sample = namedtuple("Sample", ["current_player", "state", "img",
 
 
 def get_samples(sample, next_sample):
-    sample_player_done = current_player_done_flag(sample.get_actor_observation(0)),
-    next_sample_player_done = current_player_done_flag(next_sample.get_actor_observation(0)),
+    sample_player_done = current_player_done_flag(sample.get_actor_observation(0))
+    next_sample_player_done = current_player_done_flag(next_sample.get_actor_observation(0))
 
     if not (sample_player_done and not next_sample_player_done):
         current_player = int(current_player_from_obs(sample.get_actor_observation(0)))
@@ -48,8 +48,7 @@ def get_samples(sample, next_sample):
             trial_done=1 if next_sample.get_trial_state() == common_api.TrialState.ENDED else 0,  # trial end flag never set,
             goal=tensor_from_cog_goal(sample.get_actor_observation(current_player)),
                           )
-    else:
-        return ()
+    return ()
 
 
 async def sample_producer(run_sample_producer_session):
