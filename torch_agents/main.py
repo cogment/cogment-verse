@@ -63,6 +63,7 @@ async def main():
 
     muzero_adapter = MuZeroAgentAdapter()
     muzero_adapter.register_implementations(context)
+
     simple_bc_adapter = SimpleBCAgentAdapter()
     simple_bc_adapter.register_implementations(context)
 

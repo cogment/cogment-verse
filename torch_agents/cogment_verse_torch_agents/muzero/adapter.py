@@ -191,15 +191,21 @@ class MuZeroAgentAdapter(AgentAdapter):
             step += 1
             state = next_state
             action = self.decode_cog_action(sample.get_actor_action(player_override))
+            policy, value = self.decode_cog_policy_value(sample.get_actor_action(observation.current_player))
 
             if action < 0:
+                # todo(jonathan): investigate this, it shouldn't happen
                 print("WARNING: override action is invalid, ignoring!")
                 action = self.decode_cog_action(sample.get_actor_action(observation.current_player))
+                reward = sample.get_actor_reward(observation.current_player)
+            else:
+                # BC for teacher intervention
+                if player_override != observation.current_player:
+                    policy = np.zeros_like(policy)
+                    policy[:, action] = 1.0
+                reward = sample.get_actor_reward(player_override)
 
             assert action >= 0
-
-            policy, value = self.decode_cog_policy_value(sample.get_actor_action(observation.current_player))
-            reward = sample.get_actor_reward(player_override)
 
     async def single_agent_muzero_run_implementation(self, run_session):
         xp_tracker = MlflowExperimentTracker(run_session.params_name, run_session.run_id)
@@ -369,15 +375,12 @@ def make_trial_configs(run_session, config, model_id, model_version_number):
         config.seed = seed
         return config
 
-    env_type, env_name = config.environment.implementation.split("/")
-
     actor_config = ActorConfig(
         model_id=model_id,
         model_version=model_version_number,
         num_input=config.actor.num_input,
         num_action=config.actor.num_action,
-        env_type=env_type,
-        env_name=env_name,
+        environment_implementation=config.environment.implementation,
         device=config.training.actor_device,
     )
     muzero_config = ActorParams(
@@ -400,7 +403,7 @@ def make_trial_configs(run_session, config, model_id, model_version_number):
                 config=clone_config(
                     config.environment.config,
                     seed=config.environment.config.seed + i + config.training.demonstration_trials,
-                    render=False,
+                    render=True,
                 ),
             ),
             actors=[muzero_config, teacher_config],
