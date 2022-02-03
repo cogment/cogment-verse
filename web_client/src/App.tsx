@@ -138,19 +138,22 @@ function App() {
       if (!event.last) {
         const action = new data_pb.cogment_verse.AgentAction();
         let action_int = -1;
-        let keymap = undefined;
-        if (actorConfig.environmentSpecs.implementation) {
-          keymap = get_keymap(actorConfig.environmentSpecs.implementation);
-        }
 
-        if (keymap === undefined) {
-          console.log(`no keymap defined for actor config ${actorConfig}`);
-        } else {
-          for (let item of keymap.action_map) {
-            const keySet = new Set<string>(item.keys);
-            if (setIsEndOfArray(keySet, pressedKeys)) {
-              action_int = item.id;
-              break;
+        if (actorConfig.role === data_pb.cogment_verse.HumanRole.TEACHER) {
+          let keymap = undefined;
+          if (actorConfig.environmentSpecs.implementation) {
+            keymap = get_keymap(actorConfig.environmentSpecs.implementation);
+          }
+
+          if (keymap === undefined) {
+            console.log(`no keymap defined for actor config ${actorConfig}`);
+          } else {
+            for (let item of keymap.action_map) {
+              const keySet = new Set<string>(item.keys);
+              if (setIsEndOfArray(keySet, pressedKeys)) {
+                action_int = item.id;
+                break;
+              }
             }
           }
         }
@@ -191,7 +194,13 @@ function App() {
 
   useEffect(() => {
     if (trialJoined) {
-      setTrialStatus("trial joined");
+      if (actorConfig && actorConfig.role === data_pb.cogment_verse.HumanRole.TEACHER) {
+        setTrialStatus("trial joined as teacher");
+      } else if (actorConfig && actorConfig.role === data_pb.cogment_verse.HumanRole.OBSERVER) {
+        setTrialStatus("trial joined as observer");
+      } else {
+        setTrialStatus("trial joined (unknown role)");
+      }
       setCanStartTrial(false);
       if (actorConfig && actorConfig.environmentSpecs && actorConfig.environmentSpecs.implementation) {
         setEnvironmentImplementation(actorConfig.environmentSpecs.implementation);

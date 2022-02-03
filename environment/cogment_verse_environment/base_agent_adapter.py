@@ -27,8 +27,9 @@ from data_pb2 import (
     EnvironmentConfig,
     EnvironmentParams,
     EnvironmentSpecs,
-    PlayRunConfig,
     HumanConfig,
+    HumanRole,
+    PlayRunConfig,
     TrialConfig,
 )
 
@@ -116,6 +117,7 @@ class BaseAgentAdapter(AgentAdapter):
                         human_config=HumanConfig(
                             run_id=run_session.run_id,
                             environment_specs=config.environment.specs,
+                            role=HumanRole.OBSERVER,
                         ),
                     )
                 )

@@ -34,6 +34,8 @@ from data_pb2 import (
     EnvironmentConfig,
     EnvironmentParams,
     EnvironmentSpecs,
+    HumanConfig,
+    HumanRole,
     MLPNetworkConfig,
     SimpleBCTrainingRunConfig,
     TrialConfig,
@@ -203,8 +205,9 @@ class SimpleBCAgentAdapterTutorialStep3(AgentAdapter):
                     name="web_actor",
                     actor_class="teacher_agent",
                     implementation="client",
-                    agent_config=AgentConfig(
+                    human_config=HumanConfig(
                         environment_specs=env_params.specs,
+                        role=HumanRole.TEACHER,
                     ),
                 )
 

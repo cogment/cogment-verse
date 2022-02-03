@@ -51,10 +51,16 @@ message AgentConfig {
   int32 actor_index = 5; // Used to figure out if an agent is the current_player in the observation space
 }
 
+enum HumanRole {
+  TEACHER = 0;
+  OBSERVER = 1;
+}
+
 message HumanConfig {
   string run_id = 1;
   EnvironmentSpecs environment_specs = 2;
   int32 actor_index = 3; // Used to figure out if an agent is the current_player in the observation space
+  HumanRole role = 4;
 }
 
 message ActorParams {
@@ -105,8 +111,8 @@ message ModelArgs {
 }
 
 message ReplayBufferConfig {
-    string action_dtype = 1;
-    string observation_dtype = 2;
+  string action_dtype = 1;
+  string observation_dtype = 2;
 }
 
 message RunConfig {

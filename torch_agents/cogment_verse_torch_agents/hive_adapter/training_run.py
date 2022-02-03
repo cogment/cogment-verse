@@ -27,11 +27,12 @@ from cogment_verse_torch_agents.third_party.hive.utils.schedule import (
     SwitchSchedule,
 )
 from data_pb2 import (
-    AgentConfig,
     ActorParams,
+    AgentConfig,
     EnvironmentConfig,
     EnvironmentParams,
     HumanConfig,
+    HumanRole,
     TrialConfig,
 )
 from google.protobuf.json_format import MessageToDict
@@ -160,6 +161,7 @@ def create_training_run(agent_adapter):
                     human_config=HumanConfig(
                         run_id=run_id,
                         environment_specs=config.environment.specs,
+                        role=HumanRole.TEACHER,
                     ),
                 )
                 demonstration_trial_configs = [

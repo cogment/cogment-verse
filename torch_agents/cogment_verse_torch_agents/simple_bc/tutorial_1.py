@@ -28,8 +28,9 @@ from data_pb2 import (
     EnvironmentConfig,
     EnvironmentParams,
     EnvironmentSpecs,
-    SimpleBCTrainingRunConfig,
     HumanConfig,
+    HumanRole,
+    SimpleBCTrainingRunConfig,
     TrialConfig,
 )
 
@@ -107,6 +108,7 @@ class SimpleBCAgentAdapterTutorialStep1(AgentAdapter):
                     implementation="client",
                     human_config=HumanConfig(
                         environment_specs=env_params.specs,
+                        role=HumanRole.TEACHER,
                     ),
                 )
 
