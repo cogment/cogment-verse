@@ -28,13 +28,13 @@ from data_pb2 import (
 )
 from cogment_verse import MlflowExperimentTracker
 from cogment_verse.utils import sizeof_fmt, throttle
-from cogment_verse_torch_agents.third_party.hive.utils.schedule import (
+from hive.utils.schedule import (
     PeriodicSchedule,
     LinearSchedule,
     SwitchSchedule,
 )
-from cogment_verse_torch_agents.third_party.hive.agents.qnets.base import FunctionApproximator
-from cogment_verse_torch_agents.third_party.hive.agents.qnets import MLPNetwork
+from hive.agents.qnets.base import FunctionApproximator
+from hive.agents.qnets import MLPNetwork
 
 import logging
 
@@ -285,7 +285,7 @@ def create_training_run(agent_adapter):
 
                         model.update(update_info)
 
-                        
+
                     if sample.current_player_sample[-1] and model.replay_buffer_size() > config.batch_size:
                         info, training_batch = train_model()
                         samples_seen += get_samples_seen(training_batch)

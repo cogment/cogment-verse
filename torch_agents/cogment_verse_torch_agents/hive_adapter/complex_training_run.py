@@ -27,14 +27,14 @@ from data_pb2 import (
 )
 from cogment_verse import MlflowExperimentTracker
 from cogment_verse.utils import sizeof_fmt, throttle
-from cogment_verse_torch_agents.third_party.hive.utils.schedule import (
+from hive.utils.schedule import (
     PeriodicSchedule,
     LinearSchedule,
     SwitchSchedule,
     CosineSchedule,
 )
-from cogment_verse_torch_agents.third_party.hive.agents.qnets.base import FunctionApproximator
-from cogment_verse_torch_agents.third_party.hive.agents.qnets import MLPNetwork
+from hive.agents.qnets.base import FunctionApproximator
+from hive.agents.qnets import MLPNetwork
 
 import logging
 

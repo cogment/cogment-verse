@@ -16,8 +16,8 @@ from data_pb2 import RunConfig
 
 from cogment_verse import AgentAdapter
 
-from cogment_verse_torch_agents.third_party.hive.agents.dqn import DQNAgent
-from cogment_verse_torch_agents.third_party.hive.agents.rainbow import RainbowDQNAgent
+from hive.agents.dqn import DQNAgent
+from hive.agents.rainbow import RainbowDQNAgent
 from cogment_verse_torch_agents.third_party.td3.td3 import TD3Agent
 
 # from cogment_verse_torch_agents.third_party.td3.td3 import TD3Agent
@@ -25,8 +25,8 @@ from cogment_verse_torch_agents.wrapper import format_legal_moves, cog_action_fr
 from cogment_verse_torch_agents.hive_adapter.sample_producer import sample_producer
 from cogment_verse_torch_agents.hive_adapter.training_run import create_training_run
 
-from cogment_verse_torch_agents.third_party.hive.agents.qnets.base import FunctionApproximator
-from cogment_verse_torch_agents.third_party.hive.agents.qnets import MLPNetwork
+from hive.agents.qnets.base import FunctionApproximator
+from hive.agents.qnets import MLPNetwork
 
 import cogment
 
