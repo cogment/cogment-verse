@@ -29,14 +29,6 @@ Sample = namedtuple("Sample", ["current_player", "state", "img",
                                 "next_img", "player_done", "trial_done",
                                 "goal"])
 
-# def print_stuff(sample, next_sample):
-#     print(f"\n\n\n&&&&&&&&&&&&&&&&&&&&&&&&&&&& START &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&")
-#     print(f"0th player: {int(current_player_from_obs(sample.get_actor_observation(0)))}, 1st player: {int(current_player_from_obs(sample.get_actor_observation(1)))}")
-#     print(f"0th state: {tensor_from_cog_state(sample.get_actor_observation(0))}, 1st state: {tensor_from_cog_state(sample.get_actor_observation(1))}")
-#     print(f"0th action: {tensor_from_cog_action(sample.get_actor_action(0))}, 1st action: {tensor_from_cog_action(sample.get_actor_action(1))}")
-#     print(f"0th next state: {tensor_from_cog_state(next_sample.get_actor_observation(0))}, 1st next state: {tensor_from_cog_state(next_sample.get_actor_observation(1))}")
-#     print(f"0th player done: {current_player_done_flag(next_sample.get_actor_observation(0))}, 1st player done: {current_player_done_flag(next_sample.get_actor_observation(1))}")
-#     print(f"&&&&&&&&&&&&&&&&&&&&&&&&&&&& END &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&\n\n\n")
 
 def get_samples(sample, next_sample):
     sample_player_done = current_player_done_flag(sample.get_actor_observation(0)),
@@ -53,7 +45,7 @@ def get_samples(sample, next_sample):
             next_state=tensor_from_cog_state(next_sample.get_actor_observation(current_player)),
             next_img=tensor_from_cog_img(next_sample.get_actor_observation(current_player)),
             player_done=current_player_done_flag(next_sample.get_actor_observation(current_player)),
-            trial_done=1 if sample.get_trial_state() == common_api.TrialState.ENDED else 0,  # trial end flag never set,
+            trial_done=1 if next_sample.get_trial_state() == common_api.TrialState.ENDED else 0,  # trial end flag never set,
             goal=tensor_from_cog_goal(sample.get_actor_observation(current_player)),
                           )
     else:
@@ -61,7 +53,6 @@ def get_samples(sample, next_sample):
 
 
 async def sample_producer(run_sample_producer_session):
-    # num_player_sessions = run_sample_producer_session.count_actors()
     previous_sample = None
 
     async for sample in run_sample_producer_session.get_all_samples():
