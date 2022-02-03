@@ -48,9 +48,9 @@ commands:
   down: docker-compose down
   # Build and use the client
   build_client: docker-compose build client
-  list_runs: docker-compose run client list
-  start_run: docker-compose run client start $RUN_PARAMS
-  terminate_run: docker-compose run client terminate $RUN_ID
+  list_runs: docker-compose run --rm client list
+  start_run: docker-compose run --rm client start $RUN_PARAMS
+  terminate_run: docker-compose run --rm client terminate $RUN_ID
 
   test: cogment run test_torch_agents && cogment run test_environment
   test_torch_agents: >
