@@ -152,7 +152,7 @@ def create_training_run(agent_adapter):
                             if int(sample.reward) == 5:
                                 alice_samples[-1] = alice_samples[-1]._replace(reward=-2.0)
                             else:
-                                alice_samples[-1] = alice_samples[-1]._replace(reward=5.0)
+                                alice_samples[-1] = alice_samples[-1]._replace(reward=3.0)
                     else: # alice's sample
                         alice_samples.append(sample)
 
