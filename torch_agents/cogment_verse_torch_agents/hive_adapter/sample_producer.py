@@ -86,7 +86,10 @@ async def sample_producer(run_sample_producer_session):
                 run_sample_producer_session.produce_training_sample(
                     TrainingSample(
                         current_player_sample=vectorized_training_sample_from_samples(
-                            previous_sample, sample, last_tick, run_sample_producer_session.run_config.num_action
+                            previous_sample,
+                            sample,
+                            last_tick,
+                            run_sample_producer_session.run_config.environment.specs.num_action,
                         ),
                         trial_total_reward=trial_total_reward if last_tick else None,
                     ),

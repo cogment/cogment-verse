@@ -34,14 +34,23 @@ log = logging.getLogger(__name__)
 # pylint: disable=W0212
 # pylint: disable=W0622
 # pylint: disable=C0103
+# pylint: disable=arguments-differ
 class ReinforceAgentAdapter(AgentAdapter):
-    def _create(self, model_id, **kwargs):
-        return ReinforceAgent(id=model_id, **kwargs)
+    def _create(self, model_id, environment_specs, **kwargs):
+        model = ReinforceAgent(
+            id=model_id, obs_dim=environment_specs.num_input, act_dim=environment_specs.num_action, **kwargs
+        )
+        model_user_data = {
+            "environment_implementation": environment_specs.implementation,
+            "num_input": environment_specs.num_input,
+            "num_action": environment_specs.num_action,
+        }
+        return model, model_user_data
 
-    def _load(self, model_id, version_number, version_user_data, model_data_f):
+    def _load(self, model_id, version_number, model_user_data, version_user_data, model_data_f, **kwargs):
         return ReinforceAgent.load(model_data_f, id=model_id, **version_user_data)
 
-    def _save(self, model, model_data_f):
+    def _save(self, model, model_user_data, model_data_f, **kwargs):
         return model.save(model_data_f)
 
     def _create_actor_implementations(self):
@@ -50,7 +59,7 @@ class ReinforceAgentAdapter(AgentAdapter):
             actor_session.start()
 
             # Retrieve the latest version of the agent model (asynchronous so needs to be done after the start)
-            model, version_info = await self.retrieve_version(
+            model, _, version_info = await self.retrieve_version(
                 actor_session.config.model_id, actor_session.config.model_version
             )
 

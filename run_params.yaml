@@ -1,9 +1,105 @@
 
+environment_specs:
+  cartpole_specs: &cartpole_specs
+    implementation: gym/CartPole-v0
+    num_players: 1
+    num_input: 4
+    num_action: 2
+  pendulum_specs: &pendulum_specs
+    implementation: gym/Pendulum-v0
+    num_players: 1
+    num_input: 3
+    num_action: 1
+  mountain_car_specs: &mountain_car_specs
+    implementation: gym/MountainCar-v0
+    num_players: 1
+    num_input: 2
+    num_action: 3
+  lander_specs: &lander_specs
+    implementation: gym/LunarLander-v2
+    num_players: 1
+    num_input: 8
+    num_action: 4
+  lander_continuous_specs: &lander_continuous_specs
+    implementation: gym/LunarLanderContinuous-v2
+    num_players: 1
+    num_input: 8
+    num_action: 2
+  bipedal_walker_specs: &bipedal_walker_specs
+    implementation: gym/BipedalWalker-v3
+    num_players: 1
+    num_input: 24
+    num_action: 4
+  minatar_breakout_specs: &minatar_breakout_specs
+    implementation: minatar/breakout
+    num_players: 1
+    num_input: 500
+    num_action: 6
+  atari_pitfall_specs: &atari_pitfall_specs
+    implementation: atari/Pitfall
+    num_players: 1
+    num_input: 7056
+    num_action: 18
+  atari_breakout_specs: &atari_breakout_specs
+    implementation: atari/Breakout
+    num_players: 1
+    num_input: 7056
+    num_action: 4
+  tetris_specs: &tetris_specs
+    implementation: tetris/TetrisA-v0
+    num_players: 1
+    num_input: 7056
+    num_action: 12
+  procgen_bigfish_specs: &procgen_bigfish_specs
+    implementation: procgen/bigfish
+    num_players: 1
+    num_input: 7056
+    num_action: 15
+  pettingzoo_connect_four_specs: &pettingzoo_connect_four_specs
+    implementation: pettingzoo/connect_four_v3
+    num_players: 2
+    num_input: 84
+    num_action: 7
+  pettingzoo_backgammon_specs: &pettingzoo_backgammon_specs
+    implementation: pettingzoo/backgammon_v3
+    num_players: 2
+    num_input: 198
+    num_action: 1353
+
+play:
+  implementation: play
+  config:
+    class_name: data_pb2.PlayRunConfig
+    # Set to true to have the ability to observe the run in the web client
+    observer: true
+    trial_count: 10
+    environment:
+      specs: *cartpole_specs
+    actors:
+    # Configure the players (only the first ones are used, up to the number of required players)
+    - name: agent_1
+      actor_class: agent
+      # implementation: random
+      # To use an already trained agent use the following.
+      # Make sure the model is compatible with the implementation and the environment
+      implementation: rainbowtorch
+      agent_config:
+       model_id: compassionate_aryabhata_model
+       model_version: -1
+    - name: agent_2
+      actor_class: agent
+      implementation: random
+
 cartpole_rainbow: &default_params
   implementation: "cogment_verse_run_impl"
   config: &default_config
     class_name: data_pb2.RunConfig
-    player_count: 1
+    environment:
+      specs: *cartpole_specs
+      config: &default_env_config
+        render_width: 256
+        flatten: True
+        framestack: 1
     epsilon_min: 0.1
     epsilon_steps: 100000
     target_net_update_schedule: 1000
@@ -13,31 +109,22 @@ cartpole_rainbow: &default_params
     total_trial_count: 10000
     model_publication_interval: 1000
     model_archive_interval_multiplier: 4 # Archive every fourth published model
-    render_width: 256
     batch_size: 256
     min_replay_buffer_size: 1000
     max_parallel_trials: 4
     model_kwargs: {}
     max_replay_buffer_size: 100000
-    flatten: True
     aggregate_by_actor: False
-    framestack: 1
     replay_buffer_config:
       observation_dtype: float32
       action_dtype: int8
-    num_input: 4
-    num_action: 2
     agent_implementation: rainbowtorch
-    environment_implementation: gym/CartPole-v0
 
 cartpole_dqn:
   <<: *default_params
   config:
     <<: *default_config
-    num_input: 4
-    num_action: 2
     agent_implementation: dqn
-    environment_implementation: gym/CartPole-v0
 
 cartpole_REINFORCE:
   implementation: "reinforce_training"
@@ -53,10 +140,10 @@ pendulum_td3:
   <<: *default_params
   config:
     <<: *default_config
-    num_input: 3
-    num_action: 1
+    environment:
+      specs: *pendulum_specs
+      config: *default_env_config
     agent_implementation: td3
-    environment_implementation: gym/Pendulum-v0
     epsilon_min: 0.0
     epsilon_steps: 1
     target_net_update_schedule: 2
@@ -76,35 +163,36 @@ minatar_breakout_rainbow:
   <<: *default_params
   config:
     <<: *default_config
-    num_input: 400
-    num_action: 6
+    environment:
+      specs: *minatar_breakout_specs
+      config: *default_env_config
     agent_implementation: rainbowtorch
-    environment_implementation: min/breakout
 
 atari_pitfall_rainbow:
   <<: *default_params
   config:
     <<: *default_config
-    num_input: 7056
-    num_action: 18
+    environment:
+      specs: *atari_pitfall_specs
+      config: *default_env_config
     agent_implementation: rainbowtorch
-    environment_implementation: ata/Pitfall
 
 atari_breakout_cnn:
   <<: *default_params
   config:
     <<: *default_config
-    num_input: 7056
-    num_action: 4
+    environment:
+      specs: *atari_breakout_specs
+      config:
+        <<: *default_env_config
+        flatten: false
+        framestack: 4
     agent_implementation: atari_cnn
-    environment_implementation: ata/Breakout
     demonstration_count: 0
     total_trial_count: 10000
     model_publication_interval: 1000
     model_archive_interval_multiplier: 100
     max_parallel_trials: 2
-    render_width: 256
-    flatten: false
     batch_size: 1024
     min_replay_buffer_size: 10000
     max_replay_buffer_size: 350000
@@ -112,7 +200,6 @@ atari_breakout_cnn:
     epsilon_steps: 100000
     learning_rate: 1.0e-4
     lr_warmup_steps: 10000
-    framestack: 4
     model_kwargs:
       target_net_soft_update: False
     replay_buffer_config:
@@ -123,41 +210,42 @@ minatar_breakout_demo:
   <<: *default_params
   config:
     <<: *default_config
-    num_input: 400
-    num_action: 6
+    environment:
+      specs: *minatar_breakout_specs
+      config: *default_env_config
     agent_implementation: rainbowtorch
-    environment_implementation: min/breakout
-    demonstration_count: 0
 
 atari_breakout_demo:
   <<: *default_params
   config:
     <<: *default_config
-    num_input: 7056
-    num_action: 4
+    environment:
+      specs: *atari_breakout_specs
+      config:
+        <<: *default_env_config
+        framestack: 4
     agent_implementation: rainbowtorch
-    environment_implementation: ata/Breakout
-    demonstration_count: 0
-    framestack: 4
 
 atari_pitfall_demo:
   <<: *default_params
   config:
     <<: *default_config
-    num_input: 7056
-    num_action: 18
+    environment:
+      specs: *atari_pitfall_specs
+      config: *default_env_config
     agent_implementation: rainbowtorch
-    environment_implementation: ata/Pitfall
     demonstration_count: 10
 
 lander_rainbow_demo: &lander_rainbow_demo
   <<: *default_params
   config: &lander_rainbow_config
     <<: *default_config
-    num_input: 8
-    num_action: 4
+    environment:
+      specs: *lander_specs
+      config:
+        <<: *default_env_config
+        render_width: 1000
     agent_implementation: rainbowtorch
-    environment_implementation: gym/LunarLander-v2
     demonstration_count: 20000 #100
     total_trial_count: 20000
     epsilon_min: 0.1
@@ -166,7 +254,6 @@ lander_rainbow_demo: &lander_rainbow_demo
     learning_rate: 1.0e-4
     lr_warmup_steps: 100
     model_publication_interval: 200
-    render_width: 1000
     batch_size: 32
     min_replay_buffer_size: 32
 
@@ -183,10 +270,13 @@ tetris_rainbow_demo:
   <<: *default_params
   config:
     <<: *default_config
-    num_input: 7056
-    num_action: 12
+    environment:
+      specs: *tetris_specs
+      config:
+        <<: *default_env_config
+        render_width: 1000
+        flatten: False
     agent_implementation: atari_cnn
-    environment_implementation: tet/TetrisA-v0
     demonstration_count: 1000 #100
     total_trial_count: 10000
     epsilon_min: 0.1
@@ -195,21 +285,18 @@ tetris_rainbow_demo:
     learning_rate: 1.0e-4
     lr_warmup_steps: 100
     model_publication_interval: 2000
-    render_width: 1000
     batch_size: 32
     min_replay_buffer_size: 32
     max_replay_buffer_size: 10000
-    flatten: False
 
 connect_four_rainbow:
   <<: *default_params
   config:
     <<: *default_config
-    num_input: 84
-    num_action: 7
-    player_count: 2
+    environment:
+      specs: *pettingzoo_connect_four_specs
+      config: *default_env_config
     agent_implementation: rainbowtorch
-    environment_implementation: pet/connect_four_v3
     demonstration_count: 0 #100
     total_trial_count: 10000
     epsilon_steps: 5000
@@ -223,11 +310,12 @@ backgammon_rainbow:
   <<: *default_params
   config:
     <<: *default_config
-    num_input: 198
-    num_action: 1353
-    player_count: 2
-    agent_implementation: rainbowtorch
-    environment_implementation: pet/backgammon_v3
+    environment:
+      specs:
+        implementation: pet/backgammon_v3
+        num_input: 198
+        num_action: 1353
+      config: *default_env_config
     demonstration_count: 0 #100
     total_trial_count: 10
     model_publication_interval: 100
@@ -236,10 +324,12 @@ benchmark_lander:
   <<: *default_params
   config:
     <<: *default_config
-    num_input: 8
-    num_action: 4
+    environment:
+      specs: *lander_specs
+      config:
+        <<: *default_env_config
+        render_width: 1000
     agent_implementation: rainbowtorch
-    environment_implementation: gym/LunarLander-v2
     demonstration_count: 0
     total_trial_count: 250
     epsilon_min: 0.10
@@ -248,7 +338,6 @@ benchmark_lander:
     learning_rate: 1.0e-4
     lr_warmup_steps: 100
     model_publication_interval: 250
-    render_width: 1000
     batch_size: 32
     min_replay_buffer_size: 32
     model_kwargs:
@@ -259,10 +348,12 @@ benchmark_lander_hill:
   <<: *default_params
   config:
     <<: *default_config
-    num_input: 8
-    num_action: 4
+    environment:
+      specs: *lander_specs
+      config:
+        <<: *default_env_config
+        render_width: 1000
     agent_implementation: rainbowtorch
-    environment_implementation: gym/LunarLander-v2
     demonstration_count: 1000
     total_trial_count: 1000
     epsilon_min: 0.1
@@ -271,7 +362,6 @@ benchmark_lander_hill:
     learning_rate: 1.0e-4
     lr_warmup_steps: 100
     model_publication_interval: 250
-    render_width: 1000
     batch_size: 256
     min_replay_buffer_size: 256
     model_kwargs:
@@ -282,10 +372,12 @@ lander_continuous_td3:
   <<: *default_params
   config:
     <<: *default_config
-    num_input: 8
-    num_action: 2
+    environment:
+      specs: *lander_continuous_specs
+      config:
+        <<: *default_env_config
+        render_width: 1000
     agent_implementation: td3
-    environment_implementation: gym/LunarLanderContinuous-v2
     demonstration_count: 0
     total_trial_count: 1000
     epsilon_min: 0.0
@@ -312,10 +404,12 @@ lander_continuous_ddpg:
   <<: *default_params
   config:
     <<: *default_config
-    num_input: 8
-    num_action: 2
+    environment:
+      specs: *lander_continuous_specs
+      config:
+        <<: *default_env_config
+        render_width: 1000
     agent_implementation: ddpg
-    environment_implementation: gym/LunarLanderContinuous-v2
     demonstration_count: 0
     total_trial_count: 1000
     epsilon_min: 0.1
@@ -324,7 +418,6 @@ lander_continuous_ddpg:
     learning_rate: 1.0e-4
     lr_warmup_steps: 100
     model_publication_interval: 250
-    render_width: 1000
     batch_size: 64
     min_replay_buffer_size: 64
     max_replay_buffer_size: 100000
@@ -342,10 +435,12 @@ walker_td3:
   <<: *default_params
   config:
     <<: *default_config
-    num_input: 8
-    num_action: 2
+    environment:
+      specs: *bipedal_walker_specs
+      config:
+        <<: *default_env_config
+        render_width: 1000
     agent_implementation: td3
-    environment_implementation: gym/BipedalWalker-v3
     demonstration_count: 0
     total_trial_count: 1000
     epsilon_min: 0.0
@@ -354,7 +449,6 @@ walker_td3:
     learning_rate: 1.0e-4
     lr_warmup_steps: 100
     model_publication_interval: 250
-    render_width: 1000
     batch_size: 256
     min_replay_buffer_size: 256
     max_replay_buffer_size: 100000
@@ -372,10 +466,12 @@ walker_ddpg:
   <<: *default_params
   config:
     <<: *default_config
-    num_input: 24
-    num_action: 4
+    environment:
+      specs: *bipedal_walker_specs
+      config:
+        <<: *default_env_config
+        render_width: 1000
     agent_implementation: ddpg
-    environment_implementation: gym/BipedalWalker-v3
     demonstration_count: 0
     total_trial_count: 1000
     epsilon_min: 0.1
@@ -383,7 +479,6 @@ walker_ddpg:
     target_net_update_schedule: 2
     learning_rate: 1.0e-4
     model_publication_interval: 250
-    render_width: 1000
     batch_size: 64
     min_replay_buffer_size: 64
     max_replay_buffer_size: 100000
@@ -401,10 +496,15 @@ pendulum_td3:
   <<: *default_params
   config:
     <<: *default_config
-    num_input: 3
-    num_action: 1
+    environment:
+      specs:
+        implementation: gym/Pendulum-v0
+        num_input: 3
+        num_action: 1
+      config:
+        <<: *default_env_config
+        render_width: 1000
     agent_implementation: td3
-    environment_implementation: gym/Pendulum-v0
     demonstration_count: 0 #100
     total_trial_count: 250
     epsilon_min: 0.0
@@ -414,7 +514,6 @@ pendulum_td3:
     learning_rate: 1.0e-4
     lr_warmup_steps: 100
     model_publication_interval: 1000
-    render_width: 1000
     batch_size: 64
     min_replay_buffer_size: 64
     replay_buffer_config:
@@ -430,10 +529,15 @@ pendulum_ddpg:
   <<: *default_params
   config:
     <<: *default_config
-    num_input: 3
-    num_action: 1
+    environment:
+      specs:
+        implementation: gym/Pendulum-v0
+        num_input: 3
+        num_action: 1
+      config:
+        <<: *default_env_config
+        render_width: 1000
     agent_implementation: ddpg
-    environment_implementation: gym/Pendulum-v0
     demonstration_count: 0 #100
     total_trial_count: 250
     epsilon_min: 0.0
@@ -443,7 +547,6 @@ pendulum_ddpg:
     learning_rate: 1.0e-4
     lr_warmup_steps: 100
     model_publication_interval: 1000
-    render_width: 1000
     batch_size: 64
     min_replay_buffer_size: 64
     max_replay_buffer_size: 10000
@@ -460,10 +563,10 @@ benchmark_breakout:
   <<: *default_params
   config:
     <<: *default_config
-    num_input: 400
-    num_action: 6
+    environment:
+      specs: *minatar_breakout_specs
+      config: *default_env_config
     agent_implementation: rainbowtorch
-    environment_implementation: min/breakout
     demonstration_count: 0
     total_trial_count: 1000
     model_publication_interval: 100
@@ -477,11 +580,11 @@ benchmark_connect_four:
   <<: *default_params
   config:
     <<: *default_config
-    num_input: 84
-    num_action: 7
-    player_count: 2
+    environment:
+      specs: *pettingzoo_connect_four_specs
+      config: *default_env_config
     agent_implementation: rainbowtorch
-    environment_implementation: pet/connect_four_v3
+    environment_implementation:
     demonstration_count: 0 #100
     total_trial_count: 10
     epsilon_steps: 5000
@@ -498,12 +601,10 @@ simple_a2c_cartpole: &default_simple_a2c_params
   config: &default_simple_a2c_config
     class_name: data_pb2.SimpleA2CTrainingRunConfig
     environment:
-      implementation: gym/CartPole-v0
+      specs: *cartpole_specs
       config:
+        <<: *default_env_config
         seed: 12
-    actor:
-      num_input: 4
-      num_action: 2
     training:
       epoch_count: 100
       epoch_trial_count: 15
@@ -524,17 +625,19 @@ procgen_bigfish:
   <<: *default_params
   config:
     <<: *default_config
-    num_input: 7056
-    num_action: 15
+    environment:
+      specs: *procgen_bigfish_specs
+      config:
+        <<: *default_env_config
+        render_width: 64
+        flatten: false
+        framestack: 4
     agent_implementation: atari_cnn
-    environment_implementation: procgen/bigfish
     demonstration_count: 100
     total_trial_count: 10000
     model_publication_interval: 1000
     model_archive_interval_multiplier: 10
     max_parallel_trials: 2
-    render_width: 64
-    flatten: false
     batch_size: 32
     min_replay_buffer_size: 10000
     max_replay_buffer_size: 350000
@@ -542,7 +645,6 @@ procgen_bigfish:
     epsilon_steps: 100000
     learning_rate: 1.0e-4
     lr_warmup_steps: 10000
-    framestack: 4
     model_kwargs:
       target_net_soft_update: False
       screensize: 64
@@ -556,12 +658,9 @@ simple_bc_lander: &simple_bc_experiment
   config: &simple_bc_config
     class_name: data_pb2.SimpleBCTrainingRunConfig
     environment:
-      implementation: gym/LunarLander-v2
+      specs: *lander_specs
       config:
         seed: 12
-    actor:
-      num_input: 8
-      num_action: 4
     training:
       trial_count: 1000
       max_parallel_trials: 1
@@ -576,12 +675,9 @@ simple_bc_cartpole:
   config:
     <<: *simple_bc_config
     environment:
-      implementation: gym/CartPole-v0
+      specs: *cartpole_specs
       config:
         seed: 12
-    actor:
-        num_input: 4
-        num_action: 2
 
 simple_bc_mountaincar:
   <<: *simple_bc_experiment
@@ -589,10 +685,6 @@ simple_bc_mountaincar:
   config:
     <<: *simple_bc_config
     environment:
-      implementation: gym/MountainCar-v0
+      specs: *mountain_car_specs
       config:
         seed: 12
-    actor:
-        num_input: 2
-        num_action: 3
-

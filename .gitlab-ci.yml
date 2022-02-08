@@ -55,7 +55,7 @@ npm_lint:
   script:
     - cd web_client
     - npm install
-    - npx prettier --check .
+    - npm run lint
 
 test_base_python:
   extends: .base_poetry

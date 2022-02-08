@@ -20,9 +20,11 @@ import random
 import cogment
 from cogment_verse.api.run_api_pb2 import DESCRIPTOR as RUN_DESCRIPTOR
 from cogment_verse.api.run_api_pb2_grpc import add_RunServicer_to_server
+from cogment_verse.model_registry_client import ModelRegistryClient
 from cogment_verse.run.run_servicer import RunServicer
 from cogment_verse.run.run_session import RunSession
 from cogment_verse.trial_datastore_client import TrialDatastoreClient
+from cogment_verse.utils import LRU
 from grpc_reflection.v1alpha import reflection
 from prometheus_client.core import REGISTRY
 
@@ -62,9 +64,9 @@ class RunContext(cogment.Context):
 
             environment_params = pre_trial_hook_session.trial_config.environment
             pre_trial_hook_session.environment_config = environment_params.config
-            pre_trial_hook_session.environment_implementation = environment_params.implementation
+            pre_trial_hook_session.environment_implementation = environment_params.specs.implementation
             pre_trial_hook_session.environment_endpoint = "grpc://" + self._get_service_endpoint(
-                environment_params.implementation
+                pre_trial_hook_session.environment_implementation
             )
             pre_trial_hook_session.datalog_endpoint = "grpc://" + services_endpoints["trial_datastore"]
             pre_trial_hook_session.actors = [
@@ -75,7 +77,7 @@ class RunContext(cogment.Context):
                     if actor.implementation == "client"
                     else ("grpc://" + self._get_service_endpoint(actor.implementation)),
                     "implementation": "" if actor.implementation == "client" else actor.implementation,
-                    "config": set_config_index(actor.config, actor_idx),
+                    "config": set_config_index(getattr(actor, actor.WhichOneof("config_oneof")), actor_idx),
                 }
                 for actor_idx, actor in enumerate(pre_trial_hook_session.trial_config.actors)
             ]
@@ -85,6 +87,9 @@ class RunContext(cogment.Context):
         self.register_pre_trial_hook(pre_trial_hook)
 
         self._run_impls = {}
+
+        # Cache used by the model registry
+        self._model_registry_cache = LRU()
 
     def _get_service_endpoint(self, services_name):
         if services_name not in self._services_endpoints:
@@ -115,6 +120,12 @@ class RunContext(cogment.Context):
 
     def _get_trial_datastore_client(self):
         return TrialDatastoreClient(endpoint=self._get_service_endpoint("trial_datastore"))
+
+    def get_model_registry_client(self):
+        return ModelRegistryClient(
+            endpoint=self._get_service_endpoint("model_registry"),
+            cache=self._model_registry_cache,
+        )
 
     def _create_run_session(self, run_params_name, run_implementation, serialized_config, run_id=None):
         if run_implementation not in self._run_impls:

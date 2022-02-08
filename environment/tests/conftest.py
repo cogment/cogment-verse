@@ -14,7 +14,7 @@
 
 import pytest
 from cogment_verse_environment.environment_adapter import EnvironmentAdapter
-from tests.mock_environment_session import MockEnvironmentSession
+from mock_environment_session import MockEnvironmentSession
 
 # pylint: disable=protected-access
 

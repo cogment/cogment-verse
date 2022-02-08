@@ -22,10 +22,8 @@ message NDArray {
   bytes data = 3;
 }
 
-
 message EnvironmentConfig {
   string run_id = 1;
-  int32 player_count = 2;
   bool render = 5;
   bool flatten = 6;
   int32 render_width = 7;
@@ -33,25 +31,46 @@ message EnvironmentConfig {
   uint32 seed = 9;
 }
 
-message EnvironmentParams {
+message EnvironmentSpecs {
   string implementation = 1;
-  EnvironmentConfig config = 2;
+  int32 num_players = 2;
+  int32 num_input = 3;
+  int32 num_action = 4;
 }
-message ActorConfig {
+
+message EnvironmentParams {
+  EnvironmentSpecs specs = 2; // Keeping that here for the moment, could probably be defined somewhere else with only the implementation name defined in the params
+  EnvironmentConfig config = 3;
+}
+
+message AgentConfig {
   string run_id = 1;
-  string model_id = 2;
-  int32 model_version = 3;
-  int32 num_input = 4;
-  int32 num_action = 5;
-  string environment_implementation = 6; // TODO Remove by retrieving info from the environment instead
-  int32 actor_index = 7; //Used to figure out if an agent is the current_player in the observation space
+  EnvironmentSpecs environment_specs = 2;
+  string model_id = 3;
+  int32 model_version = 4;
+  int32 actor_index = 5; // Used to figure out if an agent is the current_player in the observation space
+}
+
+enum HumanRole {
+  TEACHER = 0;
+  OBSERVER = 1;
+}
+
+message HumanConfig {
+  string run_id = 1;
+  EnvironmentSpecs environment_specs = 2;
+  int32 actor_index = 3; // Used to figure out if an agent is the current_player in the observation space
+  HumanRole role = 4;
 }
 
 message ActorParams {
   string name = 1;
   string actor_class = 2;
   string implementation = 3;
-  ActorConfig config = 4;
+  oneof config_oneof {
+    AgentConfig agent_config = 4;
+    HumanConfig human_config = 5;
+  }
 }
 
 message TrialConfig {
@@ -92,37 +111,30 @@ message ModelArgs {
 }
 
 message ReplayBufferConfig {
-    string action_dtype = 1;
-    string observation_dtype = 2;
+  string action_dtype = 1;
+  string observation_dtype = 2;
 }
 
 message RunConfig {
-  string name = 1;
-  uint32 num_input = 2;
-  uint32 num_action = 3;
-  string agent_implementation = 4;
-  string environment_implementation = 5;
-  uint32 player_count = 8;
-  float epsilon_min = 9;
-  uint32 epsilon_steps = 10;
-  uint32 target_net_update_schedule = 11;
-  float learning_rate = 12;
-  uint32 lr_warmup_steps = 13;
-  uint32 demonstration_count = 14;
-  uint32 total_trial_count = 15;
-  uint32 model_publication_interval = 16;
-  uint32 model_archive_interval_multiplier = 17; // Archive every fourth published model
-  uint32 render_width = 18;
-  uint32 batch_size = 19;
-  uint32 min_replay_buffer_size = 20;
-  uint32 max_parallel_trials = 21;
-  ModelArgs model_kwargs = 22;
-  uint32 max_replay_buffer_size = 23;
-  bool flatten = 24;
-  bool aggregate_by_actor = 26;
-  uint32 framestack = 27;
-  ReplayBufferConfig replay_buffer_config = 28;
-  float discount_factor = 29;
+  EnvironmentParams environment = 1;
+  string agent_implementation = 2;
+  float epsilon_min = 3;
+  uint32 epsilon_steps = 4;
+  uint32 target_net_update_schedule = 5;
+  float learning_rate = 6;
+  uint32 lr_warmup_steps = 7;
+  uint32 demonstration_count = 8;
+  uint32 total_trial_count = 9;
+  uint32 model_publication_interval = 10;
+  uint32 model_archive_interval_multiplier = 11; // Archive every fourth published model
+  uint32 batch_size = 12;
+  uint32 min_replay_buffer_size = 13;
+  uint32 max_parallel_trials = 14;
+  ModelArgs model_kwargs = 15;
+  uint32 max_replay_buffer_size = 16;
+  bool aggregate_by_actor = 17;
+  ReplayBufferConfig replay_buffer_config = 18;
+  float discount_factor = 19;
 }
 
 message MLPNetworkConfig {
@@ -142,10 +154,9 @@ message SimpleA2CTrainingConfig {
 
 message SimpleA2CTrainingRunConfig {
   EnvironmentParams environment = 1;
-  ActorConfig actor = 2;
-  SimpleA2CTrainingConfig training = 3;
-  MLPNetworkConfig actor_network = 4;
-  MLPNetworkConfig critic_network = 5;
+  SimpleA2CTrainingConfig training = 2;
+  MLPNetworkConfig actor_network = 3;
+  MLPNetworkConfig critic_network = 4;
 }
 
 message SimpleBCTrainingConfig {
@@ -158,7 +169,13 @@ message SimpleBCTrainingConfig {
 
 message SimpleBCTrainingRunConfig {
   EnvironmentParams environment = 1;
-  ActorConfig actor = 2;
-  SimpleBCTrainingConfig training = 3;
-  MLPNetworkConfig policy_network = 4;
+  SimpleBCTrainingConfig training = 2;
+  MLPNetworkConfig policy_network = 3;
+}
+
+message PlayRunConfig {
+  EnvironmentParams environment = 1;
+  repeated ActorParams actors = 2;
+  bool observer = 3;
+  uint32 trial_count = 4;
 }

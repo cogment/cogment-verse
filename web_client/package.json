@@ -27,7 +27,9 @@
     "start": "npm run cogment_generate && react-scripts start",
     "build": "npm run cogment_generate && react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "lint": "npx prettier --check .",
+    "lint_fix": "npx prettier -w ."
   },
   "eslintConfig": {
     "extends": [
