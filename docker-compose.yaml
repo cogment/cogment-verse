@@ -41,7 +41,7 @@ services:
       # that can be parsed by Go's time.ParseDuration
       - COGMENT_MODEL_REGISTRY_VERSION_CACHE_EXPIRATION=1h
       # Amount of model versions that are removed from the cache at once
-      - COGMENT_MODEL_REGISTRY_VERSION_CACHE_TO_PRUNE_COUNT=50
+      - COGMENT_MODEL_REGISTRY_VERSION_CACHE_TO_PRUNE_COUNT=5
     volumes:
       - ./data/model-registry:/data
 

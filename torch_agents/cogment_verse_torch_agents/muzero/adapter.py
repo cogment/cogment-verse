@@ -21,7 +21,6 @@ import time
 import logging
 import torch
 import torch.multiprocessing as mp
-from multiprocessing.pool import ThreadPool
 import numpy as np
 import queue
 
@@ -226,121 +225,118 @@ class MuZeroAgentAdapter(AgentAdapter):
 
         num_reanalyze_workers = config.training.reanalyze_workers
 
-        max_prefetch_batch = 128
-        sample_queue = mp.Queue()
-        priority_update_queue = mp.Queue()
-        reanalyze_update_queue = mp.Queue()
-        reanalyze_queue = mp.Queue(num_reanalyze_workers + 1)
+        # with mp.Manager() as manager:
+        if True:
+            manager = mp
+            max_prefetch_batch = 128
+            sample_queue = manager.Queue()
+            priority_update_queue = manager.Queue()
+            reanalyze_update_queue = manager.Queue()
+            reanalyze_queue = manager.Queue(num_reanalyze_workers + 1)
 
-        batch_queue = mp.Queue(max_prefetch_batch)
-        reanalyze_queue = mp.Queue()
-        # limit to small size so that training and sample generation don't get out of sync
-        results_queue = mp.Queue(max_prefetch_batch)
+            batch_queue = manager.Queue(max_prefetch_batch)
+            # limit to small size so that training and sample generation don't get out of sync
+            results_queue = manager.Queue(max_prefetch_batch)
 
-        reward_distribution = copy.deepcopy(agent.muzero.reward_distribution).cpu()
-        value_distribution = copy.deepcopy(agent.muzero.value_distribution).cpu()
+            reward_distribution = copy.deepcopy(agent.muzero.reward_distribution).cpu()
+            value_distribution = copy.deepcopy(agent.muzero.value_distribution).cpu()
 
-        train_worker = TrainWorker(agent, batch_queue, results_queue, config)
-        replay_buffer = ReplayBufferWorker(
-            sample_queue,
-            priority_update_queue,
-            batch_queue,
-            reanalyze_queue,
-            reanalyze_update_queue,
-            config.training,
-            reward_distribution,
-            value_distribution,
-        )
-        reanalyze_workers = [
-            ReanalyzeWorker(
+            train_worker = TrainWorker(model_id, batch_queue, results_queue, config)
+            replay_buffer = ReplayBufferWorker(
+                sample_queue,
+                priority_update_queue,
+                batch_queue,
                 reanalyze_queue,
                 reanalyze_update_queue,
-                model_id,
-                config.training.reanalyze_device,
+                config.training,
                 reward_distribution,
                 value_distribution,
             )
-            for i in range(num_reanalyze_workers)
-        ]
+            reanalyze_workers = [
+                ReanalyzeWorker(
+                    reanalyze_queue,
+                    reanalyze_update_queue,
+                    model_id,
+                    config.training.reanalyze_device,
+                    reward_distribution,
+                    value_distribution,
+                )
+                for i in range(num_reanalyze_workers)
+            ]
 
-        trials_completed = 0
-        running_stats = RunningStats()
+            trials_completed = 0
+            running_stats = RunningStats()
 
-        xp_tracker.log_params(
-            config.environment,
-            config.actor,
-            config.training,
-        )
-
-        trial_configs = make_trial_configs(run_session, config, model_id, -1)
-
-        total_samples = 0
-        training_step = 0
-        run_total_reward = 0
-
-        workers = [train_worker, replay_buffer] + reanalyze_workers
-
-        try:
-            for worker in workers:
-                worker.start()
-
-            start_time = time.time()
-
-            sample_generator = run_session.start_trials_and_wait_for_termination(
-                trial_configs,
-                max_parallel_trials=config.training.max_parallel_trials,
+            xp_tracker.log_params(
+                config.environment,
+                config.actor,
+                config.training,
             )
 
-            async for _step, timestamp, trial_id, _tick, (sample, total_reward) in sample_generator:
-                replay_buffer.add_sample(trial_id, sample)
-                total_samples += 1
+            trial_configs = make_trial_configs(run_session, config, model_id, -1)
 
+            total_samples = 0
+            training_step = 0
+            run_total_reward = 0
+
+            workers = [train_worker, replay_buffer] + reanalyze_workers
+
+            try:
                 for worker in workers:
-                    assert worker.is_alive()
+                    worker.start()
 
-                if sample.done:
-                    trials_completed += 1
-                    xp_tracker.log_metrics(
-                        timestamp, total_samples, trial_total_reward=total_reward, trials_completed=trials_completed
-                    )
-                    run_total_reward += total_reward
+                start_time = time.time()
 
-                if replay_buffer.size() <= config.training.min_replay_buffer_size:
-                    continue
+                sample_generator = run_session.start_trials_and_wait_for_termination(
+                    trial_configs,
+                    max_parallel_trials=config.training.max_parallel_trials,
+                )
 
-                while not results_queue.empty():
-                    try:
-                        info, agent_update = results_queue.get_nowait()
-                        if agent_update is not None:
-                            agent = agent_update
-                    except queue.Empty:
+                async for _step, timestamp, trial_id, _tick, (sample, total_reward) in sample_generator:
+                    replay_buffer.add_sample(trial_id, sample)
+                    total_samples += 1
+
+                    for worker in workers:
+                        assert worker.is_alive()
+
+                    if sample.done:
+                        trials_completed += 1
+                        xp_tracker.log_metrics(
+                            timestamp, total_samples, trial_total_reward=total_reward, trials_completed=trials_completed
+                        )
+                        run_total_reward += total_reward
+
+                    if replay_buffer.size() <= config.training.min_replay_buffer_size:
                         continue
 
-                    training_step += 1
-                    info["model_version"] = version_info["version_number"]
-                    info["training_step"] = training_step
-                    info["mean_trial_reward"] = run_total_reward / max(1, trials_completed)
-                    info["samples_per_sec"] = total_samples / max(1, time.time() - start_time)
-                    info["reanalyzed_samples"] = sum([worker.reanalyzed_samples() for worker in reanalyze_workers])
-                    running_stats.update(info)
+                    while not results_queue.empty():
+                        try:
+                            info, version_info = results_queue.get_nowait()
+                        except queue.Empty:
+                            continue
 
-                if total_samples % config.training.model_publication_interval == 0:
-                    version_info = await self.publish_version(model_id, agent)
+                        training_step += 1
+                        info["model_version"] = version_info["version_number"]
+                        info["training_step"] = training_step
+                        info["mean_trial_reward"] = run_total_reward / max(1, trials_completed)
+                        info["samples_per_sec"] = total_samples / max(1, time.time() - start_time)
+                        info["reanalyzed_samples"] = sum([worker.reanalyzed_samples() for worker in reanalyze_workers])
+                        running_stats.update(info)
 
-                if total_samples % config.training.log_interval == 0:
-                    xp_tracker.log_metrics(
-                        timestamp,
-                        total_samples,
-                        total_samples=total_samples,
-                        **running_stats.get(),
-                    )
-                    running_stats.reset()
+                    if total_samples % config.training.log_interval == 0:
+                        xp_tracker.log_metrics(
+                            timestamp,
+                            total_samples,
+                            total_samples=total_samples,
+                            **running_stats.get(),
+                        )
+                        running_stats.reset()
 
-        finally:
-            for worker in workers:
-                worker.terminate()
+            finally:
+                for worker in workers:
+                    worker.terminate()
 
-        log.info(f"[{run_session.params_name}/{run_session.run_id}] finished ({total_samples} samples seen)")
+            log.info(f"[{run_session.params_name}/{run_session.run_id}] finished ({total_samples} samples seen)")
 
     def _create_run_implementations(self):
         """
@@ -529,7 +525,13 @@ class ReplayBufferWorker(mp.Process):
 
             # Queue next reanalyze update
             try:
-                episode_id = np.random.randint(0, len(replay_buffer.episodes))
+                # testing, sampling strategy
+                p = torch.tensor([episode.timestamp for episode in replay_buffer.episodes], dtype=torch.double)
+                p -= p.min() - 0.1
+                p /= p.sum()
+                dist = torch.distributions.Categorical(p)
+                # episode_id = np.random.randint(0, len(replay_buffer.episodes))
+                episode_id = dist.sample().item()
                 self._reanalyze_queue.put_nowait((episode_id, replay_buffer.episodes[episode_id]))
             except queue.Full:
                 pass
@@ -537,7 +539,8 @@ class ReplayBufferWorker(mp.Process):
             # Sample a batch and add it to the training queue
             batch = replay_buffer.sample(self._training_config.rollout_length, self._training_config.batch_size)
             for item in batch:
-                item.share_memory_()
+                # item.share_memory_()
+                item.to("cpu")
             try:
                 self._batch_queue.put(EpisodeBatch(*batch), timeout=1.0)
             except queue.Full:
@@ -612,16 +615,49 @@ class AgentTrialWorker(mp.Process):
 
 
 class TrainWorker(mp.Process):
-    def __init__(self, agent, batch_queue, results_queue, config):
+    def __init__(self, model_id, batch_queue, results_queue, config):
         super().__init__()
+        self._model_id = model_id
         self.batch_queue = batch_queue
-        self.agent = agent
         self.results_queue = results_queue
         self.config = config
         self.steps_per_update = 200
+        self._model_cache = LRU(1)
+
+    async def get_latest_agent(self):
+        def load_agent(model_id, version_number, version_user_data, model_data_f):
+            return MuZeroAgent.load(model_data_f, "cpu")
+
+        return await get_model_registry_client().retrieve_model_version(
+            self._model_id, load_agent, self._model_cache, version_number=-1
+        )
+
+    async def publish_version(self, model_id, model, archived=False):
+        """
+        Publish to the model registry a new version of a model
+        Parameters:
+            model_id (string): unique identifier for the model
+            model: a model, as returned by method of this class
+            archive (bool - default is False): If true, the model version will be archived (i.e. stored in permanent storage)
+        Returns:
+            version_info: information for the initial published version
+        """
+
+        def _save(model, model_data_f):
+            assert isinstance(model, MuZeroAgent)
+            model.save(model_data_f)
+            return {}
+
+        return await get_model_registry_client().publish_model_version(
+            model_id, model, _save, cache=self._model_cache, archived=archived
+        )
 
     def run(self):
-        self.agent.set_device(self.config.training.train_device)
+        asyncio.run(self.main())
+
+    async def main(self):
+        agent, version_info = await self.get_latest_agent()
+        agent.set_device(self.config.training.train_device)
         step = 0
 
         lr_schedule = LinearScheduleWithWarmup(
@@ -645,18 +681,19 @@ class TrainWorker(mp.Process):
             0,
         )
 
-        threadpool = ThreadPool()
-        batch_generator = yield_from_queue(threadpool, self.batch_queue, self.config.training.train_device)
+        # threadpool = ThreadPool()
+        # batch_generator = yield_from_queue(threadpool, self.batch_queue, self.config.training.train_device)
 
         while True:
             lr = lr_schedule.update()  # pylint: disable=invalid-name
             epsilon = epsilon_schedule.update()
             temperature = temperature_schedule.update()
-            self.agent.params.learning_rate = lr
-            self.agent.params.exploration_epsilon = epsilon
-            self.agent.params.mcts_temperature = temperature
-            batch = next(batch_generator)
-            _priority, info = self.agent.learn(batch)
+            agent.params.learning_rate = lr
+            agent.params.exploration_epsilon = epsilon
+            agent.params.mcts_temperature = temperature
+            # batch = next(batch_generator)
+            batch = get_from_queue(self.batch_queue, self.config.training.train_device)
+            _priority, info = agent.learn(batch)
 
             info = dict(
                 lr=lr,
@@ -665,13 +702,14 @@ class TrainWorker(mp.Process):
                 **info,
             )
 
+            for key, val in info.items():
+                if isinstance(val, torch.Tensor):
+                    info[key] = val.detach().cpu().numpy().copy()
+
             step += 1
             if step % self.steps_per_update == 0:
-                cpu_agent = copy.deepcopy(self.agent)
-                cpu_agent.set_device("cpu")
-                self.results_queue.put((info, cpu_agent))
-            else:
-                self.results_queue.put((info, None))
+                version_info = await self.publish_version(self._model_id, agent)
+            self.results_queue.put((info, version_info))
 
 
 class ReanalyzeWorker(mp.Process):
@@ -708,21 +746,21 @@ class ReanalyzeWorker(mp.Process):
             agent.set_device(self._device)
 
             episode_id, episode = self._reanalyze_queue.get()
-            reanalyze_episode = Episode(episode.states[0], agent.params.discount_rate)
+            reanalyze_episode = Episode(episode.states[0].clone(), agent.params.discount_rate)
             for step in range(len(episode)):
                 policy, _, value = agent.reanalyze(episode.states[step].clone())
                 policy = policy.cpu()
                 value = value.cpu().item()
-                reward_probs = self.reward_distribution.compute_target(torch.tensor(episode.rewards[step]))
-                value_probs = self.value_distribution.compute_target(torch.tensor(value))
+                reward_probs = self.reward_distribution.compute_target(torch.tensor(episode.rewards[step])).cpu()
+                value_probs = self.value_distribution.compute_target(torch.tensor(value)).cpu()
                 reanalyze_episode.add_step(
-                    episode.states[step + 1],
+                    episode.states[step + 1].clone(),
                     episode.actions[step],
-                    reward_probs,
+                    reward_probs.clone(),
                     episode.rewards[step],
                     episode.done[step],
-                    policy,
-                    value_probs,
+                    policy.clone(),
+                    value_probs.clone(),
                     value,
                 )
             episode.bootstrap_value(agent.params.bootstrap_steps, agent.params.discount_rate)

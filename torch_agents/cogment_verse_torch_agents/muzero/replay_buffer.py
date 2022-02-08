@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import time
 import numpy as np
 import torch
 from collections import namedtuple
@@ -72,6 +73,7 @@ class Episode:
         self._action_space = set()
         self._zero_reward_probs = zero_reward_probs
         self._zero_value_probs = zero_value_probs
+        self.timestamp = time.time()
 
     def __len__(self):
         return len(self.actions)

@@ -37,12 +37,13 @@ from cogment_verse_torch_agents.muzero.replay_buffer import EpisodeBatch
 log = logging.getLogger(__name__)
 
 
-class MuZeroAgent:
+class MuZeroAgent(torch.nn.Module):
     """
     MuZero implementation
     """
 
     def __init__(self, *, obs_dim, act_dim, device, training_config: MuZeroTrainingConfig):
+        super().__init__()
         self._obs_dim = obs_dim
         self._act_dim = act_dim
         self.params = training_config
@@ -51,8 +52,10 @@ class MuZeroAgent:
 
     def set_device(self, device):
         self._device = torch.device(device)
-        self.muzero = self.muzero.to(self._device)
-        self.target_muzero = self.target_muzero.to(self._device)
+        # self.muzero = self.muzero.to(self._device)
+        # self.target_muzero = self.target_muzero.to(self._device)
+        # self._optimizer.to(self._device)
+        self.to(self._device)
 
     def _make_networks(self):
         stem = lin_bn_act(self._obs_dim, self.params.hidden_dim, bn=True, act=torch.nn.ReLU())
