@@ -225,9 +225,7 @@ class MuZeroAgentAdapter(AgentAdapter):
 
         num_reanalyze_workers = config.training.reanalyze_workers
 
-        # with mp.Manager() as manager:
-        if True:
-            manager = mp
+        with mp.Manager() as manager:
             max_prefetch_batch = 128
             sample_queue = manager.Queue()
             priority_update_queue = manager.Queue()
