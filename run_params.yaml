@@ -704,18 +704,13 @@ cartpole_muzero: &default_muzero
       reanalyze_workers: 1
 
 lander_muzero:
-  <<: *default_muzero
-  config: &lander_muzero_config
-    <<: *default_muzero_config
+  implementation: muzero_mlp_training
+  config:
+    class_name: data_pb2.MuZeroTrainingRunConfig
     environment:
-      implementation: "gym/LunarLander-v2"
-      config:
-        seed: 12
-        render_width: 256
-    actor:
-      num_input: 8
-      num_action: 4
-    training: &lander_muzero_training
+      specs: *lander_specs
+      config: *default_env_config
+    training: &lander_muzero_training_config
       <<: *default_muzero_training_config
       rbins: 16
       rmin: -100.0
@@ -724,70 +719,18 @@ lander_muzero:
       vmin: -500.0
       vmax: 500.0
 
-
-mountaincar_muzero:
-  <<: *default_muzero
+lander_muzero_gpu:
+  implementation: muzero_mlp_training
   config:
-    <<: *default_muzero_config
+    class_name: data_pb2.MuZeroTrainingRunConfig
     environment:
-      implementation: "gym/MountainCar-v0"
-      config:
-        seed: 12
-        render_width: 256
-    actor:
-      num_input: 2
-      num_action: 3
-    training:
-      <<: *default_muzero_training_config
-      rbins: 2
-      rmin: -1.0
-      rmax: 1.0
-      vbins: 16
-      vmin: -200.0
-      vmax: 200.0
-      batch_size: 32
-      min_replay_buffer_size: 200
-      demonstration_trials: 1000
-      max_parallel_trials: 2
-      mcts_depth: 4
-      mcts_samples: 16
-      rollout_length: 4
-      train_device: "cuda:0"
+      specs: *lander_specs
+      config: *default_env_config
+    training: &lander_muzero_training_config
+      <<: *lander_muzero_training_config
+      train_device: "gpu:0"
+      reanalyze_device: "gpu:1"
       actor_device: "cpu"
-      reanalyze_device: "cuda:1"
-      reanalyze_workers: 1
-
-breakout_ram_muzero:
-  <<: *default_muzero
-  config:
-    <<: *default_muzero_config
-    environment:
-      implementation: "gym/Breakout-ram-v0"
-      config:
-        seed: 12
-        render_width: 256
-    actor:
-      num_input: 128
-      num_action: 4
-    training:
-      <<: *default_muzero_training_config
-      rbins: 4
-      rmin: 0.0
-      rmax: 10.0
-      vbins: 32
-      vmin: 0.0
-      vmax: 100.0
-      batch_size: 32
-      min_replay_buffer_size: 1000
-      demonstration_trials: 0
-      max_parallel_trials: 2
-      mcts_depth: 4
-      mcts_samples: 16
-      rollout_length: 4
-      train_device: "cuda:0"
-      actor_device: "cpu"
-      reanalyze_device: "cuda:1"
-      reanalyze_workers: 1
 
 simple_bc_lander: &simple_bc_experiment
   implementation: simple_bc_training
