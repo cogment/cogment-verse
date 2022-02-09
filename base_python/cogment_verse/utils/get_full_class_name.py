@@ -12,7 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from cogment_verse.utils.lru import LRU
-from cogment_verse.utils.sizeof_fmt import sizeof_fmt
-from cogment_verse.utils.throttle import throttle
-from cogment_verse.utils.get_full_class_name import get_full_class_name
+# no import
+
+
+def get_full_class_name(instance):
+    return f"{type(instance).__module__}.{type(instance).__name__}"

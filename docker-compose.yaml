@@ -9,8 +9,8 @@ services:
 
   orchestrator:
     image: cogment/orchestrator:v2.0.0
+    restart: on-failure
     environment:
-      - COGMENT_VERSE_TRIAL_DATASTORE_ENDPOINT
       - COGMENT_LIFECYCLE_PORT=${COGMENT_VERSE_ORCHESTRATOR_PORT}
       - COGMENT_ACTOR_PORT=${COGMENT_VERSE_ORCHESTRATOR_PORT}
       - COGMENT_PRE_TRIAL_HOOKS=grpc://${COGMENT_VERSE_PRETRIAL_HOOK_ENDPOINT}
@@ -29,7 +29,7 @@ services:
       - COGMENT_TRIAL_DATASTORE_LOG_LEVEL=info
 
   model_registry:
-    image: cogment/model-registry:v0.4.0
+    image: cogment/model-registry:v0.5.0
     restart: on-failure
     environment:
       - COGMENT_MODEL_REGISTRY_PORT=${COGMENT_VERSE_MODEL_REGISTRY_PORT}
@@ -51,9 +51,15 @@ services:
       context: ./environment
       args:
         BASE_PYTHON_IMAGE: cogment/cogment-verse-python-sdk:${IMAGE_TAG:-local}
+    restart: on-failure
     environment:
       - COGMENT_VERSE_ENVIRONMENT_PORT
       - COGMENT_VERSE_ENVIRONMENT_PROMETHEUS_PORT
+      - COGMENT_VERSE_TRIAL_DATASTORE_ENDPOINT
+      - COGMENT_VERSE_ENVIRONMENT_ENDPOINTS
+      - COGMENT_VERSE_ORCHESTRATOR_ENDPOINT
+      - COGMENT_VERSE_ACTOR_ENDPOINTS
+      - MLFLOW_TRACKING_URI
     init: true # xvfb-run hang fix?
     tty: true
 
@@ -76,7 +82,6 @@ services:
       - COGMENT_VERSE_ORCHESTRATOR_ENDPOINT
       - COGMENT_VERSE_ACTOR_ENDPOINTS
       - MLFLOW_TRACKING_URI
-      - MPLBACKEND=Agg
     depends_on:
       - orchestrator
       - environment
@@ -101,7 +106,6 @@ services:
       - COGMENT_VERSE_ORCHESTRATOR_ENDPOINT
       - COGMENT_VERSE_ACTOR_ENDPOINTS
       - MLFLOW_TRACKING_URI
-      - MPLBACKEND=Agg
     depends_on:
       - orchestrator
       - environment

@@ -21,8 +21,18 @@ import numpy as np
 import torch
 from cogment.api.common_pb2 import TrialState
 from cogment_verse import AgentAdapter, MlflowExperimentTracker
-from data_pb2 import (ActorConfig, ActorParams, AgentAction, EnvironmentConfig, EnvironmentParams,
-                      SimpleBCTrainingRunConfig, TrialConfig)
+from data_pb2 import (
+    ActorParams,
+    AgentAction,
+    AgentConfig,
+    EnvironmentConfig,
+    EnvironmentParams,
+    EnvironmentSpecs,
+    HumanConfig,
+    HumanRole,
+    SimpleBCTrainingRunConfig,
+    TrialConfig,
+)
 
 log = logging.getLogger(__name__)
 
@@ -40,19 +50,6 @@ class SimpleBCAgentAdapterTutorialStep1(AgentAdapter):
         event_loop = asyncio.get_running_loop()
         return await event_loop.run_in_executor(None, func, *args)
 
-    def _create(
-        self,
-        model_id,
-        **kwargs,
-    ):
-        raise NotImplementedError
-
-    def _load(self, model_id, version_number, version_user_data, model_data_f):
-        raise NotImplementedError
-
-    def _save(self, model, model_data_f):
-        raise NotImplementedError
-
     def _create_actor_implementations(self):
         async def impl(actor_session):
             actor_session.start()
@@ -61,7 +58,7 @@ class SimpleBCAgentAdapterTutorialStep1(AgentAdapter):
 
             async for event in actor_session.event_loop():
                 if event.observation and event.type == cogment.EventType.ACTIVE:
-                    action = np.random.default_rng().integers(0, config.num_action)
+                    action = np.random.default_rng().integers(0, config.environment_specs.num_action)
                     actor_session.do_action(AgentAction(discrete_action=action))
 
         return {
@@ -82,12 +79,12 @@ class SimpleBCAgentAdapterTutorialStep1(AgentAdapter):
             xp_tracker = MlflowExperimentTracker(run_session.params_name, run_session.run_id)
 
             config = run_session.config
-            assert config.environment.config.player_count == 1
+            assert config.environment.specs.num_players == 1
 
             xp_tracker.log_params(
                 config.training,
                 config.environment.config,
-                environment=config.environment.implementation,
+                environment=config.environment.specs.implementation,
                 policy_network_hidden_size=config.policy_network.hidden_size,
             )
 
@@ -99,10 +96,9 @@ class SimpleBCAgentAdapterTutorialStep1(AgentAdapter):
                     name="agent_1",
                     actor_class="agent",
                     implementation="simple_bc",
-                    config=ActorConfig(
-                        num_input=config.actor.num_input,
-                        num_action=config.actor.num_action,
-                        environment_implementation=config.environment.implementation,
+                    agent_config=AgentConfig(
+                        run_id=run_session.run_id,
+                        environment_specs=env_params.specs,
                     ),
                 )
 
@@ -110,10 +106,9 @@ class SimpleBCAgentAdapterTutorialStep1(AgentAdapter):
                     name="web_actor",
                     actor_class="teacher_agent",
                     implementation="client",
-                    config=ActorConfig(
-                        num_input=config.actor.num_input,
-                        num_action=config.actor.num_action,
-                        environment_implementation=config.environment.implementation,
+                    human_config=HumanConfig(
+                        environment_specs=env_params.specs,
+                        role=HumanRole.TEACHER,
                     ),
                 )
 
@@ -142,8 +137,8 @@ class SimpleBCAgentAdapterTutorialStep1(AgentAdapter):
                 run_impl,
                 SimpleBCTrainingRunConfig(
                     environment=EnvironmentParams(
-                        implementation="gym/LunarLander-v2",
-                        config=EnvironmentConfig(seed=12, player_count=1, framestack=1, render=True, render_width=256),
+                        specs=EnvironmentSpecs(implementation="gym/LunarLander-v2", num_input=8, num_action=4),
+                        config=EnvironmentConfig(seed=12, framestack=1, render=True, render_width=256),
                     )
                 ),
             )

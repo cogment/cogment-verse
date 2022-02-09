@@ -8,7 +8,7 @@ commands:
     cogment copy run_api.proto base_python/cogment_verse/api client
   dev: >
     docker-compose build base_python &&
-    docker-compose -f docker-compose.yaml -f docker-compose.dev.yaml up --build --abort-on-container-exit
+    docker-compose -f docker-compose.yaml -f docker-compose.dev.yaml up --build
     grafana
     prometheus
     orchestrator
@@ -19,7 +19,6 @@ commands:
     torch_agents
     tf_agents
     web_client
-
   build: docker-compose build base_python && docker-compose build
   build_gpu: docker-compose -f docker-compose.yaml -f docker-compose.gpu.yaml build base_python && docker-compose -f docker-compose.yaml -f docker-compose.gpu.yaml build
   start: >
@@ -49,9 +48,9 @@ commands:
   down: docker-compose down
   # Build and use the client
   build_client: docker-compose build client
-  list_runs: docker-compose run client list
-  start_run: docker-compose run client start $RUN_PARAMS
-  terminate_run: docker-compose run client terminate $RUN_ID
+  list_runs: docker-compose run --rm client list
+  start_run: docker-compose run --rm client start $RUN_PARAMS
+  terminate_run: docker-compose run --rm client terminate $RUN_ID
 
   test: cogment run test_torch_agents && cogment run test_environment
   test_torch_agents: >
@@ -74,11 +73,11 @@ actor_classes:
       space: cogment_verse.AgentAction
     observation:
       space: cogment_verse.Observation
-    config_type: cogment_verse.ActorConfig
+    config_type: cogment_verse.AgentConfig
 
   - name: teacher_agent
     action:
       space: cogment_verse.AgentAction
     observation:
       space: cogment_verse.Observation
-    config_type: cogment_verse.ActorConfig
+    config_type: cogment_verse.HumanConfig

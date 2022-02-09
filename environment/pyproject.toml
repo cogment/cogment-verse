@@ -9,16 +9,17 @@ license = "Apache-2.0"
 python = ">=3.7,<3.10"
 atari-py = "0.2.9"
 cogment = {extras = ["generate"], version = "^2.0.2"}
+cogment-verse = {path = "../base_python", develop = true}
+filelock = "^3.4.0"
 gym = {version = "0.18.0", extras = ["atari", "box2d"]}
 gym-tetris = "^3.0.2"
 minatar = {git = "https://github.com/kenjyoung/MinAtar.git", rev = "f1387b4123ea5a0203c81b2d3ad9572a8cc578cf"}
 PettingZoo = "^1.11.1"
-pyglet = "^1.4"
+procgen = "^0.10.4"
 pygame = "^2.0.2"
+pyglet = "^1.4"
 python-dotenv = "^0.19.1"
 PyYAML = "^5.4.1"
-filelock = "^3.4.0"
-procgen = "^0.10.4"
 
 [tool.poetry.dev-dependencies]
 taskipy = "^1.9.0"

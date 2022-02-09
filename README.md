@@ -130,6 +130,46 @@ RUN_PARAMS=benchmark_lander_hill cogment run start_run
 
 Access the playing interface by navigating to <http://localhost:8080>
 
+#### The **Play** run
+
+The **`play`** is a run that is used to test any agent in an environment. The run is started by
+
+```console
+RUN_PARAMS=play cogment run start_run
+```
+
+It can be configured with the following parameters (to change in `run_params.yaml`):
+
+```yaml
+play:
+  implementation: play
+  config:
+    class_name: data_pb2.PlayRunConfig
+    # Set to true to have the ability to observe the run in the web client
+    observer: true
+    # Number of trials to run
+    trial_count: 10
+    environment:
+      # Reference one of the environment specs defined at the top of `run_params.yaml`
+      specs: *cartpole_specs
+    actors:
+    # Configure the players (only the first ones are used, up to the number of required players)
+    ## follows the `cogment_verse.ActorParams` datastructure
+    - name: agent_1
+      actor_class: agent
+      # Select the implementation to use
+      implementation: random
+      agent_config:
+        # Define the agent config here
+        ## follows the `cogment_verse.AgentConfig` datastructure
+        ## Make sure that the selected model is compatible with the selected implementation
+        model_id: compassionate_aryabhata_model
+        model_version: -1
+    - name: agent_2
+      actor_class: agent
+      implementation: random
+```
+
 ## Debug
 
 ### Resources monitoring

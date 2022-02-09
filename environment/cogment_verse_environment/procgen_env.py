@@ -14,6 +14,7 @@
 
 import cv2
 import numpy as np
+
 # registers procgen environments
 import procgen  # pylint: disable=unused-import
 from cogment_verse_environment.base import GymObservation
@@ -56,7 +57,6 @@ class ProcGenEnv(GymEnv):
         frame_skip=1,
         screen_size=64,
         flatten=True,
-        num_players=1,
         framestack=4,
         **_kwargs,
     ):
@@ -76,7 +76,7 @@ class ProcGenEnv(GymEnv):
         self._last_obs = []  # to be used for framestacking
         self._last_pixels = None
 
-        super().__init__(env_name=full_env_name, num_players=num_players, framestack=framestack)
+        super().__init__(env_name=full_env_name, num_players=1, framestack=framestack)
 
     def create_env_spec(self, env_name, **_kwargs):
         act_spaces = [self._env.action_space]

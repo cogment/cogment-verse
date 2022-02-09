@@ -13,21 +13,35 @@
 # limitations under the License.
 
 import asyncio
-##########################################
 import copy
 import logging
 from collections import namedtuple
 
 import cogment
+
 ############ TUTORIAL STEP 4 ############
 import numpy as np
+
+##########################################
 import torch
 from cogment.api.common_pb2 import TrialState
 from cogment_verse import AgentAdapter, MlflowExperimentTracker
 from cogment_verse_torch_agents.utils.tensors import cog_action_from_tensor, tensor_from_cog_action, tensor_from_cog_obs
-from data_pb2 import (  # ########### TUTORIAL STEP 4 ############; #########################################
-    ActorConfig, ActorParams, EnvironmentConfig, EnvironmentParams, MLPNetworkConfig, SimpleBCTrainingConfig,
-    SimpleBCTrainingRunConfig, TrialConfig)
+from data_pb2 import (
+    ActorParams,
+    AgentConfig,
+    EnvironmentConfig,
+    EnvironmentParams,
+    EnvironmentSpecs,
+    HumanConfig,
+    HumanRole,
+    MLPNetworkConfig,
+    ############ TUTORIAL STEP 4 ############
+    SimpleBCTrainingConfig,
+    ##########################################
+    SimpleBCTrainingRunConfig,
+    TrialConfig,
+)
 
 SimpleBCModel = namedtuple("SimpleBCModel", ["model_id", "version_number", "policy_network"])
 
@@ -48,31 +62,38 @@ class SimpleBCAgentAdapterTutorialStep4(AgentAdapter):
     def _create(
         self,
         model_id,
-        observation_size,
-        action_count,
+        environment_specs,
         policy_network_hidden_size=64,
         **kwargs,
     ):
-        return SimpleBCModel(
+        model = SimpleBCModel(
             model_id=model_id,
             version_number=1,
             policy_network=torch.nn.Sequential(
-                torch.nn.Linear(observation_size, policy_network_hidden_size),
+                torch.nn.Linear(environment_specs.num_input, policy_network_hidden_size),
                 torch.nn.BatchNorm1d(policy_network_hidden_size),
                 torch.nn.ReLU(),
                 torch.nn.Linear(policy_network_hidden_size, policy_network_hidden_size),
                 torch.nn.BatchNorm1d(policy_network_hidden_size),
                 torch.nn.ReLU(),
-                torch.nn.Linear(policy_network_hidden_size, action_count),
+                torch.nn.Linear(policy_network_hidden_size, environment_specs.num_action),
             ).to(self._dtype),
         )
 
-    def _load(self, model_id, version_number, version_user_data, model_data_f):
+        model_user_data = {
+            "environment_implementation": environment_specs.implementation,
+            "num_input": environment_specs.num_input,
+            "num_action": environment_specs.num_action,
+        }
+
+        return model, model_user_data
+
+    def _load(self, model_id, version_number, model_user_data, version_user_data, model_data_f, **kwargs):
         policy_network = torch.load(model_data_f)
         assert isinstance(policy_network, torch.nn.Sequential)
         return SimpleBCModel(model_id=model_id, version_number=version_number, policy_network=policy_network)
 
-    def _save(self, model, model_data_f):
+    def _save(self, model, model_user_data, model_data_f, **kwargs):
         assert isinstance(model, SimpleBCModel)
         torch.save(model.policy_network, model_data_f)
         return {}
@@ -83,7 +104,7 @@ class SimpleBCAgentAdapterTutorialStep4(AgentAdapter):
 
             config = actor_session.config
 
-            model, version_info = await self.retrieve_version(config.model_id, config.model_version)
+            model, _model_info, version_info = await self.retrieve_version(config.model_id, config.model_version)
             model_version_number = version_info["version_number"]
             log.info(f"Starting trial with model v{model_version_number}")
 
@@ -135,12 +156,12 @@ class SimpleBCAgentAdapterTutorialStep4(AgentAdapter):
             xp_tracker = MlflowExperimentTracker(run_session.params_name, run_session.run_id)
 
             config = run_session.config
-            assert config.environment.config.player_count == 1
+            assert config.environment.specs.num_players == 1
 
             xp_tracker.log_params(
                 config.training,
                 config.environment.config,
-                environment=config.environment.implementation,
+                environment=config.environment.specs.implementation,
                 policy_network_hidden_size=config.policy_network.hidden_size,
             )
 
@@ -149,8 +170,7 @@ class SimpleBCAgentAdapterTutorialStep4(AgentAdapter):
             # Initializing a model
             model, _version_info = await self.create_and_publish_initial_version(
                 model_id,
-                observation_size=config.actor.num_input,
-                action_count=config.actor.num_action,
+                environment_specs=config.environment.specs,
                 policy_network_hidden_size=config.policy_network.hidden_size,
             )
 
@@ -162,12 +182,11 @@ class SimpleBCAgentAdapterTutorialStep4(AgentAdapter):
                     name="agent_1",
                     actor_class="agent",
                     implementation="simple_bc",
-                    config=ActorConfig(
+                    agent_config=AgentConfig(
+                        run_id=run_session.run_id,
                         model_id=model_id,
                         model_version=-1,
-                        num_input=config.actor.num_input,
-                        num_action=config.actor.num_action,
-                        environment_implementation=config.environment.implementation,
+                        environment_specs=env_params.specs,
                     ),
                 )
 
@@ -175,10 +194,9 @@ class SimpleBCAgentAdapterTutorialStep4(AgentAdapter):
                     name="web_actor",
                     actor_class="teacher_agent",
                     implementation="client",
-                    config=ActorConfig(
-                        num_input=config.actor.num_input,
-                        num_action=config.actor.num_action,
-                        environment_implementation=config.environment.implementation,
+                    human_config=HumanConfig(
+                        environment_specs=env_params.specs,
+                        role=HumanRole.TEACHER,
                     ),
                 )
 
@@ -266,8 +284,8 @@ class SimpleBCAgentAdapterTutorialStep4(AgentAdapter):
                 run_impl,
                 SimpleBCTrainingRunConfig(
                     environment=EnvironmentParams(
-                        implementation="gym/LunarLander-v2",
-                        config=EnvironmentConfig(seed=12, player_count=1, framestack=1, render=True, render_width=256),
+                        specs=EnvironmentSpecs(implementation="gym/LunarLander-v2", num_input=8, num_action=4),
+                        config=EnvironmentConfig(seed=12, framestack=1, render=True, render_width=256),
                     ),
                     ############ TUTORIAL STEP 4 ############
                     training=SimpleBCTrainingConfig(

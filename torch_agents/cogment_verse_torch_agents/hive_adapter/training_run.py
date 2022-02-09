@@ -17,11 +17,24 @@ import time
 
 import numpy as np
 import torch
+
 from cogment_verse import MlflowExperimentTracker
 from cogment_verse.utils import sizeof_fmt, throttle
-from cogment_verse_torch_agents.third_party.hive.utils.schedule import (CosineSchedule, LinearSchedule,
-                                                                        PeriodicSchedule, SwitchSchedule)
-from data_pb2 import ActorConfig, ActorParams, EnvironmentConfig, EnvironmentParams, TrialConfig
+from cogment_verse_torch_agents.third_party.hive.utils.schedule import (
+    CosineSchedule,
+    LinearSchedule,
+    PeriodicSchedule,
+    SwitchSchedule,
+)
+from data_pb2 import (
+    ActorParams,
+    AgentConfig,
+    EnvironmentConfig,
+    EnvironmentParams,
+    HumanConfig,
+    HumanRole,
+    TrialConfig,
+)
 from google.protobuf.json_format import MessageToDict
 from prometheus_client import Gauge, Summary
 
@@ -66,9 +79,8 @@ def create_training_run(agent_adapter):
             model, _ = await agent_adapter.create_and_publish_initial_version(
                 model_id,
                 impl_name=config.agent_implementation,
+                environment_specs=config.environment.specs,
                 **{
-                    "obs_dim": config.num_input,
-                    "act_dim": config.num_action,
                     "epsilon_schedule": LinearSchedule(1, config.epsilon_min, config.epsilon_steps),
                     "learn_schedule": SwitchSchedule(False, True, 1),
                     "target_net_update_schedule": PeriodicSchedule(False, True, config.target_net_update_schedule),
@@ -79,11 +91,10 @@ def create_training_run(agent_adapter):
             )
             run_xp_tracker.log_params(
                 model._params,
-                player_count=config.player_count,
                 batch_size=config.batch_size,
                 model_publication_interval=config.model_publication_interval,
                 model_archive_interval=config.model_archive_interval,
-                environment=config.environment_implementation,
+                environment=config.environment.specs.implementation,
                 agent_implmentation=config.agent_implementation,
             )
 
@@ -107,34 +118,31 @@ def create_training_run(agent_adapter):
                     name=f"agent_player_{player_idx}",
                     actor_class="agent",
                     implementation=config.agent_implementation,
-                    config=ActorConfig(
+                    agent_config=AgentConfig(
+                        run_id=run_id,
                         model_id=model_id,
                         model_version=np.random.randint(-100, -1),  # TODO this actually won't work anymore
-                        run_id=run_id,
-                        environment_implementation=config.environment_implementation,
-                        num_input=config.num_input,
-                        num_action=config.num_action,
+                        environment_specs=config.environment.specs,
                     ),
                 )
-                for player_idx in range(config.player_count)
+                for player_idx in range(config.environment.specs.num_players)
             ]
             # for self-play, randomly select one player to use latest model version
             # if there is only one player then it will always use the latest
-            distinguished_actor = np.random.randint(0, config.player_count)
-            player_actor_configs[distinguished_actor].config.model_version = -1
+            distinguished_actor = np.random.randint(0, config.environment.specs.num_players)
+            player_actor_configs[distinguished_actor].agent_config.model_version = -1
 
             self_play_trial_configs = [
                 TrialConfig(
                     run_id=run_id,
                     environment=EnvironmentParams(
-                        implementation=config.environment_implementation,
+                        specs=config.environment.specs,
                         config=EnvironmentConfig(
-                            player_count=config.player_count,
                             run_id=run_id,
                             render=False,
-                            render_width=config.render_width,
-                            flatten=config.flatten,
-                            framestack=config.framestack,
+                            render_width=config.environment.config.render_width,
+                            flatten=config.environment.config.flatten,
+                            framestack=config.environment.config.framestack,
                         ),
                     ),
                     actors=player_actor_configs,
@@ -150,25 +158,23 @@ def create_training_run(agent_adapter):
                     name="web_actor",
                     actor_class="teacher_agent",
                     implementation="client",
-                    config=ActorConfig(
+                    human_config=HumanConfig(
                         run_id=run_id,
-                        environment_implementation=config.environment_implementation,
-                        num_input=config.num_input,
-                        num_action=config.num_action,
+                        environment_specs=config.environment.specs,
+                        role=HumanRole.TEACHER,
                     ),
                 )
                 demonstration_trial_configs = [
                     TrialConfig(
                         run_id=run_id,
                         environment=EnvironmentParams(
-                            implementation=config.environment_implementation,
+                            specs=config.environment.specs,
                             config=EnvironmentConfig(
-                                player_count=config.player_count,
                                 run_id=run_id,
                                 render=True,
-                                render_width=config.render_width,
-                                flatten=config.flatten,
-                                framestack=config.framestack,
+                                render_width=config.environment.config.render_width,
+                                flatten=config.environment.config.flatten,
+                                framestack=config.environment.config.framestack,
                             ),
                         ),
                         actors=[*player_actor_configs, teacher_actor_config],

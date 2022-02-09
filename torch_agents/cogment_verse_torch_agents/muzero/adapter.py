@@ -32,7 +32,8 @@ from data_pb2 import (
     ActorParams,
     EnvironmentConfig,
     EnvironmentParams,
-    ActorConfig,
+    EnvironmentSpecs,
+    AgentConfig,
 )
 
 from cogment_verse.utils import LRU
@@ -43,10 +44,14 @@ from cogment_verse_torch_agents.muzero.replay_buffer import Episode, TrialReplay
 from cogment_verse_torch_agents.muzero.agent import MuZeroAgent
 from cogment_verse_torch_agents.muzero.schedule import LinearScheduleWithWarmup
 from cogment_verse_torch_agents.muzero.stats import RunningStats
-from cogment_verse.model_registry_client import get_model_registry_client
 
 from cogment.api.common_pb2 import TrialState
 import cogment
+
+from cogment_verse_torch_agents.muzero.reanalyze_worker import ReanalyzeWorker
+from cogment_verse_torch_agents.muzero.replay_worker import ReplayBufferWorker
+from cogment_verse_torch_agents.muzero.trial_worker import AgentTrialWorker
+from cogment_verse_torch_agents.muzero.train_worker import TrainWorker
 
 
 # pylint: disable=arguments-differ
@@ -125,22 +130,50 @@ class MuZeroAgentAdapter(AgentAdapter):
         self._model_cache = LRU(2)  # memory issue?
         self._dtype = torch.float
 
-    def _create(self, model_id, *, obs_dim, act_dim, device, training_config):
-        return MuZeroAgent(obs_dim=obs_dim, act_dim=act_dim, device=device, training_config=training_config)
+    def _create(
+        self,
+        model_id,
+        environment_specs,
+        device,
+        training_config,
+        **kwargs,
+    ):
+        model = MuZeroAgent(
+            obs_dim=environment_specs.num_input,
+            act_dim=environment_specs.num_action,
+            device=device,
+            training_config=training_config,
+        )
+        model_user_data = {
+            "environment_implementation": environment_specs.implementation,
+            "num_input": environment_specs.num_input,
+            "num_action": environment_specs.num_action,
+            "training_config": training_config,
+        }
+        return model, model_user_data
 
-    def _load(self, model_id, version_number, version_user_data, model_data_f):
+    def _load(
+        self,
+        model_id,
+        version_number,
+        model_user_data,
+        version_user_data,
+        model_data_f,
+        environment_specs,
+        **kwargs,
+    ):
         return MuZeroAgent.load(model_data_f, "cpu")
 
-    def _save(self, model, model_data_f):
+    def _save(self, model, model_user_data, model_data_f, environment_specs, epoch_idx=-1, total_samples=0, **kwargs):
         assert isinstance(model, MuZeroAgent)
         model.save(model_data_f)
-        return {}
+        return {"epoch_idx": epoch_idx, "total_samples": total_samples}
 
     def _create_actor_implementations(self):
         async def _single_agent_muzero_actor_implementation(actor_session):
             actor_session.start()
-            agent, _ = await self.retrieve_version(actor_session.config.model_id, -1)
-            agent = copy.deepcopy(agent)
+            agent, _, _ = await self.retrieve_version(actor_session.config.model_id, -1)
+            # agent = copy.deepcopy(agent)
             agent.set_device(actor_session.config.device)
 
             worker = AgentTrialWorker(agent, actor_session.config)
@@ -213,12 +246,11 @@ class MuZeroAgentAdapter(AgentAdapter):
         model_id = f"{run_session.run_id}_model"
 
         config = run_session.config
-        assert config.environment.config.player_count == 1
+        assert config.environment.specs.num_players == 1
 
         agent, version_info = await self.create_and_publish_initial_version(
             model_id=model_id,
-            obs_dim=config.actor.num_input,
-            act_dim=config.actor.num_action,
+            environment_specs=config.environment.specs,
             device=config.training.train_device,
             training_config=config.training,
         )
@@ -239,7 +271,7 @@ class MuZeroAgentAdapter(AgentAdapter):
             reward_distribution = copy.deepcopy(agent.muzero.reward_distribution).cpu()
             value_distribution = copy.deepcopy(agent.muzero.value_distribution).cpu()
 
-            train_worker = TrainWorker(model_id, batch_queue, results_queue, config)
+            train_worker = TrainWorker(agent, batch_queue, results_queue, config)
             replay_buffer = ReplayBufferWorker(
                 sample_queue,
                 priority_update_queue,
@@ -252,6 +284,7 @@ class MuZeroAgentAdapter(AgentAdapter):
             )
             reanalyze_workers = [
                 ReanalyzeWorker(
+                    manager.Queue(1),
                     reanalyze_queue,
                     reanalyze_update_queue,
                     model_id,
@@ -276,8 +309,12 @@ class MuZeroAgentAdapter(AgentAdapter):
             total_samples = 0
             training_step = 0
             run_total_reward = 0
+            epoch_idx = 0
 
             workers = [train_worker, replay_buffer] + reanalyze_workers
+
+            for worker in reanalyze_workers:
+                worker.update_agent(agent)
 
             try:
                 for worker in workers:
@@ -309,7 +346,19 @@ class MuZeroAgentAdapter(AgentAdapter):
 
                     while not results_queue.empty():
                         try:
-                            info, version_info = results_queue.get_nowait()
+                            info, new_agent = results_queue.get_nowait()
+                            if new_agent is not None:
+                                epoch_idx += 1
+                                agent = new_agent
+                                version_info = await self.publish_version(
+                                    model_id,
+                                    agent,
+                                    epoch_idx=epoch_idx,
+                                    total_samples=total_samples,
+                                    environment_specs=config.environment.specs,
+                                )
+                                for worker in reanalyze_workers:
+                                    worker.update_agent(new_agent)
                         except queue.Empty:
                             continue
 
@@ -348,12 +397,13 @@ class MuZeroAgentAdapter(AgentAdapter):
                 self.single_agent_muzero_run_implementation,
                 MuZeroTrainingRunConfig(
                     environment=EnvironmentParams(
-                        implementation="gym/CartPole-v0",
                         config=EnvironmentConfig(
                             seed=12,
-                            player_count=1,
                             framestack=1,
                             render=False,
+                        ),
+                        specs=EnvironmentSpecs(
+                            implementation="gym/CartPole-v0", num_players=1, num_input=4, num_action=2
                         ),
                     ),
                     training=DEFAULT_MUZERO_TRAINING_CONFIG,
@@ -369,36 +419,36 @@ def make_trial_configs(run_session, config, model_id, model_version_number):
         config.seed = seed
         return config
 
-    actor_config = ActorConfig(
+    actor_config = AgentConfig(
+        run_id=run_session.run_id,
         model_id=model_id,
         model_version=model_version_number,
-        num_input=config.actor.num_input,
-        num_action=config.actor.num_action,
-        environment_implementation=config.environment.implementation,
         device=config.training.actor_device,
+        environment_specs=config.environment.specs,
+        actor_index=0,
     )
     muzero_config = ActorParams(
         name="agent_1",
         actor_class="agent",
         implementation="muzero_mlp",
-        config=actor_config,
+        agent_config=actor_config,
     )
     teacher_config = ActorParams(
         name="web_actor",
         actor_class="teacher_agent",
         implementation="client",
-        config=actor_config,
+        agent_config=actor_config,  # todo: this needs to be modified to HumanConfig
     )
     demonstration_configs = [
         TrialConfig(
             run_id=run_session.run_id,
             environment=EnvironmentParams(
-                implementation=config.environment.implementation,
                 config=clone_config(
                     config.environment.config,
                     seed=config.environment.config.seed + i + config.training.demonstration_trials,
                     render=True,
                 ),
+                specs=config.environment.specs,
             ),
             actors=[muzero_config, teacher_config],
         )
@@ -409,12 +459,12 @@ def make_trial_configs(run_session, config, model_id, model_version_number):
         TrialConfig(
             run_id=run_session.run_id,
             environment=EnvironmentParams(
-                implementation=config.environment.implementation,
                 config=clone_config(
                     config.environment.config,
                     seed=config.environment.config.seed + i + config.training.demonstration_trials,
                     render=False,
                 ),
+                specs=config.environment.specs,
             ),
             actors=[muzero_config],
         )
@@ -431,136 +481,6 @@ def compute_targets(reward, value, reward_distribution, value_distribution):
     return reward_probs, value_probs
 
 
-class ReplayBufferWorker(mp.Process):
-    def __init__(
-        self,
-        sample_queue,
-        priority_update_queue,
-        batch_queue,
-        reanalyze_queue,
-        reanalyze_update_queue,
-        config,
-        reward_distribution,
-        value_distribution,
-    ):
-        super().__init__()
-        self._sample_queue = sample_queue
-        self._priority_update_queue = priority_update_queue
-        self._batch_queue = batch_queue
-        self._reanalyze_queue = reanalyze_queue
-        self._reanalyze_update_queue = reanalyze_update_queue
-        self._replay_buffer_size = mp.Value(ctypes.c_uint32, 0)
-        self._training_config = config
-        self._device = config.train_device
-        self.reward_distribution = reward_distribution
-        self.value_distribution = value_distribution
-
-    def run(self):
-        episode_samples = {}
-        replay_buffer = TrialReplayBuffer(
-            max_size=self._training_config.max_replay_buffer_size,
-            discount_rate=self._training_config.discount_rate,
-            bootstrap_steps=self._training_config.bootstrap_steps,
-        )
-
-        zero_reward_probs = self.reward_distribution.compute_target(torch.tensor(0.0)).cpu().detach()
-        zero_value_probs = self.value_distribution.compute_target(torch.tensor(0.0)).cpu().detach()
-
-        while True:
-            # Fetch & perform all pending priority updates
-            while not self._priority_update_queue.empty():
-                try:
-                    episodes, steps, priorities = self._priority_update_queue.get_nowait()
-                    replay_buffer.update_priorities(episodes, steps, priorities)
-                except queue.Empty:
-                    pass
-
-            # Add any queued data to the replay buffer
-            try:
-                trial_id, sample = self._sample_queue.get_nowait()
-
-                if trial_id not in episode_samples:
-                    episode_samples[trial_id] = Episode(
-                        sample.state,
-                        self._training_config.discount_rate,
-                        zero_reward_probs=zero_reward_probs,
-                        zero_value_probs=zero_value_probs,
-                    )
-
-                with torch.no_grad():
-                    reward_probs = self.reward_distribution.compute_target(torch.tensor(sample.reward)).cpu()
-                    value_probs = self.value_distribution.compute_target(torch.tensor(sample.value)).cpu()
-
-                episode_samples[trial_id].add_step(
-                    sample.next_state,
-                    sample.action,
-                    reward_probs,
-                    sample.reward,
-                    sample.done,
-                    sample.policy,
-                    value_probs,
-                    sample.value,
-                )
-
-                if sample.done:
-                    episode_samples[trial_id].bootstrap_value(
-                        self._training_config.bootstrap_steps, self._training_config.discount_rate
-                    )
-                    replay_buffer.add_episode(episode_samples.pop(trial_id))
-            except queue.Empty:
-                pass
-
-            self._replay_buffer_size.value = replay_buffer.size()
-            if self._replay_buffer_size.value < self._training_config.min_replay_buffer_size:
-                continue
-
-            # Fetch/perform any pending reanalyze updates
-            try:
-                episode_id, episode = self._reanalyze_update_queue.get_nowait()
-                replay_buffer.episodes[episode_id] = episode
-            except queue.Empty:
-                pass
-
-            # Queue next reanalyze update
-            try:
-                # testing, sampling strategy
-                p = torch.tensor([episode.timestamp for episode in replay_buffer.episodes], dtype=torch.double)
-                p -= p.min() - 0.1
-                p /= p.sum()
-                dist = torch.distributions.Categorical(p)
-                # episode_id = np.random.randint(0, len(replay_buffer.episodes))
-                episode_id = dist.sample().item()
-                self._reanalyze_queue.put_nowait((episode_id, replay_buffer.episodes[episode_id]))
-            except queue.Full:
-                pass
-
-            # Sample a batch and add it to the training queue
-            batch = replay_buffer.sample(self._training_config.rollout_length, self._training_config.batch_size)
-            for item in batch:
-                # item.share_memory_()
-                item.to("cpu")
-            try:
-                self._batch_queue.put(EpisodeBatch(*batch), timeout=1.0)
-            except queue.Full:
-                pass
-
-    def add_sample(self, trial_id, sample):
-        self._sample_queue.put((trial_id, sample))
-
-    def update_priorities(self, episodes, steps, priorities):
-        self._priority_update_queue.put((episodes, steps, priorities))
-
-    def size(self):
-        return self._replay_buffer_size.value
-
-
-def get_from_queue(q, device):  # pylint: disable=invalid-name
-    batch = q.get()
-    for item in batch:
-        item.to(device)
-    return batch
-
-
 def yield_from_queue(pool, q, device, prefetch=4):  # pylint: disable=invalid-name
     futures = [pool.apply_async(get_from_queue, args=(q, device)) for _ in range(prefetch)]
     i = 0
@@ -571,196 +491,3 @@ def yield_from_queue(pool, q, device, prefetch=4):  # pylint: disable=invalid-na
             yield future.get()
 
         i = (i + 1) % prefetch
-
-
-class AgentTrialWorker(mp.Process):
-    def __init__(self, agent, config, sleep_time=0.01):
-        super().__init__()
-        self._event_queue = mp.Queue(1)
-        self._action_queue = mp.Queue(1)
-        self._config = config
-        self._agent = agent
-        self._terminate = mp.Value(ctypes.c_bool, False)
-        self._sleep_time = sleep_time
-
-    async def put_event(self, event):
-        while True:
-            try:
-                self._event_queue.put_nowait(event)
-                break
-            except queue.Full:
-                await asyncio.sleep(self._sleep_time)
-
-    async def get_action(self):
-        while True:
-            try:
-                return self._action_queue.get_nowait()
-            except queue.Empty:
-                await asyncio.sleep(self._sleep_time)
-
-    def run(self):
-        while not self._terminate.value:
-            try:
-                event = self._event_queue.get(timeout=1.0)
-            except queue.Empty:
-                continue
-
-            observation = event.observation.snapshot.vectorized
-            observation = np_array_from_proto_array(observation)
-            action_int, policy, value = self._agent.act(torch.tensor(observation))
-            action = AgentAction(discrete_action=action_int, policy=proto_array_from_np_array(policy), value=value)
-            self._action_queue.put(action)
-
-
-class TrainWorker(mp.Process):
-    def __init__(self, model_id, batch_queue, results_queue, config):
-        super().__init__()
-        self._model_id = model_id
-        self.batch_queue = batch_queue
-        self.results_queue = results_queue
-        self.config = config
-        self.steps_per_update = 200
-        self._model_cache = LRU(1)
-
-    async def get_latest_agent(self):
-        def load_agent(model_id, version_number, version_user_data, model_data_f):
-            return MuZeroAgent.load(model_data_f, "cpu")
-
-        return await get_model_registry_client().retrieve_model_version(
-            self._model_id, load_agent, self._model_cache, version_number=-1
-        )
-
-    async def publish_version(self, model_id, model, archived=False):
-        """
-        Publish to the model registry a new version of a model
-        Parameters:
-            model_id (string): unique identifier for the model
-            model: a model, as returned by method of this class
-            archive (bool - default is False): If true, the model version will be archived (i.e. stored in permanent storage)
-        Returns:
-            version_info: information for the initial published version
-        """
-
-        def _save(model, model_data_f):
-            assert isinstance(model, MuZeroAgent)
-            model.save(model_data_f)
-            return {}
-
-        return await get_model_registry_client().publish_model_version(
-            model_id, model, _save, cache=self._model_cache, archived=archived
-        )
-
-    def run(self):
-        asyncio.run(self.main())
-
-    async def main(self):
-        agent, version_info = await self.get_latest_agent()
-        agent.set_device(self.config.training.train_device)
-        step = 0
-
-        lr_schedule = LinearScheduleWithWarmup(
-            self.config.training.learning_rate,
-            self.config.training.min_learning_rate,
-            self.config.training.lr_decay_steps,
-            self.config.training.lr_warmup_steps,
-        )
-
-        epsilon_schedule = LinearScheduleWithWarmup(
-            self.config.training.exploration_epsilon,
-            self.config.training.epsilon_min,
-            self.config.training.epsilon_decay_steps,
-            0,
-        )
-
-        temperature_schedule = LinearScheduleWithWarmup(
-            self.config.training.mcts_temperature,
-            self.config.training.min_temperature,
-            self.config.training.temperature_decay_steps,
-            0,
-        )
-
-        # threadpool = ThreadPool()
-        # batch_generator = yield_from_queue(threadpool, self.batch_queue, self.config.training.train_device)
-
-        while True:
-            lr = lr_schedule.update()  # pylint: disable=invalid-name
-            epsilon = epsilon_schedule.update()
-            temperature = temperature_schedule.update()
-            agent.params.learning_rate = lr
-            agent.params.exploration_epsilon = epsilon
-            agent.params.mcts_temperature = temperature
-            # batch = next(batch_generator)
-            batch = get_from_queue(self.batch_queue, self.config.training.train_device)
-            _priority, info = agent.learn(batch)
-
-            info = dict(
-                lr=lr,
-                epsilon=epsilon,
-                temperature=temperature,
-                **info,
-            )
-
-            for key, val in info.items():
-                if isinstance(val, torch.Tensor):
-                    info[key] = val.detach().cpu().numpy().copy()
-
-            step += 1
-            if step % self.steps_per_update == 0:
-                version_info = await self.publish_version(self._model_id, agent)
-            self.results_queue.put((info, version_info))
-
-
-class ReanalyzeWorker(mp.Process):
-    def __init__(
-        self, reanalyze_queue, reanalyze_update_queue, model_id, device, reward_distribution, value_distribution
-    ):
-        super().__init__()
-        self._reanalyze_queue = reanalyze_queue
-        self._reanalyze_update_queue = reanalyze_update_queue
-        self._device = device
-        self._reanalyzed_samples = mp.Value(ctypes.c_uint64, 0)
-        self.reward_distribution = reward_distribution
-        self.value_distribution = value_distribution
-        self._model_cache = LRU(1)
-        self._model_id = model_id
-
-    async def get_latest_agent(self):
-        def load_agent(model_id, version_number, version_user_data, model_data_f):
-            return MuZeroAgent.load(model_data_f, "cpu")
-
-        return await get_model_registry_client().retrieve_model_version(
-            self._model_id, load_agent, self._model_cache, version_number=-1
-        )
-
-    def reanalyzed_samples(self):
-        return self._reanalyzed_samples.value
-
-    def run(self):
-        asyncio.run(self.main())
-
-    async def main(self):
-        while True:
-            agent, _ = await self.get_latest_agent()
-            agent.set_device(self._device)
-
-            episode_id, episode = self._reanalyze_queue.get()
-            reanalyze_episode = Episode(episode.states[0].clone(), agent.params.discount_rate)
-            for step in range(len(episode)):
-                policy, _, value = agent.reanalyze(episode.states[step].clone())
-                policy = policy.cpu()
-                value = value.cpu().item()
-                reward_probs = self.reward_distribution.compute_target(torch.tensor(episode.rewards[step])).cpu()
-                value_probs = self.value_distribution.compute_target(torch.tensor(value)).cpu()
-                reanalyze_episode.add_step(
-                    episode.states[step + 1].clone(),
-                    episode.actions[step],
-                    reward_probs.clone(),
-                    episode.rewards[step],
-                    episode.done[step],
-                    policy.clone(),
-                    value_probs.clone(),
-                    value,
-                )
-            episode.bootstrap_value(agent.params.bootstrap_steps, agent.params.discount_rate)
-            self._reanalyze_update_queue.put((episode_id, episode))
-            self._reanalyzed_samples.value += len(episode)

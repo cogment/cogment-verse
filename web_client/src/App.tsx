@@ -77,7 +77,7 @@ function App() {
 
   type ObservationT = data_pb.cogment_verse.Observation;
   type ActionT = data_pb.cogment_verse.AgentAction;
-  type ConfigT = data_pb.cogment_verse.ActorConfig;
+  type HumanConfigT = data_pb.cogment_verse.HumanConfig;
 
   useEffect(() => {
     //const canvas = canvasRef.current;
@@ -92,10 +92,10 @@ function App() {
     img.src = "data:image/png;base64," + bufferToBase64(pixelData);
   });
 
-  const [event, joinTrial, _sendAction, reset, trialJoined, watchTrials, trialStateList, actorConfig] = useActions<
+  const [event, joinTrial, _sendAction, reset, trialJoined, watchTrials, trialStateList, AgentConfig] = useActions<
     ObservationT,
     ActionT,
-    ConfigT
+    HumanConfigT
   >(
     cogSettings,
     "web_actor", // actor name
@@ -122,26 +122,38 @@ function App() {
   );
 
   useEffect(() => {
-    if (trialJoined && actorConfig && event.observation && event.observation.pixelData) {
+    if (trialJoined && AgentConfig && event.observation && event.observation.pixelData) {
       setPixelData(event.observation.pixelData);
     }
-  }, [event, actorConfig, trialJoined]);
+  }, [event, AgentConfig, trialJoined]);
 
   useEffect(() => {
-    if (trialJoined && actorConfig && event.observation && event.observation.pixelData) {
+    if (
+      trialJoined &&
+      AgentConfig &&
+      AgentConfig.environmentSpecs &&
+      event.observation &&
+      event.observation.pixelData
+    ) {
       if (!event.last) {
         const action = new data_pb.cogment_verse.AgentAction();
         let action_int = -1;
-        const keymap = get_keymap(actorConfig.environmentImplementation);
 
-        if (keymap === undefined) {
-          console.log(`no keymap defined for actor config ${actorConfig}`);
-        } else {
-          for (let item of keymap.action_map) {
-            const keySet = new Set<string>(item.keys);
-            if (setIsEndOfArray(keySet, pressedKeys)) {
-              action_int = item.id;
-              break;
+        if (AgentConfig.role === data_pb.cogment_verse.HumanRole.TEACHER) {
+          let keymap = undefined;
+          if (AgentConfig.environmentSpecs.implementation) {
+            keymap = get_keymap(AgentConfig.environmentSpecs.implementation);
+          }
+
+          if (keymap === undefined) {
+            console.log(`no keymap defined for actor config ${AgentConfig}`);
+          } else {
+            for (let item of keymap.action_map) {
+              const keySet = new Set<string>(item.keys);
+              if (setIsEndOfArray(keySet, pressedKeys)) {
+                action_int = item.id;
+                break;
+              }
             }
           }
         }
@@ -178,21 +190,27 @@ function App() {
         setTimer(undefined);
       }
     };
-  }, [event, sendAction, trialJoined, actorConfig, pressedKeys, lastTime, timer, emaFps, fpsEmaWeight]);
+  }, [event, sendAction, trialJoined, AgentConfig, pressedKeys, lastTime, timer, emaFps, fpsEmaWeight]);
 
   useEffect(() => {
     if (trialJoined) {
-      setTrialStatus("trial joined");
+      if (AgentConfig && AgentConfig.role === data_pb.cogment_verse.HumanRole.TEACHER) {
+        setTrialStatus("trial joined as teacher");
+      } else if (AgentConfig && AgentConfig.role === data_pb.cogment_verse.HumanRole.OBSERVER) {
+        setTrialStatus("trial joined as observer");
+      } else {
+        setTrialStatus("trial joined (unknown role)");
+      }
       setCanStartTrial(false);
-      if (actorConfig) {
-        setEnvironmentImplementation(actorConfig.environmentImplementation);
+      if (AgentConfig && AgentConfig.environmentSpecs && AgentConfig.environmentSpecs.implementation) {
+        setEnvironmentImplementation(AgentConfig.environmentSpecs.implementation);
       }
     } else {
       setTrialStatus("no trial running");
       setCurrentTrialId(undefined);
       setCanStartTrial(true);
     }
-  }, [trialJoined, trialStatus, actorConfig]);
+  }, [trialJoined, trialStatus, AgentConfig]);
 
   useEffect(() => {
     if (watchTrials && !watching) {

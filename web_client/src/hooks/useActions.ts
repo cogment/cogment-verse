@@ -43,7 +43,7 @@ export type UseActions = <ObservationT, ActionT extends MessageBase, ConfigT ext
   trialJoined: boolean,
   watchTrials: WatchTrials | undefined,
   trialStateList: TrialStateList | undefined,
-  actorConfig: ConfigT | undefined
+  AgentConfig: ConfigT | undefined
 ];
 
 export const useActions: UseActions = <ObservationT, ActionT extends MessageBase, ConfigT extends MessageBase>(
@@ -71,7 +71,7 @@ export const useActions: UseActions = <ObservationT, ActionT extends MessageBase
   const [cogSettings, setCogSettings] = useState(_cogSettings);
   const [watchTrials, setWatchTrials] = useState<WatchTrials>();
 
-  const [actorConfig, setActorConfig] = useState<ConfigT>();
+  const [AgentConfig, setAgentConfig] = useState<ConfigT>();
 
   const reset = useCallback(() => {
     setCogSettings({ ..._cogSettings });
@@ -90,7 +90,7 @@ export const useActions: UseActions = <ObservationT, ActionT extends MessageBase
         actorSession.start();
 
         // todo: figure out why this cast is necessary (wrong template argument somewhere?)
-        setActorConfig(actorSession.config);
+        setAgentConfig(actorSession.config);
 
         //Double arrow function here beause react will turn a single one into a lazy loaded function
         setSendAction(() => (action: ActionT) => {
@@ -151,5 +151,5 @@ export const useActions: UseActions = <ObservationT, ActionT extends MessageBase
     });
   }, [cogSettings, actorName, actorClass, grpcURL]);
 
-  return [event, joinTrial, sendAction, reset, trialJoined, watchTrials, trialStateList, actorConfig];
+  return [event, joinTrial, sendAction, reset, trialJoined, watchTrials, trialStateList, AgentConfig];
 };
