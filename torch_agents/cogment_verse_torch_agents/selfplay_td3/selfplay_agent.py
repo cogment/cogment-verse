@@ -69,6 +69,7 @@ class SelfPlayAgentAdapter(AgentAdapter):
 
                 if event.observation and event.type == cogment.EventType.ACTIVE:
                     obs = event.observation.snapshot
+                    # process observation
                     # agent act when its turn
                     if (obs.current_player == 1 and agent == "alice") or \
                         (obs.current_player == 0 and agent == "bob"):

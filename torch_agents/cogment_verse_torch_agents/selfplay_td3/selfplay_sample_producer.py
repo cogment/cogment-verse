@@ -37,7 +37,7 @@ def get_samples(sample, next_sample):
     if not (sample_player_done and not next_sample_player_done):
         current_player = int(current_player_from_obs(sample.get_actor_observation(0)))
         return Sample(
-            current_player=current_player, # TBD: function names
+            current_player=current_player,
             state=tensor_from_cog_state(sample.get_actor_observation(current_player)),
             img=tensor_from_cog_img(sample.get_actor_observation(current_player)),
             action=tensor_from_cog_action(sample.get_actor_action(current_player)),

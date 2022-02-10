@@ -28,6 +28,7 @@ class SelfPlayTD3:
     def __init__(self, model_params=None, **params):
 
         self._params = params
+        self._params['name'] = self._params['id'].split("_")[-1]
         # self._model = PolicyNetwork(self._params["obs_dim"], self._params["act_dim"])
         # self._optimizer = tf.keras.optimizers.Adam(learning_rate=self._params["lr"])
         # self._replay_buffer = Memory(
@@ -38,7 +39,18 @@ class SelfPlayTD3:
         #     self._model.set_weights(model_params)
         # self._model.trainable = True
 
+        # rl replay buffer
+        # if bob: bc replay buffer
+
+        # self._model = Network(agent=self._params["name"])
+
+
+
     def act(self, observation):
+
+        # if alice: filter observation
+        # action self._model.model(observation)
+        # return action
 
         # policy = self._model.model(tf.expand_dims(observation, axis=0), training=False)
         # dist = tfp.distributions.Categorical(probs=policy, dtype=tf.float32)
@@ -68,8 +80,18 @@ class SelfPlayTD3:
     #     loss = -log_prob * Q
     #     return tf.reduce_mean(loss)
     #
-    # def learn(self):
-    #
+    def learn(self):
+        pass
+        # random bacth from rl replaybuffer
+        # if bob: random batch from bc replaybuffer
+
+        # critic loss
+        # actor_loss
+        # if bob: bc_actor_loss
+
+        # grads, learn
+        # return some stats
+
     #     batch = self._replay_buffer.sample()
     #     Q = self.get_discounted_rewards(batch["rewards"])
     #     with tf.GradientTape() as tape:
@@ -81,7 +103,10 @@ class SelfPlayTD3:
     #     self._replay_buffer.reset_replay_buffer()
     #     return {"loss": loss.numpy(), "rewards_mean": batch["rewards"].mean()}
     #
-    # def consume_training_sample(self, sample):
+    def consume_training_sample(self, sample):
+        pass
+        # add sample to rl replay buffer
+        # if bob: add alice samples to bc replay buffer
     #     """
     #     Consume a training sample, e.g. store in an internal replay buffer
     #     """
