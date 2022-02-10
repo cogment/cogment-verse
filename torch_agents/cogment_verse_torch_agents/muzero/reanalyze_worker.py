@@ -58,6 +58,7 @@ class ReanalyzeWorker(mp.Process):
         device,
         reward_distribution,
         value_distribution,
+        max_threads,
     ):
         super().__init__()
         self._agent_queue = agent_queue
@@ -69,6 +70,7 @@ class ReanalyzeWorker(mp.Process):
         self.value_distribution = value_distribution
         self._model_cache = LRU(1)
         self._model_id = model_id
+        self._max_threads = max_threads
 
     def reanalyzed_samples(self):
         return self._reanalyzed_samples.value
@@ -80,6 +82,7 @@ class ReanalyzeWorker(mp.Process):
         asyncio.run(self.main())
 
     async def main(self):
+        torch.set_num_threads(self._max_threads)
         agent = self._agent_queue.get()
         agent.set_device(self._device)
 

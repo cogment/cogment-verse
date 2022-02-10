@@ -208,6 +208,7 @@ message MuZeroTrainingConfig {
   string actor_device = 46;
   string reanalyze_device = 47;
   uint32 reanalyze_workers = 48;
+  uint32 threads_per_worker = 49;
 }
 
 message MuZeroTrainingRunConfig {

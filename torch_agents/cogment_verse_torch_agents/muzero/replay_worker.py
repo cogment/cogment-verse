@@ -73,6 +73,7 @@ class ReplayBufferWorker(mp.Process):
         self.value_distribution = value_distribution
 
     def run(self):
+        torch.set_num_threads(self._training_config.threads_per_worker)
         episode_samples = {}
         replay_buffer = TrialReplayBuffer(
             max_size=self._training_config.max_replay_buffer_size,

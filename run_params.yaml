@@ -661,7 +661,7 @@ cartpole_muzero: &default_muzero
     training: &default_muzero_training_config
       model_publication_interval: 200
       trial_count: 2000
-      max_parallel_trials: 4
+      max_parallel_trials: 8
       discount_rate: 0.995
       batch_size: 32
       projector_dim: 16
@@ -669,7 +669,7 @@ cartpole_muzero: &default_muzero
       hidden_layers: 2
       projector_hidden_dim: 32
       projector_hidden_layers: 1
-      min_replay_buffer_size: 100
+      min_replay_buffer_size: 200
       max_replay_buffer_size: 100000
       log_interval: 100
       weight_decay: 0.01
@@ -701,6 +701,7 @@ cartpole_muzero: &default_muzero
       train_device: "cpu"
       actor_device: "cpu"
       reanalyze_device: "cpu"
+      threads_per_worker: 8
       reanalyze_workers: 1
 
 lander_muzero:
@@ -729,7 +730,7 @@ lander_muzero_gpu:
     training:
       <<: *lander_muzero_training_config
       train_device: "cuda:1"
-      reanalyze_device: "cuda:1"
+      reanalyze_device: "cpu"
       actor_device: "cuda:0"
 
 simple_bc_lander: &simple_bc_experiment

@@ -291,6 +291,7 @@ class MuZeroAgentAdapter(AgentAdapter):
                     config.training.reanalyze_device,
                     reward_distribution,
                     value_distribution,
+                    config.training.threads_per_worker,
                 )
                 for i in range(num_reanalyze_workers)
             ]

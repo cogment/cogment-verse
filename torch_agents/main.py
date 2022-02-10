@@ -17,7 +17,7 @@ import json
 import logging
 import os
 import sys
-import multiprocessing as mp
+import torch.multiprocessing as mp
 
 import cog_settings
 import cogment
@@ -77,6 +77,8 @@ async def main():
 
 if __name__ == "__main__":
     mp.set_start_method("spawn")
+    # suggested fix https://github.com/pytorch/pytorch/issues/67864
+    mp.set_sharing_strategy("file_system")
     loop = asyncio.get_event_loop()
     try:
         loop.run_until_complete(main())

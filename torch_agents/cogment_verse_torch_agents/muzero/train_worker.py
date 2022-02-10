@@ -68,6 +68,7 @@ class TrainWorker(mp.Process):
         asyncio.run(self.main())
 
     async def main(self):
+        torch.set_num_threads(self.config.training.threads_per_worker)
         # original agent sent from another process, we want to work with a copy
         agent = copy.deepcopy(self.agent)
         agent.set_device(self.config.training.train_device)
