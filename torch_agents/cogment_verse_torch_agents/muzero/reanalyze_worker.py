@@ -81,12 +81,11 @@ class ReanalyzeWorker(mp.Process):
 
     async def main(self):
         agent = self._agent_queue.get()
-        agent = copy.deepcopy(agent)
         agent.set_device(self._device)
+
         while True:
             try:
                 agent = self._agent_queue.get_nowait()
-                agent = copy.deepcopy(agent)
                 agent.set_device(self._device)
             except queue.Empty:
                 pass

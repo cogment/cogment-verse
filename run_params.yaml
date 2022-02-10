@@ -661,7 +661,7 @@ cartpole_muzero: &default_muzero
     training: &default_muzero_training_config
       model_publication_interval: 200
       trial_count: 2000
-      max_parallel_trials: 2
+      max_parallel_trials: 4
       discount_rate: 0.995
       batch_size: 32
       projector_dim: 16
@@ -726,11 +726,11 @@ lander_muzero_gpu:
     environment:
       specs: *lander_specs
       config: *default_env_config
-    training: &lander_muzero_training_config
+    training:
       <<: *lander_muzero_training_config
-      train_device: "gpu:0"
-      reanalyze_device: "gpu:1"
-      actor_device: "cpu"
+      train_device: "cuda:1"
+      reanalyze_device: "cuda:1"
+      actor_device: "cuda:0"
 
 simple_bc_lander: &simple_bc_experiment
   implementation: simple_bc_training

@@ -49,13 +49,17 @@ class MuZeroAgent(torch.nn.Module):
         self.params = training_config
         self._device = torch.device(device)
         self._make_networks()
+        self._make_optimizer()
 
     def set_device(self, device):
         self._device = torch.device(device)
         # self.muzero = self.muzero.to(self._device)
         # self.target_muzero = self.target_muzero.to(self._device)
         # self._optimizer.to(self._device)
-        self.to(self._device)
+        state_dict = self.state_dict()
+        self._make_networks()
+        self._make_optimizer()
+        self.load_state_dict(state_dict)
 
     def _make_networks(self):
         stem = lin_bn_act(self._obs_dim, self.params.hidden_dim, bn=True, act=torch.nn.ReLU())
@@ -103,6 +107,7 @@ class MuZeroAgent(torch.nn.Module):
 
         self.target_muzero = copy.deepcopy(self.muzero)
 
+    def _make_optimizer(self):
         self._optimizer = torch.optim.AdamW(
             self.muzero.parameters(),
             lr=1e-3,

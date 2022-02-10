@@ -121,5 +121,8 @@ class TrainWorker(mp.Process):
 
             step += 1
             if step % self.steps_per_update == 0:
-                self.results_queue.put((info, agent))
+                cpu_agent = copy.deepcopy(agent)
+                cpu_agent.set_device("cpu")
+                self.results_queue.put((info, copy.deepcopy(cpu_agent)))
+                del cpu_agent
             self.results_queue.put((info, None))

@@ -251,7 +251,7 @@ class MuZeroAgentAdapter(AgentAdapter):
         agent, version_info = await self.create_and_publish_initial_version(
             model_id=model_id,
             environment_specs=config.environment.specs,
-            device=config.training.train_device,
+            device="cpu",
             training_config=config.training,
         )
 
@@ -284,7 +284,7 @@ class MuZeroAgentAdapter(AgentAdapter):
             )
             reanalyze_workers = [
                 ReanalyzeWorker(
-                    manager.Queue(1),
+                    manager.Queue(2),
                     reanalyze_queue,
                     reanalyze_update_queue,
                     model_id,
@@ -358,7 +358,7 @@ class MuZeroAgentAdapter(AgentAdapter):
                                     environment_specs=config.environment.specs,
                                 )
                                 for worker in reanalyze_workers:
-                                    worker.update_agent(new_agent)
+                                    worker.update_agent(agent)
                         except queue.Empty:
                             continue
 
