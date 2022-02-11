@@ -46,6 +46,7 @@ class ActorNetwork(nn.Module):
 
         self.grid_channels = params["obs_dim3"]
 
+        self.action_dim = params["act_dim"]
         self.action_scale = np.array(params["action_scale"])
         self.action_bias = np.array(params["action_bias"])
         self.max_action = params["max_action"]

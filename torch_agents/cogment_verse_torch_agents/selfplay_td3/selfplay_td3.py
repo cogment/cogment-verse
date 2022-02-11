@@ -42,8 +42,8 @@ class SelfPlayTD3:
         # rl replay buffer
         # if bob: bc replay buffer
 
-        self._actor_model = ActorNetwork(self._params)
-        self._critic_model = CriticNetwork(self._params)
+        self._actor_model = ActorNetwork(**self._params)
+        self._critic_model = CriticNetwork(**self._params)
 
 
 
