@@ -45,8 +45,13 @@ def create_training_run(agent_adapter):
             alice, _ = await agent_adapter.create_and_publish_initial_version(
                 alice_id,
                 **{
-                    "obs_dim": config.actor.config.num_input,
+                    "obs_dim1": config.actor.config.num_input,
+                    "obs_dim2": config.actor.config.num_input_2,
+                    "obs_dim3": config.actor.config.num_input_2,
                     "act_dim": config.actor.config.num_action,
+                    "action_scale": config.actor.config.action_scale,
+                    "action_bias": config.actor.config.action_bias,
+                    "max_action": config.actor.config.max_action,
                 #     "max_replay_buffer_size": config.max_replay_buffer_size,
                 #     "lr": config.learning_rate,
                 #     "gamma": config.discount_factor,
@@ -63,8 +68,13 @@ def create_training_run(agent_adapter):
             bob, _ = await agent_adapter.create_and_publish_initial_version(
                 bob_id,
                 **{
-                    "obs_dim": config.actor.config.num_input,
+                    "obs_dim1": config.actor.config.num_input,
+                    "obs_dim2": config.actor.config.num_input_2,
+                    "obs_dim3": config.actor.config.num_input_2,
                     "act_dim": config.actor.config.num_action,
+                    "action_scale": config.actor.config.action_scale,
+                    "action_bias": config.actor.config.action_bias,
+                    "max_action": config.actor.config.max_action,
                 #     "max_replay_buffer_size": config.max_replay_buffer_size,
                 #     "lr": config.learning_rate,
                 #     "gamma": config.discount_factor,

@@ -597,8 +597,12 @@ selfplay_td3_driving: &default_selfplay_td3_params
       implementation: selfplay_td3
       config:
         num_input: 7
-        num_input_2: [ 75,75 ]
+        num_input_2: 2
+        num_input_3: 1
         num_action: 2
+        action_scale: [ 0.5,0.6 ]
+        action_bias: [ 1.0,0.0 ]
+        max_action: 1
         actor_network:
           hidden_size: 64
         critic_network:

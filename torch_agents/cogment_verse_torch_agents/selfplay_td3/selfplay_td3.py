@@ -13,7 +13,7 @@
 # limitations under the License.
 
 # from cogment_verse_tf_agents.reinforce.replaybuffer import Memory
-# from cogment_verse_tf_agents.reinforce.model import PolicyNetwork
+from cogment_verse_torch_agents.selfplay_td3.model import ActorNetwork, CriticNetwork
 import numpy as np
 # import tensorflow_probability as tfp
 import pickle as pkl
@@ -42,7 +42,8 @@ class SelfPlayTD3:
         # rl replay buffer
         # if bob: bc replay buffer
 
-        # self._model = Network(agent=self._params["name"])
+        self._actor_model = ActorNetwork(self._params)
+        self._critic_model = CriticNetwork(self._params)
 
 
 
