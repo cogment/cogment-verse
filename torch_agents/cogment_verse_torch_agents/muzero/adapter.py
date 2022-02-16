@@ -16,6 +16,7 @@ import asyncio
 from collections import namedtuple
 import ctypes
 import copy
+import io
 import time
 
 import logging
@@ -261,7 +262,7 @@ class MuZeroAgentAdapter(AgentAdapter):
             max_prefetch_batch = 128
             sample_queue = manager.Queue()
             priority_update_queue = manager.Queue()
-            reanalyze_update_queue = manager.Queue()
+            reanalyze_update_queue = manager.Queue(num_reanalyze_workers + 1)
             reanalyze_queue = manager.Queue(num_reanalyze_workers + 1)
 
             batch_queue = manager.Queue(max_prefetch_batch)
@@ -347,10 +348,10 @@ class MuZeroAgentAdapter(AgentAdapter):
 
                     while not results_queue.empty():
                         try:
-                            info, new_agent = results_queue.get_nowait()
-                            if new_agent is not None:
+                            info, serialized_model = results_queue.get_nowait()
+                            if serialized_model is not None:
                                 epoch_idx += 1
-                                agent = new_agent
+                                agent = MuZeroAgent.load(io.BytesIO(serialized_model), "cpu")
                                 version_info = await self.publish_version(
                                     model_id,
                                     agent,
@@ -473,22 +474,3 @@ def make_trial_configs(run_session, config, model_id, model_version_number):
     ]
 
     return demonstration_configs + trial_configs
-
-
-@torch.no_grad()
-def compute_targets(reward, value, reward_distribution, value_distribution):
-    reward_probs = reward_distribution.compute_target(torch.tensor(reward)).cpu()
-    value_probs = value_distribution.compute_target(torch.tensor(value)).cpu()
-    return reward_probs, value_probs
-
-
-def yield_from_queue(pool, q, device, prefetch=4):  # pylint: disable=invalid-name
-    futures = [pool.apply_async(get_from_queue, args=(q, device)) for _ in range(prefetch)]
-    i = 0
-    while True:
-        if futures[i].ready():
-            future = futures[i]
-            futures[i] = pool.apply_async(get_from_queue, args=(q, device))
-            yield future.get()
-
-        i = (i + 1) % prefetch

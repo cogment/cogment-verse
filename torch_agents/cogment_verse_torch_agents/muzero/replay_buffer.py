@@ -57,7 +57,7 @@ class Episode:
     ):
         self._discount = discount
         self._id = trial_id
-        self.states = [ensure_tensor(initial_state).clone().to("cpu")]
+        self.states = [clone_to_cpu(initial_state)]
         self.actions = []
         self.rewards = []
         self._policy = []
@@ -71,8 +71,8 @@ class Episode:
         self._bootstrap = None
         self._min_priority = min_priority
         self._action_space = set()
-        self._zero_reward_probs = zero_reward_probs
-        self._zero_value_probs = zero_value_probs
+        self.zero_reward_probs = clone_to_cpu(zero_reward_probs)
+        self.zero_value_probs = clone_to_cpu(zero_value_probs)
         self.timestamp = time.time()
 
     def __len__(self):
@@ -88,6 +88,7 @@ class Episode:
             self._p = self._p / self._p.sum()
             self._p = self._p.tolist()
 
+    @torch.no_grad()
     def bootstrap_value(self, steps, discount):
         length = len(self)
         self._bootstrap = [0.0 for _ in range(length)]
@@ -176,8 +177,8 @@ class Episode:
             next_states[k - start] = next_states[k - start - 1]
             states[k - start] = next_states[k - start - 1]
 
-            target_reward_probs[k - start] = self._zero_reward_probs
-            target_value_probs[k - start] = self._zero_value_probs
+            target_reward_probs[k - start] = self.zero_reward_probs
+            target_value_probs[k - start] = self.zero_value_probs
 
         return EpisodeBatch(
             episode=torch.tensor(self._id),

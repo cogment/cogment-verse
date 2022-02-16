@@ -81,6 +81,7 @@ class ReanalyzeWorker(mp.Process):
     def run(self):
         asyncio.run(self.main())
 
+    @torch.no_grad()
     async def main(self):
         torch.set_num_threads(self._max_threads)
         agent = self._agent_queue.get()
@@ -94,23 +95,27 @@ class ReanalyzeWorker(mp.Process):
                 pass
 
             episode_id, episode = self._reanalyze_queue.get()
-            reanalyze_episode = Episode(episode.states[0].clone(), agent.params.discount_rate)
+            reanalyze_episode = Episode(
+                episode.states[0],
+                agent.params.discount_rate,
+                zero_reward_probs=episode.zero_reward_probs,
+                zero_value_probs=episode.zero_value_probs,
+            )
             for step in range(len(episode)):
-                policy, _, value = agent.reanalyze(episode.states[step].clone())
-                policy = policy.cpu()
-                value = value.cpu().item()
+                policy, _, value = agent.reanalyze(episode.states[step])
                 reward_probs = self.reward_distribution.compute_target(torch.tensor(episode.rewards[step])).cpu()
-                value_probs = self.value_distribution.compute_target(torch.tensor(value)).cpu()
+                value_probs = self.value_distribution.compute_target(value).cpu()
                 reanalyze_episode.add_step(
-                    episode.states[step + 1].clone(),
+                    episode.states[step + 1],
                     episode.actions[step],
-                    reward_probs.clone(),
+                    reward_probs,
                     episode.rewards[step],
                     episode.done[step],
-                    policy.clone(),
-                    value_probs.clone(),
-                    value,
+                    policy,
+                    value_probs,
+                    value.detach().cpu().item(),
                 )
-            episode.bootstrap_value(agent.params.bootstrap_steps, agent.params.discount_rate)
-            self._reanalyze_update_queue.put((episode_id, episode))
-            self._reanalyzed_samples.value += len(episode)
+            del episode
+            reanalyze_episode.bootstrap_value(agent.params.bootstrap_steps, agent.params.discount_rate)
+            self._reanalyze_update_queue.put((episode_id, reanalyze_episode))
+            self._reanalyzed_samples.value += len(reanalyze_episode)

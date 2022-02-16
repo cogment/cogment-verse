@@ -16,6 +16,7 @@ import asyncio
 from collections import namedtuple
 import ctypes
 import copy
+import io
 import time
 
 import logging
@@ -62,7 +63,7 @@ class TrainWorker(mp.Process):
         self.batch_queue = batch_queue
         self.results_queue = results_queue
         self.config = config
-        self.steps_per_update = 200
+        self.steps_per_update = config.training.model_publication_interval
 
     def run(self):
         asyncio.run(self.main())
@@ -95,9 +96,6 @@ class TrainWorker(mp.Process):
             0,
         )
 
-        # threadpool = ThreadPool()
-        # batch_generator = yield_from_queue(threadpool, self.batch_queue, self.config.training.train_device)
-
         while True:
             lr = lr_schedule.update()  # pylint: disable=invalid-name
             epsilon = epsilon_schedule.update()
@@ -108,22 +106,29 @@ class TrainWorker(mp.Process):
             # batch = next(batch_generator)
             batch = get_from_queue(self.batch_queue, self.config.training.train_device)
             _priority, info = agent.learn(batch)
+            del batch
 
             info = dict(
                 lr=lr,
                 epsilon=epsilon,
                 temperature=temperature,
+                batch_queue=self.batch_queue.qsize(),  # monitor if training process is starved
                 **info,
             )
 
             for key, val in info.items():
                 if isinstance(val, torch.Tensor):
-                    info[key] = val.detach().cpu().numpy().copy()
+                    info[key] = val.detach().cpu().numpy().item()
 
             step += 1
             if step % self.steps_per_update == 0:
-                cpu_agent = copy.deepcopy(agent)
-                cpu_agent.set_device("cpu")
-                self.results_queue.put((info, copy.deepcopy(cpu_agent)))
-                del cpu_agent
-            self.results_queue.put((info, None))
+                # cpu_agent = copy.deepcopy(agent)
+                # cpu_agent.set_device("cpu")
+                # self.results_queue.put((info, cpu_agent))
+                # del cpu_agent
+                # self.results_queue.put((info, agent))
+                serialized_model = io.BytesIO()
+                agent.save(serialized_model)
+                self.results_queue.put((info, serialized_model.getvalue()))
+            else:
+                self.results_queue.put((info, None))

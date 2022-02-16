@@ -133,34 +133,37 @@ class ReplayBufferWorker(mp.Process):
                 continue
 
             # Fetch/perform any pending reanalyze updates
-            try:
-                episode_id, episode = self._reanalyze_update_queue.get_nowait()
+            if not self._reanalyze_update_queue.empty():
+                episode_id, episode = self._reanalyze_update_queue.get()
                 replay_buffer.episodes[episode_id] = episode
-            except queue.Empty:
-                pass
+                del episode
 
             # Queue next reanalyze update
-            try:
-                # testing, sampling strategy
-                p = torch.tensor([episode.timestamp for episode in replay_buffer.episodes], dtype=torch.double)
-                p -= p.min() - 0.1
-                p /= p.sum()
-                dist = torch.distributions.Categorical(p)
-                # episode_id = np.random.randint(0, len(replay_buffer.episodes))
-                episode_id = dist.sample().item()
-                self._reanalyze_queue.put_nowait((episode_id, replay_buffer.episodes[episode_id]))
-            except queue.Full:
-                pass
+            if not self._reanalyze_queue.full():
+                try:
+                    # testing, sampling strategy
+                    p = torch.tensor([episode.timestamp for episode in replay_buffer.episodes], dtype=torch.double)
+                    p -= p.min() - 0.1
+                    p /= p.sum()
+                    dist = torch.distributions.Categorical(p)
+                    # episode_id = np.random.randint(0, len(replay_buffer.episodes))
+                    episode_id = dist.sample().item()
+                    self._reanalyze_queue.put((episode_id, replay_buffer.episodes[episode_id]), timeout=1.0)
+                except queue.Full:
+                    pass
+
+                del p
+                del dist
 
             # Sample a batch and add it to the training queue
-            batch = replay_buffer.sample(self._training_config.rollout_length, self._training_config.batch_size)
-            for item in batch:
-                # item.share_memory_()
-                item.to("cpu")
-            try:
-                self._batch_queue.put(EpisodeBatch(*batch), timeout=1.0)
-            except queue.Full:
-                pass
+            if replay_buffer.size() >= self._training_config.min_replay_buffer_size and not self._batch_queue.full():
+                batch = replay_buffer.sample(self._training_config.rollout_length, self._training_config.batch_size)
+                for item in batch:
+                    item.to(self._training_config.train_device)
+                try:
+                    self._batch_queue.put(EpisodeBatch(*batch), timeout=1.0)
+                except queue.Full:
+                    pass
 
     def add_sample(self, trial_id, sample):
         self._sample_queue.put((trial_id, sample))

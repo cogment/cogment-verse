@@ -114,9 +114,10 @@ class MuZeroAgent(torch.nn.Module):
             weight_decay=self.params.weight_decay,
         )
 
+    @torch.no_grad()
     def act(self, observation):
         self.target_muzero.eval()
-        obs = observation.clone().detach().float().to(self._device)
+        obs = observation.detach().clone().float().to(self._device)
         action, policy, _q, value = self.target_muzero.act(
             obs,
             self.params.exploration_epsilon,
@@ -133,9 +134,10 @@ class MuZeroAgent(torch.nn.Module):
 
         return action, policy, value
 
+    @torch.no_grad()
     def reanalyze(self, observation):
         return self.target_muzero.reanalyze(
-            observation.clone().to(self._device),
+            observation.detach().clone().to(self._device),
             self.params.exploration_epsilon,
             self.params.exploration_alpha,
             self.params.discount_rate,
