@@ -17,7 +17,13 @@ import { CogMessage } from "@cogment/cogment-js-sdk/dist/cogment/types/CogMessag
 import { useCallback, useEffect, useState } from "react";
 export type SendAction<ActionT> = (action: ActionT) => void;
 
-type JoinTrial = (trialId: string) => void;
+type JoinTrial = (trialId: string) => false | Promise<void>;
+type JoinAnyTrial = () =>
+  | false
+  | {
+      trialToJoin: string;
+      joinPromise: false | Promise<void>;
+    };
 export type Event<ObservationT> = {
   observation?: ObservationT;
   message?: CogMessage;
@@ -26,28 +32,25 @@ export type Event<ObservationT> = {
   tickId: number;
 };
 
-export type TrialStateList = Map<string, number>;
+export type TrialStates = { [trialId: string]: number };
 
 export type Policy<ObservationT, ActionT> = (event: Event<ObservationT>) => ActionT;
 export type WatchTrials = () => void;
-export type UseActions = <ObservationT, ActionT extends MessageBase, ConfigT extends MessageBase>(
+export type UseActions = <ObservationT, ActionT extends MessageBase, ActorConfigT>(
   _cogSettings: CogSettings,
   actorName: string,
   actorClass: string,
   grpcURL: string
 ) => [
   event: Event<ObservationT>,
-  JoinTrial: JoinTrial | undefined,
+  joinAnyTrial: JoinAnyTrial,
   sendAction: SendAction<ActionT> | undefined,
-  reset: () => void,
   trialJoined: boolean,
-  watchTrials: WatchTrials | undefined,
-  trialStateList: TrialStateList | undefined,
-  actorConfig: ConfigT | undefined
+  actorConfig: ActorConfigT | undefined
 ];
 
-export const useActions: UseActions = <ObservationT, ActionT extends MessageBase, ConfigT extends MessageBase>(
-  _cogSettings: CogSettings,
+export const useActions: UseActions = <ObservationT, ActionT extends MessageBase, ActorConfigT>(
+  cogSettings: CogSettings,
   actorName: string,
   actorClass: string,
   grpcURL: string
@@ -62,20 +65,15 @@ export const useActions: UseActions = <ObservationT, ActionT extends MessageBase
     tickId: 0,
   });
 
-  const [trialStateList, setTrialStateList] = useState<TrialStateList>();
+  const [trialStates, setTrialStates] = useState<TrialStates>({});
   const [trialJoined, setTrialJoined] = useState(false);
 
   const [joinTrial, setJoinTrial] = useState<JoinTrial>();
   const [sendAction, setSendAction] = useState<SendAction<ActionT>>();
 
-  const [cogSettings, setCogSettings] = useState(_cogSettings);
   const [watchTrials, setWatchTrials] = useState<WatchTrials>();
 
-  const [actorConfig, setActorConfig] = useState<ConfigT>();
-
-  const reset = useCallback(() => {
-    setCogSettings({ ..._cogSettings });
-  }, [_cogSettings]);
+  const [actorConfig, setActorConfig] = useState<any>();
 
   //Set up the connection and register the actor only once, regardless of re-rendering
   useEffect(() => {
@@ -90,7 +88,7 @@ export const useActions: UseActions = <ObservationT, ActionT extends MessageBase
         actorSession.start();
 
         // todo: figure out why this cast is necessary (wrong template argument somewhere?)
-        setActorConfig(actorSession.config);
+        setActorConfig(actorSession.config as ActorConfigT);
 
         //Double arrow function here beause react will turn a single one into a lazy loaded function
         setSendAction(() => (action: ActionT) => {
@@ -125,31 +123,49 @@ export const useActions: UseActions = <ObservationT, ActionT extends MessageBase
     //Creating the trial controller must happen after actors are registered
     const trialController = context.getController(grpcURL);
 
-    setJoinTrial(() => async (trialId: string) => {
+    setJoinTrial(() => (trialId: string) => {
       try {
         setTrialJoined(true);
-        console.log("joining trial", trialId);
-        await context.joinTrial(trialId, grpcURL, actor.name);
-        console.log("completed trial", trialId);
+        const joinTrialPromise = context.joinTrial(trialId, grpcURL, actor.name).then(() => setTrialJoined(false));
+        return joinTrialPromise;
       } catch (error) {
         console.log(`failed to start trial: ${error}`);
+        return false;
       }
-      setTrialJoined(false);
     });
     setWatchTrials(() => async () => {
-      const trialStateList = new Map<string, number>();
       const watchTrialsGenerator = trialController.watchTrials();
       try {
         for await (const trialStateMsg of watchTrialsGenerator) {
           const { trialId, state } = trialStateMsg;
-          trialStateList.set(trialId, state);
-          setTrialStateList(trialStateList);
+          console.log(`trial ${trialId} is in state ${state}`);
+
+          setTrialStates((trialStates) => {
+            const newTrials = { ...trialStates, [trialId]: state };
+            console.log(newTrials);
+            return newTrials;
+          });
         }
+        console.error("watch trials returned early");
       } catch (error) {
         console.log(`failed to watch trials ${error}`);
       }
     });
   }, [cogSettings, actorName, actorClass, grpcURL]);
 
-  return [event, joinTrial, sendAction, reset, trialJoined, watchTrials, trialStateList, actorConfig];
+  useEffect(() => {
+    if (!watchTrials) return;
+    watchTrials();
+  }, [watchTrials]);
+
+  const joinAnyTrial = useCallback(() => {
+    if (!joinTrial || trialJoined) return false;
+    let trialToJoin = Object.keys(trialStates).find((trialId) => trialStates[trialId] === 2);
+    if (!trialToJoin) return false;
+    const joinPromise = joinTrial(trialToJoin);
+    console.log("joining trial", trialToJoin);
+    return { trialToJoin, joinPromise };
+  }, [joinTrial, trialJoined, trialStates]);
+
+  return [event, joinAnyTrial, sendAction, trialJoined, actorConfig];
 };
