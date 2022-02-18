@@ -61,7 +61,7 @@ def replay_buffer(env, policy):
             obs = next_obs
 
         episode.bootstrap_value(100, 0.99)
-        replay_buffer.add_episode(episode)
+        replay_buffer.update_episode(episode)
 
     return replay_buffer
 

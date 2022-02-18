@@ -713,21 +713,22 @@ lander_muzero:
       config: *default_env_config
     training: &lander_muzero_training_config
       <<: *default_muzero_training_config
-      rbins: 16
-      rmin: -100.0
-      rmax: 100.0
-      vbins: 16
-      vmin: -500.0
-      vmax: 500.0
+      rbins: 32
+      rmin: -50.0
+      rmax: 50.0
+      vbins: 32
+      vmin: -200.0
+      vmax: 200.0
       model_publication_interval: 1000
-      min_replay_buffer_size: 1000
+      min_replay_buffer_size: 200
       max_replay_buffer_size: 100000
-      batch_size: 128
-      temperature_decay_steps: 100000
-      min_temperature: 0.25
-      projector_dim: 32
-      hidden_dim: 128
-      projector_hidden_dim: 64
+      batch_size: 32
+      #temperature_decay_steps: 100000
+      min_temperature: 1.0
+      #projector_dim: 32
+      #hidden_dim: 128
+      #projector_hidden_dim: 64
+      weight_decay: 1.0e-5
 
 lander_muzero_gpu:
   implementation: muzero_mlp_training

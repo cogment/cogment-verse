@@ -261,7 +261,6 @@ class MuZeroAgentAdapter(AgentAdapter):
         with mp.Manager() as manager:
             max_prefetch_batch = 128
             sample_queue = manager.Queue()
-            priority_update_queue = manager.Queue()
             reanalyze_update_queue = manager.Queue(num_reanalyze_workers + 1)
             reanalyze_queue = manager.Queue(num_reanalyze_workers + 1)
 
@@ -275,7 +274,6 @@ class MuZeroAgentAdapter(AgentAdapter):
             train_worker = TrainWorker(agent, batch_queue, results_queue, config)
             replay_buffer = ReplayBufferWorker(
                 sample_queue,
-                priority_update_queue,
                 batch_queue,
                 reanalyze_queue,
                 reanalyze_update_queue,

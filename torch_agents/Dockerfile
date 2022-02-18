@@ -62,4 +62,4 @@ CMD [ "task", "start" ]
 
 
 ## testing
-RUN pip3 install --pre torch torchvision torchaudio -f https://download.pytorch.org/whl/nightly/cu113/torch_nightly.html
+# RUN pip3 install --pre torch torchvision torchaudio -f https://download.pytorch.org/whl/nightly/cu113/torch_nightly.html

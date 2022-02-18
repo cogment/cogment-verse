@@ -52,7 +52,6 @@ class ReplayBufferWorker(mp.Process):
     def __init__(
         self,
         sample_queue,
-        priority_update_queue,
         batch_queue,
         reanalyze_queue,
         reanalyze_update_queue,
@@ -62,7 +61,6 @@ class ReplayBufferWorker(mp.Process):
     ):
         super().__init__()
         self._sample_queue = sample_queue
-        self._priority_update_queue = priority_update_queue
         self._batch_queue = batch_queue
         self._reanalyze_queue = reanalyze_queue
         self._reanalyze_update_queue = reanalyze_update_queue
@@ -85,14 +83,6 @@ class ReplayBufferWorker(mp.Process):
         zero_value_probs = self.value_distribution.compute_target(torch.tensor(0.0)).cpu().detach()
 
         while True:
-            # Fetch & perform all pending priority updates
-            while not self._priority_update_queue.empty():
-                try:
-                    episodes, steps, priorities = self._priority_update_queue.get_nowait()
-                    replay_buffer.update_priorities(episodes, steps, priorities)
-                except queue.Empty:
-                    pass
-
             # Add any queued data to the replay buffer
             try:
                 trial_id, sample = self._sample_queue.get_nowait()
@@ -124,7 +114,7 @@ class ReplayBufferWorker(mp.Process):
                     episode_samples[trial_id].bootstrap_value(
                         self._training_config.bootstrap_steps, self._training_config.discount_rate
                     )
-                    replay_buffer.add_episode(episode_samples.pop(trial_id))
+                    replay_buffer.update_episode(episode_samples.pop(trial_id))
             except queue.Empty:
                 pass
 
@@ -135,14 +125,17 @@ class ReplayBufferWorker(mp.Process):
             # Fetch/perform any pending reanalyze updates
             if not self._reanalyze_update_queue.empty():
                 episode_id, episode = self._reanalyze_update_queue.get()
-                replay_buffer.episodes[episode_id] = episode
+                # torch multiprocessing issue: need to create a process-local copy
+                replay_buffer.update_episode(episode.clone(), key=episode_id)
                 del episode
 
             # Queue next reanalyze update
             if not self._reanalyze_queue.full():
                 try:
                     # testing, sampling strategy
-                    p = torch.tensor([episode.timestamp for episode in replay_buffer.episodes], dtype=torch.double)
+                    p = torch.tensor(
+                        [episode.timestamp for _, episode in replay_buffer.episodes.items()], dtype=torch.double
+                    )
                     p -= p.min() - 0.1
                     p /= p.sum()
                     dist = torch.distributions.Categorical(p)
@@ -167,9 +160,6 @@ class ReplayBufferWorker(mp.Process):
 
     def add_sample(self, trial_id, sample):
         self._sample_queue.put((trial_id, sample))
-
-    def update_priorities(self, episodes, steps, priorities):
-        self._priority_update_queue.put((episodes, steps, priorities))
 
     def size(self):
         return self._replay_buffer_size.value

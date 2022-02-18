@@ -12,10 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import copy
 import time
 import numpy as np
 import torch
-from collections import namedtuple
+from collections import namedtuple, OrderedDict
 
 
 def clone_to_cpu(x):
@@ -63,11 +64,9 @@ class Episode:
         self._policy = []
         self._value = []
         self.done = []
-        self._priority = []
         self._return = []
         self._reward_probs = []
         self._value_probs = []
-        self._range = None
         self._bootstrap = None
         self._min_priority = min_priority
         self._action_space = set()
@@ -75,18 +74,26 @@ class Episode:
         self.zero_value_probs = clone_to_cpu(zero_value_probs)
         self.timestamp = time.time()
 
+    def clone(self):
+        episode = Episode(
+            self.states[0], self._discount, self._id, self._min_priority, self.zero_reward_probs, self.zero_value_probs
+        )
+        for step in range(len(self)):
+            episode.add_step(
+                self.states[step + 1],
+                self.actions[step],
+                self._reward_probs[step],
+                self.rewards[step],
+                self.done[step],
+                self._policy[step],
+                self._value_probs[step],
+                self._value[step],
+            )
+            episode._bootstrap = copy.deepcopy(self._bootstrap)
+        return episode
+
     def __len__(self):
         return len(self.actions)
-
-    def total_priority(self):
-        return sum(self._priority)
-
-    def update_priority(self, step, priority):
-        if step < len(self._priority):
-            self._priority[step] = priority
-            self._p = np.array(self._priority, dtype=np.double)
-            self._p = self._p / self._p.sum()
-            self._p = self._p.tolist()
 
     @torch.no_grad()
     def bootstrap_value(self, steps, discount):
@@ -109,23 +116,14 @@ class Episode:
         self.done.append(int(done))
         self._reward_probs.append(clone_to_cpu(reward_probs))
         self._value_probs.append(clone_to_cpu(value_probs))
-        self._p = None
         self._action_space.add(int(action))
 
         if done:
             num_steps = len(self.actions)
             self._return = [0.0 for _ in range(num_steps)]
-            self._priority = [0.0 for _ in range(num_steps)]
             self._return[-1] = reward
             for i in reversed(range(num_steps - 1)):
                 self._return[i] = self.rewards[i] + self._discount * self._return[i + 1]
-                self._priority[i] = self._min_priority + abs(self._return[i] - self._value[i])
-                # testing
-                self._priority[i] = 1.0
-            self._p = np.array(self._priority, dtype=np.double)
-            self._p = self._p / self._p.sum()
-            self._p = self._p.tolist()
-            self._range = list(range(num_steps))
 
     def sample(self, k) -> EpisodeBatch:
         start = np.random.randint(0, len(self.actions))
@@ -163,7 +161,7 @@ class Episode:
             rewards[k - start] = self.rewards[k]
             target_policy[k - start] = ensure_tensor(self._policy[k])
             target_value[k - start] = self._bootstrap[k]
-            priority[k - start] = self._p[k]
+            priority[k - start] = 0.0  # self._p[k]
             importance_weight[k - start] = 0.0
             done[k - start] = self.done[k]
 
@@ -199,14 +197,12 @@ class Episode:
 
 class TrialReplayBuffer:
     def __init__(self, max_size, discount_rate, bootstrap_steps):
-        self.episodes = []
+        self.episodes = OrderedDict()
         self._max_size = max_size
         self._total_size = 0
-        self._priority = []
         self._discount_rate = discount_rate
         self._bootstrap_steps = bootstrap_steps
         self._p = None
-        self._range = None
         self._current_episode = None
         self._bootstrap_steps = bootstrap_steps
 
@@ -216,64 +212,34 @@ class TrialReplayBuffer:
     def num_episodes(self):
         return len(self.episodes)
 
-    def update_priority(self, episode, step, priority):
-        if episode < len(self.episodes):
-            self.episodes[episode].update_priority(step, priority)
-            self._priority[episode] = self.episodes[episode].total_priority()
-        self._p = np.array(self._priority, dtype=np.double)
-        self._p /= self._p.sum()
+    def update_episode(self, episode, key=None):
+        if key in self.episodes:
+            # decrease count since we will overwrite this episode
+            self._total_size -= len(self.episodes[key])
+        if key is None:
+            key = len(self.episodes)
 
-    def update_priorities(self, episodes, steps, priorities):
-        modified_episodes = set()
-        for episode, step, priority in zip(episodes, steps, priorities):
-            modified_episodes.add(episode)
-            self.episodes[episode].update_priority(step, priority)
-
-        for episode in modified_episodes:
-            self._priority[episode] = self.episodes[episode].total_priority()
-
-        self._p = np.array(self._priority, dtype=np.double)
-        self._p /= self._p.sum()
-
-    def add_episode(self, episode):
-        self.episodes.append(episode)
         self._total_size += len(episode)
-        self._priority.append(episode.total_priority())
+        self.episodes[key] = episode
 
         # discard old episodes if necessary
-        overflow = self._total_size - self._max_size
-        discarded = 0
-        idx = 0
-        while discarded < overflow:
-            discarded += len(self.episodes[idx])
-            idx += 1
+        keys_to_delete = []
+        for key, episode in self.episodes.items():
+            if self._total_size < self._max_size:
+                break
+            self._total_size -= len(episode)
+            keys_to_delete.append(key)
 
-        if discarded > 0:
-            self._total_size -= discarded
-            self.episodes = self.episodes[idx:]
-            self._priority = self._priority[idx:]
-
-        self._p = np.array(self._priority, dtype=np.double)
-        self._p /= self._p.sum()
-        self._range = list(range(len(self.episodes)))
-
-    def sample_old(self, rollout_length, batch_size) -> EpisodeBatch:
-        # idx = np.random.randint(0, len(self.episodes), batch_size)
-        idx = np.random.choice(self._range, batch_size, p=self._p)
-        probs = [self._p[i] for i in idx]
-        transitions = [self.episodes[i].sample(rollout_length) for i in idx]
-        batch = [torch.stack(item) for item in zip(*transitions)]
-        batch = EpisodeBatch(*batch)._asdict()
-        batch["priority"] = batch["priority"][:, 0] * torch.tensor(probs)
-        batch["importance_weight"] = 1 / (batch["priority"] + 1e-6) / self.size()
-
-        return EpisodeBatch(**batch)
+        for key in keys_to_delete:
+            del self.episodes[key]
 
     def sample(self, rollout_length, batch_size) -> EpisodeBatch:
-        prob = torch.tensor(list(map(len, self.episodes)), dtype=torch.double)
+        keys = list(self.episodes.keys())
+        lengths = [len(episode) for _, episode in self.episodes.items()]
+        prob = torch.tensor(lengths, dtype=torch.double)
         prob /= torch.sum(prob)
         idx = torch.distributions.Categorical(prob).sample((batch_size,))
-        transitions = [self.episodes[i].sample(rollout_length) for i in idx]
+        transitions = [self.episodes[keys[i]].sample(rollout_length) for i in idx]
         items = []
         for item in zip(*transitions):
             item = torch.stack(item)
