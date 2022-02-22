@@ -16,6 +16,7 @@ import asyncio
 from collections import namedtuple
 import ctypes
 import copy
+import io
 import time
 
 import logging
@@ -76,7 +77,7 @@ class ReanalyzeWorker(mp.Process):
         return self._reanalyzed_samples.value
 
     def update_agent(self, agent):
-        self._agent_queue.put(agent)
+        self._agent_queue.put(agent.serialize_to_buffer())
 
     def run(self):
         asyncio.run(self.main())
@@ -84,12 +85,12 @@ class ReanalyzeWorker(mp.Process):
     @torch.no_grad()
     async def main(self):
         torch.set_num_threads(self._max_threads)
-        agent = self._agent_queue.get()
+        agent = MuZeroAgent.load(io.BytesIO(self._agent_queue.get()), "cpu")
         agent.set_device(self._device)
 
         while True:
             try:
-                agent = self._agent_queue.get_nowait()
+                agent = MuZeroAgent.load(io.BytesIO(self._agent_queue.get()), "cpu")
                 agent.set_device(self._device)
             except queue.Empty:
                 pass

@@ -29,7 +29,8 @@ services:
       - COGMENT_TRIAL_DATASTORE_LOG_LEVEL=info
 
   model_registry:
-    image: cogment/model-registry:v0.5.0
+    # image: cogment/model-registry:v0.5.0
+    image: cogment/model-registry:local
     restart: on-failure
     environment:
       - COGMENT_MODEL_REGISTRY_PORT=${COGMENT_VERSE_MODEL_REGISTRY_PORT}

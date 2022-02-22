@@ -18,6 +18,7 @@ import logging
 import torch
 import numpy as np
 import copy
+import io
 import itertools
 
 from cogment_verse_torch_agents.muzero.networks import (
@@ -210,6 +211,11 @@ class MuZeroAgent(torch.nn.Module):
             },
             f,
         )
+
+    def serialize_to_buffer(self):
+        serialized_model = io.BytesIO()
+        self.save(serialized_model)
+        return serialized_model.getvalue()
 
     @staticmethod
     def load(f, device):

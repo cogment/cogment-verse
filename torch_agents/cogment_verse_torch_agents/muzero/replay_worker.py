@@ -133,15 +133,14 @@ class ReplayBufferWorker(mp.Process):
             if not self._reanalyze_queue.full():
                 try:
                     # testing, sampling strategy
-                    p = torch.tensor(
-                        [episode.timestamp for _, episode in replay_buffer.episodes.items()], dtype=torch.double
-                    )
+                    keys = list(replay_buffer.episodes.keys())
+                    p = torch.tensor([replay_buffer.episodes[key].timestamp for key in keys], dtype=torch.double)
                     p -= p.min() - 0.1
                     p /= p.sum()
                     dist = torch.distributions.Categorical(p)
                     # episode_id = np.random.randint(0, len(replay_buffer.episodes))
-                    episode_id = dist.sample().item()
-                    self._reanalyze_queue.put((episode_id, replay_buffer.episodes[episode_id]), timeout=1.0)
+                    key_id = dist.sample().item()
+                    self._reanalyze_queue.put((keys[key_id], replay_buffer.episodes[keys[key_id]]), timeout=1.0)
                 except queue.Full:
                     pass
 

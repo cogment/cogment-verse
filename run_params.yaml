@@ -743,6 +743,8 @@ lander_muzero_gpu:
       reanalyze_device: "cuda:1"
       actor_device: "cuda:0"
       reanalyze_workers: 1
+      min_replay_buffer_size: 1000
+      max_replay_buffer_size: 100000
 
 simple_bc_lander: &simple_bc_experiment
   implementation: simple_bc_training

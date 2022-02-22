@@ -213,14 +213,11 @@ class TrialReplayBuffer:
         return len(self.episodes)
 
     def update_episode(self, episode, key=None):
-        if key in self.episodes:
-            # decrease count since we will overwrite this episode
-            self._total_size -= len(self.episodes[key])
         if key is None:
             key = len(self.episodes)
 
-        self._total_size += len(episode)
         self.episodes[key] = episode
+        self._total_size = sum(map(len, self.episodes.values()))
 
         # discard old episodes if necessary
         keys_to_delete = []
