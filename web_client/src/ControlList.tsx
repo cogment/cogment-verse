@@ -28,6 +28,8 @@ export const ControlList = (props: any) => {
     );
   }
 
+  //console.log(keymap.action_map);
+
   return (
     <div>
       <table>
