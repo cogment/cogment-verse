@@ -23,7 +23,7 @@ def tensor_from_cog_state(cog_obs, dtype=torch.float, device=None):
     np_array = np.frombuffer(pb_array.data, dtype=pb_array.dtype).reshape(*pb_array.shape)
     return torch.tensor(np_array[:7], dtype=dtype, device=device)
 
-def tensor_from_cog_img(cog_obs, dtype=torch.float, device=None):
+def tensor_from_cog_grid(cog_obs, dtype=torch.float, device=None):
     pb_array = cog_obs.vectorized
     np_array = np.frombuffer(pb_array.data, dtype=pb_array.dtype).reshape(*pb_array.shape)
     return torch.tensor(np_array[7:-2], dtype=dtype, device=device)

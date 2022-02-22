@@ -17,7 +17,7 @@ from data_pb2 import SelfPlayTD3TrainingRunConfig
 from cogment_verse_torch_agents.selfplay_td3.selfplay_td3 import SelfPlayTD3
 from cogment_verse_torch_agents.selfplay_td3.selfplay_sample_producer import sample_producer
 from cogment_verse_torch_agents.selfplay_td3.selfplay_training_run import create_training_run
-from cogment_verse_torch_agents.selfplay_td3.wrapper import cog_action_from_tensor, tensor_from_cog_state
+from cogment_verse_torch_agents.selfplay_td3.wrapper import cog_action_from_tensor, tensor_from_cog_state, tensor_from_cog_goal, tensor_from_cog_grid
 
 from cogment_verse import AgentAdapter
 import cogment, torch
@@ -51,7 +51,6 @@ class SelfPlayAgentAdapter(AgentAdapter):
             model, version_info = await self.retrieve_version(
                 actor_session.config.model_id, actor_session.config.model_version
             )
-
             version_number = version_info["version_number"]
             log.debug(
                 f"[selfplay_td3 - {actor_session.name}] model {actor_session.config.model_id}@v{version_number} retrieved"
@@ -70,11 +69,13 @@ class SelfPlayAgentAdapter(AgentAdapter):
                 if event.observation and event.type == cogment.EventType.ACTIVE:
                     obs = event.observation.snapshot
                     # process observation
-                    # agent act when its turn
+                    # agent acts when its turn
                     if (obs.current_player == 1 and agent == "alice") or \
                         (obs.current_player == 0 and agent == "bob"):
-                            observation = tensor_from_cog_state(obs)
-                            action = model.act(observation)
+                            state = tensor_from_cog_state(obs)
+                            goal = tensor_from_cog_goal(obs)
+                            grid = tensor_from_cog_grid(obs)
+                            action = model.act(state, goal, grid)
                             cog_action = cog_action_from_tensor(action)
                             actor_session.do_action(cog_action)
 

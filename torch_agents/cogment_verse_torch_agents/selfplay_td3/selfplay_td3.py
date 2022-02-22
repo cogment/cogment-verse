@@ -12,12 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# from cogment_verse_tf_agents.reinforce.replaybuffer import Memory
+from cogment_verse_torch_agents.selfplay_td3.replaybuffer import Memory
 from cogment_verse_torch_agents.selfplay_td3.model import ActorNetwork, CriticNetwork
 import numpy as np
 # import tensorflow_probability as tfp
 import pickle as pkl
+import torch
 
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # pylint: disable=C0103
 # pylint: disable=W0613
@@ -42,14 +45,23 @@ class SelfPlayTD3:
         # rl replay buffer
         # if bob: bc replay buffer
 
-        self._actor_model = ActorNetwork(**self._params)
-        self._critic_model = CriticNetwork(**self._params)
+        self._actor_network = ActorNetwork(**self._params)
+        self._critic_network = CriticNetwork(**self._params)
 
+        self._replay_buffer = Memory(**self._params)
 
-
-    def act(self, observation):
+    def act(self, state, goal, grid):
 
         # if alice: filter observation
+        if self._params['name'] == "bob":
+            state = np.concatenate([state, goal])
+        grid = np.reshape(grid, self._params["grid_shape"])
+
+        state = torch.FloatTensor(state.reshape(1, -1)).to(device)
+        grid = torch.transpose(torch.FloatTensor(grid).to(device).unsqueeze_(0), 1, 3)
+        return self._actor_network(state, grid).cpu().data.numpy().flatten() + np.random.normal(0, self._params["SIGMA"], (1, 2))[0]
+
+
         # action self._model.model(observation)
         # return action
 
@@ -58,7 +70,7 @@ class SelfPlayTD3:
         # action = dist.sample()
         # return int(action.numpy()[0])
 
-        return np.random.sample(self._params["act_dim"])
+        # return np.random.sample(self._params["act_dim"])
 
     # def get_discounted_rewards(self, rewards):
     #     discounted_rewards = []
@@ -104,17 +116,15 @@ class SelfPlayTD3:
     #     self._replay_buffer.reset_replay_buffer()
     #     return {"loss": loss.numpy(), "rewards_mean": batch["rewards"].mean()}
     #
-    def consume_training_sample(self, sample):
-        pass
-        # add sample to rl replay buffer
-        # if bob: add alice samples to bc replay buffer
-    #     """
-    #     Consume a training sample, e.g. store in an internal replay buffer
-    #     """
-    #     self._replay_buffer.add(sample)
-    #
+    def consume_training_sample(self, samples):
+        """
+        Consume a training sample, e.g. store in an internal replay buffer
+        """
+        self._replay_buffer.add(samples)
+
     def save(self, f):
-        # pkl.dump({"model_params": self._model.get_weights()}, f, pkl.HIGHEST_PROTOCOL)
+        # pkl.dump({"model_params": self._actor_network}, f, pkl.HIGHEST_PROTOCOL)
+        pkl.dump(self._params['name'], f, pkl.HIGHEST_PROTOCOL)
         return self._params
 
     @staticmethod

@@ -598,11 +598,12 @@ selfplay_td3_driving: &default_selfplay_td3_params
       config:
         num_input: 7
         num_input_2: 2
-        num_input_3: 1
         num_action: 2
         action_scale: [ 0.5,0.6 ]
         action_bias: [ 1.0,0.0 ]
         max_action: 1
+        alice_grid_shape: [75, 75, 2]
+        bob_grid_shape: [75, 75, 3]
         actor_network:
           hidden_size: 64
         critic_network:
@@ -630,8 +631,10 @@ selfplay_td3_driving: &default_selfplay_td3_params
       epsilon_min: 0.0
       epsilon_steps: 1
       target_net_update_schedule: 2
+      SIGMA: 0.2
     replaybuffer:
       min_replay_buffer_size: 64
+      max_replay_buffer_size: 100000
       replay_buffer_config:
         observation_dtype: float32
         action_dtype: float32

@@ -47,11 +47,13 @@ def create_training_run(agent_adapter):
                 **{
                     "obs_dim1": config.actor.config.num_input,
                     "obs_dim2": config.actor.config.num_input_2,
-                    "obs_dim3": config.actor.config.num_input_2,
                     "act_dim": config.actor.config.num_action,
                     "action_scale": config.actor.config.action_scale,
                     "action_bias": config.actor.config.action_bias,
                     "max_action": config.actor.config.max_action,
+                    "grid_shape": config.actor.config.alice_grid_shape,
+                    "SIGMA": config.training.SIGMA,
+                    "buffer_size": config.replaybuffer.max_replay_buffer_size,
                 #     "max_replay_buffer_size": config.max_replay_buffer_size,
                 #     "lr": config.learning_rate,
                 #     "gamma": config.discount_factor,
@@ -70,11 +72,13 @@ def create_training_run(agent_adapter):
                 **{
                     "obs_dim1": config.actor.config.num_input,
                     "obs_dim2": config.actor.config.num_input_2,
-                    "obs_dim3": config.actor.config.num_input_2,
                     "act_dim": config.actor.config.num_action,
                     "action_scale": config.actor.config.action_scale,
                     "action_bias": config.actor.config.action_bias,
                     "max_action": config.actor.config.max_action,
+                    "grid_shape": config.actor.config.bob_grid_shape,
+                    "SIGMA": config.training.SIGMA,
+                    "buffer_size": config.replaybuffer.max_replay_buffer_size,
                 #     "max_replay_buffer_size": config.max_replay_buffer_size,
                 #     "lr": config.learning_rate,
                 #     "gamma": config.discount_factor,
@@ -141,10 +145,11 @@ def create_training_run(agent_adapter):
                 for _ in range(config.rollout.epoch_trial_count)
             ]
 
-            bob_samples = []
-            alice_samples = []
+            # Rollout trials
             for epoch in range(config.rollout.epoch_count):
-                # Rollout Alice trials
+                bob_samples = []
+                alice_samples = []
+
                 async for (
                     step_idx,
                     step_timestamp,
@@ -159,14 +164,14 @@ def create_training_run(agent_adapter):
                         bob_samples.append(sample)
                         # penalize/reward alice if bob does/doesn't achieve goal
                         if sample.player_done:
-                            if int(sample.reward) == 5:
-                                alice_samples[-1] = alice_samples[-1]._replace(reward=-2.0)
+                            if int(sample.reward) > 0:
+                                alice_samples[-1] = alice_samples[-1]._replace(reward=-5.0)
                             else:
                                 alice_samples[-1] = alice_samples[-1]._replace(reward=5.0)
                     else: # alice's sample
                         alice_samples.append(sample)
-                # alice.consume_samples(alice_samples)
-                # bob.consume_samples(bob_samples, alice_samples)
+                alice.consume_samples(alice_samples)
+                bob.consume_samples(bob_samples)
                 # Train Bob
                 # bob.learn()
                 # Train Alice

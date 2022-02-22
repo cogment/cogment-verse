@@ -95,7 +95,6 @@ class DrivingEnv(BaseEnv):
             self.goal = observation['car_qpos'][:2]
             if agent == "bob" and self.current_turn == self.total_num_turns:
                 self.trial_done = True
-
         return GymObservation(
             observation=np.concatenate((observation['car_qpos'],
                                         np.ndarray.flatten(observation['segmentation'].astype('int32')),

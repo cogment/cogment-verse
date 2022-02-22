@@ -44,11 +44,11 @@ class ActorNetwork(nn.Module):
         else:
             self.state_dim = params["obs_dim1"]
 
-        self.grid_channels = params["obs_dim3"]
+        self.grid_channels = params["grid_shape"][2]
 
         self.action_dim = params["act_dim"]
-        self.action_scale = np.array(params["action_scale"])
-        self.action_bias = np.array(params["action_bias"])
+        self.action_scale = torch.FloatTensor(params["action_scale"]).to(device)
+        self.action_bias = torch.FloatTensor(params["action_bias"]).to(device)
         self.max_action = params["max_action"]
 
         self.cnnl1 = nn.Sequential(
@@ -83,7 +83,7 @@ class ActorNetwork(nn.Module):
         a = F.relu(self.l3(a))
         a = self.l4(a)
 
-        return self.action_scale * torch.tanh(a) + self.action_add
+        return self.action_scale * torch.tanh(a) + self.action_bias
 
 class CriticNetwork(nn.Module):
     """Initialize a CriticNetwork.
@@ -107,7 +107,7 @@ class CriticNetwork(nn.Module):
         else:
             self.state_dim = params["obs_dim1"]
 
-        self.grid_channels = params["obs_dim3"]
+        self.grid_channels = params["grid_shape"][2]
         self.action_dim = params["act_dim"]
 
         # Q1 architecture

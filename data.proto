@@ -152,18 +152,19 @@ message SimpleA2CTrainingRunConfig {
 message SelfPlayActorConfig{
   uint32 num_input = 1;
   uint32 num_input_2 = 2;
-  uint32 num_input_3 = 3;
-  uint32 num_action = 4;
-  MLPNetworkConfig actor_network = 5;
-  MLPNetworkConfig critic_network = 6;
-  ModelArgs model_kwargs = 7;
-  string run_id = 8;
-  string model_id = 9;
-  int32 model_version = 10;
-  string environment_implementation = 11;
-  repeated float action_scale = 12;
-  repeated float action_bias = 13;
-  uint32 max_action = 14;
+  uint32 num_action = 3;
+  MLPNetworkConfig actor_network = 4;
+  MLPNetworkConfig critic_network = 5;
+  ModelArgs model_kwargs = 6;
+  string run_id = 7;
+  string model_id = 8;
+  int32 model_version = 9;
+  string environment_implementation = 10;
+  repeated float action_scale = 11;
+  repeated float action_bias = 12;
+  uint32 max_action = 13;
+  repeated uint32 alice_grid_shape = 14;
+  repeated uint32 bob_grid_shape = 15;
 }
 
 message SelfPlayRolloutConfig{
@@ -176,7 +177,8 @@ message SelfPlayRolloutConfig{
 
 message SelfPlayReplaybufferConfig{
   uint32 min_replay_buffer_size = 1;
-  ReplayBufferConfig replay_buffer_config = 2;
+  uint32 max_replay_buffer_size = 2;
+  ReplayBufferConfig replay_buffer_config = 3;
 }
 
 message SelfPlayTrainingConfig{
@@ -191,6 +193,7 @@ message SelfPlayTrainingConfig{
   float epsilon_steps = 9;
   float target_net_update_schedule = 10;
   uint32 batch_size = 11;
+  float SIGMA = 12;
 }
 
 message SelfPlayEnvironmentConfig {

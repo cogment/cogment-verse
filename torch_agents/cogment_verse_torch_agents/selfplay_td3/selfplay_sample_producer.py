@@ -15,7 +15,7 @@
 import cogment.api.common_pb2 as common_api
 from cogment_verse_torch_agents.selfplay_td3.wrapper import (
     tensor_from_cog_state,
-    tensor_from_cog_img,
+    tensor_from_cog_grid,
     tensor_from_cog_action,
     current_player_from_obs,
     tensor_from_cog_goal,
@@ -24,10 +24,10 @@ from cogment_verse_torch_agents.selfplay_td3.wrapper import (
 )
 from collections import namedtuple
 
-Sample = namedtuple("Sample", ["current_player", "state", "img",
+Sample = namedtuple("Sample", ["current_player", "state", "grid",
                                 "action", "reward", "next_state",
-                                "next_img", "player_done", "trial_done",
-                                "goal"])
+                                "next_grid", "player_done", "trial_done",
+                                "goal", "next_goal"])
 
 
 def get_samples(sample, next_sample):
@@ -39,15 +39,16 @@ def get_samples(sample, next_sample):
         return Sample(
             current_player=current_player,
             state=tensor_from_cog_state(sample.get_actor_observation(current_player)),
-            img=tensor_from_cog_img(sample.get_actor_observation(current_player)),
+            grid=tensor_from_cog_grid(sample.get_actor_observation(current_player)),
             action=tensor_from_cog_action(sample.get_actor_action(current_player)),
             reward=sample.get_actor_reward(current_player, default=0.0),
             next_state=tensor_from_cog_state(next_sample.get_actor_observation(current_player)),
-            next_img=tensor_from_cog_img(next_sample.get_actor_observation(current_player)),
+            next_grid=tensor_from_cog_grid(next_sample.get_actor_observation(current_player)),
             player_done=current_player_done_flag(next_sample.get_actor_observation(current_player)),
             trial_done=1 if next_sample.get_trial_state() == common_api.TrialState.ENDED else 0,  # trial end flag never set,
             goal=tensor_from_cog_goal(sample.get_actor_observation(current_player)),
-                          )
+            next_goal=tensor_from_cog_goal(sample.get_actor_observation(current_player)),
+        )
     return ()
 
 

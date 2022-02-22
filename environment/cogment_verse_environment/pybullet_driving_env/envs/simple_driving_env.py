@@ -22,14 +22,14 @@ class SimpleDrivingEnv(gym.Env):
             obs_space -- observation space for the environment
                 car_qpos     -- x and y co-ordinates of the car, orientation of the car (Euler angles/pi), x and y velocities of the car
                 segmentation -- A 3d occupancy map with Region occupied by the car along the first layer, that occupied by the obstacles along the second layer,
-                                and the goal position along the third layer (not present for the agent setting the goal)  
+                                and the goal position along the third layer (not present for the agent setting the goal)
         """
         obs_space = {
             'car_qpos':gym.spaces.box.Box(
                     low=np.array([-np.Inf, -np.Inf, -1, -1, -1, -np.Inf, -np.Inf], dtype=np.float32),
                     high=np.array([np.Inf,  np.Inf,  1,  1,  1,  np.Inf,  np.Inf], dtype=np.float32)
                 ),
-            
+
             'segmentation': gym.spaces.box.Box(
                     low = np.zeros((75,75,3)),
                     high = np.ones((75,75,3)),
@@ -38,7 +38,7 @@ class SimpleDrivingEnv(gym.Env):
 
         self.observation_space = gym.spaces.dict.Dict(obs_space)
         self.np_random, _ = gym.utils.seeding.np_random()
-        
+
         # use this if not rendering
         self.client = p.connect(p.DIRECT)
 
@@ -61,9 +61,9 @@ class SimpleDrivingEnv(gym.Env):
         self.pos_obstacles = None
         self.obstacle_dims = None
         self.initialize_obstacles()
-        
+
         self.obstacle_mass = 1000
-        
+
         # setting up the camera
         self.viewMatrix = p.computeViewMatrix(
                     cameraEyePosition=[0, 0, 25],
@@ -114,7 +114,7 @@ class SimpleDrivingEnv(gym.Env):
 
     def get_camera_image(self, sz):
         width, height, rgbImg, depthImg, segImg = p.getCameraImage(
-                                        width=sz, 
+                                        width=sz,
                                         height=sz,
                                         viewMatrix=self.viewMatrix,
                                         projectionMatrix=self.projectionMatrix)
@@ -166,7 +166,7 @@ class SimpleDrivingEnv(gym.Env):
         if self.steps > max_step_multiplier * self.max_steps:
             reward = -2
             self.done = True
-        
+
         ob = np.array(car_ob, dtype=np.float32)
         gridmap = self.get_observation_image(75, agent)
         return {'segmentation':gridmap, 'car_qpos':ob}, reward, self.done, dict()
@@ -231,7 +231,7 @@ class SimpleDrivingEnv(gym.Env):
             elif r == 1:
                 self.pos_obstacles[i+2][0:2] = mult*(np.random.uniform(0,5,2)+np.array([-10,5]))
             elif r == 2:
-                self.pos_obstacles[i+2][0:2] = mult*(np.random.uniform(0,5,2)+np.array([-10,0]))    
+                self.pos_obstacles[i+2][0:2] = mult*(np.random.uniform(0,5,2)+np.array([-10,0]))
 
     def close(self):
         p.disconnect(self.client)
