@@ -183,18 +183,15 @@ message SelfPlayReplaybufferConfig{
 
 message SelfPlayTrainingConfig{
   float discount_factor = 1;
-  float entropy_coef = 2;
-  float value_loss_coef = 3;
-  float action_loss_coef = 4;
+  float tau = 2;
+  float policy_noise = 3;
+  float noise_clip = 4;
   float learning_rate = 5;
-  uint32 lr_warmup_steps = 6;
-  uint32 demonstration_count = 7;
-  float epsilon_min = 8;
-  float epsilon_steps = 9;
-  float target_net_update_schedule = 10;
-  uint32 batch_size = 11;
-  float SIGMA = 12;
-  uint32 num_training_steps = 13;
+  uint32 policy_freq = 6;
+  uint32 batch_size = 7;
+  float SIGMA = 8;
+  uint32 num_training_steps = 9;
+  uint32 max_action = 10;
 }
 
 message SelfPlayEnvironmentConfig {

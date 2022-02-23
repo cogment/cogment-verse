@@ -615,24 +615,21 @@ selfplay_td3_driving: &default_selfplay_td3_params
           expl_noise: 0.1
     rollout:
       epoch_count: 1000
-      epoch_trial_count: 15
+      epoch_trial_count: 2
       max_parallel_trials: 1
       model_publication_interval: 1000
       number_turns_per_trial: 5
     training:
       batch_size: 64
-      discount_factor: 0.95
-      entropy_coef: 0.01
-      value_loss_coef: 0.5
-      action_loss_coef: 1.0
-      learning_rate: 0.01
-      lr_warmup_steps: 100
-      demonstration_count: 0 #100
-      epsilon_min: 0.0
-      epsilon_steps: 1
-      target_net_update_schedule: 2
+      discount_factor: 0.99
+      tau: 0.005
+      policy_noise: 0.1
+      noise_clip: 0.2
+      learning_rate: 3e-4
+      policy_freq: 2
       SIGMA: 0.2
       num_training_steps: 2
+      max_action: 1
     replaybuffer:
       min_replay_buffer_size: 64
       max_replay_buffer_size: 100000
