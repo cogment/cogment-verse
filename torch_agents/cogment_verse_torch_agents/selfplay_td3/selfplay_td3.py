@@ -93,8 +93,25 @@ class SelfPlayTD3:
     #     loss = -log_prob * Q
     #     return tf.reduce_mean(loss)
     #
-    def learn(self):
-        pass
+
+    def train(self, alice):
+        training_batch = self._replay_buffer.sample()
+        return 0, 0
+
+    def learn(self, alice=None):
+        mean_actor_loss, mean_critic_loss = 0, 0
+
+        if self._replay_buffer.get_size() >= self._params["batch_size"]:
+            actor_loss, critic_loss = 0, 0
+            for _ in range(self._params["num_training_steps"]):
+                actor_loss_, critic_loss_ = self.train(alice)
+                actor_loss += actor_loss_
+                critic_loss += critic_loss_
+
+            mean_actor_loss = actor_loss/self._params["num_training_steps"]
+            mean_critic_loss = critic_loss/self._params["num_training_steps"]
+
+
         # random bacth from rl replaybuffer
         # if bob: random batch from bc replaybuffer
 
@@ -114,9 +131,9 @@ class SelfPlayTD3:
     #
     #     self._optimizer.apply_gradients(zip(gradients, self._model.trainable_variables))
     #     self._replay_buffer.reset_replay_buffer()
-    #     return {"loss": loss.numpy(), "rewards_mean": batch["rewards"].mean()}
-    #
-    def consume_training_sample(self, samples):
+        return {"mean_actor_loss": mean_actor_loss, "mean_critic_loss": mean_critic_loss}
+
+    def consume_samples(self, samples):
         """
         Consume a training sample, e.g. store in an internal replay buffer
         """

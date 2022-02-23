@@ -53,7 +53,9 @@ def create_training_run(agent_adapter):
                     "max_action": config.actor.config.max_action,
                     "grid_shape": config.actor.config.alice_grid_shape,
                     "SIGMA": config.training.SIGMA,
-                    "buffer_size": config.replaybuffer.max_replay_buffer_size,
+                    "max_buffer_size": config.replaybuffer.max_replay_buffer_size,
+                    "batch_size": config.training.batch_size,
+                    "num_training_steps": config.training.num_training_steps,
                 #     "max_replay_buffer_size": config.max_replay_buffer_size,
                 #     "lr": config.learning_rate,
                 #     "gamma": config.discount_factor,
@@ -78,7 +80,9 @@ def create_training_run(agent_adapter):
                     "max_action": config.actor.config.max_action,
                     "grid_shape": config.actor.config.bob_grid_shape,
                     "SIGMA": config.training.SIGMA,
-                    "buffer_size": config.replaybuffer.max_replay_buffer_size,
+                    "max_buffer_size": config.replaybuffer.max_replay_buffer_size,
+                    "batch_size": config.training.batch_size,
+                    "num_training_steps": config.training.num_training_steps,
                 #     "max_replay_buffer_size": config.max_replay_buffer_size,
                 #     "lr": config.learning_rate,
                 #     "gamma": config.discount_factor,
@@ -172,10 +176,10 @@ def create_training_run(agent_adapter):
                         alice_samples.append(sample)
                 alice.consume_samples(alice_samples)
                 bob.consume_samples(bob_samples)
-                # Train Bob
-                # bob.learn()
-                # Train Alice
-                # alice.learn()x
+
+                # Train Alice and Bob
+                alice.learn()
+                bob.learn(alice)
 
                 alice_version_info = await agent_adapter.publish_version(alice_id, alice)
                 bob_version_info = await agent_adapter.publish_version(bob_id, bob)

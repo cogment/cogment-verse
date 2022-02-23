@@ -632,6 +632,7 @@ selfplay_td3_driving: &default_selfplay_td3_params
       epsilon_steps: 1
       target_net_update_schedule: 2
       SIGMA: 0.2
+      num_training_steps: 2
     replaybuffer:
       min_replay_buffer_size: 64
       max_replay_buffer_size: 100000

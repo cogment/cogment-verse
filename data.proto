@@ -194,6 +194,7 @@ message SelfPlayTrainingConfig{
   float target_net_update_schedule = 10;
   uint32 batch_size = 11;
   float SIGMA = 12;
+  uint32 num_training_steps = 13;
 }
 
 message SelfPlayEnvironmentConfig {
