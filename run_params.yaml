@@ -688,3 +688,19 @@ simple_bc_mountaincar:
       specs: *mountain_car_specs
       config:
         seed: 12
+
+simple_sb3_lander: &simple_sb3_lander
+  implementation: simple_sb3_training
+  config: &simple_sb3_config
+    class_name: data_pb2.SimpleSB3TrainingRunConfig
+    environment:
+      specs: *lander_specs
+      config:
+        seed: 12
+    training:
+      trial_count: 1000
+      max_parallel_trials: 1
+      learning_rate: 0.001
+      batch_size: 32
+
+

@@ -35,8 +35,9 @@ from data_pb2 import (
     EnvironmentSpecs,
     MLPNetworkConfig,
     TrialConfig,
+    SB3TrainingRunConfig,
 )
-from huggingface_sb3 import load_from_hub
+from huggingface_sb3 import load_from_hub, push_to_hub
 from stable_baselines3 import PPO
 from stable_baselines3.common.evaluation import evaluate_policy
 
@@ -189,32 +190,31 @@ class SimpleSB3AgentAdapter(AgentAdapter):
                 if len(observations) < config.training.batch_size:
                     continue
 
-                loss = await self.run_async(train_step)
 
                 # Publish the newly trained version every 100 steps
-                if step_idx % 100 == 0:
-                    version_info = await self.publish_version(model_id, model)
-
-                    xp_tracker.log_metrics(
-                        step_timestamp,
-                        step_idx,
-                        model_version_number=version_info["version_number"],
-                        loss=loss,
-                        total_samples=len(observations),
-                    )
+                # if step_idx % 100 == 0:
+                #     version_info = await self.publish_version(model_id, model)
+                #
+                #     xp_tracker.log_metrics(
+                #         step_timestamp,
+                #         step_idx,
+                #         model_version_number=version_info["version_number"],
+                #         loss=loss,
+                #         total_samples=len(observations),
+                #     )
                 ##########################################
 
         return {
-            "simple_bc_training": (
-                sample_producer_impl,
+            "simple_sb3_training": (
+                # sample_producer_impl,
                 run_impl,
-                SimpleBCTrainingRunConfig(
+                SB3TrainingRunConfig(
                     environment=EnvironmentParams(
                         specs=EnvironmentSpecs(implementation="gym/LunarLander-v2", num_input=8, num_action=4),
                         config=EnvironmentConfig(seed=12, framestack=1, render=True, render_width=256),
                     ),
                     ############ TUTORIAL STEP 4 ############
-                    training=SimpleBCTrainingConfig(
+                    training=SimpleSB3TrainingRunConfig(
                         trial_count=100,
                         max_parallel_trials=1,
                         discount_factor=0.95,

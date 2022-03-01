@@ -179,3 +179,9 @@ message PlayRunConfig {
   bool observer = 3;
   uint32 trial_count = 4;
 }
+
+message SB3TrainingRunConfig {
+  EnvironmentParams environment = 1;
+  ActorParams actors = 2;
+  uint32 trial_count = 3;
+}
