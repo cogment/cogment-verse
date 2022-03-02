@@ -16,55 +16,23 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import "./App.css";
 import { cogSettings } from "./CogSettings";
 import { ControlList } from "./ControlList";
+import { Countdown } from "./Countdown";
 import * as data_pb from "./data_pb";
 import { useActions } from "./hooks/useActions";
-import { get_keymap, useControls } from "./hooks/useControls";
+import { useKeys } from "./hooks/useKeys";
 import { useWindowSize } from "./hooks/useWindowSize";
 
-const setContains = <T extends unknown>(A: Set<T>, B: Set<T>): boolean => {
-  if (A.size > B.size) {
-    return false;
-  }
-
-  for (let a of A) {
-    if (!B.has(a)) {
-      return false;
-    }
-  }
-  return true;
-};
-
-const setEquals = <T extends unknown>(A: Set<T>, B: Set<T>): boolean => {
-  return setContains(A, B) && setContains(B, A);
-};
-
-const setIsEndOfArray = <T extends unknown>(A: Set<T>, B: T[]): boolean => {
-  for (let i = 1; i <= B.length; i++) {
-    const testSet = new Set(B.slice(i * -1));
-    if (setEquals(A, testSet)) return true;
-  }
-  return false;
-};
-
 function App() {
-  const [canStartTrial, setCanStartTrial] = useState(true);
   const [pixelData, setPixelData] = useState<Uint8Array | undefined>();
   const [trialStatus, setTrialStatus] = useState("no trial started");
-  const [watching, setWatching] = useState(false);
   const [currentTrialId, setCurrentTrialId] = useState<string | undefined>();
+  const [countdown, setCountdown] = useState(false);
 
-  const [pressedKeys, onKeyDown, onKeyUp] = useControls();
   const [environmentImplementation, setEnvironmentImplementation] = useState<string>();
 
-  const [lastTime, setLastTime] = useState<DOMHighResTimeStamp>(0);
-  const [emaFps, setEmaFps] = useState(0.0);
-  const [timer, setTimer] = useState<NodeJS.Timeout>();
-
   const imgRef = useRef<HTMLImageElement>(null);
-  const fpsEmaWeight = 1 / 60.0;
 
   // cogment stuff
-  const COGMENT_VERSE_GRPCWEBPROXY_PUBLIC_URL = process.env.REACT_APP_GRPCWEBPROXY_URL || "http://localhost:8081";
 
   function bufferToBase64(buf: Uint8Array) {
     var binstr = Array.prototype.map
@@ -75,9 +43,11 @@ function App() {
     return btoa(binstr);
   }
 
+  const grpcURL = process.env.REACT_APP_GRPCWEBPROXY_URL || "http://localhost:8081";
+
   type ObservationT = data_pb.cogment_verse.Observation;
   type ActionT = data_pb.cogment_verse.AgentAction;
-  type HumanConfigT = data_pb.cogment_verse.HumanConfig;
+  type ActorConfigT = data_pb.cogment_verse.HumanConfig;
 
   useEffect(() => {
     //const canvas = canvasRef.current;
@@ -90,7 +60,8 @@ function App() {
     }
 
     img.src = "data:image/png;base64," + bufferToBase64(pixelData);
-  });
+  }, [pixelData]);
+
 
   const [event, joinTrial, _sendAction, reset, trialJoined, watchTrials, trialStateList, AgentConfig] = useActions<
     ObservationT,
@@ -100,7 +71,7 @@ function App() {
     cogSettings,
     "web_actor", // actor name
     "teacher_agent", // actor class
-    COGMENT_VERSE_GRPCWEBPROXY_PUBLIC_URL
+    grpcURL
   );
 
   const actionLock = useRef(false);
@@ -128,6 +99,7 @@ function App() {
   }, [event, AgentConfig, trialJoined]);
 
   useEffect(() => {
+
     if (
       trialJoined &&
       AgentConfig &&
@@ -272,6 +244,7 @@ function App() {
     };
   });
 
+
   const windowSize = useWindowSize() as unknown as { width: number; height: number };
   const [expanded, setExpanded] = useState(false);
 
@@ -280,9 +253,18 @@ function App() {
       <div className="cabinet-container">
         <img height={windowSize.height * 2} src={`${process.env.PUBLIC_URL}/assets/Arcade.png`} alt="arcade machine" />
         <div id="screen" className="screen">
-          {pixelData && <img ref={imgRef} className="display" tabIndex={0} alt="current trial observation" />}
+          {countdown && <Countdown onAfterCountdown={joinTrial} />}
+          {pixelData && (
+            <img
+              style={{ filter: countdown ? "blur(3px)" : "none" }}
+              ref={imgRef}
+              className="display"
+              tabIndex={0}
+              alt="current trial observation"
+            />
+          )}
         </div>
-        <button onClick={triggerJoinTrial} className="pushable">
+        <button onClick={joinTrial} className="pushable">
           <span className="front">Join Trial</span>
         </button>
         <div className="status">
