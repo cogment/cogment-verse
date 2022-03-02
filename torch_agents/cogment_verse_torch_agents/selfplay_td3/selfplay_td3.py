@@ -15,9 +15,7 @@
 from cogment_verse_torch_agents.selfplay_td3.replaybuffer import Memory
 from cogment_verse_torch_agents.selfplay_td3.model import ActorNetwork, CriticNetwork
 import numpy as np
-# import tensorflow_probability as tfp
 import torch.nn.functional as F
-import pickle as pkl
 import torch
 import copy
 
@@ -57,7 +55,8 @@ class SelfPlayTD3:
         state = torch.FloatTensor(state.reshape(1, -1)).to(device)
         grid = torch.transpose(torch.FloatTensor(grid).to(device).unsqueeze_(0), 1, 3)
         # TBD refactor noise
-        return self._actor_network(state, grid).cpu().data.numpy().flatten() + np.random.normal(0, self._params["SIGMA"], (1, 2))[0]
+        action = self._actor_network(state, grid).cpu().data.numpy().flatten() + np.random.normal(0, self._params["SIGMA"], (1, 2))[0]
+        return action
 
     def prepare_data(self, data):
         if self._params["name"] == "bob":
@@ -120,7 +119,7 @@ class SelfPlayTD3:
         # Delayed policy updates
         if self.total_it % self._params["policy_freq"] == 0:
 
-            # Compute actor losse
+            # Compute actor loss
             actions = self._actor_network(state, grid)
             actor_loss = -self._critic_network.Q1(state, actions, grid).mean()
             if self._params["name"] == "bob":
@@ -145,7 +144,6 @@ class SelfPlayTD3:
 
     def learn(self, alice=None):
         mean_actor_loss, mean_critic_loss = 0, 0
-
         if self._replay_buffer.get_size() >= self._params["batch_size"]:
             actor_loss, critic_loss = 0, 0
             for _ in range(self._params["num_training_steps"]):
@@ -173,10 +171,10 @@ class SelfPlayTD3:
         (actor_network, critic_network) = torch.load(f)
         agent = SelfPlayTD3(**params)
 
-        agent._critic_network = copy.deepcopy(critic_network)
+        agent._critic_network = critic_network
         agent._critic_target_network = copy.deepcopy(agent._critic_network)
 
-        agent._actor_network = copy.deepcopy(actor_network)
+        agent._actor_network = actor_network
         agent._actor_target_network = copy.deepcopy(agent._actor_network)
 
         return agent

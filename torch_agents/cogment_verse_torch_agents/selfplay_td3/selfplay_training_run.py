@@ -12,8 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from google.protobuf.json_format import MessageToDict
-
 from data_pb2 import (
     ActorConfig,
     ActorParams,
@@ -22,7 +20,6 @@ from data_pb2 import (
     TrialConfig,
 )
 from cogment_verse import MlflowExperimentTracker
-
 import logging
 
 # pylint: disable=protected-access
@@ -35,12 +32,11 @@ def create_training_run(agent_adapter):
         config = run_session.config
 
         run_xp_tracker = MlflowExperimentTracker(run_session.params_name, run_id)
-
         try:
             # Initialize Alice Agent
             alice_id = f"{run_id}_alice"
             alice_version_number = 1
-            # TBD: hyperparameters, model kwargs
+
             # alice_kwargs = MessageToDict(config.model_kwargs, preserving_proto_field_name=True)
             alice, _ = await agent_adapter.create_and_publish_initial_version(
                 alice_id,
@@ -63,18 +59,14 @@ def create_training_run(agent_adapter):
                     "learning_rate": config.training.learning_rate,
                     "policy_freq": config.training.policy_freq,
                     "max_action": config.training.max_action,
-                #     "max_replay_buffer_size": config.max_replay_buffer_size,
-                #     "lr": config.learning_rate,
-                #     "gamma": config.discount_factor,
                 },
-                # **alice_kwargs,
             )
 
 
             # Initialize Bob Agent
             bob_id = f"{run_id}_bob"
             bob_version_number = 1
-            # TBD: hyperparameters, model kwargs
+
             # bob_kwargs = MessageToDict(config.model_kwargs, preserving_proto_field_name=True)
             bob, _ = await agent_adapter.create_and_publish_initial_version(
                 bob_id,
@@ -97,19 +89,8 @@ def create_training_run(agent_adapter):
                     "learning_rate": config.training.learning_rate,
                     "policy_freq": config.training.policy_freq,
                     "max_action": config.training.max_action,
-                #     "max_replay_buffer_size": config.max_replay_buffer_size,
-                #     "lr": config.learning_rate,
-                #     "gamma": config.discount_factor,
                 },
-
-                # **bob_kwargs,
             )
-
-            # run_xp_tracker.log_params(alice._params)
-            # run_xp_tracker.log_params(bob._params)
-
-            trials_completed = 0
-            all_trials_reward = 0
 
             # create Alice_config
             alice_configs = [
@@ -145,7 +126,7 @@ def create_training_run(agent_adapter):
                 )
             ]
 
-            trial_configs = [
+            train_trial_configs = [
                 TrialConfig(
                     run_id=run_id,
                     environment=EnvironmentParams(
@@ -161,14 +142,39 @@ def create_training_run(agent_adapter):
                     ),
                     actors=alice_configs + bob_configs,
                 )
-                for _ in range(config.rollout.epoch_trial_count)
+                for _ in range(config.rollout.epoch_train_trial_count)
             ]
+
+            test_trial_configs = [
+                TrialConfig(
+                    run_id=run_id,
+                    environment=EnvironmentParams(
+                        implementation=config.environment.implementation,
+                        config=EnvironmentConfig(
+                            player_count=config.environment.config.player_count,
+                            run_id=run_id,
+                            render=False,
+                            render_width=config.environment.config.render_width,
+                            flatten=config.environment.config.flatten,
+                            framestack=config.environment.config.framestack,
+                        ),
+                    ),
+                    actors=alice_configs + bob_configs,
+                )
+                for _ in range(config.rollout.epoch_test_trial_count)
+            ]
+
+            total_number_trials = 0
+            alice_rewards = []
+            bob_rewards = []
+            test_success = []
 
             # Rollout trials
             for epoch in range(config.rollout.epoch_count):
                 bob_samples = []
                 alice_samples = []
 
+                # Training
                 async for (
                     step_idx,
                     step_timestamp,
@@ -176,7 +182,7 @@ def create_training_run(agent_adapter):
                     _tick_id,
                     sample,
                 ) in run_session.start_trials_and_wait_for_termination(
-                    trial_configs=trial_configs,
+                    trial_configs=train_trial_configs,
                     max_parallel_trials=config.rollout.max_parallel_trials,
                 ):
                     if sample.current_player == 0: # bob's sample
@@ -184,20 +190,60 @@ def create_training_run(agent_adapter):
                         # penalize/reward alice if bob does/doesn't achieve goal
                         if sample.player_done:
                             if int(sample.reward) > 0:
-                                alice_samples[-1] = alice_samples[-1]._replace(reward=-5.0)
+                                alice_reward = -5.0
+                                bob_reward = 5.0
                             else:
-                                alice_samples[-1] = alice_samples[-1]._replace(reward=5.0)
+                                alice_reward = 5.0
+                                bob_reward = -2.0
+                            alice_samples[-1] = alice_samples[-1]._replace(reward=alice_reward)
+                            bob_samples[-1] = bob_samples[-1]._replace(reward=bob_reward)
+                            alice_rewards.append(alice_reward)
+                            bob_rewards.append(bob_reward)
+
+                            run_xp_tracker.log_metrics(
+                                step_timestamp,
+                                step_idx,
+                                alice_rewards=alice_reward,
+                                bob_rewards=bob_reward,
+                                difference_bob_alice_rewards=bob_reward-alice_reward,
+                            )
                     else: # alice's sample
                         alice_samples.append(sample)
+
                 alice.consume_samples(alice_samples)
                 bob.consume_samples(bob_samples)
+                total_number_trials += config.rollout.epoch_train_trial_count
 
                 # Train Alice and Bob
-                alice.learn()
-                bob.learn(alice)
+                alice_hyperparams = alice.learn()
+                bob_hyperparams = bob.learn(alice)
 
                 alice_version_info = await agent_adapter.publish_version(alice_id, alice)
                 bob_version_info = await agent_adapter.publish_version(bob_id, bob)
+
+                # Test bob's performance
+                if epoch % config.rollout.test_freq == 0:
+                    async for (
+                        step_idx,
+                        step_timestamp,
+                        _trial_id,
+                        _tick_id,
+                        sample,
+                    ) in run_session.start_trials_and_wait_for_termination(
+                        trial_configs=test_trial_configs,
+                        max_parallel_trials=config.rollout.max_parallel_trials,
+                    ):
+                        if sample.current_player == 0: # bob' sample
+                            if sample.player_done:
+                                test_success.append(0)
+                                if int(sample.reward) > 0:
+                                    test_success[-1] = 1
+
+                                run_xp_tracker.log_metrics(
+                                    step_timestamp,
+                                    step_idx,
+                                    bob_success=test_success[-1],
+                                )
 
             run_xp_tracker.terminate_success()
 

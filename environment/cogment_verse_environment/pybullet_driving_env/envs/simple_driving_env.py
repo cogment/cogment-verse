@@ -74,6 +74,7 @@ class SimpleDrivingEnv(gym.Env):
                     aspect=1.0,
                     nearVal=0.1,
                     farVal=100.5)
+        self.threshold = 1
 
 
     def initialize_obstacles(self):
@@ -154,13 +155,12 @@ class SimpleDrivingEnv(gym.Env):
 
         dist_to_goal = np.linalg.norm(car_ob[:2] - self.goal)
         self.prev_dist_to_goal = dist_to_goal
-        threshold = 1
 
         # Reward function
         # Modify the reward function according to your needs
         reward = 0
         self.steps += 1
-        if dist_to_goal < threshold:
+        if dist_to_goal < self.threshold:
             self.done = True
             reward = 5
         if self.steps > max_step_multiplier * self.max_steps:

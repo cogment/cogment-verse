@@ -169,10 +169,12 @@ message SelfPlayActorConfig{
 
 message SelfPlayRolloutConfig{
   uint32 epoch_count = 1;
-  uint32 epoch_trial_count = 2;
-  uint32 max_parallel_trials = 3;
-  uint32 model_publication_interval = 4;
-  uint32 number_turns_per_trial = 5;
+  uint32 epoch_train_trial_count = 2;
+  uint32 epoch_test_trial_count = 3;
+  uint32 max_parallel_trials = 4;
+  uint32 model_publication_interval = 5;
+  uint32 number_turns_per_trial = 6;
+  uint32 test_freq = 7;
 }
 
 message SelfPlayReplaybufferConfig{

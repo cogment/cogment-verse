@@ -57,9 +57,6 @@ class SelfPlayAgentAdapter(AgentAdapter):
             )
 
             agent = actor_session.config.model_id.split("_")[-1]
-            actor_map = {actor.actor_name: idx for idx, actor in enumerate(actor_session.get_active_actors())}
-            actor_index = actor_map[actor_session.name]
-
             total_reward = 0
 
             async for event in actor_session.event_loop():
