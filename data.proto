@@ -180,7 +180,7 @@ message PlayRunConfig {
   uint32 trial_count = 4;
 }
 
-message SB3TrainingRunConfig {
+message SimpleSB3TrainingRunConfig {
   EnvironmentParams environment = 1;
   ActorParams actors = 2;
   uint32 trial_count = 3;

@@ -35,7 +35,7 @@ from data_pb2 import (
     EnvironmentSpecs,
     MLPNetworkConfig,
     TrialConfig,
-    SB3TrainingRunConfig,
+    SimpleSB3TrainingRunConfig,
 )
 from huggingface_sb3 import load_from_hub, push_to_hub
 from stable_baselines3 import PPO
