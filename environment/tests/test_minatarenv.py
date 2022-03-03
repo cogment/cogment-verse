@@ -12,12 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from data_pb2 import EnvironmentConfig
-from tests.mock_environment_session import ActorInfo
-
-from cogment_verse_environment.utils.serialization_helpers import deserialize_np_array, deserialize_img
-
 import pytest
+from cogment_verse_environment.utils.serialization_helpers import deserialize_img, deserialize_np_array
+from data_pb2 import EnvironmentConfig
+from mock_environment_session import ActorInfo
 
 # pylint: disable=redefined-outer-name
 
@@ -28,7 +26,7 @@ async def breakout_session(create_mock_environment_session):
     session = create_mock_environment_session(
         impl_name="minatar/breakout",
         trial_id="test_minatar",
-        environment_config=EnvironmentConfig(player_count=1, framestack=4, flatten=True),
+        environment_config=EnvironmentConfig(framestack=4, flatten=True),
         actor_infos=[ActorInfo("player_1", "player")],
     )
 

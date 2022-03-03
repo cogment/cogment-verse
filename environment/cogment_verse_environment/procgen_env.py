@@ -12,15 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import numpy as np
 import cv2
-
-from cogment_verse_environment.base import GymObservation
-from cogment_verse_environment.gym_env import GymEnv
-from cogment_verse_environment.env_spec import EnvSpec
+import numpy as np
 
 # registers procgen environments
 import procgen  # pylint: disable=unused-import
+from cogment_verse_environment.base import GymObservation
+from cogment_verse_environment.env_spec import EnvSpec
+from cogment_verse_environment.gym_env import GymEnv
 
 ENV_NAMES = [
     "bigfish",
@@ -57,7 +56,6 @@ class ProcGenEnv(GymEnv):
         frame_skip=1,
         screen_size=64,
         flatten=True,
-        num_players=1,
         framestack=4,
         **_kwargs,
     ):
@@ -77,7 +75,7 @@ class ProcGenEnv(GymEnv):
         self._last_obs = []  # to be used for framestacking
         self._last_pixels = None
 
-        super().__init__(env_name=full_env_name, num_players=num_players, framestack=framestack)
+        super().__init__(env_name=full_env_name, num_players=1, framestack=framestack)
 
     def create_env_spec(self, env_name, **_kwargs):
         act_spaces = [self._env.action_space]

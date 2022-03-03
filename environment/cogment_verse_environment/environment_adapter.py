@@ -12,23 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from data_pb2 import Observation
-
-from cogment_verse_environment.gym_env import GymEnv
-from cogment_verse_environment.atari import AtariEnv
-from cogment_verse_environment.tetris import TetrisEnv
-from cogment_verse_environment.minatarenv import MinAtarEnv
-from cogment_verse_environment.zoo_env import PettingZooEnv
-from cogment_verse_environment.procgen_env import ProcGenEnv
-from cogment_verse_environment.pybullet_driving import DrivingEnv
-
-from cogment_verse_environment.utils.serialization_helpers import serialize_np_array, serialize_img
-
-import numpy as np
+import logging
 
 import cv2
-
-import logging
+import numpy as np
+from cogment_verse_environment.atari import AtariEnv
+from cogment_verse_environment.gym_env import GymEnv
+from cogment_verse_environment.minatarenv import MinAtarEnv
+from cogment_verse_environment.procgen_env import ProcGenEnv
+from cogment_verse_environment.tetris import TetrisEnv
+from cogment_verse_environment.utils.serialization_helpers import serialize_img, serialize_np_array
+from cogment_verse_environment.zoo_env import PettingZooEnv
+from cogment_verse_environment.pybullet_driving import DrivingEnv
+from data_pb2 import Observation
 
 ENVIRONMENT_CONSTRUCTORS = {
     "gym": GymEnv,
@@ -99,6 +95,7 @@ class EnvironmentAdapter:
             "gym/BipedalWalker-v3",
             "gym/CartPole-v0",
             "gym/LunarLander-v2",
+            "gym/MountainCar-v0",
             "gym/LunarLanderContinuous-v2",
             "gym/Pendulum-v0",
             "minatar/breakout",
@@ -134,7 +131,6 @@ class EnvironmentAdapter:
                 env = ENVIRONMENT_CONSTRUCTORS[env_type](
                     env_type=env_type,
                     env_name=env_name,
-                    num_players=env_config.player_count,
                     flatten=env_config.flatten,
                     framestack=env_config.framestack,
                 )
@@ -155,10 +151,9 @@ class EnvironmentAdapter:
                 # If there is an extra player, it must be the teacher/expert
                 # and it must be the _last_ player this is only supported form of HILL at the moment)
                 # todo: Make this more general and configurable (via TrialConfig)
-                num_players = env_config.player_count
-                if len(actors) != num_players:
-                    log.debug(len(actors), num_players)
-                    assert len(actors) == num_players + 1
+                if len(actors) != env.num_players:
+                    log.debug(len(actors), env.num_players)
+                    assert len(actors) == env.num_players + 1
                     for idx, actor in enumerate(actors):
                         log.debug(idx, actor.actor_name, actor.actor_class_name)
                     steerable = True
@@ -230,7 +225,7 @@ class EnvironmentAdapter:
                             log.debug(
                                 f"[Environment] ending trial [{environment_session.get_trial_id()}] @ tick #{environment_session.get_tick_id()}..."
                             )
-                            environment_session.end(observations=observations)
+                            environment_session.end(observations)
                         else:
                             environment_session.produce_observations(observations=observations)
 

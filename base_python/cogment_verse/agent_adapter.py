@@ -12,79 +12,120 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from cogment_verse.model_registry_client import get_model_registry_client
-
-from cogment_verse.utils import LRU
-
 import abc
 import logging
+
+from cogment_verse.utils import LRU, get_full_class_name
 
 log = logging.getLogger(__name__)
 
 
 class AgentAdapter(abc.ABC):
+    MODEL_USER_DATA_ADAPTER_CLASS_NAME_KEY = "_source_adapter_class_name"
+    VERSION_USER_DATA_MODEL_CLASS_NAME_KEY = "_model_class_name"
+
     def __init__(self):
         """
         Create an agent adapter
         """
         self._model_cache = LRU()
+        self._adapter_class_name = get_full_class_name(self)
 
-    @abc.abstractmethod
+        def default_get_model_registry_client():
+            raise RuntimeError("`get_model_registry_client` is not defined before a call to `register_implementations`")
+
+        self.get_model_registry_client = default_get_model_registry_client
+
     def _create(self, model_id, **kwargs):
         """
         Create and return a model instance
         Parameters:
             model_id (string): unique identifier for the model
-            kwargs: any number of key/values paramters
+            kwargs: any number of key/values paramters, forwarded from `create_and_publish_initial_version`
         Returns:
-            model: the created model
+            model, model_user_data: a tuple containing the created model and additional user_data
         """
+        raise NotImplementedError
 
-    @abc.abstractmethod
-    def _load(self, model_id, version_number, version_user_data, model_data_f):
+    def __create(self, model_id, **kwargs):
+        model, model_user_data = self._create(model_id, **kwargs)
+        model_user_data[self.MODEL_USER_DATA_ADAPTER_CLASS_NAME_KEY] = self._adapter_class_name
+        return model, model_user_data
+
+    def _load(self, model_id, version_number, model_user_data, version_user_data, model_data_f, **kwargs):
         """
         Load a serialized model instance and return it
         Args:
             model_id (string): unique identifier for the model
             version_number (int): version number of the data
+            model_user_data (dict[str, str]): model user data
             version_user_data (dict[str, str]): version user data
             model_data_f: file object that will be used to load the version model data
+            kwargs: any number of key/values parameters, forwarded from `retrieve_version`
         Returns:
             model: the loaded model
         """
+        raise NotImplementedError
 
-    @abc.abstractmethod
-    def _save(self, model, model_data_f):
+    def __load(self, model_id, version_number, model_user_data, version_user_data, model_data_f, **kwargs):
+        if (
+            self.MODEL_USER_DATA_ADAPTER_CLASS_NAME_KEY in model_user_data
+            and model_user_data[self.MODEL_USER_DATA_ADAPTER_CLASS_NAME_KEY] != self._adapter_class_name
+        ):
+            raise RuntimeError(
+                f"Unable to load model '{model_id}@v{version_number}' with adapter '{self._adapter_class_name}': it was initially created by adapter '{model_user_data[self.MODEL_USER_DATA_ADAPTER_CLASS_NAME_KEY]}'"
+            )
+
+        return self._load(model_id, version_number, model_user_data, version_user_data, model_data_f, **kwargs)
+
+    def _save(self, model, model_user_data, model_data_f, **kwargs):
         """
         Serialize and save a model
         Args:
-            model: a model, as returned by method of this class
+            model: a model, as returned by the _create method of this class
+            model_user_data (dict[str, str]): model user data
             model_data_f: file object that will be used to save the version model data
+            kwargs: any number of key/values parameters, forwarded from `create_and_publish_initial_version` or `publish_version`
         Returns:
-            version_user_data (dict[str, str]): version user data
+            version_user_data (dict[str, str]): additional version user data
         """
+        raise NotImplementedError
+
+    def __save(self, model, model_user_data, model_data_f, **kwargs):
+        if (
+            self.MODEL_USER_DATA_ADAPTER_CLASS_NAME_KEY in model_user_data
+            and model_user_data[self.MODEL_USER_DATA_ADAPTER_CLASS_NAME_KEY] != self._adapter_class_name
+        ):
+            raise RuntimeError(
+                f"Unable to save a new version of the model with adapter '{self._adapter_class_name}': it was initially created by adapter '{model_user_data[self.MODEL_USER_DATA_ADAPTER_CLASS_NAME_KEY]}'"
+            )
+
+        version_user_data = self._save(model, model_user_data, model_data_f, **kwargs)
+        version_user_data[self.VERSION_USER_DATA_MODEL_CLASS_NAME_KEY] = get_full_class_name(model)
+
+        return version_user_data
 
     async def create_and_publish_initial_version(self, model_id, **kwargs):
         """
         Create and publish to the model registry a model instance
         Parameters:
             model_id (string): unique identifier for the model
-            kwargs: any number of key/values paramters
+            kwargs: any number of key/values parameters, will be forwarded to `_create`
         Returns:
-            model, version_info: the created model and information for the initial published version
+            model, model_info, version_info: the created model, its information and the information for the initial published version
         """
 
         # Create the agent model locally
-        model = self._create(model_id, **kwargs)
+        model, model_user_data = self.__create(model_id, **kwargs)
 
         # Create it in the model registry
-        await get_model_registry_client().create_model(model_id)
+        await self.get_model_registry_client().create_model(model_id, model_user_data)
 
         # Publish the first version
-        version_info = await self.publish_version(model_id, model)
+        version_info = await self.publish_version(model_id, model, **kwargs)
         return model, version_info
 
-    async def publish_version(self, model_id, model, archived=False):
+    async def publish_version(self, model_id, model, archived=False, **kwargs):
         """
         Publish to the model registry a new version of a model
         Parameters:
@@ -94,21 +135,21 @@ class AgentAdapter(abc.ABC):
         Returns:
             version_info: information for the initial published version
         """
-        return await get_model_registry_client().publish_model_version(
-            model_id, model, self._save, cache=self._model_cache, archived=archived
+        return await self.get_model_registry_client().publish_version(
+            model_id=model_id, model=model, save_model=self.__save, archived=archived, **kwargs
         )
 
-    async def retrieve_version(self, model_id, version_number=-1):
+    async def retrieve_version(self, model_id, version_number=-1, **kwargs):
         """
         Publish to the model registry a new version of a model
         Parameters:
             model_id (string): Unique id of the model
             version_number (int - default is -1): The version number (-1 for the latest)
         Returns:
-            model, version_info: the retrieve model and information for the retrieved version
+            model, model_info, version_info: A tuple containing the model, the model info and the model version info
         """
-        return await get_model_registry_client().retrieve_model_version(
-            model_id, self._load, self._model_cache, version_number=version_number
+        return await self.get_model_registry_client().retrieve_version(
+            model_id=model_id, load_model=self.__load, version_number=version_number, **kwargs
         )
 
     @abc.abstractmethod
@@ -118,6 +159,7 @@ class AgentAdapter(abc.ABC):
         Returns:
             dict[impl_name: string, (actor_impl: Callable, actor_classes: []string)]: key/value definition for the available actor implementations.
         """
+        return {}
 
     @abc.abstractmethod
     def _create_run_implementations(self):
@@ -126,6 +168,7 @@ class AgentAdapter(abc.ABC):
         Returns:
             dict[impl_name: string, (sample_producer_impl: Callable, run_impl: Callable, default_run_config)]: key/value definition for the available run implementations.
         """
+        return {}
 
     def register_implementations(self, context):
         """
@@ -145,3 +188,5 @@ class AgentAdapter(abc.ABC):
                 impl_name=impl_name,
                 default_config=default_config,
             )
+
+        self.get_model_registry_client = context.get_model_registry_client

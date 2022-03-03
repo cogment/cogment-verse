@@ -14,13 +14,11 @@
 
 import importlib
 
-import numpy as np
-
 import gym
-
+import numpy as np
 from cogment_verse_environment.base import GymObservation
-from cogment_verse_environment.gym_env import GymEnv
 from cogment_verse_environment.env_spec import EnvSpec
+from cogment_verse_environment.gym_env import GymEnv
 
 
 def legal_moves_from_mask(action_mask):
@@ -32,7 +30,7 @@ class PettingZooEnv(GymEnv):
     Class for loading gym built-in environments.
     """
 
-    def __init__(self, *, env_name, num_players=1, flatten=True, **kwargs):
+    def __init__(self, *, env_name, flatten=True, **kwargs):
         """
         Args:
             env_name: Name of the environment (NOTE: make sure it is available at gym.envs.registry.all())
@@ -40,7 +38,8 @@ class PettingZooEnv(GymEnv):
         self._flatten = flatten
         self._cumulative_rewards = None
         self._rewards = None
-        super().__init__(env_name=env_name, num_players=num_players, **kwargs)
+        super().__init__(env_name=env_name, **kwargs)
+        self.num_players = len(self._env.action_spaces)
 
     def create_env(self, env_name, **_kwargs):
         """Function used to create the environment. Subclasses can override this method
@@ -87,8 +86,8 @@ class PettingZooEnv(GymEnv):
 
     def reset(self):
         self._env.reset()
-        self._rewards = np.full(self._num_players, 0.0)
-        self._cumulative_rewards = np.full(self._num_players, 0.0)
+        self._rewards = np.full(self.num_players, 0.0)
+        self._cumulative_rewards = np.full(self.num_players, 0.0)
         self._turn = 0
 
         obs, _, done, info = self._env.last()
@@ -117,7 +116,7 @@ class PettingZooEnv(GymEnv):
         self._rewards = cumulative_rewards - self._cumulative_rewards
         self._cumulative_rewards = cumulative_rewards
 
-        self._turn = (self._turn + 1) % self._num_players
+        self._turn = (self._turn + 1) % self.num_players
 
         return GymObservation(
             observation=self._prepare_obs(obs["observation"]),

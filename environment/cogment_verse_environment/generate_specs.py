@@ -13,8 +13,8 @@
 # limitations under the License.
 
 import gym
-import yaml
 import numpy as np
+import yaml
 from minatar.environment import Environment as MinatarEnvironment
 
 env_specs = {}

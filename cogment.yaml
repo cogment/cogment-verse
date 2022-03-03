@@ -3,12 +3,24 @@ import:
     - data.proto
 
 commands:
-  sync: >
-    cogment sync base_python environment torch_agents tf_agents client web_client &&
-    cp ./run_api.proto ./base_python/cogment_verse/api/ &&
-    cp ./run_api.proto ./client/
+  copy: >
+    cogment copy cogment.yaml data.proto base_python environment torch_agents tf_agents client web_client &&
+    cogment copy run_api.proto base_python/cogment_verse/api client
+  dev: >
+    docker-compose build base_python &&
+    docker-compose -f docker-compose.yaml -f docker-compose.dev.yaml up --build
+    grafana
+    prometheus
+    orchestrator
+    grpcwebproxy
+    model_registry
+    trial_datastore
+    environment
+    torch_agents
+    tf_agents
+    web_client
   build: docker-compose build base_python && docker-compose build
-  build_gpu: docker-compose -f docker-compose.yaml -f docker-compose.gpu-override.yaml build base_python && docker-compose -f docker-compose.yaml -f docker-compose.gpu-override.yaml build
+  build_gpu: docker-compose -f docker-compose.yaml -f docker-compose.gpu.yaml build base_python && docker-compose -f docker-compose.yaml -f docker-compose.gpu.yaml build
   start: >
     docker-compose up
     grafana
@@ -20,8 +32,9 @@ commands:
     environment
     torch_agents
     tf_agents
+    web_client
   start_gpu: >
-    docker-compose -f docker-compose.yaml -f docker-compose.gpu-override.yaml up
+    docker-compose -f docker-compose.yaml -f docker-compose.gpu.yaml up
     grafana
     prometheus
     orchestrator
@@ -31,11 +44,14 @@ commands:
     environment
     torch_agents
     tf_agents
+    web_client
   down: docker-compose down
-  list_runs: docker-compose run client list
-  start_run: docker-compose run client start $RUN_PARAMS
-  terminate_run: docker-compose run client terminate $RUN_ID
-  web_client: docker-compose up --abort-on-container-exit web_client
+  # Build and use the client
+  build_client: docker-compose build client
+  list_runs: docker-compose run --rm client list
+  start_run: docker-compose run --rm client start $RUN_PARAMS
+  terminate_run: docker-compose run --rm client terminate $RUN_ID
+
   test: cogment run test_torch_agents && cogment run test_environment
   test_torch_agents: >
     docker-compose build base_python &&
@@ -49,12 +65,6 @@ environment:
 
 trial:
   config_type: cogment_verse.TrialConfig
-  pre_hooks:
-    - grpc://${COGMENT_VERSE_PRETRIAL_HOOK_ENDPOINT}
-
-datalog:
-  type: grpc
-  url: ${COGMENT_VERSE_TRIAL_DATASTORE_ENDPOINT}
 
 # Static configuration
 actor_classes:
@@ -63,11 +73,11 @@ actor_classes:
       space: cogment_verse.AgentAction
     observation:
       space: cogment_verse.Observation
-    config_type: cogment_verse.ActorConfig
+    config_type: cogment_verse.AgentConfig
 
   - name: teacher_agent
     action:
       space: cogment_verse.AgentAction
     observation:
       space: cogment_verse.Observation
-    config_type: cogment_verse.ActorConfig
+    config_type: cogment_verse.HumanConfig

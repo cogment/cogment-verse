@@ -22,6 +22,7 @@ pytest = "^6.2.5"
 pytest-cov = "^3.0.0"
 coverage = "^6.0.2"
 taskipy = "^1.9.0"
+watchdog = {extras = ["watchmedo"], version = "^2.1.6"}
 
 [tool.taskipy.tasks]
 generate = "python -m cogment.generate"
@@ -30,6 +31,7 @@ unit_tests = "python -m pytest --cov=. --cov-report term-missing tests"
 coverage = "coverage html -i"
 test="task unit_tests && task coverage"
 start="python -m main"
+dev="../base_python/scripts/autoreload.sh"
 
 [tool.black]
 line-length = 120

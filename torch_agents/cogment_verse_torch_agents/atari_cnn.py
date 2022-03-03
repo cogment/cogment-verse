@@ -13,15 +13,14 @@
 # limitations under the License.
 
 import copy
+
 import numpy as np
-
 import torch
-from torch import nn
-
-from cogment_verse_torch_agents.third_party.hive.utils.schedule import get_schedule, PeriodicSchedule
-from cogment_verse_torch_agents.third_party.hive.utils.utils import get_optimizer_fn
-from cogment_verse_torch_agents.third_party.hive.dqn import legal_moves_adapter
 from cogment_verse_torch_agents.third_party.hive.agent import Agent
+from cogment_verse_torch_agents.third_party.hive.dqn import legal_moves_adapter
+from cogment_verse_torch_agents.third_party.hive.utils.schedule import PeriodicSchedule, get_schedule
+from cogment_verse_torch_agents.third_party.hive.utils.utils import get_optimizer_fn
+from torch import nn
 
 # TODO address those issues properly
 # pylint: disable=redefined-builtin,arguments-differ,arguments-renamed

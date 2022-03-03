@@ -1,16 +1,14 @@
 # This code has been modified from its original version found at
 # https://github.com/sfujim/TD3
 
-import os
 import copy
+import os
+
 import numpy as np
 import torch
 import torch.nn.functional as F
-
-from cogment_verse_torch_agents.third_party.hive.utils.schedule import (
-    PeriodicSchedule,
-)
 from cogment_verse_torch_agents.third_party.hive.agent import Agent
+from cogment_verse_torch_agents.third_party.hive.utils.schedule import PeriodicSchedule
 from cogment_verse_torch_agents.third_party.td3.td3_mlp import ActorMLP, CriticMLP
 
 

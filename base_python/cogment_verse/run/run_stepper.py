@@ -12,9 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from cogment_verse.utils import LRU
-
 import time
+
+from cogment_verse.utils import LRU
 
 
 def compute_full_tick_id(trial_id, tick_id):

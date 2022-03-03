@@ -12,18 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from google.protobuf.json_format import MessageToDict
-
-from data_pb2 import (
-    ActorConfig,
-    ActorParams,
-    EnvironmentConfig,
-    EnvironmentParams,
-    TrialConfig,
-)
-from cogment_verse import MlflowExperimentTracker
-
 import logging
+
+from cogment_verse import MlflowExperimentTracker
+from data_pb2 import AgentConfig, ActorParams, EnvironmentConfig, EnvironmentParams, TrialConfig
+from google.protobuf.json_format import MessageToDict
 
 # pylint: disable=protected-access
 log = logging.getLogger(__name__)
@@ -43,9 +36,8 @@ def create_training_run(agent_adapter):
             model_kwargs = MessageToDict(config.model_kwargs, preserving_proto_field_name=True)
             model, _ = await agent_adapter.create_and_publish_initial_version(
                 model_id,
+                environment_specs=config.environment.specs,
                 **{
-                    "obs_dim": config.num_input,
-                    "act_dim": config.num_action,
                     "max_replay_buffer_size": config.max_replay_buffer_size,
                     "lr": config.learning_rate,
                     "gamma": config.discount_factor,
@@ -64,16 +56,14 @@ def create_training_run(agent_adapter):
                     name=f"reinforce_player_{player_idx}",
                     actor_class="agent",
                     implementation=config.agent_implementation,
-                    config=ActorConfig(
+                    agent_config=AgentConfig(
+                        run_id=run_id,
                         model_id=model_id,
                         model_version=model_version_number,
-                        run_id=run_id,
-                        environment_implementation=config.environment_implementation,
-                        num_input=config.num_input,
-                        num_action=config.num_action,
+                        environment_specs=config.environment.specs,
                     ),
                 )
-                for player_idx in range(config.player_count)
+                for player_idx in range(config.environment.specs.num_players)
             ]
 
             # Create configs for trials
@@ -81,14 +71,13 @@ def create_training_run(agent_adapter):
                 TrialConfig(
                     run_id=run_id,
                     environment=EnvironmentParams(
-                        implementation=config.environment_implementation,
+                        specs=config.environment.specs,
                         config=EnvironmentConfig(
-                            player_count=config.player_count,
                             run_id=run_id,
                             render=False,
-                            render_width=config.render_width,
-                            flatten=config.flatten,
-                            framestack=config.framestack,
+                            render_width=config.environment.config.render_width,
+                            flatten=config.environment.config.flatten,
+                            framestack=config.environment.config.framestack,
                         ),
                     ),
                     actors=actor_configs,

@@ -15,3 +15,4 @@
 from cogment_verse.utils.lru import LRU
 from cogment_verse.utils.sizeof_fmt import sizeof_fmt
 from cogment_verse.utils.throttle import throttle
+from cogment_verse.utils.get_full_class_name import get_full_class_name

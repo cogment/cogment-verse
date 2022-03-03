@@ -1,0 +1,10 @@
+tricks:
+- watchdog.tricks.AutoRestartTrick:
+    patterns: ["*.py"]
+    ignore_directories: true
+    command: ["poetry", "run", "task", "start"]
+- watchdog.tricks.ShellCommandTrick:
+    patterns: ["*.yaml", "*.proto"]
+    ignore_directories: true
+    shell_command:  "poetry run task generate"
+    wait_for_process: true

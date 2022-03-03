@@ -1,5 +1,4 @@
 FROM prom/prometheus
-
 COPY --from=hairyhenderson/gomplate:stable /gomplate /bin/gomplate
 
 ADD prometheus.yml.tmpl /etc/prometheus/

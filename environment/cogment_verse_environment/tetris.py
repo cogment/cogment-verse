@@ -12,13 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import numpy as np
-
 import gym_tetris
+import numpy as np
+from cogment_verse_environment.atari import AtariEnv, GymEnv
 from gym_tetris.actions import MOVEMENT
 from nes_py.wrappers import JoypadSpace
-
-from cogment_verse_environment.atari import AtariEnv, GymEnv
 
 
 class TetrisEnv(AtariEnv):
@@ -35,7 +33,6 @@ class TetrisEnv(AtariEnv):
         screen_size=84,
         _sticky_actions=True,
         flatten=True,
-        num_players=1,
         framestack=4,
         **_kwargs,
     ):  # pylint: disable=super-init-not-called,non-parent-init-called
@@ -54,7 +51,7 @@ class TetrisEnv(AtariEnv):
         self._framestack = framestack
         self._flatten = flatten
 
-        GymEnv.__init__(self, env_name=env_name, num_players=num_players, framestack=framestack)
+        GymEnv.__init__(self, env_name=env_name, num_players=1, framestack=framestack)
 
     def create_env(self, env_name, **_kwargs):
         """Function used to create the environment. Subclasses can override this method

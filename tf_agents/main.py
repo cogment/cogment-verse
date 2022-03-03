@@ -12,18 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import cog_settings
-
-from cogment_verse_tf_agents.reinforce.reinforce_agent_adapter import ReinforceAgentAdapter
-
-from dotenv import load_dotenv
-import cogment
-from cogment_verse import RunContext
-
 import asyncio
 import json
 import logging
 import os
+import sys
+
+import cog_settings
+import cogment
+from cogment_verse import RunContext
+from cogment_verse_tf_agents.reinforce.reinforce_agent_adapter import ReinforceAgentAdapter
+from dotenv import load_dotenv
 
 load_dotenv()
 
@@ -31,6 +30,7 @@ PORT = int(os.getenv("COGMENT_VERSE_TF_AGENTS_PORT", "9000"))
 PROMETHEUS_PORT = int(os.getenv("COGMENT_VERSE_TF_AGENTS_PROMETHEUS_PORT", "8000"))
 
 TRIAL_DATASTORE_ENDPOINT = os.getenv("COGMENT_VERSE_TRIAL_DATASTORE_ENDPOINT")
+MODEL_REGISTRY_ENDPOINT = os.getenv("COGMENT_VERSE_MODEL_REGISTRY_ENDPOINT")
 ORCHESTRATOR_ENDPOINT = os.getenv("COGMENT_VERSE_ORCHESTRATOR_ENDPOINT")
 ACTOR_ENDPOINTS = json.loads(os.getenv("COGMENT_VERSE_ACTOR_ENDPOINTS"))
 ENVIRONMENT_ENDPOINTS = json.loads(os.getenv("COGMENT_VERSE_ENVIRONMENT_ENDPOINTS"))
@@ -47,6 +47,7 @@ async def main():
         services_endpoints={
             "orchestrator": ORCHESTRATOR_ENDPOINT,
             "trial_datastore": TRIAL_DATASTORE_ENDPOINT,
+            "model_registry": MODEL_REGISTRY_ENDPOINT,
             **ACTOR_ENDPOINTS,
             **ENVIRONMENT_ENDPOINTS,
         },
@@ -61,4 +62,9 @@ async def main():
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    loop = asyncio.get_event_loop()
+    try:
+        loop.run_until_complete(main())
+    except KeyboardInterrupt:
+        log.error("process interrupted")
+        sys.exit(-1)

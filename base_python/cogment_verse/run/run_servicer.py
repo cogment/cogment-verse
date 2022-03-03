@@ -12,20 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from cogment_verse.api.run_api_pb2_grpc import RunServicer as AbstractRunServicer
-from cogment_verse.api.run_api_pb2 import (
-    RunInfo,
-    RunStatus,
-    StartRunReply,
-    ListRunsReply,
-    TerminateRunReply,
-)
-from cogment_verse.run.run_session import RunSessionStatus
-
-from google.protobuf.timestamp_pb2 import Timestamp
-from google.protobuf.json_format import MessageToDict
-
 import logging
+
+from cogment_verse.api.run_api_pb2 import ListRunsReply, RunInfo, RunStatus, StartRunReply, TerminateRunReply
+from cogment_verse.api.run_api_pb2_grpc import RunServicer as AbstractRunServicer
+from cogment_verse.run.run_session import RunSessionStatus
+from google.protobuf.json_format import MessageToDict
+from google.protobuf.timestamp_pb2 import Timestamp
 
 # pylint: disable=invalid-overridden-method, invalid-name
 

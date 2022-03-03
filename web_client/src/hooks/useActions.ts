@@ -12,49 +12,50 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import * as cogment from "@cogment/cogment-js-sdk";
-import { CogSettings } from "@cogment/cogment-js-sdk";
+import { CogSettings, Context, MessageBase, Reward } from "@cogment/cogment-js-sdk";
 import { CogMessage } from "@cogment/cogment-js-sdk/dist/cogment/types/CogMessage";
-import { Message } from "google-protobuf";
 import { useCallback, useEffect, useState } from "react";
 export type SendAction<ActionT> = (action: ActionT) => void;
 
-type JoinTrial = (trialId: string) => void;
-export type Event<ObservationT, RewardT> = {
+type JoinTrial = (trialId: string) => false | Promise<void>;
+type JoinAnyTrial = () =>
+  | false
+  | {
+      trialToJoin: string;
+      joinPromise: false | Promise<void>;
+    };
+export type Event<ObservationT> = {
   observation?: ObservationT;
   message?: CogMessage;
-  reward?: RewardT;
+  reward?: Reward;
   last: boolean;
   tickId: number;
 };
 
-export type TrialStateList = Map<string, number>;
+export type TrialStates = { [trialId: string]: number };
 
-export type Policy<ObservationT, ActionT, RewardT> = (event: Event<ObservationT, RewardT>) => ActionT;
+export type Policy<ObservationT, ActionT> = (event: Event<ObservationT>) => ActionT;
 export type WatchTrials = () => void;
-export type UseActions = <ObservationT, ActionT extends Message, RewardT extends Message, ActorConfigT>(
+export type UseActions = <ObservationT, ActionT extends MessageBase, ActorConfigT>(
   _cogSettings: CogSettings,
   actorName: string,
   actorClass: string,
   grpcURL: string
 ) => [
-  event: Event<ObservationT, RewardT>,
-  JoinTrial: JoinTrial | undefined,
+  event: Event<ObservationT>,
+  joinAnyTrial: JoinAnyTrial,
   sendAction: SendAction<ActionT> | undefined,
-  reset: () => void,
   trialJoined: boolean,
-  watchTrials: WatchTrials | undefined,
-  trialStateList: TrialStateList | undefined,
   actorConfig: ActorConfigT | undefined
 ];
 
-export const useActions: UseActions = <ObservationT, ActionT extends Message, RewardT extends Message, ActorConfigT>(
-  _cogSettings: CogSettings,
+export const useActions: UseActions = <ObservationT, ActionT extends MessageBase, ActorConfigT>(
+  cogSettings: CogSettings,
   actorName: string,
   actorClass: string,
   grpcURL: string
 ) => {
-  type EventT = Event<ObservationT, RewardT>;
+  type EventT = Event<ObservationT>;
 
   const [event, setEvent] = useState<EventT>({
     observation: undefined,
@@ -64,91 +65,107 @@ export const useActions: UseActions = <ObservationT, ActionT extends Message, Re
     tickId: 0,
   });
 
-  const [trialStateList, setTrialStateList] = useState<TrialStateList>();
+  const [trialStates, setTrialStates] = useState<TrialStates>({});
   const [trialJoined, setTrialJoined] = useState(false);
 
   const [joinTrial, setJoinTrial] = useState<JoinTrial>();
   const [sendAction, setSendAction] = useState<SendAction<ActionT>>();
 
-  const [cogSettings, setCogSettings] = useState(_cogSettings);
   const [watchTrials, setWatchTrials] = useState<WatchTrials>();
 
-  const [actorConfig, setActorConfig] = useState<ActorConfigT>();
-
-  const reset = useCallback(() => {
-    setCogSettings({ ..._cogSettings });
-  }, [_cogSettings]);
+  const [actorConfig, setActorConfig] = useState<any>();
 
   //Set up the connection and register the actor only once, regardless of re-rendering
   useEffect(() => {
-    const service = cogment.createService({
-      cogSettings,
-      grpcURL,
-    });
-
     const actor = { name: actorName, actorClass: actorClass };
 
-    service.registerActor(actor, async (actorSession) => {
-      let tickId = 0;
+    const context = new Context<ActionT, ObservationT>(cogSettings, actorName);
 
-      actorSession.start();
+    context.registerActor(
+      async (actorSession) => {
+        let tickId = 0;
 
-      // todo: figure out why this cast is necessary (wrong template argument somewhere?)
-      setActorConfig(actorSession.actorConfig as ActorConfigT);
+        actorSession.start();
 
-      //Double arrow function here beause react will turn a single one into a lazy loaded function
-      setSendAction(() => (action: ActionT) => {
-        actorSession.sendAction(action);
-      });
+        // todo: figure out why this cast is necessary (wrong template argument somewhere?)
+        setActorConfig(actorSession.config as ActorConfigT);
 
-      for await (const { observation, message, reward, type } of actorSession.eventLoop()) {
-        //Parse the observation into a regular JS object
-        //TODO: this will eventually be part of the API
+        //Double arrow function here beause react will turn a single one into a lazy loaded function
+        setSendAction(() => (action: ActionT) => {
+          actorSession.doAction(action);
+        });
 
-        let observationOBJ = observation && (observation.toObject() as ObservationT | undefined);
+        for await (const { observation, messages, rewards, type } of actorSession.eventLoop()) {
+          //Parse the observation into a regular JS object
+          //TODO: this will eventually be part of the API
 
-        let next_event = {
-          observation: observationOBJ,
-          message,
-          reward: reward as RewardT,
-          last: type === 3,
-          tickId: tickId++,
-        };
+          let observationOBJ = observation && (observation as ObservationT | undefined);
 
-        setEvent(next_event);
+          let next_event = {
+            observation: observationOBJ,
+            message: messages[0],
+            reward: rewards[0],
+            last: type === 3,
+            tickId: tickId++,
+          };
 
-        if (next_event.last) {
-          break;
+          setEvent(next_event);
+
+          if (next_event.last) {
+            break;
+          }
         }
-      }
-    });
+      },
+      actor.name,
+      actor.actorClass
+    );
 
     //Creating the trial controller must happen after actors are registered
-    const trialController = service.createTrialController();
+    const trialController = context.getController(grpcURL);
 
-    setJoinTrial(() => async (trialId: string) => {
+    setJoinTrial(() => (trialId: string) => {
       try {
         setTrialJoined(true);
-        await trialController.joinTrial(trialId, actor);
-        console.log("completed trial", trialId);
+        const joinTrialPromise = context.joinTrial(trialId, grpcURL, actor.name).then(() => setTrialJoined(false));
+        return joinTrialPromise;
       } catch (error) {
         console.log(`failed to start trial: ${error}`);
+        return false;
       }
-      setTrialJoined(false);
     });
     setWatchTrials(() => async () => {
-      const trialStateList = new Map<string, number>();
+      const watchTrialsGenerator = trialController.watchTrials();
       try {
-        for await (const trialStateMsg of trialController.watchTrials()) {
-          const { trialId, state } = trialStateMsg.toObject();
-          trialStateList.set(trialId, state);
-          setTrialStateList(trialStateList);
+        for await (const trialStateMsg of watchTrialsGenerator) {
+          const { trialId, state } = trialStateMsg;
+          console.log(`trial ${trialId} is in state ${state}`);
+
+          setTrialStates((trialStates) => {
+            const newTrials = { ...trialStates, [trialId]: state };
+            console.log(newTrials);
+            return newTrials;
+          });
         }
+        console.error("watch trials returned early");
       } catch (error) {
         console.log(`failed to watch trials ${error}`);
       }
     });
   }, [cogSettings, actorName, actorClass, grpcURL]);
 
-  return [event, joinTrial, sendAction, reset, trialJoined, watchTrials, trialStateList, actorConfig];
+  useEffect(() => {
+    if (!watchTrials) return;
+    watchTrials();
+  }, [watchTrials]);
+
+  const joinAnyTrial = useCallback(() => {
+    if (!joinTrial || trialJoined) return false;
+    let trialToJoin = Object.keys(trialStates).find((trialId) => trialStates[trialId] === 2);
+    if (!trialToJoin) return false;
+    const joinPromise = joinTrial(trialToJoin);
+    console.log("joining trial", trialToJoin);
+    return { trialToJoin, joinPromise };
+  }, [joinTrial, trialJoined, trialStates]);
+
+  return [event, joinAnyTrial, sendAction, trialJoined, actorConfig];
 };

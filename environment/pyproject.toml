@@ -8,17 +8,18 @@ license = "Apache-2.0"
 [tool.poetry.dependencies]
 python = ">=3.7,<3.10"
 atari-py = "0.2.9"
-cogment = {extras = ["generate"], version = "^1.3.1"}
+cogment = {extras = ["generate"], version = "^2.0.2"}
+cogment-verse = {path = "../base_python", develop = true}
+filelock = "^3.4.0"
 gym = {version = "0.18.0", extras = ["atari", "box2d"]}
 gym-tetris = "^3.0.2"
 minatar = {git = "https://github.com/kenjyoung/MinAtar.git", rev = "f1387b4123ea5a0203c81b2d3ad9572a8cc578cf"}
 PettingZoo = "^1.11.1"
-pyglet = "^1.4"
+procgen = "^0.10.4"
 pygame = "^2.0.2"
+pyglet = "^1.4"
 python-dotenv = "^0.19.1"
 PyYAML = "^5.4.1"
-filelock = "^3.4.0"
-procgen = "^0.10.4"
 
 [tool.poetry.dev-dependencies]
 taskipy = "^1.9.0"
@@ -27,13 +28,15 @@ pytest-cov = "^3.0.0"
 coverage = "^6.0.2"
 pytest-asyncio = "^0.16.0"
 pybullet = "3.2.1"
+watchdog = {extras = ["watchmedo"], version = "^2.1.6"}
+
 
 [tool.taskipy.tasks]
-retrieve_roms = "mkdir -p .atari_roms && curl -s http://www.atarimania.com/roms/Roms.rar -o .atari_roms/roms.rar && unrar x -r .atari_roms/roms.rar .atari_roms/"
-import_roms = "python -m atari_py.import_roms .atari_roms"
-generate_protos = "python -m cogment.generate"
-build = "task import_roms && task generate_protos"
+import_atari_roms = "mkdir -p .atari_roms && curl -s http://www.atarimania.com/roms/Roms.rar -o .atari_roms/roms.rar && unrar x -r .atari_roms/roms.rar .atari_roms/ && python -m atari_py.import_roms .atari_roms"
+generate = "python -m cogment.generate"
+build = "task generate"
 start = "python -m main"
+dev="../base_python/scripts/autoreload.sh"
 unit_tests = "python -m pytest --cov=. --cov-report term-missing tests"
 coverage = "coverage html -i"
 test="task unit_tests && task coverage"

@@ -1,0 +1,35 @@
+version: "3.7"
+
+services:
+  # development version of the environment
+  environment:
+    build:
+      context: environment
+      target: dev
+    volumes:
+      - ./environment:/cogment-verse/environment:cached
+
+  # development version of the torch agents
+  torch_agents: &torch_agents
+    build:
+      context: torch_agents
+      target: dev
+    volumes:
+      - ./torch_agents:/cogment-verse/torch_agents:cached
+
+  # development version of the tensorflow agents
+  tf_agents: &tf_agents
+    build:
+      context: tf_agents
+      target: dev
+    volumes:
+      - ./tf_agents:/cogment-verse/tf_agents:cached
+
+  # development version of the web client
+  web_client:
+    build:
+      context: web_client
+      target: dev
+    volumes:
+      - ./web_client/src:/cogment-verse/web_client/src:cached
+      - ./web_client/public:/cogment-verse/web_client/public:cached

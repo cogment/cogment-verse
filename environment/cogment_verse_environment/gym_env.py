@@ -13,7 +13,6 @@
 # limitations under the License.
 
 import gym
-
 from cogment_verse_environment.base import BaseEnv, GymObservation
 from cogment_verse_environment.env_spec import EnvSpec
 
@@ -79,7 +78,7 @@ class GymEnv(BaseEnv):
 
     def step(self, action=None):
         observation, reward, done, info = self._env.step(action)
-        self._turn = (self._turn + 1) % self._num_players
+        self._turn = (self._turn + 1) % self.num_players
         return GymObservation(
             observation=observation,
             current_player=self._turn,

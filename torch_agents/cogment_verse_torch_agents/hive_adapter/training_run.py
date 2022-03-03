@@ -12,31 +12,31 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
 import time
 
-import torch
 import numpy as np
-from prometheus_client import Summary, Gauge
-from google.protobuf.json_format import MessageToDict
+import torch
 
-from data_pb2 import (
-    ActorConfig,
-    ActorParams,
-    EnvironmentConfig,
-    EnvironmentParams,
-    TrialConfig,
-    NDArray,
-)
 from cogment_verse import MlflowExperimentTracker
 from cogment_verse.utils import sizeof_fmt, throttle
 from cogment_verse_torch_agents.third_party.hive.utils.schedule import (
-    PeriodicSchedule,
-    LinearSchedule,
-    SwitchSchedule,
     CosineSchedule,
+    LinearSchedule,
+    PeriodicSchedule,
+    SwitchSchedule,
 )
-
-import logging
+from data_pb2 import (
+    ActorParams,
+    AgentConfig,
+    EnvironmentConfig,
+    EnvironmentParams,
+    HumanConfig,
+    HumanRole,
+    TrialConfig,
+)
+from google.protobuf.json_format import MessageToDict
+from prometheus_client import Gauge, Summary
 
 # pylint: disable=protected-access
 
@@ -60,14 +60,12 @@ def create_progress_logger(params_name, run_id, total_trial_count):
 
     return handle_progress
 
-def serialize_np_array(np_array):
-    return NDArray(shape=np_array.shape, dtype=str(np_array.dtype), data=np_array.tobytes())
 
 def create_training_run(agent_adapter):
     async def training_run(run_session):
         run_id = run_session.run_id
 
-        config2 = run_session.config
+        config = run_session.config
 
         run_xp_tracker = MlflowExperimentTracker(run_session.params_name, run_id)
 
@@ -75,38 +73,36 @@ def create_training_run(agent_adapter):
             # Initializing a model
             model_id = f"{run_id}_model"
 
-            model_kwargs = MessageToDict(config2.model_kwargs, preserving_proto_field_name=True)
+            model_kwargs = MessageToDict(config.model_kwargs, preserving_proto_field_name=True)
             model_kwargs["device"] = "cuda" if torch.cuda.is_available() else "cpu"
 
             model, _ = await agent_adapter.create_and_publish_initial_version(
                 model_id,
-                impl_name=config2.agent_implementation,
+                impl_name=config.agent_implementation,
+                environment_specs=config.environment.specs,
                 **{
-                    "obs_dim": config2.num_input,
-                    "act_dim": config2.num_action,
-                    "epsilon_schedule": LinearSchedule(1, config2.epsilon_min, config2.epsilon_steps),
+                    "epsilon_schedule": LinearSchedule(1, config.epsilon_min, config.epsilon_steps),
                     "learn_schedule": SwitchSchedule(False, True, 1),
-                    "target_net_update_schedule": PeriodicSchedule(False, True, config2.target_net_update_schedule),
-                    "lr_schedule": CosineSchedule(0.0, config2.learning_rate, config2.lr_warmup_steps),
-                    "max_replay_buffer_size": config2.max_replay_buffer_size,
+                    "target_net_update_schedule": PeriodicSchedule(False, True, config.target_net_update_schedule),
+                    "lr_schedule": CosineSchedule(0.0, config.learning_rate, config.lr_warmup_steps),
+                    "max_replay_buffer_size": config.max_replay_buffer_size,
                 },
                 **model_kwargs,
             )
             run_xp_tracker.log_params(
                 model._params,
-                player_count=config2.player_count,
-                batch_size=config2.batch_size,
-                model_publication_interval=config2.model_publication_interval,
-                model_archive_interval_multiplier=config2.model_archive_interval_multiplier,
-                environment=config2.environment_implementation,
-                agent_implmentation=config2.agent_implementation,
+                batch_size=config.batch_size,
+                model_publication_interval=config.model_publication_interval,
+                model_archive_interval_multiplier=config.model_archive_interval_multiplier,
+                environment=config.environment.specs.implementation,
+                agent_implmentation=config.agent_implementation,
             )
 
-            model_publication_schedule = PeriodicSchedule(False, True, config2.model_publication_interval)
+            model_publication_schedule = PeriodicSchedule(False, True, config.model_publication_interval)
             model_archive_schedule = PeriodicSchedule(
                 False,
                 True,
-                config2.model_archive_interval_multiplier * config2.model_publication_interval,
+                config.model_archive_interval_multiplier * config.model_publication_interval,
             )
 
             training_step = 0
@@ -121,81 +117,76 @@ def create_training_run(agent_adapter):
                 ActorParams(
                     name=f"agent_player_{player_idx}",
                     actor_class="agent",
-                    implementation=config2.agent_implementation,
-                    config=ActorConfig(
+                    implementation=config.agent_implementation,
+                    agent_config=AgentConfig(
+                        run_id=run_id,
                         model_id=model_id,
                         model_version=np.random.randint(-100, -1),  # TODO this actually won't work anymore
-                        run_id=run_id,
-                        environment_implementation=config2.environment_implementation,
-                        num_input=config2.num_input,
-                        num_action=config2.num_action,
+                        environment_specs=config.environment.specs,
                     ),
                 )
-                for player_idx in range(config2.player_count)
+                for player_idx in range(config.environment.specs.num_players)
             ]
             # for self-play, randomly select one player to use latest model version
             # if there is only one player then it will always use the latest
-            distinguished_actor = np.random.randint(0, config2.player_count)
-            player_actor_configs[distinguished_actor].config.model_version = -1
+            distinguished_actor = np.random.randint(0, config.environment.specs.num_players)
+            player_actor_configs[distinguished_actor].agent_config.model_version = -1
 
             self_play_trial_configs = [
                 TrialConfig(
                     run_id=run_id,
                     environment=EnvironmentParams(
-                        implementation=config2.environment_implementation,
+                        specs=config.environment.specs,
                         config=EnvironmentConfig(
-                            player_count=config2.player_count,
                             run_id=run_id,
                             render=False,
-                            render_width=config2.render_width,
-                            flatten=config2.flatten,
-                            framestack=config2.framestack,
+                            render_width=config.environment.config.render_width,
+                            flatten=config.environment.config.flatten,
+                            framestack=config.environment.config.framestack,
                         ),
                     ),
                     actors=player_actor_configs,
                     distinguished_actor=distinguished_actor,
                 )
-                for _ in range(config2.total_trial_count - config2.demonstration_count)
+                for _ in range(config.total_trial_count - config.demonstration_count)
             ]
 
             demonstration_trial_configs = []
-            if config2.demonstration_count > 0:
+            if config.demonstration_count > 0:
                 # create the config for the teacher agent
                 teacher_actor_config = ActorParams(
                     name="web_actor",
                     actor_class="teacher_agent",
                     implementation="client",
-                    config=ActorConfig(
+                    human_config=HumanConfig(
                         run_id=run_id,
-                        environment_implementation=config2.environment_implementation,
-                        num_input=config2.num_input,
-                        num_action=config2.num_action,
+                        environment_specs=config.environment.specs,
+                        role=HumanRole.TEACHER,
                     ),
                 )
                 demonstration_trial_configs = [
                     TrialConfig(
                         run_id=run_id,
                         environment=EnvironmentParams(
-                            implementation=config2.environment_implementation,
+                            specs=config.environment.specs,
                             config=EnvironmentConfig(
-                                player_count=config2.player_count,
                                 run_id=run_id,
                                 render=True,
-                                render_width=config2.render_width,
-                                flatten=config2.flatten,
-                                framestack=config2.framestack,
+                                render_width=config.environment.config.render_width,
+                                flatten=config.environment.config.flatten,
+                                framestack=config.environment.config.framestack,
                             ),
                         ),
                         actors=[*player_actor_configs, teacher_actor_config],
                         distinguished_actor=distinguished_actor,
                     )
-                    for _ in range(config2.demonstration_count)
+                    for _ in range(config.demonstration_count)
                 ]
 
             def train_model():
                 training_batch = None
                 with TRAINING_SAMPLE_BATCH_TIME.time():
-                    training_batch = model.sample_training_batch(config2.batch_size)
+                    training_batch = model.sample_training_batch(config.batch_size)
 
                 with TRAINING_LEARN_TIME.time():
                     info = model.learn(training_batch, update_schedule=True)
@@ -260,7 +251,7 @@ def create_training_run(agent_adapter):
                 ) in run_session.start_trials_and_wait_for_termination(
                     trial_configs=trial_configs,
                     max_parallel_trials=max_parallel_trials,
-                    on_progress=create_progress_logger(run_session.params_name, run_id, config2.total_trial_count),
+                    on_progress=create_progress_logger(run_session.params_name, run_id, config.total_trial_count),
                 ):
                     if sample.trial_total_reward is not None:
                         # This is a sample from a end of a trial
@@ -283,7 +274,7 @@ def create_training_run(agent_adapter):
 
                     TRAINING_REPLAY_BUFFER_SIZE.set(model.replay_buffer_size())
 
-                    if sample.current_player_sample[-1] and model.replay_buffer_size() > config2.batch_size:
+                    if sample.current_player_sample[-1] and model.replay_buffer_size() > config.batch_size:
                         info, training_batch = train_model()
                         samples_seen += get_samples_seen(training_batch)
                         training_step += 1
@@ -299,8 +290,8 @@ def create_training_run(agent_adapter):
                         )
 
                     elif (
-                        model.replay_buffer_size() > config2.min_replay_buffer_size
-                        and model.replay_buffer_size() > config2.batch_size
+                        model.replay_buffer_size() > config.min_replay_buffer_size
+                        and model.replay_buffer_size() > config.batch_size
                     ):
                         info, training_batch = train_model()
                         samples_seen += get_samples_seen(training_batch)
@@ -322,10 +313,10 @@ def create_training_run(agent_adapter):
             if demonstration_trial_configs:
                 await run_trials(
                     demonstration_trial_configs,
-                    max_parallel_trials=config2.max_parallel_trials,
+                    max_parallel_trials=config.max_parallel_trials,
                 )
             if self_play_trial_configs:
-                await run_trials(self_play_trial_configs, max_parallel_trials=config2.max_parallel_trials)
+                await run_trials(self_play_trial_configs, max_parallel_trials=config.max_parallel_trials)
 
             run_xp_tracker.terminate_success()
 

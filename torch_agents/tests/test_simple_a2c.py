@@ -12,33 +12,54 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from cogment_verse_torch_agents.simple_a2c.simple_a2c_agent import SimpleA2CAgentAdapter
+import io
 
 import torch
-import io
+from cogment_verse_torch_agents.simple_a2c.simple_a2c_agent import SimpleA2CAgentAdapter
+from data_pb2 import EnvironmentSpecs
 
 # pylint: disable=protected-access
 
 
 def test_create():
     adapter = SimpleA2CAgentAdapter()
-    model = adapter._create(model_id="test", observation_size=2, hidden_size=10, action_count=3)
+    model, model_user_data = adapter._create(
+        model_id="test",
+        environment_specs=EnvironmentSpecs(implementation="foo", num_input=2, num_action=3),
+        actor_network_hidden_size=10,
+        critic_network_hidden_size=12,
+    )
     assert model.model_id == "test"
     assert model.version_number == 1
     assert isinstance(model.actor_network, torch.nn.Module)
     assert isinstance(model.critic_network, torch.nn.Module)
+    assert model_user_data == {"environment_implementation": "foo", "num_input": 2, "num_action": 3}
 
 
 def test_save_and_load():
     adapter = SimpleA2CAgentAdapter()
-    model = adapter._create(model_id="test", observation_size=4, action_count=2)
+    environment_specs = EnvironmentSpecs(implementation="foo", num_input=4, num_action=3)
+    model, model_user_data = adapter._create(
+        model_id="test",
+        environment_specs=environment_specs,
+    )
 
     with io.BytesIO() as serialized_model_io:
-        adapter._save(model=model, model_data_f=serialized_model_io)
+        adapter._save(
+            model=model,
+            model_user_data=model_user_data,
+            model_data_f=serialized_model_io,
+            environment_specs=environment_specs,
+        )
         serialized_model_data = serialized_model_io.getvalue()
 
     deserialized_model = adapter._load(
-        model_id="test", version_number=2, version_user_data={}, model_data_f=io.BytesIO(serialized_model_data)
+        model_id="test",
+        version_number=2,
+        model_user_data=model_user_data,
+        version_user_data={},
+        model_data_f=io.BytesIO(serialized_model_data),
+        environment_specs=environment_specs,
     )
 
     assert deserialized_model.model_id == "test"

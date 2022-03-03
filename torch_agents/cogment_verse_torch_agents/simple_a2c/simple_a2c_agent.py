@@ -12,29 +12,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
+from collections import namedtuple
+
+import cogment
+import torch
+from cogment.api.common_pb2 import TrialState
+from cogment_verse import AgentAdapter, MlflowExperimentTracker
+from cogment_verse_torch_agents.utils.tensors import cog_action_from_tensor, tensor_from_cog_action, tensor_from_cog_obs
 from data_pb2 import (
-    ActorConfig,
+    AgentConfig,
     ActorParams,
-    AgentAction,
     EnvironmentConfig,
     EnvironmentParams,
+    EnvironmentSpecs,
     MLPNetworkConfig,
     SimpleA2CTrainingConfig,
     SimpleA2CTrainingRunConfig,
     TrialConfig,
 )
-
-from cogment_verse import AgentAdapter
-from cogment_verse import MlflowExperimentTracker
-
-from cogment.api.common_pb2 import TrialState
-import cogment
-
-import logging
-import torch
-import numpy as np
-
-from collections import namedtuple
 
 log = logging.getLogger(__name__)
 
@@ -48,39 +44,26 @@ class SimpleA2CAgentAdapter(AgentAdapter):
         super().__init__()
         self._dtype = torch.float
 
-    def tensor_from_cog_obs(self, cog_obs, device=None):
-        pb_array = cog_obs.vectorized
-        np_array = np.frombuffer(pb_array.data, dtype=pb_array.dtype).reshape(*pb_array.shape)
-        return torch.tensor(np_array, dtype=self._dtype, device=device)
-
-    def tensor_from_cog_action(self, cog_action, device=None):
-        return torch.tensor(cog_action.discrete_action, dtype=self._dtype, device=device)
-
-    @staticmethod
-    def cog_action_from_tensor(tensor):
-        return AgentAction(discrete_action=tensor.item())
-
     def _create(
         self,
         model_id,
-        observation_size,
-        action_count,
+        environment_specs,
         actor_network_hidden_size=64,
         critic_network_hidden_size=64,
         **kwargs,
     ):
-        return SimpleA2CModel(
+        model = SimpleA2CModel(
             model_id=model_id,
             version_number=1,
             actor_network=torch.nn.Sequential(
-                torch.nn.Linear(observation_size, actor_network_hidden_size),
+                torch.nn.Linear(environment_specs.num_input, actor_network_hidden_size),
                 torch.nn.Tanh(),
                 torch.nn.Linear(actor_network_hidden_size, actor_network_hidden_size),
                 torch.nn.Tanh(),
-                torch.nn.Linear(actor_network_hidden_size, action_count),
+                torch.nn.Linear(actor_network_hidden_size, environment_specs.num_action),
             ).to(self._dtype),
             critic_network=torch.nn.Sequential(
-                torch.nn.Linear(observation_size, critic_network_hidden_size),
+                torch.nn.Linear(environment_specs.num_input, critic_network_hidden_size),
                 torch.nn.Tanh(),
                 torch.nn.Linear(critic_network_hidden_size, critic_network_hidden_size),
                 torch.nn.Tanh(),
@@ -88,18 +71,37 @@ class SimpleA2CAgentAdapter(AgentAdapter):
             ).to(self._dtype),
         )
 
-    def _load(self, model_id, version_number, version_user_data, model_data_f):
+        model_user_data = {
+            "environment_implementation": environment_specs.implementation,
+            "num_input": environment_specs.num_input,
+            "num_action": environment_specs.num_action,
+        }
+
+        return model, model_user_data
+
+    def _load(
+        self,
+        model_id,
+        version_number,
+        model_user_data,
+        version_user_data,
+        model_data_f,
+        environment_specs,
+        **kwargs,
+    ):
         (actor_network, critic_network) = torch.load(model_data_f)
+        assert model_user_data["environment_implementation"] == environment_specs.implementation
         assert isinstance(actor_network, torch.nn.Sequential)
         assert isinstance(critic_network, torch.nn.Sequential)
         return SimpleA2CModel(
             model_id=model_id, version_number=version_number, actor_network=actor_network, critic_network=critic_network
         )
 
-    def _save(self, model, model_data_f):
+    def _save(self, model, model_user_data, model_data_f, environment_specs, epoch_idx=-1, total_samples=0, **kwargs):
+        assert model_user_data["environment_implementation"] == environment_specs.implementation
         assert isinstance(model, SimpleA2CModel)
         torch.save((model.actor_network, model.critic_network), model_data_f)
-        return {}
+        return {"epoch_idx": epoch_idx, "total_samples": total_samples}
 
     def _create_actor_implementations(self):
         async def impl(actor_session):
@@ -107,15 +109,17 @@ class SimpleA2CAgentAdapter(AgentAdapter):
 
             config = actor_session.config
 
-            model, _ = await self.retrieve_version(config.model_id, config.model_version)
+            model, _, _ = await self.retrieve_version(
+                config.model_id, config.model_version, environment_specs=config.environment_specs
+            )
 
             async for event in actor_session.event_loop():
                 if event.observation and event.type == cogment.EventType.ACTIVE:
-                    obs = self.tensor_from_cog_obs(event.observation.snapshot)
+                    obs = tensor_from_cog_obs(event.observation.snapshot, dtype=self._dtype)
                     scores = model.actor_network(obs)
                     probs = torch.softmax(scores, dim=-1)
                     action = torch.distributions.Categorical(probs).sample()
-                    actor_session.do_action(self.cog_action_from_tensor(action))
+                    actor_session.do_action(cog_action_from_tensor(action))
 
         return {
             "simple_a2c": (impl, ["agent"]),
@@ -134,8 +138,8 @@ class SimpleA2CAgentAdapter(AgentAdapter):
                     # The last sample was the last useful one
                     done[-1] = torch.ones(1, dtype=self._dtype)
                     break
-                observation.append(self.tensor_from_cog_obs(sample.get_actor_observation(0)))
-                action.append(self.tensor_from_cog_action(sample.get_actor_action(0)))
+                observation.append(tensor_from_cog_obs(sample.get_actor_observation(0), dtype=self._dtype))
+                action.append(tensor_from_cog_action(sample.get_actor_action(0)))
                 reward.append(torch.tensor(sample.get_actor_reward(0), dtype=self._dtype))
                 done.append(torch.zeros(1, dtype=self._dtype))
 
@@ -149,12 +153,11 @@ class SimpleA2CAgentAdapter(AgentAdapter):
             model_id = f"{run_session.run_id}_model"
 
             config = run_session.config
-            assert config.environment.config.player_count == 1
+            assert config.environment.specs.num_players == 1
 
             model, _ = await self.create_and_publish_initial_version(
                 model_id,
-                observation_size=config.actor.num_input,
-                action_count=config.actor.num_action,
+                environment_specs=config.environment.specs,
                 actor_network_hidden_size=config.actor_network.hidden_size,
                 critic_network_hidden_size=config.critic_network.hidden_size,
             )
@@ -162,7 +165,8 @@ class SimpleA2CAgentAdapter(AgentAdapter):
 
             xp_tracker.log_params(
                 config.training,
-                config.environment,
+                config.environment.config,
+                environment_implementation=config.environment.specs.implementation,
                 actor_network_hidden_size=config.actor_network.hidden_size,
                 critic_network_hidden_size=config.critic_network.hidden_size,
             )
@@ -174,7 +178,7 @@ class SimpleA2CAgentAdapter(AgentAdapter):
             )
 
             total_samples = 0
-            for epoch in range(config.training.epoch_count):
+            for epoch_idx in range(config.training.epoch_count):
                 # Rollout a bunch of trials
                 observation = []
                 action = []
@@ -198,17 +202,16 @@ class SimpleA2CAgentAdapter(AgentAdapter):
                                     name="agent_1",
                                     actor_class="agent",
                                     implementation="simple_a2c",
-                                    config=ActorConfig(
+                                    agent_config=AgentConfig(
+                                        run_id=run_session.run_id,
                                         model_id=model_id,
                                         model_version=model_version_number,
-                                        num_input=config.actor.num_input,
-                                        num_action=config.actor.num_action,
-                                        environment_implementation=config.environment.implementation,
+                                        environment_specs=config.environment.specs,
                                     ),
                                 )
                             ],
                         )
-                        for trial_ids in range(config.training.epoch_trial_count)
+                        for trial_idx in range(config.training.epoch_trial_count)
                     ],
                     max_parallel_trials=config.training.max_parallel_trials,
                 ):
@@ -221,6 +224,12 @@ class SimpleA2CAgentAdapter(AgentAdapter):
                     epoch_last_step_timestamp = step_timestamp
 
                     xp_tracker.log_metrics(step_timestamp, step_idx, total_reward=sum([r.item() for r in trial_reward]))
+
+                if len(observation) == 0:
+                    log.warning(
+                        f"[{run_session.params_name}/{run_session.run_id}] epoch #{epoch_idx + 1}/{config.training.epoch_count} finished without generating any sample (every trial ended at the first tick), skipping training."
+                    )
+                    continue
 
                 total_samples += len(observation)
 
@@ -262,13 +271,21 @@ class SimpleA2CAgentAdapter(AgentAdapter):
                 optimizer.step()
 
                 # Publish the newly trained version
-                version_info = await self.publish_version(model_id, model)
+                last_epoch = epoch_idx + 1 == config.training.epoch_count
+                version_info = await self.publish_version(
+                    model_id,
+                    model,
+                    archived=last_epoch,
+                    epoch_idx=epoch_idx,
+                    total_samples=total_samples,
+                    environment_specs=config.environment.specs,
+                )
                 model_version_number = version_info["version_number"]
                 xp_tracker.log_metrics(
                     epoch_last_step_timestamp,
                     epoch_last_step_idx,
                     model_version_number=model_version_number,
-                    epoch=epoch,
+                    epoch_idx=epoch_idx,
                     entropy_loss=entropy_loss.item(),
                     value_loss=value_loss.item(),
                     action_loss=action_loss.item(),
@@ -276,7 +293,7 @@ class SimpleA2CAgentAdapter(AgentAdapter):
                     total_samples=total_samples,
                 )
                 log.info(
-                    f"[{run_session.params_name}/{run_session.run_id}] epoch #{epoch} finished ({total_samples} samples seen)"
+                    f"[{run_session.params_name}/{run_session.run_id}] epoch #{epoch_idx + 1}/{config.training.epoch_count} finished ({total_samples} samples seen)"
                 )
 
         return {
@@ -285,8 +302,12 @@ class SimpleA2CAgentAdapter(AgentAdapter):
                 run_impl,
                 SimpleA2CTrainingRunConfig(
                     environment=EnvironmentParams(
-                        implementation="gym/CartPole-v0",
-                        config=EnvironmentConfig(seed=12, player_count=1, framestack=1),
+                        specs=EnvironmentSpecs(
+                            implementation="gym/CartPole-v0",
+                            num_input=4,
+                            num_action=2,
+                        ),
+                        config=EnvironmentConfig(seed=12, framestack=1),
                     ),
                     training=SimpleA2CTrainingConfig(
                         epoch_count=100,

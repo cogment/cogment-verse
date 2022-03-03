@@ -12,13 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from data_pb2 import EnvironmentConfig, AgentAction
-from tests.mock_environment_session import ActorInfo
-
-from cogment_verse_environment.utils.serialization_helpers import deserialize_np_array, deserialize_img
-
-import pytest
 import numpy as np
+import pytest
+from cogment_verse_environment.utils.serialization_helpers import deserialize_img, deserialize_np_array
+from data_pb2 import AgentAction, EnvironmentConfig
+from mock_environment_session import ActorInfo
 
 # pylint doesn't like test fixtures
 # pylint: disable=redefined-outer-name
@@ -30,7 +28,7 @@ async def connect_four_session(create_mock_environment_session):
     session = create_mock_environment_session(
         impl_name="pettingzoo/connect_four_v3",
         trial_id="test_pettingzoo",
-        environment_config=EnvironmentConfig(player_count=2, framestack=1, flatten=True),
+        environment_config=EnvironmentConfig(framestack=1, flatten=True),
         actor_infos=[ActorInfo("player_1", "player"), ActorInfo("player_2", "player")],
     )
 
