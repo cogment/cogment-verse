@@ -46,10 +46,7 @@ export type UseActions = <ObservationT, ActionT extends MessageBase, ActorConfig
   joinAnyTrial: JoinAnyTrial,
   sendAction: SendAction<ActionT> | undefined,
   trialJoined: boolean,
-  watchTrials: WatchTrials | undefined,
-  trialStateList: TrialStateList | undefined,
-  AgentConfig: ConfigT | undefined
-
+  actorConfig: ActorConfigT | undefined
 ];
 
 export const useActions: UseActions = <ObservationT, ActionT extends MessageBase, ActorConfigT>(
@@ -76,11 +73,7 @@ export const useActions: UseActions = <ObservationT, ActionT extends MessageBase
 
   const [watchTrials, setWatchTrials] = useState<WatchTrials>();
 
-  const [AgentConfig, setAgentConfig] = useState<ConfigT>();
-
-  const reset = useCallback(() => {
-    setCogSettings({ ..._cogSettings });
-  }, [_cogSettings]);
+  const [actorConfig, setActorConfig] = useState<any>();
 
   //Set up the connection and register the actor only once, regardless of re-rendering
   useEffect(() => {
@@ -95,8 +88,7 @@ export const useActions: UseActions = <ObservationT, ActionT extends MessageBase
         actorSession.start();
 
         // todo: figure out why this cast is necessary (wrong template argument somewhere?)
-        setAgentConfig(actorSession.config);
-
+        setActorConfig(actorSession.config as ActorConfigT);
 
         //Double arrow function here beause react will turn a single one into a lazy loaded function
         setSendAction(() => (action: ActionT) => {
@@ -161,6 +153,19 @@ export const useActions: UseActions = <ObservationT, ActionT extends MessageBase
     });
   }, [cogSettings, actorName, actorClass, grpcURL]);
 
+  useEffect(() => {
+    if (!watchTrials) return;
+    watchTrials();
+  }, [watchTrials]);
 
-  return [event, joinTrial, sendAction, reset, trialJoined, watchTrials, trialStateList, AgentConfig];
+  const joinAnyTrial = useCallback(() => {
+    if (!joinTrial || trialJoined) return false;
+    let trialToJoin = Object.keys(trialStates).find((trialId) => trialStates[trialId] === 2);
+    if (!trialToJoin) return false;
+    const joinPromise = joinTrial(trialToJoin);
+    console.log("joining trial", trialToJoin);
+    return { trialToJoin, joinPromise };
+  }, [joinTrial, trialJoined, trialStates]);
+
+  return [event, joinAnyTrial, sendAction, trialJoined, actorConfig];
 };

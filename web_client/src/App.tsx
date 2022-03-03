@@ -62,12 +62,7 @@ function App() {
     img.src = "data:image/png;base64," + bufferToBase64(pixelData);
   }, [pixelData]);
 
-
-  const [event, joinTrial, _sendAction, reset, trialJoined, watchTrials, trialStateList, AgentConfig] = useActions<
-    ObservationT,
-    ActionT,
-    HumanConfigT
-  >(
+  const [event, joinAnyTrial, _sendAction, trialJoined, actorConfig] = useActions<ObservationT, ActionT, ActorConfigT>(
     cogSettings,
     "web_actor", // actor name
     "teacher_agent", // actor class
@@ -93,157 +88,31 @@ function App() {
   );
 
   useEffect(() => {
-    if (trialJoined && AgentConfig && event.observation && event.observation.pixelData) {
+    if (trialJoined && actorConfig && event.observation && event.observation.pixelData) {
       setPixelData(event.observation.pixelData);
     }
-  }, [event, AgentConfig, trialJoined]);
+  }, [event, actorConfig, trialJoined]);
 
   useEffect(() => {
+    if (!actorConfig?.environmentSpecs?.implementation) return;
+    setEnvironmentImplementation(actorConfig?.environmentSpecs?.implementation);
+  }, [actorConfig]);
 
-    if (
-      trialJoined &&
-      AgentConfig &&
-      AgentConfig.environmentSpecs &&
-      event.observation &&
-      event.observation.pixelData
-    ) {
-      if (!event.last) {
-        const action = new data_pb.cogment_verse.AgentAction();
-        let action_int = -1;
+  const { onKeyDown, onKeyUp } = useKeys(event, sendAction, trialJoined, actorConfig);
 
-        if (AgentConfig.role === data_pb.cogment_verse.HumanRole.TEACHER) {
-          let keymap = undefined;
-          if (AgentConfig.environmentSpecs.implementation) {
-            keymap = get_keymap(AgentConfig.environmentSpecs.implementation);
-          }
-
-          if (keymap === undefined) {
-            console.log(`no keymap defined for actor config ${AgentConfig}`);
-          } else {
-            for (let item of keymap.action_map) {
-              const keySet = new Set<string>(item.keys);
-              if (setIsEndOfArray(keySet, pressedKeys)) {
-                action_int = item.id;
-                break;
-              }
-            }
-          }
-        }
-
-        action.discreteAction = action_int;
-        if (sendAction) {
-          sendAction(action);
-        }
-
-        const minDelta = 1000.0 / 30.0; // 30 fps
-        const currentTime = new Date().getTime();
-        const timeout = lastTime ? Math.max(0, minDelta - (currentTime - lastTime) - 1) : 0;
-
-        if (!timer) {
-          setTimer(
-            setTimeout(() => {
-              const currentTime = new Date().getTime();
-              const fps = 1000.0 / Math.max(1, currentTime - lastTime);
-              setEmaFps(fpsEmaWeight * fps + (1 - fpsEmaWeight) * emaFps);
-
-              if (sendAction) {
-                sendAction(action);
-              }
-              setTimer(undefined);
-              setLastTime(currentTime);
-            }, timeout)
-          );
-        }
-      }
-    }
-    return () => {
-      if (timer) {
-        clearTimeout(timer);
-        setTimer(undefined);
-      }
-    };
-  }, [event, sendAction, trialJoined, AgentConfig, pressedKeys, lastTime, timer, emaFps, fpsEmaWeight]);
-
-  useEffect(() => {
-    if (trialJoined) {
-      if (AgentConfig && AgentConfig.role === data_pb.cogment_verse.HumanRole.TEACHER) {
-        setTrialStatus("trial joined as teacher");
-      } else if (AgentConfig && AgentConfig.role === data_pb.cogment_verse.HumanRole.OBSERVER) {
-        setTrialStatus("trial joined as observer");
-      } else {
-        setTrialStatus("trial joined (unknown role)");
-      }
-      setCanStartTrial(false);
-      if (AgentConfig && AgentConfig.environmentSpecs && AgentConfig.environmentSpecs.implementation) {
-        setEnvironmentImplementation(AgentConfig.environmentSpecs.implementation);
-      }
-    } else {
-      setTrialStatus("no trial running");
+  const joinTrial = useCallback(() => {
+    setCountdown(false);
+    const joinResult = joinAnyTrial();
+    if (!joinResult) return;
+    if (!joinResult.joinPromise) return;
+    setCurrentTrialId(joinResult.trialToJoin);
+    setTrialStatus("trial joined");
+    joinResult.joinPromise.then(() => {
       setCurrentTrialId(undefined);
-      setCanStartTrial(true);
-    }
-  }, [trialJoined, trialStatus, AgentConfig]);
-
-  useEffect(() => {
-    if (watchTrials && !watching) {
-      watchTrials();
-      setWatching(true);
-    }
-  }, [watchTrials, watching]);
-
-  //This will start a trial as soon as we're connected to the orchestrator
-  const triggerJoinTrial = () => {
-    if (!joinTrial || trialJoined) {
-      return;
-    }
-    reset();
-
-    if (trialStateList === undefined) {
-      return;
-    }
-
-    let trialIdToJoin: string | undefined = undefined;
-
-    // find a trial to join
-    for (let trialId of Array.from(trialStateList.keys())) {
-      let state = trialStateList.get(trialId);
-
-      // trial is pending
-      if (state === 2) {
-        trialIdToJoin = trialId;
-        break;
-      }
-    }
-
-    if (trialIdToJoin === undefined) {
-      console.log("no trial to join");
-      return;
-    } else {
-      console.log(`attempting to join trial ${trialIdToJoin}`);
-    }
-
-    if (canStartTrial) {
-      //startTrial(trialConfig);
-      joinTrial(trialIdToJoin);
-      console.log("calling joinTrial");
-      setCurrentTrialId(trialIdToJoin);
-      if (trialJoined) {
-        setCanStartTrial(false);
-        setCurrentTrialId(trialIdToJoin);
-        console.log("trial joined");
-      } else {
-        setTrialStatus("could not start trial");
-      }
-    }
-  };
-
-  useEffect(() => {
-    const timer = setInterval(triggerJoinTrial, 200);
-    return () => {
-      clearInterval(timer);
-    };
-  });
-
+      setTrialStatus("waiting to join trial");
+      setCountdown(true);
+    });
+  }, [joinAnyTrial]);
 
   const windowSize = useWindowSize() as unknown as { width: number; height: number };
   const [expanded, setExpanded] = useState(false);
