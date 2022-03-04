@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from data_pb2 import (
-    ActorConfig,
+    AgentConfig,
     ActorParams,
     EnvironmentConfig,
     EnvironmentParams,
@@ -98,13 +98,11 @@ def create_training_run(agent_adapter):
                     name=f"selfplayRL_Alice",
                     actor_class="agent",
                     implementation=config.actor.implementation,
-                    config=ActorConfig(
+                    agent_config=AgentConfig(
                         model_id=alice_id,
                         model_version=alice_version_number,
                         run_id=run_id,
-                        environment_implementation=config.environment.implementation,
-                        num_input=config.actor.config.num_input,
-                        num_action=config.actor.config.num_action,
+                        environment_specs=config.environment.specs,
                     ),
                 )
             ]
@@ -115,13 +113,11 @@ def create_training_run(agent_adapter):
                     name=f"selfplayRL_Bob",
                     actor_class="agent",
                     implementation=config.actor.implementation,
-                    config=ActorConfig(
+                    agent_config=AgentConfig(
                         model_id=bob_id,
                         model_version=bob_version_number,
                         run_id=run_id,
-                        environment_implementation=config.environment.implementation,
-                        num_input=config.actor.config.num_input,
-                        num_action=config.actor.config.num_action,
+                        environment_specs=config.environment.specs,
                     ),
                 )
             ]
@@ -129,17 +125,7 @@ def create_training_run(agent_adapter):
             train_trial_configs = [
                 TrialConfig(
                     run_id=run_id,
-                    environment=EnvironmentParams(
-                        implementation=config.environment.implementation,
-                        config=EnvironmentConfig(
-                            player_count=config.environment.config.player_count,
-                            run_id=run_id,
-                            render=False,
-                            render_width=config.environment.config.render_width,
-                            flatten=config.environment.config.flatten,
-                            framestack=config.environment.config.framestack,
-                        ),
-                    ),
+                    environment=config.environment,
                     actors=alice_configs + bob_configs,
                 )
                 for _ in range(config.rollout.epoch_train_trial_count)
@@ -148,17 +134,7 @@ def create_training_run(agent_adapter):
             test_trial_configs = [
                 TrialConfig(
                     run_id=run_id,
-                    environment=EnvironmentParams(
-                        implementation=config.environment.implementation,
-                        config=EnvironmentConfig(
-                            player_count=config.environment.config.player_count,
-                            run_id=run_id,
-                            render=False,
-                            render_width=config.environment.config.render_width,
-                            flatten=config.environment.config.flatten,
-                            framestack=config.environment.config.framestack,
-                        ),
-                    ),
+                    environment=config.environment,
                     actors=alice_configs + bob_configs,
                 )
                 for _ in range(config.rollout.epoch_test_trial_count)

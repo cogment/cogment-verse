@@ -238,11 +238,6 @@ message SelfPlayEnvironmentConfig {
   uint32 seed = 9;
 }
 
-message SelfPlayEnvironmentParams {
-  string implementation = 1;
-  SelfPlayEnvironmentConfig config = 2;
-}
-
 message SelfPlayActorParams{
   string name = 1;
   string actor_class = 2;
@@ -251,7 +246,7 @@ message SelfPlayActorParams{
 }
 
 message SelfPlayTD3TrainingRunConfig {
-  SelfPlayEnvironmentParams environment = 1;
+  EnvironmentParams environment = 1;
   SelfPlayActorParams actor = 2;
   SelfPlayRolloutConfig rollout = 3;
   SelfPlayTrainingConfig training = 4;

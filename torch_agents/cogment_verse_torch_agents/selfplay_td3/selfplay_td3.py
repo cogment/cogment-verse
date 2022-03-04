@@ -164,7 +164,7 @@ class SelfPlayTD3:
 
     def save(self, f):
         torch.save((self._actor_network, self._critic_network), f)
-        return self._params
+        return {}
 
     @staticmethod
     def load(f, **params):

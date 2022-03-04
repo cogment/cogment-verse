@@ -119,10 +119,6 @@ cartpole_rainbow: &default_params
       observation_dtype: float32
       action_dtype: int8
     agent_implementation: rainbowtorch
-<<<<<<< HEAD
-    environment_implementation: gym/CartPole-v0environment_implementation
-=======
->>>>>>> efb5a7714ff0b1153d0a6e8167052e6ae5bb69e3
 
 cartpole_dqn:
   <<: *default_params
@@ -628,10 +624,11 @@ selfplay_td3_driving: &default_selfplay_td3_params
   config: &default_elfplay_td3_config
     class_name: data_pb2.SelfPlayTD3TrainingRunConfig
     environment:
-      implementation: driving/SimpleDriving-v0
+      specs:
+        implementation: driving/SimpleDriving-v0
+        num_players: 2
       config:
         seed: 12
-        player_count: 2
         render_width: 1000
         framestack: 4
     actor:

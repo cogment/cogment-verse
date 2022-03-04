@@ -34,12 +34,13 @@ log = logging.getLogger(__name__)
 # pylint: disable=C0103
 class SelfPlayAgentAdapter(AgentAdapter):
     def _create(self, model_id, **kwargs):
-        return SelfPlayTD3(id=model_id, **kwargs)
+        model = SelfPlayTD3(id=model_id, **kwargs)
+        return model, kwargs
 
-    def _load(self, model_id, version_number, version_user_data, model_data_f):
-        return SelfPlayTD3.load(model_data_f, id=model_id, **version_user_data)
+    def _load(self, model_id, version_number, model_user_data, version_user_data, model_data_f):
+        return SelfPlayTD3.load(model_data_f, id=model_id, **model_user_data)
 
-    def _save(self, model, model_data_f):
+    def _save(self, model, model_user_data, model_data_f, **kwargs):
         return model.save(model_data_f)
 
     def _create_actor_implementations(self):
@@ -48,12 +49,8 @@ class SelfPlayAgentAdapter(AgentAdapter):
             actor_session.start()
 
             # Retrieve the latest version of the agent model (asynchronous so needs to be done after the start)
-            model, version_info = await self.retrieve_version(
-                actor_session.config.model_id, actor_session.config.model_version
-            )
-            version_number = version_info["version_number"]
-            log.debug(
-                f"[selfplay_td3 - {actor_session.name}] model {actor_session.config.model_id}@v{version_number} retrieved"
+            model, _, _ = await self.retrieve_version(
+                actor_session.config.model_id, actor_session.config.model_version, environment_specs=actor_session.config.environment_specs
             )
 
             agent = actor_session.config.model_id.split("_")[-1]
