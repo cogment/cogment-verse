@@ -24,7 +24,7 @@ from cogment_verse import RunContext
 from cogment_verse_torch_agents.hive_adapter.hive_agent_adapter import HiveAgentAdapter
 from cogment_verse_torch_agents.simple_a2c.simple_a2c_agent import SimpleA2CAgentAdapter
 from cogment_verse_torch_agents.simple_bc import SimpleBCAgentAdapter
-from cogment_verse_torch_agents.hf_sb3.sb3_adapter import SimpleSB3AgentAdapter
+from cogment_verse_torch_agents.hf_sb3 import SimpleSB3AgentAdapter
 from dotenv import load_dotenv
 
 load_dotenv()
