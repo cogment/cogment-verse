@@ -133,6 +133,7 @@ class EnvironmentAdapter:
                     env_name=env_name,
                     flatten=env_config.flatten,
                     framestack=env_config.framestack,
+                    mode=env_config.mode,
                 )
                 env.seed(env_config.seed)
                 return env

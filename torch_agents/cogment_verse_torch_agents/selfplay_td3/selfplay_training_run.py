@@ -21,6 +21,7 @@ from data_pb2 import (
 )
 from cogment_verse import MlflowExperimentTracker
 import logging
+import numpy as np
 
 # pylint: disable=protected-access
 log = logging.getLogger(__name__)
@@ -122,6 +123,7 @@ def create_training_run(agent_adapter):
                 )
             ]
 
+            config.environment.config.mode = "train"
             train_trial_configs = [
                 TrialConfig(
                     run_id=run_id,
@@ -131,6 +133,7 @@ def create_training_run(agent_adapter):
                 for _ in range(config.rollout.epoch_train_trial_count)
             ]
 
+            config.environment.config.mode = "test"
             test_trial_configs = [
                 TrialConfig(
                     run_id=run_id,
@@ -161,6 +164,7 @@ def create_training_run(agent_adapter):
                     trial_configs=train_trial_configs,
                     max_parallel_trials=config.rollout.max_parallel_trials,
                 ):
+
                     if sample.current_player == 0: # bob's sample
                         bob_samples.append(sample)
                         # penalize/reward alice if bob does/doesn't achieve goal
@@ -209,6 +213,7 @@ def create_training_run(agent_adapter):
                         trial_configs=test_trial_configs,
                         max_parallel_trials=config.rollout.max_parallel_trials,
                     ):
+
                         if sample.current_player == 0: # bob' sample
                             if sample.player_done:
                                 test_success.append(0)

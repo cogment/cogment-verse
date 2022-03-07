@@ -29,6 +29,7 @@ message EnvironmentConfig {
   int32 render_width = 7;
   uint32 framestack = 8;
   uint32 seed = 9;
+  string mode = 10;
 }
 
 message EnvironmentSpecs {
@@ -228,15 +229,6 @@ message SelfPlayTrainingConfig{
   uint32 max_action = 10;
 }
 
-message SelfPlayEnvironmentConfig {
-  string run_id = 1;
-  int32 player_count = 2;
-  bool render = 5;
-  bool flatten = 6;
-  int32 render_width = 7;
-  uint32 framestack = 8;
-  uint32 seed = 9;
-}
 
 message SelfPlayActorParams{
   string name = 1;

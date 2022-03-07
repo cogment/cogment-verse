@@ -28,6 +28,7 @@ class DrivingEnv(BaseEnv):
         self.trial_done = False
         self.current_turn = 0
         self.total_num_turns = 5
+        self.mode = kwargs["mode"]
 
         super().__init__(
             env_spec=self.create_env_spec(**kwargs), num_players=num_players, framestack=framestack
@@ -50,14 +51,21 @@ class DrivingEnv(BaseEnv):
         )
 
     def reset(self):
-        self.switch_turn()
-        if not self._turn == 0:
-            self.goal = 12 * np.ones((2,))
+        if self.mode == "train":
+            self.switch_turn()
+            if not self._turn == 0:
+                self.goal = 12 * np.ones((2,))
+                self.spawn_position = np.random.uniform(-10, 10, (3,))
+                self.spawn_orientation = np.random.uniform(-1, 1, (4,))
+                self.spawn_position[2] = 0.5
+                agent = "alice"
+            else:
+                agent = "bob"
+        elif self.mode == "test":
+            self.goal = np.random.uniform(-12, 12, (2,))
             self.spawn_position = np.random.uniform(-10, 10, (3,))
             self.spawn_orientation = np.random.uniform(-1, 1, (4,))
             self.spawn_position[2] = 0.5
-            agent = "alice"
-        else:
             agent = "bob"
 
         observation = self._env.reset(self.goal, self.spawn_position, self.spawn_orientation, agent)
@@ -93,7 +101,7 @@ class DrivingEnv(BaseEnv):
         observation, reward, self.agent_done, info = self._env.step(action, step_multiplier, agent)
         if self.agent_done:
             if agent == "alice":
-                self.goal = observation['car_qpos'][:2] + np.random.uniform(0.6, 0.8, [2, ])
+                self.goal = observation['car_qpos'][:2] + np.random.uniform(0.6, 0.8, [2, ]) # additional noise to accelerate learning
                 observation['car_qpos'][:2] = self.goal
             if agent == "bob" and self.current_turn == self.total_num_turns:
                 self.trial_done = True
