@@ -26,6 +26,7 @@ from cogment_verse import AgentAdapter, MlflowExperimentTracker
 from cogment_verse_torch_agents.utils.tensors import cog_action_from_tensor, tensor_from_cog_action, tensor_from_cog_obs
 from data_pb2 import (
     ActorParams,
+    AgentAction,
     AgentConfig,
     EnvironmentConfig,
     EnvironmentParams,
@@ -124,20 +125,7 @@ class SimpleSB3AgentAdapter(AgentAdapter):
         async def run_impl(run_session):
             # xp_tracker = MlflowExperimentTracker(run_session.params_name, run_session.run_id)
             config = run_session.config
-            actors_params = [
-                ActorParams(
-                    name=actor_params.name,
-                    actor_class=actor_params.actor_class,
-                    implementation=actor_params.implementation,
-                    agent_config=AgentConfig(
-                        run_id=run_session.run_id,
-                        environment_specs=config.environment.specs,
-                        model_id=actor_params.agent_config.model_id,
-                        model_version=actor_params.agent_config.model_version,
-                    ),
-                )
-                for actor_params in config.actors[: config.environment.specs.num_players]
-            ]
+
 
             config = run_session.config
             assert config.environment.specs.num_players == 1
@@ -156,10 +144,20 @@ class SimpleSB3AgentAdapter(AgentAdapter):
                 env_params = copy.deepcopy(config.environment)
                 env_params.config.seed = env_params.config.seed + trial_idx
 
+                agent_actor_params = ActorParams(
+                        name="agent_1",
+                        actor_class="agent",
+                        implementation="simple_sb3",
+                        agent_config=AgentConfig(
+                            run_id=run_session.run_id,
+                            environment_specs=env_params.specs,
+                        ),
+                    )
+
                 return TrialConfig(
                     run_id=run_session.run_id,
                     environment=env_params,
-                    actors=actors_params,
+                    actors=[agent_actor_params],
                 )
 
 
@@ -185,13 +183,13 @@ class SimpleSB3AgentAdapter(AgentAdapter):
                     environment=EnvironmentParams(
                         specs=EnvironmentSpecs(implementation="gym/LunarLander-v2", num_input=8, num_action=4),
                         config=EnvironmentConfig(seed=12, framestack=1, render=True, render_width=256),
-                    ),
-                    ############ TUTORIAL STEP 4 ############
-                    training=SimpleSB3TrainingRunConfig(
-                        trial_count=100,
-                    ),
-                    ##########################################
-                    policy_network=MLPNetworkConfig(hidden_size=64),
+                    )
+                    # ############ TUTORIAL STEP 4 ############
+                    # training=SimpleSB3TrainingRunConfig(
+                    #     trial_count=100,
+                    # ),
+                    # ##########################################
+                    # policy_network=MLPNetworkConfig(hidden_size=64),
                 ),
             )
         }
