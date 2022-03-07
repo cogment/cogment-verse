@@ -180,8 +180,16 @@ message PlayRunConfig {
   uint32 trial_count = 4;
 }
 
+message SimpleSB3TrainingConfig {
+  uint32 trial_count = 2;
+  uint32 max_parallel_trials = 3;
+  float discount_factor = 4;
+  float learning_rate = 8;
+  uint32 batch_size = 5;
+}
+
 message SimpleSB3TrainingRunConfig {
   EnvironmentParams environment = 1;
-  ActorParams actors = 2;
-  uint32 trial_count = 3;
+  SimpleSB3TrainingConfig training = 2;
+  MLPNetworkConfig policy_network = 3;
 }

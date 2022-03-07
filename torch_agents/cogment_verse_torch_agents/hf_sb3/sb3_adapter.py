@@ -55,52 +55,71 @@ class SimpleSB3AgentAdapter(AgentAdapter):
         event_loop = asyncio.get_running_loop()
         return await event_loop.run_in_executor(None, func, *args)
 
-    def _create(
-        self,
-        model_id,
-        environment_specs,
-        policy_network_hidden_size=64,
-        **kwargs,
-    ):
-        checkpoint = load_from_hub(
-            repo_id="sb3/demo-hf-CartPole-v1",
-            filename="ppo-CartPole-v1",
-        )
-        model = SimpleSB3Model(
-            model_id = model_id,
-            version_number = 1,
-            policy_network = PPO.load(checkpoint)
-        )
+    # def _create(
+    #     self,
+    #     model_id,
+    #     environment_specs,
+    #     policy_network_hidden_size=64,
+    #     **kwargs,
+    # ):
+    #     checkpoint = load_from_hub(
+    #         repo_id="ThomasSimonini/ppo-LunarLander-v2",
+    #         filename="ppo-LunarLander-v2.zip",
+    #     )
+    #     model = SimpleSB3Model(
+    #         model_id = model_id,
+    #         version_number = 1,
+    #         policy_network = PPO.load(checkpoint)
+    #     )
+    #
+    #     model_user_data = {
+    #         "environment_implementation": environment_specs.implementation,
+    #         "num_input": environment_specs.num_input,
+    #         "num_action": environment_specs.num_action,
+    #     }
+    #
+        # return model, model_user_data
 
-        model_user_data = {
-            "environment_implementation": environment_specs.implementation,
-            "num_input": environment_specs.num_input,
-            "num_action": environment_specs.num_action,
-        }
-
-        return model, model_user_data
-
+    # def _load(self, model_id, version_number, model_user_data, version_user_data, model_data_f, **kwargs):
+    #     # policy_network = torch.load(model_data_f)
+    #     # assert isinstance(policy_network, torch.nn.Sequential)
+    #     checkpoint = load_from_hub(
+    #         repo_id="ThomasSimonini/ppo-LunarLander-v2",
+    #         filename="ppo-LunarLander-v2.zip",
+    #     )
+    #     policy_network = PPO.load(checkpoint)
+    #     return SimpleSB3Model(model_id=model_id, version_number=version_number, policy_network=policy_network)
+    #
+    # def _save(self, model, model_user_data, model_data_f, **kwargs):
+    #     assert isinstance(model, SimpleSB3Model)
+    #     # torch.save(model.policy_network, model_data_f)
+    #     return {}
 
     def _create_actor_implementations(self):
         async def impl(actor_session):
             actor_session.start()
 
             config = actor_session.config
-
-            model, _model_info, version_info = await self.retrieve_version(config.model_id, config.model_version)
-            model_version_number = version_info["version_number"]
-            log.info(f"Starting trial with model v{model_version_number}")
+            # print("config.model_id = ", config.model_id)
+            # print("config.model_version = ", config.model_version)
+            # model, _model_info, version_info = await self.retrieve_version(config.model_id, config.model_version)
+            # model_version_number = version_info["version_number"]
+            # log.info(f"Starting trial with model v{model_version_number}")
 
             # Retrieve the policy network and set it to "eval" mode
-            policy_network = copy.deepcopy(model.policy_network)
-            policy_network.eval()
+            checkpoint = load_from_hub(
+                repo_id="ThomasSimonini/ppo-LunarLander-v2",
+                filename="ppo-LunarLander-v2.zip",
+            )
+            model = PPO.load(checkpoint)
+
+            # policy_network = copy.deepcopy(model.policy_network)
+            # policy_network.eval()
 
             @torch.no_grad()
             def compute_action(event):
                 obs = tensor_from_cog_obs(event.observation.snapshot, dtype=self._dtype)
-                scores = policy_network(obs.view(1, -1))
-                probs = torch.softmax(scores, dim=-1)
-                action = torch.distributions.Categorical(probs).sample()
+                action = model.predict(obs)
                 return action
 
             async for event in actor_session.event_loop():
@@ -123,21 +142,8 @@ class SimpleSB3AgentAdapter(AgentAdapter):
                 log.info("Got raw sample")
 
         async def run_impl(run_session):
-            # xp_tracker = MlflowExperimentTracker(run_session.params_name, run_session.run_id)
-            config = run_session.config
-
-
             config = run_session.config
             assert config.environment.specs.num_players == 1
-
-            model_id = f"{run_session.run_id}_model"
-
-            # Initializing a model
-            model, _version_info = await self.create_and_publish_initial_version(
-                model_id,
-                environment_specs=config.environment.specs,
-                policy_network_hidden_size=config.policy_network.hidden_size,
-            )
 
             # Helper function to create a trial configuration
             def create_trial_config(trial_idx):
@@ -174,22 +180,28 @@ class SimpleSB3AgentAdapter(AgentAdapter):
             ):
                 log.info(f"Got sample {sample}")
 
-
-        return {
-            "simple_sb3_training": (
-                sample_producer_impl,
-                run_impl,
-                SimpleSB3TrainingRunConfig(
-                    environment=EnvironmentParams(
-                        specs=EnvironmentSpecs(implementation="gym/LunarLander-v2", num_input=8, num_action=4),
-                        config=EnvironmentConfig(seed=12, framestack=1, render=True, render_width=256),
-                    )
-                    # ############ TUTORIAL STEP 4 ############
-                    # training=SimpleSB3TrainingRunConfig(
-                    #     trial_count=100,
-                    # ),
-                    # ##########################################
-                    # policy_network=MLPNetworkConfig(hidden_size=64),
-                ),
-            )
-        }
+        checkpoint = load_from_hub(
+            repo_id="ThomasSimonini/ppo-LunarLander-v2",
+            filename="ppo-LunarLander-v2.zip",
+        )
+        # return {
+        #     "simple_sb3_training": (
+        #         sample_producer_impl,
+        #         run_impl,
+        #         SimpleSB3TrainingRunConfig(
+        #             environment=EnvironmentParams(
+        #                 specs=EnvironmentSpecs(implementation="gym/LunarLander-v2", num_input=8, num_action=4),
+        #                 config=EnvironmentConfig(seed=12, framestack=1, render=True, render_width=256),
+        #             ),
+        #             # ############ TUTORIAL STEP 4 ############
+        #             # training=SimpleSB3TrainingRunConfig(
+        #             #     trial_count=100,
+        #             # ),
+        #             # ##########################################
+        #             # policy_network=MLPNetworkConfig(hidden_size=64),
+        #             policy_network = "ppo"
+        #             policy_network = PPO.load(checkpoint),
+        #         ),
+        #     )
+        # }
+        return {}
