@@ -18,15 +18,16 @@ import logging
 import os
 import sys
 import torch.multiprocessing as mp
-
-import cog_settings
+from dotenv import load_dotenv
 import cogment
+
 from cogment_verse import RunContext
 from cogment_verse_torch_agents.hive_adapter.hive_agent_adapter import HiveAgentAdapter
 from cogment_verse_torch_agents.muzero.adapter import MuZeroAgentAdapter
 from cogment_verse_torch_agents.simple_a2c.simple_a2c_agent import SimpleA2CAgentAdapter
 from cogment_verse_torch_agents.simple_bc import SimpleBCAgentAdapter
-from dotenv import load_dotenv
+
+import cog_settings
 
 load_dotenv()
 

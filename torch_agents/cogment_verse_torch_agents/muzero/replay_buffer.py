@@ -12,11 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from collections import namedtuple, OrderedDict
 import copy
 import time
 import numpy as np
 import torch
-from collections import namedtuple, OrderedDict
 
 
 def clone_to_cpu(x):
@@ -220,6 +220,9 @@ class TrialReplayBuffer:
         self._total_size = sum(map(len, self.episodes.values()))
 
         # discard old episodes if necessary
+        self._discard_old_episodes()
+
+    def _discard_old_episodes(self):
         keys_to_delete = []
         for key, episode in self.episodes.items():
             if self._total_size < self._max_size:

@@ -12,23 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import asyncio
 from collections import namedtuple
-import ctypes
 import copy
 import io
 import time
-
 import logging
+import queue
 import torch
 import torch.multiprocessing as mp
 import numpy as np
-import queue
+
 
 from data_pb2 import (
     MuZeroTrainingRunConfig,
     MuZeroTrainingConfig,
-    AgentAction,
     TrialConfig,
     ActorParams,
     EnvironmentConfig,
@@ -40,10 +37,7 @@ from data_pb2 import (
 from cogment_verse.utils import LRU
 from cogment_verse import AgentAdapter
 from cogment_verse import MlflowExperimentTracker
-from cogment_verse_torch_agents.wrapper import np_array_from_proto_array, proto_array_from_np_array
-from cogment_verse_torch_agents.muzero.replay_buffer import Episode, TrialReplayBuffer, EpisodeBatch
 from cogment_verse_torch_agents.muzero.agent import MuZeroAgent
-from cogment_verse_torch_agents.muzero.schedule import LinearScheduleWithWarmup
 from cogment_verse_torch_agents.muzero.stats import RunningStats
 
 from cogment.api.common_pb2 import TrialState

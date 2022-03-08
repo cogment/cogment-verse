@@ -12,14 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from data_pb2 import MuZeroTrainingConfig
 
 import logging
-import torch
-import numpy as np
 import copy
 import io
 import itertools
+import torch
+import numpy as np
 
 from cogment_verse_torch_agents.muzero.networks import (
     MuZero,
@@ -31,6 +30,8 @@ from cogment_verse_torch_agents.muzero.networks import (
     DynamicsNetwork,
 )
 from cogment_verse_torch_agents.muzero.replay_buffer import EpisodeBatch
+
+from data_pb2 import MuZeroTrainingConfig
 
 # pylint: disable=arguments-differ
 # pylint: disable=invalid-name
@@ -115,11 +116,8 @@ class MuZeroAgent(torch.nn.Module):
             weight_decay=self.params.weight_decay,
         )
 
-    @torch.no_grad()
-    def act(self, observation):
-        self.target_muzero.eval()
-        obs = observation.detach().clone().float().to(self._device)
-        action, policy, _q, value = self.target_muzero.act(
+    def forward(self, obs):
+        return self.target_muzero.act(
             obs,
             self.params.exploration_epsilon,
             self.params.exploration_alpha,
@@ -130,6 +128,12 @@ class MuZeroAgent(torch.nn.Module):
             self.params.ucb_c1,
             self.params.ucb_c2,
         )
+
+    @torch.no_grad()
+    def act(self, observation):
+        self.target_muzero.eval()
+        obs = observation.detach().clone().float().to(self._device)
+        action, policy, _q, value = self(obs)
         policy = policy.cpu().numpy()
         value = value.cpu().numpy().item()
 
