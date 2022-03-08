@@ -48,7 +48,7 @@ def policy():
 def replay_buffer(env, policy):
     reward_probs = torch.ones(4) / 4
     value_probs = torch.ones(4) / 4
-    replay_buffer = TrialReplayBuffer(max_size=1000, discount_rate=0.99, bootstrap_steps=10)
+    replay_buffer = TrialReplayBuffer(max_size=1000)
     for _ in range(10):
         obs = env.reset()
         done = False

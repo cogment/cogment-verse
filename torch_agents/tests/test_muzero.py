@@ -26,10 +26,16 @@ from cogment_verse_torch_agents.muzero.networks import (
 from cogment_verse_torch_agents.muzero.agent import MuZeroAgent
 from cogment_verse_torch_agents.muzero.adapter import MuZeroAgentAdapter, DEFAULT_MUZERO_TRAINING_CONFIG
 
+from data_pb2 import EnvironmentSpecs
 
 # pylint: disable=redefined-outer-name
 # pylint: disable=invalid-name
 # pylint: disable=protected-access
+
+
+@pytest.fixture
+def lander_specs():
+    return EnvironmentSpecs(implementation="gym/LunarLander-v2", num_players=1, num_input=8, num_action=4)
 
 
 @pytest.fixture
@@ -80,9 +86,7 @@ def test_act(device, env):
 
 # todo(jonathan): fix after refactor
 @pytest.mark.parametrize("device", ["cpu", "cuda"])
-def test_learn(
-    device,
-):
+def test_learn(device, lander_specs):
     if device == "cuda" and not torch.cuda.is_available():
         pytest.skip()
 
@@ -91,7 +95,12 @@ def test_learn(
 
     agent_adapter = MuZeroAgentAdapter()
     agent = agent_adapter._create(
-        "dummy_id", obs_dim=obs_dim, act_dim=act_dim, device=device, training_config=DEFAULT_MUZERO_TRAINING_CONFIG
+        "dummy_id",
+        obs_dim=obs_dim,
+        act_dim=act_dim,
+        device=device,
+        training_config=DEFAULT_MUZERO_TRAINING_CONFIG,
+        environment_specs=lander_specs,
     )
 
     model = agent.muzero
@@ -179,9 +188,14 @@ def test_distributional_transform():
     assert torch.allclose(val, val_4)
 
 
-def test_agentadapter():
+def test_agentadapter(lander_specs):
     agent_adapter = MuZeroAgentAdapter()
     agent = agent_adapter._create(
-        "dummy_id", obs_dim=8, act_dim=4, device="cpu", training_config=DEFAULT_MUZERO_TRAINING_CONFIG
+        "dummy_id",
+        obs_dim=8,
+        act_dim=4,
+        device="cpu",
+        training_config=DEFAULT_MUZERO_TRAINING_CONFIG,
+        environment_specs=lander_specs,
     )
     agent.act(torch.rand(8))

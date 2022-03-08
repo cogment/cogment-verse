@@ -45,11 +45,7 @@ class ReplayBufferWorker(mp.Process):
     def run(self):
         torch.set_num_threads(self._training_config.threads_per_worker)
         episode_samples = {}
-        replay_buffer = TrialReplayBuffer(
-            max_size=self._training_config.max_replay_buffer_size,
-            discount_rate=self._training_config.discount_rate,
-            bootstrap_steps=self._training_config.bootstrap_steps,
-        )
+        replay_buffer = TrialReplayBuffer(max_size=self._training_config.max_replay_buffer_size)
 
         zero_reward_probs = self.reward_distribution.compute_target(torch.tensor(0.0)).cpu().detach()
         zero_value_probs = self.value_distribution.compute_target(torch.tensor(0.0)).cpu().detach()
@@ -106,17 +102,16 @@ class ReplayBufferWorker(mp.Process):
                 try:
                     # testing, sampling strategy
                     keys = list(replay_buffer.episodes.keys())
-                    p = torch.tensor([replay_buffer.episodes[key].timestamp for key in keys], dtype=torch.double)
-                    p -= p.min() - 0.1
-                    p /= p.sum()
-                    dist = torch.distributions.Categorical(p)
-                    # episode_id = np.random.randint(0, len(replay_buffer.episodes))
+                    probs = torch.tensor([replay_buffer.episodes[key].timestamp for key in keys], dtype=torch.double)
+                    probs -= probs.min() - 0.1
+                    probs /= probs.sum()
+                    dist = torch.distributions.Categorical(probs)
                     key_id = dist.sample().item()
                     self._reanalyze_queue.put((keys[key_id], replay_buffer.episodes[keys[key_id]]), timeout=1.0)
                 except queue.Full:
                     pass
 
-                del p
+                del probs
                 del dist
 
             # Sample a batch and add it to the training queue

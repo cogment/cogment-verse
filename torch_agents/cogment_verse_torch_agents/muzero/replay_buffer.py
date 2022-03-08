@@ -67,7 +67,7 @@ class Episode:
         self._return = []
         self._reward_probs = []
         self._value_probs = []
-        self._bootstrap = None
+        self.bootstrap = None
         self._min_priority = min_priority
         self._action_space = set()
         self.zero_reward_probs = clone_to_cpu(zero_reward_probs)
@@ -89,7 +89,7 @@ class Episode:
                 self._value_probs[step],
                 self._value[step],
             )
-            episode._bootstrap = copy.deepcopy(self._bootstrap)
+            episode.bootstrap = copy.deepcopy(self.bootstrap)
         return episode
 
     def __len__(self):
@@ -98,14 +98,14 @@ class Episode:
     @torch.no_grad()
     def bootstrap_value(self, steps, discount):
         length = len(self)
-        self._bootstrap = [0.0 for _ in range(length)]
+        self.bootstrap = [0.0 for _ in range(length)]
         for i in range(length):
             max_k = min(i + steps, length)
             if max_k < length:
-                self._bootstrap[i] = (discount ** (max_k - i)) * self._value[max_k]
+                self.bootstrap[i] = (discount ** (max_k - i)) * self._value[max_k]
 
             for k in reversed(range(i, max_k)):
-                self._bootstrap[i] += (discount ** (k - i)) * self.rewards[k]
+                self.bootstrap[i] += (discount ** (k - i)) * self.rewards[k]
 
     def add_step(self, state, action, reward_probs, reward, done, policy, value_probs, value):
         self.states.append(clone_to_cpu(state))
@@ -160,7 +160,7 @@ class Episode:
             actions[k - start] = self.actions[k]
             rewards[k - start] = self.rewards[k]
             target_policy[k - start] = ensure_tensor(self._policy[k])
-            target_value[k - start] = self._bootstrap[k]
+            target_value[k - start] = self.bootstrap[k]
             priority[k - start] = 0.0  # self._p[k]
             importance_weight[k - start] = 0.0
             done[k - start] = self.done[k]
@@ -196,15 +196,12 @@ class Episode:
 
 
 class TrialReplayBuffer:
-    def __init__(self, max_size, discount_rate, bootstrap_steps):
+    def __init__(self, max_size):
         self.episodes = OrderedDict()
         self._max_size = max_size
         self._total_size = 0
-        self._discount_rate = discount_rate
-        self._bootstrap_steps = bootstrap_steps
         self._p = None
         self._current_episode = None
-        self._bootstrap_steps = bootstrap_steps
 
     def size(self):
         return self._total_size

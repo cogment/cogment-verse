@@ -154,12 +154,11 @@ class MuZeroAgentAdapter(AgentAdapter):
         model_user_data,
         version_user_data,
         model_data_f,
-        environment_specs,
         **kwargs,
     ):
         return MuZeroAgent.load(model_data_f, "cpu")
 
-    def _save(self, model, model_user_data, model_data_f, environment_specs, epoch_idx=-1, total_samples=0, **kwargs):
+    def _save(self, model, model_user_data, model_data_f, epoch_idx=-1, total_samples=0, **kwargs):
         assert isinstance(model, MuZeroAgent)
         model.save(model_data_f)
         return {"epoch_idx": epoch_idx, "total_samples": total_samples}
@@ -168,7 +167,6 @@ class MuZeroAgentAdapter(AgentAdapter):
         async def _single_agent_muzero_actor_implementation(actor_session):
             actor_session.start()
             agent, _, _ = await self.retrieve_version(actor_session.config.model_id, -1)
-            # agent = copy.deepcopy(agent)
             agent.set_device(actor_session.config.device)
 
             worker = AgentTrialWorker(agent, actor_session.config)
