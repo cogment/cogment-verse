@@ -51,9 +51,7 @@ EpisodeBatch = namedtuple(
 
 
 class Episode:
-    def __init__(
-        self, initial_state, discount, trial_id=0, zero_reward_probs=None, zero_value_probs=None
-    ):
+    def __init__(self, initial_state, discount, trial_id=0, zero_reward_probs=None, zero_value_probs=None):
         self._discount = discount
         self._id = trial_id
         self.states = [clone_to_cpu(initial_state)]
@@ -72,9 +70,7 @@ class Episode:
         self.timestamp = time.time()
 
     def clone(self):
-        episode = Episode(
-            self.states[0], self._discount, self._id, self.zero_reward_probs, self.zero_value_probs
-        )
+        episode = Episode(self.states[0], self._discount, self._id, self.zero_reward_probs, self.zero_value_probs)
         for step in range(len(self)):
             episode.add_step(
                 self.states[step + 1],
