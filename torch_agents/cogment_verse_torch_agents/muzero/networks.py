@@ -21,23 +21,6 @@ from cogment_verse_torch_agents.muzero.mcts import MCTS
 # pylint: disable=invalid-name
 
 
-def expect_equal_shape(a, b):
-    assert a.shape == b.shape, f"{a.shape} == {b.shape}"
-
-
-@torch.no_grad()
-def parameters_l2(model):
-    l2 = 0
-    for p in model.parameters():
-        l2 += torch.sum(torch.square(p))
-    return l2
-
-
-def relative_error(u, v, eps=1e-6):
-    # clamp for NaN issue??
-    return torch.clamp(torch.abs(u - v) / torch.sqrt(u ** 2 + v ** 2 + eps), 0, 1)
-
-
 def cosine_similarity_loss(u, v, dim=1, weights=None, eps=1e-6):
     if weights is None:
         weights = 1.0
@@ -237,22 +220,6 @@ class ValueNetwork(torch.nn.Module):
         return self.distribution(x)
 
 
-class QNetwork(torch.nn.Module):
-    def __init__(self, num_act, num_hidden, num_hidden_layers, vmin, vmax, vbins):
-        super().__init__()
-        self.blocks = torch.nn.ModuleList([ResidualBlock(num_hidden) for _ in range(num_hidden_layers)])
-        self.distributions = torch.nn.ModuleList(
-            [Distributional(vmin, vmax, num_hidden, vbins) for _ in range(num_act)]
-        )
-
-    def forward(self, x):
-        for block in self.blocks:
-            x = block(x)
-
-        probs, vals = zip(*[dist(x) for dist in self.distributions])
-        return torch.stack(probs, dim=1), torch.stack(vals, dim=1)
-
-
 class DynamicsNetwork(torch.nn.Module):
     def __init__(self, num_action, num_hidden, num_hidden_layers, rmin, rmax, rbins):
         super().__init__()
@@ -345,7 +312,6 @@ class MuZero(torch.nn.Module):
         target_policy,
         target_value_probs,
         target_value,
-        _importance_weight,
         max_norm,
         s_weight,
         v_weight,
@@ -358,7 +324,6 @@ class MuZero(torch.nn.Module):
         rollout_length, batch_size = observation.shape[:2]
         initial_state = self.representation(observation[0])
         device = initial_state.device
-        priority = torch.zeros((rollout_length, batch_size), dtype=initial_state.dtype, device=device)
 
         loss_kl = 0
         loss_v = 0
@@ -399,10 +364,6 @@ class MuZero(torch.nn.Module):
         loss_v = cross_entropy(pred_value_probs, target_value_probs, weights=1, dim=1)
         loss_s = self._similarity_loss(pred_projection, target_projection, weights=1, dim=1)
 
-        # testing; disable priority replay
-        priority = torch.ones_like(priority)
-        priority = priority.detach().cpu().numpy()
-
         # muzero optimizer step
         optimizer.zero_grad()
         total_loss = loss_kl + loss_r + v_weight * loss_v + s_weight * loss_s
@@ -425,7 +386,7 @@ class MuZero(torch.nn.Module):
             value_mean=torch.mean(target_value),
             value_max=torch.max(target_value),
         )
-        return priority, info
+        return info
 
     @torch.no_grad()
     def reanalyze(self, state, epsilon, alpha, discount_rate, mcts_depth, mcts_count, ucb_c1, ucb_c2, temperature):

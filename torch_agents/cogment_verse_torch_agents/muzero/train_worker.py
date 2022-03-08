@@ -73,9 +73,8 @@ class TrainWorker(mp.Process):
             agent.params.learning_rate = lr
             agent.params.exploration_epsilon = epsilon
             agent.params.mcts_temperature = temperature
-            # batch = next(batch_generator)
             batch = get_from_queue(self.batch_queue, self.config.training.train_device)
-            _priority, info = agent.learn(batch)
+            info = agent.learn(batch)
             del batch
 
             info = dict(

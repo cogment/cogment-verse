@@ -167,7 +167,7 @@ class MuZeroAgent(torch.nn.Module):
             batch_tensors.append(tensor.to(self._device))
         batch = EpisodeBatch(*batch_tensors)
 
-        priority, info = self.muzero.train_step(
+        info = self.muzero.train_step(
             self._optimizer,
             batch.state,
             batch.action,
@@ -178,7 +178,6 @@ class MuZeroAgent(torch.nn.Module):
             batch.target_policy,
             batch.target_value_probs,
             batch.target_value,
-            batch.importance_weight,
             self.params.max_norm,
             self.params.s_weight,
             self.params.v_weight,
@@ -196,7 +195,7 @@ class MuZeroAgent(torch.nn.Module):
             if isinstance(val, torch.Tensor):
                 info[key] = val.detach().cpu().numpy().item()
 
-        return priority, info
+        return info
 
     def _update_target(self):
         pass

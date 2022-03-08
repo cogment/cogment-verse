@@ -44,8 +44,6 @@ EpisodeBatch = namedtuple(
         "done",
         "target_policy",
         "target_value",
-        "priority",
-        "importance_weight",
         "target_value_probs",
         "target_reward_probs",
     ],
@@ -54,7 +52,7 @@ EpisodeBatch = namedtuple(
 
 class Episode:
     def __init__(
-        self, initial_state, discount, trial_id=0, min_priority=0.1, zero_reward_probs=None, zero_value_probs=None
+        self, initial_state, discount, trial_id=0, zero_reward_probs=None, zero_value_probs=None
     ):
         self._discount = discount
         self._id = trial_id
@@ -68,7 +66,6 @@ class Episode:
         self._reward_probs = []
         self._value_probs = []
         self.bootstrap = None
-        self._min_priority = min_priority
         self._action_space = set()
         self.zero_reward_probs = clone_to_cpu(zero_reward_probs)
         self.zero_value_probs = clone_to_cpu(zero_value_probs)
@@ -76,7 +73,7 @@ class Episode:
 
     def clone(self):
         episode = Episode(
-            self.states[0], self._discount, self._id, self._min_priority, self.zero_reward_probs, self.zero_value_probs
+            self.states[0], self._discount, self._id, self.zero_reward_probs, self.zero_value_probs
         )
         for step in range(len(self)):
             episode.add_step(
@@ -143,8 +140,6 @@ class Episode:
         next_states = torch.zeros((length, *self.states[start].shape))
         target_policy = torch.zeros((length, *self._policy[start].shape))
         target_value = torch.zeros(length)
-        priority = torch.zeros(length)
-        importance_weight = torch.zeros(length)
 
         target_reward_probs = torch.zeros(length, *self._reward_probs[start].shape)
         target_value_probs = torch.zeros(length, *self._value_probs[start].shape)
@@ -161,8 +156,6 @@ class Episode:
             rewards[k - start] = self.rewards[k]
             target_policy[k - start] = ensure_tensor(self._policy[k])
             target_value[k - start] = self.bootstrap[k]
-            priority[k - start] = 0.0  # self._p[k]
-            importance_weight[k - start] = 0.0
             done[k - start] = self.done[k]
 
             target_reward_probs[k - start] = self._reward_probs[k]
@@ -188,8 +181,6 @@ class Episode:
             done=done,
             target_policy=target_policy,
             target_value=target_value,
-            priority=priority,
-            importance_weight=importance_weight,
             target_reward_probs=target_reward_probs,
             target_value_probs=target_value_probs,
         )
@@ -247,6 +238,4 @@ class TrialReplayBuffer:
             items.append(item)
 
         batch = EpisodeBatch(*items)._asdict()
-        batch["priority"] = torch.ones_like(batch["priority"])
-        batch["importance_weight"] = torch.ones_like(batch["priority"])
         return EpisodeBatch(**batch)

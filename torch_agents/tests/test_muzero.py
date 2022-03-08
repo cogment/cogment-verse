@@ -112,12 +112,11 @@ def test_learn(device, lander_specs):
     target_value = torch.rand((4, 3))
     done = torch.rand((4, 3))
     action = torch.randint(low=0, high=act_dim, size=(4, 3))
-    importance_weight = 1 / (1 + torch.rand(4) ** 2)
 
     target_reward_probs = agent.muzero.reward_distribution.compute_target(reward).to(device)
     target_value_probs = agent.muzero.value_distribution.compute_target(target_value).to(device)
 
-    _priority, _info = model.train_step(
+    _info = model.train_step(
         optimizer,
         observation,
         action,
@@ -128,7 +127,6 @@ def test_learn(device, lander_specs):
         target_policy,
         target_value_probs,
         target_value,
-        importance_weight,
         max_norm=1.0,
         s_weight=1.0,
         v_weight=1.0,
