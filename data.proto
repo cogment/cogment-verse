@@ -191,5 +191,5 @@ message SimpleSB3TrainingConfig {
 message SimpleSB3TrainingRunConfig {
   EnvironmentParams environment = 1;
   SimpleSB3TrainingConfig training = 2;
-  MLPNetworkConfig policy_network = 3;
+  string policy_network = 3;
 }
