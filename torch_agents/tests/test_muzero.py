@@ -94,7 +94,7 @@ def test_learn(device, lander_specs):
     act_dim = 4
 
     agent_adapter = MuZeroAgentAdapter()
-    agent = agent_adapter._create(
+    agent, _agent_user_data = agent_adapter._create(
         "dummy_id",
         obs_dim=obs_dim,
         act_dim=act_dim,
@@ -190,7 +190,7 @@ def test_distributional_transform():
 
 def test_agentadapter(lander_specs):
     agent_adapter = MuZeroAgentAdapter()
-    agent = agent_adapter._create(
+    agent, _agent_user_data = agent_adapter._create(
         "dummy_id",
         obs_dim=8,
         act_dim=4,
