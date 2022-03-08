@@ -21,16 +21,6 @@ from cogment_verse_torch_agents.muzero.mcts import MCTS
 # pylint: disable=invalid-name
 
 
-def cosine_similarity_loss(u, v, dim=1, weights=None, eps=1e-6):
-    if weights is None:
-        weights = 1.0
-    uv = torch.sum(u * v, dim=dim)
-    u2 = torch.sum(u * u, dim=dim)
-    v2 = torch.sum(v * v, dim=dim)
-    cosine = uv / torch.sqrt(u2 * v2 + eps)
-    return torch.mean((1.0 - cosine) * weights)
-
-
 def lin_bn_act(num_in, num_out, bn=True, act=None):
     layers = [torch.nn.Linear(num_in, num_out)]
     if bn:
@@ -253,7 +243,6 @@ class MuZero(torch.nn.Module):
         predictor,
         reward_distribution,
         value_distribution,
-        similarity_loss=cosine_similarity_loss,
     ):
         super().__init__()
         self.representation = representation
@@ -264,7 +253,6 @@ class MuZero(torch.nn.Module):
         self._predictor = predictor
         self.reward_distribution = reward_distribution
         self.value_distribution = value_distribution
-        self._similarity_loss = similarity_loss
 
     def forward(self, _):
         pass
@@ -357,11 +345,15 @@ class MuZero(torch.nn.Module):
                 target_muzero.representation(next_observation.reshape(rollout_length * batch_size, -1))
             )
 
+        # Set up similarity loss (from EfficientZero)
+        similarity_loss = torch.nn.CosineEmbeddingLoss()
+        cosine_target = torch.ones(pred_projection.shape[0]).to(pred_projection.device)
+
         # muzero loss calculation
         loss_kl = cross_entropy(pred_policy, target_policy, weights=1, dim=1) - entropy_target
         loss_r = cross_entropy(pred_reward_probs, target_reward_probs, weights=1, dim=1)
         loss_v = cross_entropy(pred_value_probs, target_value_probs, weights=1, dim=1)
-        loss_s = self._similarity_loss(pred_projection, target_projection, weights=1, dim=1)
+        loss_s = similarity_loss(pred_projection, target_projection, cosine_target)
 
         # muzero optimizer step
         optimizer.zero_grad()
