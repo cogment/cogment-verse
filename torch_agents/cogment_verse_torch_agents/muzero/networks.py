@@ -323,7 +323,6 @@ class MuZero(torch.nn.Module):
 
         rollout_length, batch_size = observation.shape[:2]
         initial_state = self.representation(observation[0])
-        device = initial_state.device
 
         loss_kl = 0
         loss_v = 0
