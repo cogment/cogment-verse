@@ -68,7 +68,7 @@ def replay_buffer(env, policy):
 
 def test_create(replay_buffer):
     assert replay_buffer.num_episodes() == 10
-    assert replay_buffer.size() == sum(len(episode) for episode in replay_buffer.episodes)
+    assert replay_buffer.size() == sum(len(episode) for episode in replay_buffer.episodes.values())
 
 
 @pytest.mark.parametrize("rollout_length", [4, 8, 12])
