@@ -702,7 +702,7 @@ cartpole_muzero: &default_muzero
       actor_device: "cpu"
       reanalyze_device: "cpu"
       threads_per_worker: 8
-      reanalyze_workers: 0 # test if OOM happens without reanalyze
+      reanalyze_workers: 1
 
 lander_muzero:
   implementation: muzero_mlp_training
@@ -720,14 +720,10 @@ lander_muzero:
       vmin: -200.0
       vmax: 200.0
       model_publication_interval: 1000
-      min_replay_buffer_size: 200
+      min_replay_buffer_size: 1000
       max_replay_buffer_size: 100000
       batch_size: 32
-      #temperature_decay_steps: 100000
       min_temperature: 1.0
-      #projector_dim: 32
-      #hidden_dim: 128
-      #projector_hidden_dim: 64
       weight_decay: 1.0e-5
 
 lander_muzero_gpu:
@@ -742,9 +738,6 @@ lander_muzero_gpu:
       train_device: "cuda:1"
       reanalyze_device: "cuda:1"
       actor_device: "cuda:0"
-      reanalyze_workers: 1
-      min_replay_buffer_size: 1000
-      max_replay_buffer_size: 100000
 
 simple_bc_lander: &simple_bc_experiment
   implementation: simple_bc_training
