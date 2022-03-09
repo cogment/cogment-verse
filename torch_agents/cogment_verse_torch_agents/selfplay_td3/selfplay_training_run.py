@@ -128,7 +128,7 @@ def create_training_run(agent_adapter):
                 TrialConfig(
                     run_id=run_id,
                     environment=config.environment,
-                    actors=alice_configs + bob_configs,
+                    actors=bob_configs + alice_configs,
                 )
                 for _ in range(config.rollout.epoch_train_trial_count)
             ]
@@ -138,7 +138,7 @@ def create_training_run(agent_adapter):
                 TrialConfig(
                     run_id=run_id,
                     environment=config.environment,
-                    actors=alice_configs + bob_configs,
+                    actors=bob_configs + alice_configs,
                 )
                 for _ in range(config.rollout.epoch_test_trial_count)
             ]
@@ -213,7 +213,6 @@ def create_training_run(agent_adapter):
                         trial_configs=test_trial_configs,
                         max_parallel_trials=config.rollout.max_parallel_trials,
                     ):
-
                         if sample.current_player == 0: # bob' sample
                             if sample.player_done:
                                 test_success.append(0)
