@@ -141,7 +141,10 @@ message RunConfig {
 }
 
 message MLPNetworkConfig {
-  uint32 hidden_size = 1;
+  uint32 input_size = 1;
+  uint32 hidden_size = 2;
+  uint32 num_hidden_layers = 3;
+  uint32 output_size = 4;
 }
 
 message SimpleA2CTrainingConfig {
@@ -162,60 +165,71 @@ message SimpleA2CTrainingRunConfig {
   MLPNetworkConfig critic_network = 4;
 }
 
-message MuZeroTrainingConfig {
-  uint32 model_publication_interval = 1;
-  uint32 trial_count = 2;
-  uint32 max_parallel_trials = 3;
-  float discount_rate = 4;
-  float learning_rate = 5;
-  float weight_decay = 6;
-  uint32 bootstrap_steps = 7;
-  uint32 hidden_dim = 9;
-  uint32 hidden_layers = 10;
-  uint32 projector_dim = 11;
-  uint32 projector_hidden_dim = 12;
-  uint32 projector_hidden_layers = 13;
-  uint32 mcts_depth = 14;
-  uint32 mcts_samples = 15;
-  float mcts_temperature = 28;
-  float ucb_c1 = 16;
-  float ucb_c2 = 17;
-  uint32 batch_size = 18;
-  float exploration_alpha = 19;
-  float exploration_epsilon = 20;
-  uint32 rollout_length = 21;
-  float rmin = 22;
-  float rmax = 23;
-  float vmin = 24;
-  float vmax = 25;
-  uint32 rbins = 26;
-  uint32 vbins = 27;
-  uint32 max_replay_buffer_size = 29;
-  uint32 min_replay_buffer_size = 30;
-  uint32 log_interval = 31;
-  float min_learning_rate = 32;
-  uint32 lr_warmup_steps = 33;
-  uint32 lr_decay_steps = 34;
-  float epsilon_min = 35;
-  float epsilon_decay_steps = 36;
-  float min_temperature = 37;
-  uint32 temperature_decay_steps = 38;
-  float max_norm = 39;
-  float s_weight = 42;
-  float v_weight = 43;
-  uint32 demonstration_trials = 44;
-  string train_device = 45;
-  string actor_device = 46;
-  string reanalyze_device = 47;
-  uint32 reanalyze_workers = 48;
-  uint32 threads_per_worker = 49;
+message DistributionConfig {
+  float min_value = 1;
+  float max_value = 2;
+  uint32 num_bins = 3;
 }
 
-message MuZeroTrainingRunConfig {
+message MCTSConfig {
+  uint32 max_depth = 1;
+  uint32 num_samples = 2;
+  float temperature = 3;
+  float ucb_c1 = 4;
+  float ucb_c2 = 5;
+  float exploration_alpha = 6;
+  float exploration_epsilon = 7;
+  uint32 rollout_length = 8;
+  float epsilon_min = 9;
+  float epsilon_decay_steps = 10;
+  float min_temperature = 11;
+  uint32 temperature_decay_steps = 12;
+}
+
+message OptimizerConfig {
+  float learning_rate = 1;
+  float weight_decay = 2;
+  float min_learning_rate = 3;
+  uint32 lr_warmup_steps = 4;
+  uint32 lr_decay_steps = 5;
+  float max_norm = 6;
+}
+
+message MuZeroTrainingConfig {
+  uint32 model_publication_interval = 1;
+  float discount_rate = 2;
+  OptimizerConfig optimizer = 3;
+  uint32 bootstrap_steps = 4;
+  uint32 batch_size = 5;
+  uint32 max_replay_buffer_size = 6;
+  uint32 min_replay_buffer_size = 7;
+  uint32 log_interval = 8;
+  float similarity_weight = 9;
+  float value_weight = 10;
+}
+
+message MuZeroRunConfig {
   EnvironmentParams environment = 1;
   AgentConfig actor = 2;
   MuZeroTrainingConfig training = 3;
+  MCTSConfig mcts = 4;
+  MLPNetworkConfig representation_network = 5;
+  MLPNetworkConfig projector_network = 6;
+  MLPNetworkConfig dynamics_network = 7;
+  MLPNetworkConfig policy_network = 8;
+  MLPNetworkConfig value_network = 9;
+  DistributionConfig reward_distribution = 10;
+  DistributionConfig value_distribution = 11;
+  uint32 trial_count = 12;
+  uint32 max_parallel_trials = 13;
+  uint32 demonstration_trials = 14;
+  string train_device = 15;
+  string actor_device = 16;
+  string reanalyze_device = 17;
+  uint32 reanalyze_workers = 18;
+  uint32 threads_per_worker = 19;
 }
+
 message SimpleBCTrainingConfig {
   uint32 trial_count = 2;
   uint32 max_parallel_trials = 3;

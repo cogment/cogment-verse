@@ -30,7 +30,7 @@ from cogment_verse_torch_agents.muzero.networks import (
 )
 from cogment_verse_torch_agents.muzero.replay_buffer import EpisodeBatch
 
-from data_pb2 import MuZeroTrainingConfig
+from data_pb2 import MuZeroRunConfig
 
 # pylint: disable=arguments-differ
 # pylint: disable=invalid-name
@@ -43,11 +43,11 @@ class MuZeroAgent(torch.nn.Module):
     MuZero implementation
     """
 
-    def __init__(self, *, obs_dim, act_dim, device, training_config: MuZeroTrainingConfig):
+    def __init__(self, *, obs_dim, act_dim, device, run_config: MuZeroRunConfig):
         super().__init__()
         self._obs_dim = obs_dim
         self._act_dim = act_dim
-        self.params = training_config
+        self.params = run_config
         self._device = torch.device(device)
         self._make_networks()
         self._make_optimizer()
@@ -63,36 +63,41 @@ class MuZeroAgent(torch.nn.Module):
         self.load_state_dict(state_dict)
 
     def _make_networks(self):
-        stem = lin_bn_act(self._obs_dim, self.params.hidden_dim, bn=True, act=torch.nn.ReLU())
-        representation = RepresentationNetwork(stem, self.params.hidden_dim, self.params.hidden_layers)
-        policy = PolicyNetwork(self.params.hidden_dim, self.params.hidden_layers, self._act_dim)
+        latent_size = self.params.representation_network.hidden_size
+
+        stem = lin_bn_act(self._obs_dim, latent_size, bn=True, act=torch.nn.ReLU())
+        representation = RepresentationNetwork(stem, latent_size, self.params.representation_network.num_hidden_layers)
+        policy = PolicyNetwork(latent_size, self.params.policy_network.num_hidden_layers, self._act_dim)
 
         value = ValueNetwork(
-            self.params.hidden_dim,
-            self.params.hidden_layers,
-            self.params.vmin,
-            self.params.vmax,
-            self.params.vbins,
+            latent_size,
+            self.params.value_network.num_hidden_layers,
+            self.params.value_distribution.min_value,
+            self.params.value_distribution.max_value,
+            self.params.value_distribution.num_bins,
         )
 
         dynamics = DynamicsNetwork(
             self._act_dim,
-            self.params.hidden_dim,
-            self.params.hidden_layers,
-            self.params.rmin,
-            self.params.rmax,
-            self.params.rbins,
+            latent_size,
+            self.params.dynamics_network.num_hidden_layers,
+            self.params.reward_distribution.min_value,
+            self.params.reward_distribution.max_value,
+            self.params.reward_distribution.num_bins,
         )
 
         projector = mlp(
-            self.params.hidden_dim,
-            self.params.projector_hidden_dim,
-            self.params.projector_dim,
-            hidden_layers=1,
+            num_in=latent_size,
+            num_hidden=self.params.projector_network.hidden_size,
+            num_out=self.params.projector_network.output_size,
+            hidden_layers=self.params.projector_network.num_hidden_layers,
         )
         # todo: check number of hidden layers used in predictor (same as projector??)
         predictor = mlp(
-            self.params.projector_dim, self.params.projector_hidden_dim, self.params.projector_dim, hidden_layers=1
+            num_in=self.params.projector_network.output_size,
+            num_hidden=self.params.projector_network.hidden_size,
+            num_out=self.params.projector_network.output_size,
+            hidden_layers=1,
         )
 
         self.muzero = MuZero(
@@ -112,20 +117,20 @@ class MuZeroAgent(torch.nn.Module):
         self._optimizer = torch.optim.AdamW(
             self.muzero.parameters(),
             lr=1e-3,
-            weight_decay=self.params.weight_decay,
+            weight_decay=self.params.training.optimizer.weight_decay,
         )
 
     def forward(self, obs):
         return self.target_muzero.act(
             obs,
-            self.params.exploration_epsilon,
-            self.params.exploration_alpha,
-            self.params.mcts_temperature,
-            self.params.discount_rate,
-            self.params.mcts_depth,
-            self.params.mcts_samples,
-            self.params.ucb_c1,
-            self.params.ucb_c2,
+            self.params.mcts.exploration_epsilon,
+            self.params.mcts.exploration_alpha,
+            self.params.mcts.temperature,
+            self.params.training.discount_rate,
+            self.params.mcts.max_depth,
+            self.params.mcts.num_samples,
+            self.params.mcts.ucb_c1,
+            self.params.mcts.ucb_c2,
         )
 
     @torch.no_grad()
@@ -142,21 +147,21 @@ class MuZeroAgent(torch.nn.Module):
     def reanalyze(self, observation):
         return self.target_muzero.reanalyze(
             observation.detach().clone().to(self._device),
-            self.params.exploration_epsilon,
-            self.params.exploration_alpha,
-            self.params.discount_rate,
-            self.params.mcts_depth,
-            self.params.mcts_samples,
-            self.params.ucb_c1,
-            self.params.ucb_c2,
-            self.params.mcts_temperature,
+            self.params.mcts.exploration_epsilon,
+            self.params.mcts.exploration_alpha,
+            self.params.training.discount_rate,
+            self.params.mcts.max_depth,
+            self.params.mcts.num_samples,
+            self.params.mcts.ucb_c1,
+            self.params.mcts.ucb_c2,
+            self.params.mcts.temperature,
         )
 
     def learn(self, batch):
         self.muzero.train()
 
         # todo: use schedule
-        lr = self.params.learning_rate
+        lr = self.params.training.optimizer.learning_rate
         for grp in self._optimizer.param_groups:
             grp["lr"] = lr
 
@@ -178,10 +183,10 @@ class MuZeroAgent(torch.nn.Module):
             batch.target_policy,
             batch.target_value_probs,
             batch.target_value,
-            self.params.max_norm,
-            self.params.s_weight,
-            self.params.v_weight,
-            self.params.discount_rate,
+            self.params.training.optimizer.max_norm,
+            self.params.training.similarity_weight,
+            self.params.training.value_weight,
+            self.params.training.discount_rate,
             self.target_muzero,
         )
 
@@ -207,7 +212,7 @@ class MuZeroAgent(torch.nn.Module):
             {
                 "obs_dim": self._obs_dim,
                 "act_dim": self._act_dim,
-                "training_config": self.params,
+                "run_config": self.params,
                 "muzero": self.muzero.state_dict(),
                 "target_muzero": self.target_muzero.state_dict(),
             },

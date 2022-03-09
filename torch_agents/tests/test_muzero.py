@@ -24,7 +24,7 @@ from cogment_verse_torch_agents.muzero.networks import (
 )
 
 from cogment_verse_torch_agents.muzero.agent import MuZeroAgent
-from cogment_verse_torch_agents.muzero.adapter import MuZeroAgentAdapter, DEFAULT_MUZERO_TRAINING_CONFIG
+from cogment_verse_torch_agents.muzero.adapter import MuZeroAgentAdapter, DEFAULT_MUZERO_RUN_CONFIG
 
 from data_pb2 import EnvironmentSpecs
 
@@ -60,7 +60,7 @@ def test_create(device):
     if device == "cuda" and not torch.cuda.is_available():
         pytest.skip()
 
-    agent = MuZeroAgent(obs_dim=8, act_dim=4, device=device, training_config=DEFAULT_MUZERO_TRAINING_CONFIG)
+    agent = MuZeroAgent(obs_dim=8, act_dim=4, device=device, run_config=DEFAULT_MUZERO_RUN_CONFIG)
     assert isinstance(agent.muzero, MuZero)
 
 
@@ -69,7 +69,7 @@ def test_act(device, env):
     if device == "cuda" and not torch.cuda.is_available():
         pytest.skip()
 
-    agent = MuZeroAgent(obs_dim=8, act_dim=4, device=device, training_config=DEFAULT_MUZERO_TRAINING_CONFIG)
+    agent = MuZeroAgent(obs_dim=8, act_dim=4, device=device, run_config=DEFAULT_MUZERO_RUN_CONFIG)
     model = agent.muzero
     model.eval()
     state = env.reset()
@@ -99,7 +99,7 @@ def test_learn(device, lander_specs):
         obs_dim=obs_dim,
         act_dim=act_dim,
         device=device,
-        training_config=DEFAULT_MUZERO_TRAINING_CONFIG,
+        run_config=DEFAULT_MUZERO_RUN_CONFIG,
         environment_specs=lander_specs,
     )
 
@@ -193,7 +193,7 @@ def test_agentadapter(lander_specs):
         obs_dim=8,
         act_dim=4,
         device="cpu",
-        training_config=DEFAULT_MUZERO_TRAINING_CONFIG,
+        run_config=DEFAULT_MUZERO_RUN_CONFIG,
         environment_specs=lander_specs,
     )
     agent.act(torch.rand(8))

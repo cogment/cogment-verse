@@ -654,90 +654,42 @@ procgen_bigfish:
 cartpole_muzero: &default_muzero
   implementation: muzero_mlp_training
   config: &default_muzero_config
-    class_name: data_pb2.MuZeroTrainingRunConfig
+    class_name: data_pb2.MuZeroRunConfig
     environment:
       specs: *cartpole_specs
       config: *default_env_config
-    training: &default_muzero_training_config
-      model_publication_interval: 200
-      trial_count: 2000
-      max_parallel_trials: 4
-      discount_rate: 0.995
-      batch_size: 32
-      projector_dim: 16
-      hidden_dim: 64
-      hidden_layers: 2
-      projector_hidden_dim: 32
-      projector_hidden_layers: 1
-      min_replay_buffer_size: 200
-      max_replay_buffer_size: 100000
-      log_interval: 100
-      weight_decay: 0.01
-      learning_rate: 0.001
-      min_learning_rate: 0.0001
-      lr_warmup_steps: 1000
-      lr_decay_steps: 100000
-      exploration_alpha: 0.1
-      exploration_epsilon: 0.25
-      epsilon_min: 0.25
-      epsilon_decay_steps: 1
-      mcts_temperature: 1.0
-      min_temperature: 0.25
-      temperature_decay_steps: 5000
-      max_norm: 100.0
-      rbins: 4
-      rmin: -1.0
-      rmax: 1.0
-      vbins: 64
-      vmin: -1.0e-3
-      vmax: 200.0
-      rollout_length: 4
-      mcts_depth: 4
-      mcts_samples: 32
-      s_weight: 1.0
-      v_weight: 1.0
-      ucb_c1: 1.25
-      ucb_c2: 15000.0
-      train_device: "cpu"
-      actor_device: "cpu"
-      reanalyze_device: "cpu"
-      threads_per_worker: 8
-      reanalyze_workers: 1
+    reward_distribution:
+      min_value: -1.0
+      max_value: 1.0
+      num_bins: 4
+    value_distribution:
+      min_value: -200.0
+      max_value: 200.0
+      num_bins: 32
 
 lander_muzero:
   implementation: muzero_mlp_training
-  config:
-    class_name: data_pb2.MuZeroTrainingRunConfig
+  config: &lander_muzero_config
+    <<: *default_muzero_config
     environment:
       specs: *lander_specs
       config: *default_env_config
-    training: &lander_muzero_training_config
-      <<: *default_muzero_training_config
-      rbins: 32
-      rmin: -50.0
-      rmax: 50.0
-      vbins: 32
-      vmin: -200.0
-      vmax: 200.0
-      model_publication_interval: 1000
-      min_replay_buffer_size: 1000
-      max_replay_buffer_size: 100000
-      batch_size: 32
-      min_temperature: 1.0
-      weight_decay: 1.0e-5
+    reward_distribution:
+      min_value: -100.0
+      max_value: 100.0
+      num_bins: 32
+    value_distribution:
+      min_value: -1000.0
+      max_value: 1000.0
+      num_bins: 128
 
 lander_muzero_gpu:
   implementation: muzero_mlp_training
   config:
-    class_name: data_pb2.MuZeroTrainingRunConfig
-    environment:
-      specs: *lander_specs
-      config: *default_env_config
-    training:
-      <<: *lander_muzero_training_config
-      train_device: "cuda:1"
-      reanalyze_device: "cuda:1"
-      actor_device: "cuda:0"
+    <<: *lander_muzero_config
+    train_device: "cuda:1"
+    reanalyze_device: "cuda:1"
+    actor_device: "cuda:0"
 
 simple_bc_lander: &simple_bc_experiment
   implementation: simple_bc_training

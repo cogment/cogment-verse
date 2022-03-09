@@ -7,7 +7,7 @@ FROM ${BASE_PYTHON_IMAGE} as base
 FROM python:3.7-slim as cpu
 
 # Install torch as early as possible to help with cache
-RUN pip install torch==1.8.1+cpu -f https://download.pytorch.org/whl/cpu/torch_stable.html
+RUN pip install torch==1.10.2+cpu -f https://download.pytorch.org/whl/cpu/torch_stable.html
 
 # Install system dependencies
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y curl xvfb
@@ -19,10 +19,11 @@ FROM nvcr.io/nvidia/pytorch:21.08-py3 as gpu
 
 # Install the rest of the dependencies
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y python3-opengl xvfb git tk swig wget unrar libglib2.0-0 g++ cmake
+RUN pip install torch==1.10.2+cu113 torchvision==0.11.3+cu113 torchaudio==0.10.2+cu113 torchtext==0.11.2 -f https://download.pytorch.org/whl/cu113/torch_stable.html
 #########
 
 #########
-# "dev" is the developpment image
+# "dev" is the development image
 FROM ${DEVICE} as dev
 
 # Install poetry
@@ -59,7 +60,3 @@ RUN poetry run task build
 
 CMD [ "task", "start" ]
 #########
-
-
-## testing
-# RUN pip3 install --pre torch torchvision torchaudio -f https://download.pytorch.org/whl/nightly/cu113/torch_nightly.html

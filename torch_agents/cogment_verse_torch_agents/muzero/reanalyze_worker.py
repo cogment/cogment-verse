@@ -73,7 +73,7 @@ class ReanalyzeWorker(mp.Process):
             episode_id, episode = self._reanalyze_queue.get()
             reanalyze_episode = Episode(
                 episode.states[0],
-                agent.params.discount_rate,
+                agent.params.training.discount_rate,
                 zero_reward_probs=episode.zero_reward_probs,
                 zero_value_probs=episode.zero_value_probs,
             )
@@ -92,6 +92,8 @@ class ReanalyzeWorker(mp.Process):
                     value.detach().cpu().item(),
                 )
             del episode
-            reanalyze_episode.bootstrap_value(agent.params.bootstrap_steps, agent.params.discount_rate)
+            reanalyze_episode.bootstrap_value(
+                agent.params.training.bootstrap_steps, agent.params.training.discount_rate
+            )
             self._reanalyze_update_queue.put((episode_id, reanalyze_episode))
             self._reanalyzed_samples.value += len(reanalyze_episode)

@@ -37,15 +37,14 @@ class ReplayBufferWorker(mp.Process):
         self._reanalyze_queue = reanalyze_queue
         self._reanalyze_update_queue = reanalyze_update_queue
         self._replay_buffer_size = mp.Value(ctypes.c_uint32, 0)
-        self._training_config = config
-        self._device = config.train_device
+        self._run_config = config
         self.reward_distribution = reward_distribution
         self.value_distribution = value_distribution
 
     def run(self):
-        torch.set_num_threads(self._training_config.threads_per_worker)
+        torch.set_num_threads(self._run_config.threads_per_worker)
         episode_samples = {}
-        replay_buffer = TrialReplayBuffer(max_size=self._training_config.max_replay_buffer_size)
+        replay_buffer = TrialReplayBuffer(max_size=self._run_config.training.max_replay_buffer_size)
 
         zero_reward_probs = self.reward_distribution.compute_target(torch.tensor(0.0)).cpu().detach()
         zero_value_probs = self.value_distribution.compute_target(torch.tensor(0.0)).cpu().detach()
@@ -58,7 +57,7 @@ class ReplayBufferWorker(mp.Process):
                 if trial_id not in episode_samples:
                     episode_samples[trial_id] = Episode(
                         sample.state,
-                        self._training_config.discount_rate,
+                        self._run_config.training.discount_rate,
                         zero_reward_probs=zero_reward_probs,
                         zero_value_probs=zero_value_probs,
                     )
@@ -80,14 +79,14 @@ class ReplayBufferWorker(mp.Process):
 
                 if sample.done:
                     episode_samples[trial_id].bootstrap_value(
-                        self._training_config.bootstrap_steps, self._training_config.discount_rate
+                        self._run_config.training.bootstrap_steps, self._run_config.training.discount_rate
                     )
                     replay_buffer.update_episode(episode_samples.pop(trial_id))
             except queue.Empty:
                 pass
 
             self._replay_buffer_size.value = replay_buffer.size()
-            if self._replay_buffer_size.value < self._training_config.min_replay_buffer_size:
+            if self._replay_buffer_size.value < self._run_config.training.min_replay_buffer_size:
                 continue
 
             # Fetch/perform any pending reanalyze updates
@@ -115,10 +114,13 @@ class ReplayBufferWorker(mp.Process):
                 del dist
 
             # Sample a batch and add it to the training queue
-            if replay_buffer.size() >= self._training_config.min_replay_buffer_size and not self._batch_queue.full():
-                batch = replay_buffer.sample(self._training_config.rollout_length, self._training_config.batch_size)
+            if (
+                replay_buffer.size() >= self._run_config.training.min_replay_buffer_size
+                and not self._batch_queue.full()
+            ):
+                batch = replay_buffer.sample(self._run_config.mcts.rollout_length, self._run_config.training.batch_size)
                 for item in batch:
-                    item.to(self._training_config.train_device)
+                    item.to(self._run_config.train_device)
                 try:
                     self._batch_queue.put(EpisodeBatch(*batch), timeout=1.0)
                 except queue.Full:

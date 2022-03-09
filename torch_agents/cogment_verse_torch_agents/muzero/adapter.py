@@ -24,8 +24,12 @@ import numpy as np
 
 
 from data_pb2 import (
-    MuZeroTrainingRunConfig,
+    MuZeroRunConfig,
     MuZeroTrainingConfig,
+    MCTSConfig,
+    MLPNetworkConfig,
+    DistributionConfig,
+    OptimizerConfig,
     TrialConfig,
     ActorParams,
     EnvironmentConfig,
@@ -56,50 +60,77 @@ log = logging.getLogger(__name__)
 
 MuZeroSample = namedtuple("MuZeroSample", ["state", "action", "reward", "next_state", "done", "policy", "value"])
 
-DEFAULT_MUZERO_TRAINING_CONFIG = MuZeroTrainingConfig(
-    model_publication_interval=500,
+
+DEFAULT_MUZERO_RUN_CONFIG = MuZeroRunConfig(
+    environment=EnvironmentParams(
+        config=EnvironmentConfig(
+            seed=12,
+            framestack=1,
+            render=False,
+        ),
+        specs=EnvironmentSpecs(implementation="gym/CartPole-v0", num_players=1, num_input=4, num_action=2),
+    ),
+    training=MuZeroTrainingConfig(
+        model_publication_interval=500,
+        discount_rate=0.99,
+        optimizer=OptimizerConfig(
+            learning_rate=1e-4,
+            weight_decay=1e-3,
+            min_learning_rate=1e-6,
+            lr_warmup_steps=1000,
+            lr_decay_steps=1000000,
+            max_norm=100.0,
+        ),
+        bootstrap_steps=20,
+        batch_size=16,
+        max_replay_buffer_size=20000,
+        min_replay_buffer_size=200,
+        log_interval=200,
+        similarity_weight=0.1,
+        value_weight=1.0,
+    ),
+    mcts=MCTSConfig(
+        max_depth=3,
+        num_samples=8,
+        temperature=1.0,
+        ucb_c1=1.25,
+        ucb_c2=10000.0,
+        exploration_alpha=0.5,
+        exploration_epsilon=0.25,
+        rollout_length=2,
+        epsilon_min=0.01,
+        epsilon_decay_steps=100000,
+        min_temperature=0.25,
+        temperature_decay_steps=100000,
+    ),
+    representation_network=MLPNetworkConfig(
+        hidden_size=32,
+        num_hidden_layers=1,
+    ),
+    projector_network=MLPNetworkConfig(
+        hidden_size=32,
+        num_hidden_layers=1,
+        output_size=16,
+    ),
+    dynamics_network=MLPNetworkConfig(
+        num_hidden_layers=1,
+    ),
+    policy_network=MLPNetworkConfig(
+        num_hidden_layers=1,
+    ),
+    value_network=MLPNetworkConfig(
+        num_hidden_layers=1,
+    ),
+    reward_distribution=DistributionConfig(min_value=-100.0, max_value=100.0, num_bins=16),
+    value_distribution=DistributionConfig(min_value=-1000.0, max_value=1000.0, num_bins=64),
     trial_count=1000,
-    discount_rate=0.99,
-    learning_rate=1e-4,
-    weight_decay=1e-3,
-    bootstrap_steps=20,
-    hidden_dim=128,
-    hidden_layers=2,
-    projector_hidden_dim=128,
-    projector_hidden_layers=1,
-    projector_dim=64,
-    mcts_depth=3,
-    mcts_samples=8,
-    ucb_c1=1.25,
-    ucb_c2=10000.0,
-    batch_size=16,
-    exploration_alpha=0.5,
-    exploration_epsilon=0.25,
-    rollout_length=2,
-    rmin=0.0,  # proto default value issue
-    rmax=0.0,  # proto default value issue
-    vmin=0.0,  # proto default value issue
-    vmax=0.0,  # proto default value issue
-    rbins=16,
-    vbins=16,
-    max_parallel_trials=4,
-    mcts_temperature=0.99,
-    max_replay_buffer_size=20000,
-    min_replay_buffer_size=200,
-    log_interval=200,
-    min_learning_rate=1e-6,
-    lr_warmup_steps=1000,
-    lr_decay_steps=1000000,
-    epsilon_min=0.01,
-    epsilon_decay_steps=100000,
-    min_temperature=0.25,
-    temperature_decay_steps=100000,
-    s_weight=1e-2,
-    v_weight=0.1,
+    max_parallel_trials=2,
+    demonstration_trials=0,
     train_device="cpu",
     actor_device="cpu",
     reanalyze_device="cpu",
-    reanalyze_workers=0,
+    reanalyze_workers=1,
+    threads_per_worker=2,
 )
 
 
@@ -130,20 +161,20 @@ class MuZeroAgentAdapter(AgentAdapter):
         model_id,
         environment_specs,
         device,
-        training_config,
+        run_config,
         **kwargs,
     ):
         model = MuZeroAgent(
             obs_dim=environment_specs.num_input,
             act_dim=environment_specs.num_action,
             device=device,
-            training_config=training_config,
+            run_config=run_config,
         )
         model_user_data = {
             "environment_implementation": environment_specs.implementation,
             "num_input": environment_specs.num_input,
             "num_action": environment_specs.num_action,
-            "training_config": training_config,
+            "run_config": run_config,
         }
         return model, model_user_data
 
@@ -232,6 +263,46 @@ class MuZeroAgentAdapter(AgentAdapter):
 
             assert action >= 0
 
+
+    def _make_workers(self, manager, agent, model_id, config):
+        num_reanalyze_workers = config.reanalyze_workers
+        max_prefetch_batch = 128
+        sample_queue = manager.Queue()
+        reanalyze_update_queue = manager.Queue(num_reanalyze_workers + 1)
+        reanalyze_queue = manager.Queue(num_reanalyze_workers + 1)
+
+        batch_queue = manager.Queue(max_prefetch_batch)
+        # limit to small size so that training and sample generation don't get out of sync
+        results_queue = manager.Queue(max_prefetch_batch)
+
+        reward_distribution = copy.deepcopy(agent.muzero.reward_distribution).cpu()
+        value_distribution = copy.deepcopy(agent.muzero.value_distribution).cpu()
+
+        train_worker = TrainWorker(agent, batch_queue, results_queue, config)
+        replay_buffer = ReplayBufferWorker(
+            sample_queue,
+            batch_queue,
+            reanalyze_queue,
+            reanalyze_update_queue,
+            config,
+            reward_distribution,
+            value_distribution,
+        )
+        reanalyze_workers = [
+            ReanalyzeWorker(
+                manager.Queue(2),
+                reanalyze_queue,
+                reanalyze_update_queue,
+                model_id,
+                config.reanalyze_device,
+                reward_distribution,
+                value_distribution,
+                config.threads_per_worker,
+            )
+            for i in range(num_reanalyze_workers)
+        ]
+        return train_worker, replay_buffer, reanalyze_workers
+
     async def single_agent_muzero_run_implementation(self, run_session):
         xp_tracker = MlflowExperimentTracker(run_session.params_name, run_session.run_id)
 
@@ -245,47 +316,14 @@ class MuZeroAgentAdapter(AgentAdapter):
             model_id=model_id,
             environment_specs=config.environment.specs,
             device="cpu",
-            training_config=config.training,
+            run_config=config,
         )
 
-        num_reanalyze_workers = config.training.reanalyze_workers
-
         with mp.Manager() as manager:
-            max_prefetch_batch = 128
-            sample_queue = manager.Queue()
-            reanalyze_update_queue = manager.Queue(num_reanalyze_workers + 1)
-            reanalyze_queue = manager.Queue(num_reanalyze_workers + 1)
-
-            batch_queue = manager.Queue(max_prefetch_batch)
-            # limit to small size so that training and sample generation don't get out of sync
-            results_queue = manager.Queue(max_prefetch_batch)
-
-            reward_distribution = copy.deepcopy(agent.muzero.reward_distribution).cpu()
-            value_distribution = copy.deepcopy(agent.muzero.value_distribution).cpu()
-
-            train_worker = TrainWorker(agent, batch_queue, results_queue, config)
-            replay_buffer = ReplayBufferWorker(
-                sample_queue,
-                batch_queue,
-                reanalyze_queue,
-                reanalyze_update_queue,
-                config.training,
-                reward_distribution,
-                value_distribution,
+            train_worker, replay_buffer, reanalyze_workers = self._make_workers(
+                manager, agent, model_id, config
             )
-            reanalyze_workers = [
-                ReanalyzeWorker(
-                    manager.Queue(2),
-                    reanalyze_queue,
-                    reanalyze_update_queue,
-                    model_id,
-                    config.training.reanalyze_device,
-                    reward_distribution,
-                    value_distribution,
-                    config.training.threads_per_worker,
-                )
-                for i in range(num_reanalyze_workers)
-            ]
+            workers = [train_worker, replay_buffer] + reanalyze_workers
 
             trials_completed = 0
             running_stats = RunningStats()
@@ -303,8 +341,6 @@ class MuZeroAgentAdapter(AgentAdapter):
             run_total_reward = 0
             epoch_idx = 0
 
-            workers = [train_worker, replay_buffer] + reanalyze_workers
-
             for worker in reanalyze_workers:
                 worker.update_agent(agent)
 
@@ -316,7 +352,7 @@ class MuZeroAgentAdapter(AgentAdapter):
 
                 sample_generator = run_session.start_trials_and_wait_for_termination(
                     trial_configs,
-                    max_parallel_trials=config.training.max_parallel_trials,
+                    max_parallel_trials=config.max_parallel_trials,
                 )
 
                 async for _step, timestamp, trial_id, _tick, (sample, total_reward) in sample_generator:
@@ -336,9 +372,9 @@ class MuZeroAgentAdapter(AgentAdapter):
                     if replay_buffer.size() <= config.training.min_replay_buffer_size:
                         continue
 
-                    while not results_queue.empty():
+                    while not train_worker.results_queue.empty():
                         try:
-                            info, serialized_model = results_queue.get_nowait()
+                            info, serialized_model = train_worker.results_queue.get_nowait()
                             if serialized_model is not None:
                                 epoch_idx += 1
                                 agent = MuZeroAgent.load(io.BytesIO(serialized_model), "cpu")
@@ -387,19 +423,7 @@ class MuZeroAgentAdapter(AgentAdapter):
             "muzero_mlp_training": (
                 self.single_agent_muzero_sample_producer_implementation,
                 self.single_agent_muzero_run_implementation,
-                MuZeroTrainingRunConfig(
-                    environment=EnvironmentParams(
-                        config=EnvironmentConfig(
-                            seed=12,
-                            framestack=1,
-                            render=False,
-                        ),
-                        specs=EnvironmentSpecs(
-                            implementation="gym/CartPole-v0", num_players=1, num_input=4, num_action=2
-                        ),
-                    ),
-                    training=DEFAULT_MUZERO_TRAINING_CONFIG,
-                ),
+                DEFAULT_MUZERO_RUN_CONFIG,
             )
         }
 
@@ -415,7 +439,7 @@ def make_trial_configs(run_session, config, model_id, model_version_number):
         run_id=run_session.run_id,
         model_id=model_id,
         model_version=model_version_number,
-        device=config.training.actor_device,
+        device=config.actor_device,
         environment_specs=config.environment.specs,
         actor_index=0,
     )
@@ -437,14 +461,14 @@ def make_trial_configs(run_session, config, model_id, model_version_number):
             environment=EnvironmentParams(
                 config=clone_config(
                     config.environment.config,
-                    seed=config.environment.config.seed + i + config.training.demonstration_trials,
+                    seed=config.environment.config.seed + i + config.demonstration_trials,
                     render=True,
                 ),
                 specs=config.environment.specs,
             ),
             actors=[muzero_config, teacher_config],
         )
-        for i in range(config.training.demonstration_trials)
+        for i in range(config.demonstration_trials)
     ]
 
     trial_configs = [
@@ -453,14 +477,14 @@ def make_trial_configs(run_session, config, model_id, model_version_number):
             environment=EnvironmentParams(
                 config=clone_config(
                     config.environment.config,
-                    seed=config.environment.config.seed + i + config.training.demonstration_trials,
+                    seed=config.environment.config.seed + i + config.demonstration_trials,
                     render=False,
                 ),
                 specs=config.environment.specs,
             ),
             actors=[muzero_config],
         )
-        for i in range(config.training.trial_count - config.training.demonstration_trials)
+        for i in range(config.trial_count - config.demonstration_trials)
     ]
 
     return demonstration_configs + trial_configs

@@ -39,30 +39,30 @@ class TrainWorker(mp.Process):
         asyncio.run(self.main())
 
     async def main(self):
-        torch.set_num_threads(self.config.training.threads_per_worker)
+        torch.set_num_threads(self.config.threads_per_worker)
         # original agent sent from another process, we want to work with a copy
         agent = copy.deepcopy(self.agent)
-        agent.set_device(self.config.training.train_device)
+        agent.set_device(self.config.train_device)
         step = 0
 
         lr_schedule = LinearScheduleWithWarmup(
-            self.config.training.learning_rate,
-            self.config.training.min_learning_rate,
-            self.config.training.lr_decay_steps,
-            self.config.training.lr_warmup_steps,
+            self.config.training.optimizer.learning_rate,
+            self.config.training.optimizer.min_learning_rate,
+            self.config.training.optimizer.lr_decay_steps,
+            self.config.training.optimizer.lr_warmup_steps,
         )
 
         epsilon_schedule = LinearScheduleWithWarmup(
-            self.config.training.exploration_epsilon,
-            self.config.training.epsilon_min,
-            self.config.training.epsilon_decay_steps,
+            self.config.mcts.exploration_epsilon,
+            self.config.mcts.epsilon_min,
+            self.config.mcts.epsilon_decay_steps,
             0,
         )
 
         temperature_schedule = LinearScheduleWithWarmup(
-            self.config.training.mcts_temperature,
-            self.config.training.min_temperature,
-            self.config.training.temperature_decay_steps,
+            self.config.mcts.temperature,
+            self.config.mcts.min_temperature,
+            self.config.mcts.temperature_decay_steps,
             0,
         )
 
@@ -70,10 +70,10 @@ class TrainWorker(mp.Process):
             lr = lr_schedule.update()  # pylint: disable=invalid-name
             epsilon = epsilon_schedule.update()
             temperature = temperature_schedule.update()
-            agent.params.learning_rate = lr
-            agent.params.exploration_epsilon = epsilon
-            agent.params.mcts_temperature = temperature
-            batch = get_from_queue(self.batch_queue, self.config.training.train_device)
+            agent.params.training.optimizer.learning_rate = lr
+            agent.params.mcts.exploration_epsilon = epsilon
+            agent.params.mcts.temperature = temperature
+            batch = get_from_queue(self.batch_queue, self.config.train_device)
             info = agent.learn(batch)
             del batch
 

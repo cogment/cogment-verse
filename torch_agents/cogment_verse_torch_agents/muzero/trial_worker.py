@@ -30,7 +30,7 @@ class AgentTrialWorker(mp.Process):
         super().__init__()
         self._event_queue = mp.Queue(1)
         self._action_queue = mp.Queue(1)
-        self._config = config
+        self._run_config = config
         self._agent = agent
         self._terminate = mp.Value(ctypes.c_bool, False)
         self._sleep_time = sleep_time
