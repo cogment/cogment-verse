@@ -202,7 +202,7 @@ def create_training_run(agent_adapter):
                 bob_version_info = await agent_adapter.publish_version(bob_id, bob)
 
                 # Test bob's performance
-                if epoch % config.rollout.test_freq == 0:
+                if epoch and epoch % config.rollout.test_freq == 0:
                     async for (
                         step_idx,
                         step_timestamp,
@@ -228,7 +228,8 @@ def create_training_run(agent_adapter):
 
             run_xp_tracker.terminate_success()
 
-        except Exception:
+        except Exception as e:
+            logging.error(f"An exception occurred: {e}")
             run_xp_tracker.terminate_failure()
             raise
 
