@@ -263,7 +263,6 @@ class MuZeroAgentAdapter(AgentAdapter):
 
             assert action >= 0
 
-
     def _make_workers(self, manager, agent, model_id, config):
         num_reanalyze_workers = config.reanalyze_workers
         max_prefetch_batch = 128
@@ -320,9 +319,7 @@ class MuZeroAgentAdapter(AgentAdapter):
         )
 
         with mp.Manager() as manager:
-            train_worker, replay_buffer, reanalyze_workers = self._make_workers(
-                manager, agent, model_id, config
-            )
+            train_worker, replay_buffer, reanalyze_workers = self._make_workers(manager, agent, model_id, config)
             workers = [train_worker, replay_buffer] + reanalyze_workers
 
             trials_completed = 0
