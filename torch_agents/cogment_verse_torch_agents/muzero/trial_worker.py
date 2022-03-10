@@ -23,16 +23,15 @@ from data_pb2 import (
 )
 
 from cogment_verse_torch_agents.wrapper import np_array_from_proto_array, proto_array_from_np_array
+from cogment_verse_torch_agents.muzero.utils import MuZeroWorker
 
 
-class AgentTrialWorker(mp.Process):
-    def __init__(self, agent, config, sleep_time=0.01):
-        super().__init__()
+class AgentTrialWorker(MuZeroWorker):
+    def __init__(self, agent, config, manager, sleep_time=0.01):
+        super().__init__(config, manager)
         self._event_queue = mp.Queue(1)
         self._action_queue = mp.Queue(1)
-        self._run_config = config
         self._agent = agent
-        self._terminate = mp.Value(ctypes.c_bool, False)
         self._sleep_time = sleep_time
 
     async def put_event(self, event):
@@ -50,8 +49,8 @@ class AgentTrialWorker(mp.Process):
             except queue.Empty:
                 await asyncio.sleep(self._sleep_time)
 
-    def run(self):
-        while not self._terminate.value:
+    async def main(self):
+        while not self.done.value:
             try:
                 event = self._event_queue.get(timeout=1.0)
             except queue.Empty:

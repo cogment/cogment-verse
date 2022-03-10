@@ -18,38 +18,37 @@ import torch
 import torch.multiprocessing as mp
 
 from cogment_verse_torch_agents.muzero.replay_buffer import Episode, TrialReplayBuffer, EpisodeBatch
+from cogment_verse_torch_agents.muzero.utils import MuZeroWorker, flush_queue
 
 
-class ReplayBufferWorker(mp.Process):
+class ReplayBufferWorker(MuZeroWorker):
     def __init__(
         self,
-        sample_queue,
         batch_queue,
         reanalyze_queue,
         reanalyze_update_queue,
         config,
         reward_distribution,
         value_distribution,
+        manager,
     ):
-        super().__init__()
-        self._sample_queue = sample_queue
+        super().__init__(config, manager)
+        self._sample_queue = manager.Queue()
         self._batch_queue = batch_queue
         self._reanalyze_queue = reanalyze_queue
         self._reanalyze_update_queue = reanalyze_update_queue
         self._replay_buffer_size = mp.Value(ctypes.c_uint32, 0)
-        self._run_config = config
         self.reward_distribution = reward_distribution
         self.value_distribution = value_distribution
 
-    def run(self):
-        torch.set_num_threads(self._run_config.threads_per_worker)
+    async def main(self):
         episode_samples = {}
-        replay_buffer = TrialReplayBuffer(max_size=self._run_config.training.max_replay_buffer_size)
+        replay_buffer = TrialReplayBuffer(max_size=self.config.training.max_replay_buffer_size)
 
         zero_reward_probs = self.reward_distribution.compute_target(torch.tensor(0.0)).cpu().detach()
         zero_value_probs = self.value_distribution.compute_target(torch.tensor(0.0)).cpu().detach()
 
-        while True:
+        while not self.done.value:
             # Add any queued data to the replay buffer
             try:
                 trial_id, sample = self._sample_queue.get_nowait()
@@ -57,7 +56,7 @@ class ReplayBufferWorker(mp.Process):
                 if trial_id not in episode_samples:
                     episode_samples[trial_id] = Episode(
                         sample.state,
-                        self._run_config.training.discount_rate,
+                        self.config.training.discount_rate,
                         zero_reward_probs=zero_reward_probs,
                         zero_value_probs=zero_value_probs,
                     )
@@ -79,14 +78,14 @@ class ReplayBufferWorker(mp.Process):
 
                 if sample.done:
                     episode_samples[trial_id].bootstrap_value(
-                        self._run_config.training.bootstrap_steps, self._run_config.training.discount_rate
+                        self.config.training.bootstrap_steps, self.config.training.discount_rate
                     )
                     replay_buffer.update_episode(episode_samples.pop(trial_id))
             except queue.Empty:
                 pass
 
             self._replay_buffer_size.value = replay_buffer.size()
-            if self._replay_buffer_size.value < self._run_config.training.min_replay_buffer_size:
+            if self._replay_buffer_size.value < self.config.training.min_replay_buffer_size:
                 continue
 
             # Fetch/perform any pending reanalyze updates
@@ -98,35 +97,37 @@ class ReplayBufferWorker(mp.Process):
 
             # Queue next reanalyze update
             if not self._reanalyze_queue.full():
-                try:
-                    # testing, sampling strategy
-                    keys = list(replay_buffer.episodes.keys())
-                    probs = torch.tensor([replay_buffer.episodes[key].timestamp for key in keys], dtype=torch.double)
-                    probs -= probs.min() - 0.1
-                    probs /= probs.sum()
-                    dist = torch.distributions.Categorical(probs)
-                    key_id = dist.sample().item()
-                    self._reanalyze_queue.put((keys[key_id], replay_buffer.episodes[keys[key_id]]), timeout=1.0)
-                except queue.Full:
-                    pass
-
+                # Don't just reanalyze the oldest episodes since these are most likely
+                # to be ejected when the replay buffer is full. Instead we sample randomly
+                # with a probability weighted by episode "staleness"
+                keys = list(replay_buffer.episodes.keys())
+                probs = torch.tensor([replay_buffer.episodes[key].timestamp for key in keys], dtype=torch.double)
+                probs -= probs.min() - 0.1
+                probs /= probs.sum()
+                dist = torch.distributions.Categorical(probs)
+                key_id = dist.sample().item()
+                self._reanalyze_queue.put_nowait((keys[key_id], replay_buffer.episodes[keys[key_id]]))
                 del probs
                 del dist
 
             # Sample a batch and add it to the training queue
-            if (
-                replay_buffer.size() >= self._run_config.training.min_replay_buffer_size
-                and not self._batch_queue.full()
-            ):
-                batch = replay_buffer.sample(self._run_config.mcts.rollout_length, self._run_config.training.batch_size)
+            if replay_buffer.size() >= self.config.training.min_replay_buffer_size and not self._batch_queue.full():
+                batch = replay_buffer.sample(self.config.mcts.rollout_length, self.config.training.batch_size)
                 for item in batch:
-                    item.to(self._run_config.train_device)
-                try:
-                    self._batch_queue.put(EpisodeBatch(*batch), timeout=1.0)
-                except queue.Full:
-                    pass
+                    item.to(self.config.train_device)
+                self._batch_queue.put_nowait(EpisodeBatch(*batch))
+
+    def cleanup(self):
+        # Consume remaining items
+        flush_queue(self._sample_queue)
+        flush_queue(self._reanalyze_queue)
+        flush_queue(self._batch_queue)
+
+        # Note: we do _not_ flush the reanalyze update queue since this should
+        # be done by the reanalyze worker processes due to the way torch MP works
 
     def add_sample(self, trial_id, sample):
+        assert not self.done.value
         self._sample_queue.put((trial_id, sample))
 
     def size(self):

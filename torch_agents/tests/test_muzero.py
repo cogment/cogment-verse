@@ -12,8 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import copy
+import time
 import pytest
 import torch
+import torch.multiprocessing as mp
 import numpy as np
 
 from cogment_verse_torch_agents.muzero.networks import (
@@ -24,7 +27,7 @@ from cogment_verse_torch_agents.muzero.networks import (
 )
 
 from cogment_verse_torch_agents.muzero.agent import MuZeroAgent
-from cogment_verse_torch_agents.muzero.adapter import MuZeroAgentAdapter, DEFAULT_MUZERO_RUN_CONFIG
+from cogment_verse_torch_agents.muzero.adapter import MuZeroAgentAdapter, MuZeroSample, DEFAULT_MUZERO_RUN_CONFIG
 
 from data_pb2 import EnvironmentSpecs
 
@@ -197,3 +200,73 @@ def test_agentadapter(lander_specs):
         environment_specs=lander_specs,
     )
     agent.act(torch.rand(8))
+
+
+def test_workers(lander_specs):
+    manager = mp.get_context("spawn")
+
+    config = copy.deepcopy(DEFAULT_MUZERO_RUN_CONFIG)
+    config.representation_network.hidden_size = 4
+    config.dynamics_network.hidden_size = 4
+    config.policy_network.hidden_size = 4
+    config.value_network.hidden_size = 4
+    config.projector_network.input_size = 4
+    config.projector_network.hidden_size = 4
+    config.training.batch_size = 4
+    config.training.min_replay_buffer_size = 10
+    config.mcts.max_depth = 2
+    config.mcts.num_samples = 2
+    agent_adapter = MuZeroAgentAdapter()
+    agent, _agent_user_data = agent_adapter._create(
+        "dummy_id",
+        obs_dim=8,
+        act_dim=4,
+        device="cpu",
+        run_config=config,
+        environment_specs=lander_specs,
+    )
+
+    train_worker, replay_buffer, reanalyze_workers, queues = agent_adapter._make_workers(
+        manager, agent, "muzero_test_model", config
+    )
+    workers = [train_worker, replay_buffer] + reanalyze_workers
+
+    for worker in reanalyze_workers:
+        worker.update_agent(agent)
+
+    try:
+        for worker in workers:
+            worker.start()
+
+        for trial_id in range(2):
+            for step in range(config.training.min_replay_buffer_size + 1):
+                state = np.random.rand(8).astype(np.float32)  # .reshape(1, -1)
+                action = np.random.randint(4)
+                reward = np.float32(np.random.rand())
+                done = step == config.training.min_replay_buffer_size
+                next_state = np.random.rand(8).astype(np.float32)  # .reshape(1, -1)
+                policy = np.random.rand(4).astype(np.float32).reshape(1, -1)
+                policy /= policy.sum()
+                value = np.float32(np.random.rand())
+                sample = MuZeroSample(state, action, reward, next_state, done, policy, value)
+                replay_buffer.add_sample(f"{trial_id+1}", sample)
+
+        time.sleep(1)
+        assert replay_buffer.size() > config.training.min_replay_buffer_size
+
+        for worker in workers:
+            assert worker.is_alive()
+
+        assert train_worker.batch_queue.qsize() > 0
+
+        _info, _serialized_model = train_worker.results_queue.get(timeout=5.0)
+
+        for worker in workers:
+            assert worker.is_alive()
+
+    finally:
+        for worker in workers:
+            worker.set_done(True)
+        for i, worker in enumerate(workers):
+            worker.join(timeout=2.0)
+            assert worker.exitcode == 0

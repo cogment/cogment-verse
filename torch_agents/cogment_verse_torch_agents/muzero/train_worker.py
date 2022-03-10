@@ -12,34 +12,29 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import asyncio
 import copy
+import queue
 import torch
-import torch.multiprocessing as mp
 from cogment_verse_torch_agents.muzero.schedule import LinearScheduleWithWarmup
+from cogment_verse_torch_agents.muzero.utils import MuZeroWorker, flush_queue
 
 
 def get_from_queue(q, device):  # pylint: disable=invalid-name
-    batch = q.get()
+    batch = q.get(timeout=1.0)
     for item in batch:
         item.to(device)
     return batch
 
 
-class TrainWorker(mp.Process):
-    def __init__(self, agent, batch_queue, results_queue, config):
-        super().__init__()
+class TrainWorker(MuZeroWorker):
+    def __init__(self, agent, batch_queue, results_queue, config, manager):
+        super().__init__(config, manager)
         self.agent = agent
         self.batch_queue = batch_queue
         self.results_queue = results_queue
-        self.config = config
         self.steps_per_update = config.training.model_publication_interval
 
-    def run(self):
-        asyncio.run(self.main())
-
     async def main(self):
-        torch.set_num_threads(self.config.threads_per_worker)
         # original agent sent from another process, we want to work with a copy
         agent = copy.deepcopy(self.agent)
         agent.set_device(self.config.train_device)
@@ -66,14 +61,19 @@ class TrainWorker(mp.Process):
             0,
         )
 
-        while True:
+        while not self.done.value:
+            try:
+                batch = get_from_queue(self.batch_queue, self.config.train_device)
+            except queue.Empty:
+                continue
+
             lr = lr_schedule.update()  # pylint: disable=invalid-name
             epsilon = epsilon_schedule.update()
             temperature = temperature_schedule.update()
             agent.params.training.optimizer.learning_rate = lr
             agent.params.mcts.exploration_epsilon = epsilon
             agent.params.mcts.temperature = temperature
-            batch = get_from_queue(self.batch_queue, self.config.train_device)
+
             info = agent.learn(batch)
             del batch
 
@@ -94,3 +94,6 @@ class TrainWorker(mp.Process):
                 self.results_queue.put((info, agent.serialize_to_buffer()))
             else:
                 self.results_queue.put((info, None))
+
+    def cleanup(self):
+        flush_queue(self.results_queue)

@@ -22,9 +22,10 @@ import torch.multiprocessing as mp
 from cogment_verse.utils import LRU
 from cogment_verse_torch_agents.muzero.replay_buffer import Episode
 from cogment_verse_torch_agents.muzero.agent import MuZeroAgent
+from cogment_verse_torch_agents.muzero.utils import MuZeroWorker, flush_queue
 
 
-class ReanalyzeWorker(mp.Process):
+class ReanalyzeWorker(MuZeroWorker):
     def __init__(
         self,
         agent_queue,
@@ -35,8 +36,10 @@ class ReanalyzeWorker(mp.Process):
         reward_distribution,
         value_distribution,
         max_threads,
+        config,
+        manager,
     ):
-        super().__init__()
+        super().__init__(config, manager)
         self._agent_queue = agent_queue
         self._reanalyze_queue = reanalyze_queue
         self._reanalyze_update_queue = reanalyze_update_queue
@@ -52,25 +55,26 @@ class ReanalyzeWorker(mp.Process):
         return self._reanalyzed_samples.value
 
     def update_agent(self, agent):
+        assert not self.done.value
         self._agent_queue.put(agent.serialize_to_buffer())
-
-    def run(self):
-        asyncio.run(self.main())
 
     @torch.no_grad()
     async def main(self):
-        torch.set_num_threads(self._max_threads)
         agent = MuZeroAgent.load(io.BytesIO(self._agent_queue.get()), "cpu")
         agent.set_device(self._device)
 
-        while True:
+        while not self.done.value:
             try:
-                agent = MuZeroAgent.load(io.BytesIO(self._agent_queue.get()), "cpu")
+                agent = MuZeroAgent.load(io.BytesIO(self._agent_queue.get_nowait()), "cpu")
                 agent.set_device(self._device)
             except queue.Empty:
                 pass
 
-            episode_id, episode = self._reanalyze_queue.get()
+            try:
+                episode_id, episode = self._reanalyze_queue.get(timeout=1.0)
+            except queue.Empty:
+                continue
+
             reanalyze_episode = Episode(
                 episode.states[0],
                 agent.params.training.discount_rate,
@@ -97,3 +101,7 @@ class ReanalyzeWorker(mp.Process):
             )
             self._reanalyze_update_queue.put((episode_id, reanalyze_episode))
             self._reanalyzed_samples.value += len(reanalyze_episode)
+
+    def cleanup(self):
+        flush_queue(self._reanalyze_update_queue)
+        flush_queue(self._agent_queue)

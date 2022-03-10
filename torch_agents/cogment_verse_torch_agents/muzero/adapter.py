@@ -42,7 +42,7 @@ from cogment_verse.utils import LRU
 from cogment_verse import AgentAdapter
 from cogment_verse import MlflowExperimentTracker
 from cogment_verse_torch_agents.muzero.agent import MuZeroAgent
-from cogment_verse_torch_agents.muzero.stats import RunningStats
+from cogment_verse_torch_agents.muzero.utils import RunningStats
 
 from cogment.api.common_pb2 import TrialState
 import cogment
@@ -200,7 +200,7 @@ class MuZeroAgentAdapter(AgentAdapter):
             agent, _, _ = await self.retrieve_version(actor_session.config.model_id, -1)
             agent.set_device(actor_session.config.device)
 
-            worker = AgentTrialWorker(agent, actor_session.config)
+            worker = AgentTrialWorker(agent, actor_session.config, mp)
             worker.start()
 
             try:
@@ -211,7 +211,8 @@ class MuZeroAgentAdapter(AgentAdapter):
                         action = await worker.get_action()
                         actor_session.do_action(action)
             finally:
-                worker.terminate()
+                worker.set_done(True)
+                worker.join()
 
         return {
             "muzero_mlp": (_single_agent_muzero_actor_implementation, ["agent"]),
@@ -265,31 +266,33 @@ class MuZeroAgentAdapter(AgentAdapter):
 
     def _make_workers(self, manager, agent, model_id, config):
         num_reanalyze_workers = config.reanalyze_workers
-        max_prefetch_batch = 128
-        sample_queue = manager.Queue()
+
         reanalyze_update_queue = manager.Queue(num_reanalyze_workers + 1)
         reanalyze_queue = manager.Queue(num_reanalyze_workers + 1)
 
+        max_prefetch_batch = 128
         batch_queue = manager.Queue(max_prefetch_batch)
+
         # limit to small size so that training and sample generation don't get out of sync
         results_queue = manager.Queue(max_prefetch_batch)
 
         reward_distribution = copy.deepcopy(agent.muzero.reward_distribution).cpu()
         value_distribution = copy.deepcopy(agent.muzero.value_distribution).cpu()
 
-        train_worker = TrainWorker(agent, batch_queue, results_queue, config)
+        train_worker = TrainWorker(agent, batch_queue, results_queue, config, manager)
         replay_buffer = ReplayBufferWorker(
-            sample_queue,
             batch_queue,
             reanalyze_queue,
             reanalyze_update_queue,
             config,
             reward_distribution,
             value_distribution,
+            manager,
         )
+        reanalyze_agent_queues = [manager.Queue(2) for _ in range(num_reanalyze_workers)]
         reanalyze_workers = [
             ReanalyzeWorker(
-                manager.Queue(2),
+                reanalyze_agent_queues[i],
                 reanalyze_queue,
                 reanalyze_update_queue,
                 model_id,
@@ -297,10 +300,19 @@ class MuZeroAgentAdapter(AgentAdapter):
                 reward_distribution,
                 value_distribution,
                 config.threads_per_worker,
+                config,
+                manager,
             )
             for i in range(num_reanalyze_workers)
         ]
-        return train_worker, replay_buffer, reanalyze_workers
+
+        queues = [
+            results_queue,
+            batch_queue,
+            reanalyze_update_queue,
+            reanalyze_queue,
+        ] + reanalyze_agent_queues
+        return train_worker, replay_buffer, reanalyze_workers, queues
 
     async def single_agent_muzero_run_implementation(self, run_session):
         xp_tracker = MlflowExperimentTracker(run_session.params_name, run_session.run_id)
@@ -319,7 +331,9 @@ class MuZeroAgentAdapter(AgentAdapter):
         )
 
         with mp.Manager() as manager:
-            train_worker, replay_buffer, reanalyze_workers = self._make_workers(manager, agent, model_id, config)
+            train_worker, replay_buffer, reanalyze_workers, _queues = self._make_workers(
+                manager, agent, model_id, config
+            )
             workers = [train_worker, replay_buffer] + reanalyze_workers
 
             trials_completed = 0
@@ -439,6 +453,7 @@ def make_trial_configs(run_session, config, model_id, model_version_number):
         device=config.actor_device,
         environment_specs=config.environment.specs,
         actor_index=0,
+        threads_per_worker=config.threads_per_worker,
     )
     muzero_config = ActorParams(
         name="agent_1",

@@ -12,7 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import asyncio
 from collections import defaultdict
+import ctypes
+import torch
+import torch.multiprocessing as mp
+
+
+def flush_queue(queue):
+    while not queue.empty():
+        queue.get()
 
 
 class RunningStats:
@@ -30,3 +39,26 @@ class RunningStats:
 
     def get(self):
         return {key: self._running_stats[key] / count for key, count in self._running_counts.items()}
+
+
+class MuZeroWorker(mp.Process):
+    def __init__(self, config, manager):
+        super().__init__()
+        self.config = config
+        self.done = manager.Value(ctypes.c_bool, False)
+
+    def cleanup(self):
+        pass
+
+    def run(self):
+        try:
+            torch.set_num_threads(self.config.threads_per_worker)
+            asyncio.run(self.main())
+        finally:
+            self.cleanup()
+
+    def set_done(self, value):
+        self.done.value = value
+
+    async def main(self):
+        raise NotImplementedError
