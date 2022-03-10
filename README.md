@@ -95,7 +95,7 @@ cogment run start_gpu
 Once the services are running in either production or development mode, you can launch a _run_ with the following command
 
 ```console
-RUN_PARAMS=driving_td3 cogment run start_run
+RUN_PARAMS=selfplay_td3_driving cogment run start_run
 ```
 
 The available `RUN_PARAMS` are defined in `run_params.yaml`. You can add new parameters as you wish as long as the environments and agents are supported.
