@@ -14,6 +14,7 @@
 
 import numpy as np
 import pytest
+import torch
 from cogment_verse_torch_agents.atari_cnn import NatureAtariDQNModel
 from cogment_verse_torch_agents.wrapper import format_legal_moves
 
@@ -40,6 +41,7 @@ def test_cnn_action(act_dim, framestack, seed):
 @pytest.mark.parametrize("act_dim", [5])
 @pytest.mark.parametrize("seed", [42, 56, 78, 10967])
 def test_cnn_learn(act_dim, seed):
+    torch.autograd.set_detect_anomaly(True)
     rng = np.random.default_rng(seed)
     framestack = 1
     legal_moves_as_int = []
@@ -63,6 +65,7 @@ def test_cnn_learn(act_dim, seed):
 @pytest.mark.parametrize("act_dim", [5])
 @pytest.mark.parametrize("seed", [42, 56, 78, 10967])
 def test_replay_buffer(act_dim, seed):
+    torch.autograd.set_detect_anomaly(True)
     rng = np.random.default_rng(seed)
     framestack = 1
     legal_moves_as_int = []
