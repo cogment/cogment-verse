@@ -191,13 +191,13 @@ atari_breakout_cnn:
     demonstration_count: 0
     total_trial_count: 10000
     model_publication_interval: 1000
-    model_archive_interval: 20000
+    model_archive_interval: 1000000
     max_parallel_trials: 2
     batch_size: 32
     min_replay_buffer_size: 1000
     max_replay_buffer_size: 10000
     target_net_update_schedule: 100
-    epsilon_steps: 100000
+    epsilon_steps: 1000000
     learning_rate: 1.0e-4
     lr_warmup_steps: 10000
     model_kwargs:

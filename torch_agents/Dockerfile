@@ -21,6 +21,8 @@ FROM nvcr.io/nvidia/pytorch:22.02-py3 as gpu
 
 # Install the rest of the dependencies
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y python3-opengl xvfb git tk swig wget unrar libglib2.0-0 g++ cmake
+RUN pip uninstall -y torchvision torchtext torchaudio
+RUN pip install torch==1.11.0+cu113 -f https://download.pytorch.org/whl/cu113/torch_stable.html
 #########
 
 #########
