@@ -4,7 +4,7 @@ FROM python:3.7-slim
 
 # Install torch as early as possible to help with cache
 # In this case we install the generic version because of transitive dependencies from the environment lib
-RUN pip install torch==1.10.2 -f https://download.pytorch.org/whl/cpu/torch_stable.html
+RUN pip install torch==1.11.0 -f https://download.pytorch.org/whl/cpu/torch_stable.html
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y software-properties-common && apt-add-repository non-free

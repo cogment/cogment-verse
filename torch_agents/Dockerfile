@@ -7,7 +7,7 @@ FROM ${BASE_PYTHON_IMAGE} as base
 FROM python:3.7-slim as cpu
 
 # Install torch as early as possible to help with cache
-RUN pip install torch==1.10.2+cpu -f https://download.pytorch.org/whl/cpu/torch_stable.html
+RUN pip install torch==1.11.0+cpu -f https://download.pytorch.org/whl/cpu/torch_stable.html
 
 # Install system dependencies
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y curl xvfb
@@ -15,11 +15,12 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y curl xvf
 
 #########
 # "gpu" is the base image for gpu-based services
-FROM nvcr.io/nvidia/pytorch:21.08-py3 as gpu
+# Check the support matrix to ensure the nvcr image has the correct pytorch version
+# https://docs.nvidia.com/deeplearning/frameworks/support-matrix/index.html
+FROM nvcr.io/nvidia/pytorch:22.02-py3 as gpu
 
 # Install the rest of the dependencies
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y python3-opengl xvfb git tk swig wget unrar libglib2.0-0 g++ cmake
-RUN pip install torch==1.10.2+cu113 torchvision==0.11.3+cu113 torchaudio==0.10.2+cu113 torchtext==0.11.2 -f https://download.pytorch.org/whl/cu113/torch_stable.html
 #########
 
 #########
