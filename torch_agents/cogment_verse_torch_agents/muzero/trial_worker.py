@@ -13,7 +13,6 @@
 # limitations under the License.
 
 import asyncio
-import ctypes
 import queue
 import torch
 import torch.multiprocessing as mp

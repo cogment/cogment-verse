@@ -27,7 +27,12 @@ from cogment_verse_torch_agents.muzero.networks import (
 )
 
 from cogment_verse_torch_agents.muzero.agent import MuZeroAgent
-from cogment_verse_torch_agents.muzero.adapter import MuZeroAgentAdapter, MuZeroSample, DEFAULT_MUZERO_RUN_CONFIG
+from cogment_verse_torch_agents.muzero.adapter import (
+    MuZeroAgentAdapter,
+    MuZeroSample,
+    DEFAULT_MUZERO_RUN_CONFIG,
+    make_workers,
+)
 
 from data_pb2 import EnvironmentSpecs
 
@@ -226,9 +231,7 @@ def test_workers(lander_specs):
         environment_specs=lander_specs,
     )
 
-    train_worker, replay_buffer, reanalyze_workers, queues = agent_adapter._make_workers(
-        manager, agent, "muzero_test_model", config
-    )
+    train_worker, replay_buffer, reanalyze_workers, _queues = make_workers(manager, agent, "muzero_test_model", config)
     workers = [train_worker, replay_buffer] + reanalyze_workers
 
     for worker in reanalyze_workers:
@@ -267,6 +270,6 @@ def test_workers(lander_specs):
     finally:
         for worker in workers:
             worker.set_done(True)
-        for i, worker in enumerate(workers):
+        for worker in workers:
             worker.join(timeout=2.0)
             assert worker.exitcode == 0
