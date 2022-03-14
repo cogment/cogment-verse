@@ -25,8 +25,6 @@ class ReplayBufferWorker(MuZeroWorker):
     def __init__(
         self,
         batch_queue,
-        reanalyze_queue,
-        reanalyze_update_queue,
         config,
         reward_distribution,
         value_distribution,
@@ -34,9 +32,9 @@ class ReplayBufferWorker(MuZeroWorker):
     ):
         super().__init__(config, manager)
         self._sample_queue = manager.Queue()
+        self.reanalyze_update_queue = manager.Queue(config.reanalyze_workers + 1)
+        self.reanalyze_queue = manager.Queue(config.reanalyze_workers + 1)
         self._batch_queue = batch_queue
-        self._reanalyze_queue = reanalyze_queue
-        self._reanalyze_update_queue = reanalyze_update_queue
         self._replay_buffer_size = mp.Value(ctypes.c_uint32, 0)
         self.reward_distribution = reward_distribution
         self.value_distribution = value_distribution
@@ -89,14 +87,14 @@ class ReplayBufferWorker(MuZeroWorker):
                 continue
 
             # Fetch/perform any pending reanalyze updates
-            if not self._reanalyze_update_queue.empty():
-                episode_id, episode = self._reanalyze_update_queue.get()
+            if not self.reanalyze_update_queue.empty():
+                episode_id, episode = self.reanalyze_update_queue.get()
                 # torch multiprocessing issue: need to create a process-local copy
                 replay_buffer.update_episode(episode.clone(), key=episode_id)
                 del episode
 
             # Queue next reanalyze update
-            if not self._reanalyze_queue.full():
+            if not self.reanalyze_queue.full():
                 # Don't just reanalyze the oldest episodes since these are most likely
                 # to be ejected when the replay buffer is full. Instead we sample randomly
                 # with a probability weighted by episode "staleness"
@@ -106,7 +104,7 @@ class ReplayBufferWorker(MuZeroWorker):
                 probs /= probs.sum()
                 dist = torch.distributions.Categorical(probs)
                 key_id = dist.sample().item()
-                self._reanalyze_queue.put_nowait((keys[key_id], replay_buffer.episodes[keys[key_id]]))
+                self.reanalyze_queue.put_nowait((keys[key_id], replay_buffer.episodes[keys[key_id]]))
                 del probs
                 del dist
 
@@ -120,7 +118,7 @@ class ReplayBufferWorker(MuZeroWorker):
     def cleanup(self):
         # Consume remaining items
         flush_queue(self._sample_queue)
-        flush_queue(self._reanalyze_queue)
+        flush_queue(self.reanalyze_queue)
         flush_queue(self._batch_queue)
 
         # Note: we do _not_ flush the reanalyze update queue since this should

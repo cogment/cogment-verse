@@ -27,28 +27,24 @@ from cogment_verse_torch_agents.muzero.utils import MuZeroWorker, flush_queue
 class ReanalyzeWorker(MuZeroWorker):
     def __init__(
         self,
-        agent_queue,
         reanalyze_queue,
         reanalyze_update_queue,
         model_id,
-        device,
         reward_distribution,
         value_distribution,
-        max_threads,
         config,
         manager,
     ):
         super().__init__(config, manager)
-        self._agent_queue = agent_queue
+        self._agent_queue = manager.Queue(2)
         self._reanalyze_queue = reanalyze_queue
         self._reanalyze_update_queue = reanalyze_update_queue
-        self._device = device
+        self._device = config.reanalyze_device
         self._reanalyzed_samples = mp.Value(ctypes.c_uint64, 0)
         self.reward_distribution = reward_distribution
         self.value_distribution = value_distribution
         self._model_cache = LRU(1)
         self._model_id = model_id
-        self._max_threads = max_threads
 
     def reanalyzed_samples(self):
         return self._reanalyzed_samples.value

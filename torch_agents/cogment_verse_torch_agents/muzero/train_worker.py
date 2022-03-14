@@ -27,11 +27,13 @@ def get_from_queue(q, device):  # pylint: disable=invalid-name
 
 
 class TrainWorker(MuZeroWorker):
-    def __init__(self, agent, batch_queue, results_queue, config, manager):
+    def __init__(self, agent, config, manager):
         super().__init__(config, manager)
         self.agent = agent
-        self.batch_queue = batch_queue
-        self.results_queue = results_queue
+        # limit to small size so that training and sample generation don't get out of sync
+        max_prefetch_batch = 128
+        self.batch_queue = manager.Queue(max_prefetch_batch)
+        self.results_queue = manager.Queue(max_prefetch_batch)
         self.steps_per_update = config.training.model_publication_interval
 
     async def main(self):

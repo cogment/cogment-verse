@@ -231,7 +231,7 @@ def test_workers(lander_specs):
         environment_specs=lander_specs,
     )
 
-    train_worker, replay_buffer, reanalyze_workers, _queues = make_workers(manager, agent, "muzero_test_model", config)
+    train_worker, replay_buffer, reanalyze_workers = make_workers(manager, agent, "muzero_test_model", config)
     workers = [train_worker, replay_buffer] + reanalyze_workers
 
     for worker in reanalyze_workers:

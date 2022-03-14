@@ -281,7 +281,7 @@ class MuZeroAgentAdapter(AgentAdapter):
         )
 
         with mp.Manager() as manager:
-            train_worker, replay_buffer, reanalyze_workers, _queues = make_workers(manager, agent, model_id, config)
+            train_worker, replay_buffer, reanalyze_workers = make_workers(manager, agent, model_id, config)
             workers = [train_worker, replay_buffer] + reanalyze_workers
 
             trials_completed = 0
@@ -451,51 +451,30 @@ def make_trial_configs(run_session, config, model_id, model_version_number):
 
 
 def make_workers(manager, agent, model_id, config):
-    num_reanalyze_workers = config.reanalyze_workers
-
-    reanalyze_update_queue = manager.Queue(num_reanalyze_workers + 1)
-    reanalyze_queue = manager.Queue(num_reanalyze_workers + 1)
-
-    max_prefetch_batch = 128
-    batch_queue = manager.Queue(max_prefetch_batch)
-
-    # limit to small size so that training and sample generation don't get out of sync
-    results_queue = manager.Queue(max_prefetch_batch)
 
     reward_distribution = copy.deepcopy(agent.muzero.reward_distribution).cpu()
     value_distribution = copy.deepcopy(agent.muzero.value_distribution).cpu()
 
-    train_worker = TrainWorker(agent, batch_queue, results_queue, config, manager)
+    train_worker = TrainWorker(agent, config, manager)
     replay_buffer = ReplayBufferWorker(
-        batch_queue,
-        reanalyze_queue,
-        reanalyze_update_queue,
+        train_worker.batch_queue,
         config,
         reward_distribution,
         value_distribution,
         manager,
     )
-    reanalyze_agent_queues = [manager.Queue(2) for _ in range(num_reanalyze_workers)]
+
     reanalyze_workers = [
         ReanalyzeWorker(
-            reanalyze_agent_queues[i],
-            reanalyze_queue,
-            reanalyze_update_queue,
+            replay_buffer.reanalyze_queue,
+            replay_buffer.reanalyze_update_queue,
             model_id,
-            config.reanalyze_device,
             reward_distribution,
             value_distribution,
-            config.threads_per_worker,
             config,
             manager,
         )
-        for i in range(num_reanalyze_workers)
+        for i in range(config.reanalyze_workers)
     ]
 
-    queues = [
-        results_queue,
-        batch_queue,
-        reanalyze_update_queue,
-        reanalyze_queue,
-    ] + reanalyze_agent_queues
-    return train_worker, replay_buffer, reanalyze_workers, queues
+    return train_worker, replay_buffer, reanalyze_workers
