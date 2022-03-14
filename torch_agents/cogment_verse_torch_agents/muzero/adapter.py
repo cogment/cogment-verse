@@ -251,7 +251,7 @@ class MuZeroAgentAdapter(AgentAdapter):
             policy, value = self.decode_cog_policy_value(sample.get_actor_action(observation.current_player))
 
             if action < 0:
-                # todo(jonathan): investigate this, it shouldn't happen, see issue #54
+                # todo(jonathan): investigate this, it shouldn't happen, see issue #53
                 log.warning("override action is invalid, ignoring!")
                 action = self.decode_cog_action(sample.get_actor_action(observation.current_player))
                 reward = sample.get_actor_reward(observation.current_player)
