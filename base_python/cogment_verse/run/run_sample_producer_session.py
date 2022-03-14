@@ -131,7 +131,7 @@ class RunSampleProducerSession:
 
         self.run_config = run_config
 
-        self._queue = asyncio.Queue(maxsize=1)
+        self._queue = asyncio.Queue(maxsize=10)
 
     # TODO Expose further helper functions to avoid the need to access directly _trial_params as needed
     def count_actors(self):

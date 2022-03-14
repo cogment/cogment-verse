@@ -17,13 +17,14 @@ import json
 import logging
 import os
 import sys
+from dotenv import load_dotenv
 
-import cog_settings
 import cogment
 from cogment_verse import RunContext
 from cogment_verse_environment.base_agent_adapter import BaseAgentAdapter
 from cogment_verse_environment.environment_adapter import EnvironmentAdapter
-from dotenv import load_dotenv
+
+import cog_settings
 
 load_dotenv()
 
