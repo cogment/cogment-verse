@@ -21,6 +21,7 @@ import queue
 import torch
 import torch.multiprocessing as mp
 import numpy as np
+from google.protobuf.json_format import MessageToDict
 
 
 from data_pb2 import (
@@ -38,9 +39,9 @@ from data_pb2 import (
     AgentConfig,
 )
 
-from cogment_verse.utils import LRU
 from cogment_verse import AgentAdapter
 from cogment_verse import MlflowExperimentTracker
+from cogment_verse.utils import flatten_dict, LRU
 from cogment_verse_torch_agents.muzero.agent import MuZeroAgent
 from cogment_verse_torch_agents.muzero.utils import RunningStats
 
@@ -71,41 +72,41 @@ DEFAULT_MUZERO_RUN_CONFIG = MuZeroRunConfig(
         specs=EnvironmentSpecs(implementation="gym/CartPole-v0", num_players=1, num_input=4, num_action=2),
     ),
     training=MuZeroTrainingConfig(
-        model_publication_interval=500,
+        model_publication_interval=1000,
         discount_rate=0.99,
         optimizer=OptimizerConfig(
-            learning_rate=1e-4,
-            weight_decay=1e-3,
-            min_learning_rate=1e-6,
-            lr_warmup_steps=1000,
+            learning_rate=1e-3,
+            weight_decay=1e-2,
+            min_learning_rate=1e-4,
+            lr_warmup_steps=100,
             lr_decay_steps=1000000,
             max_norm=100.0,
         ),
         bootstrap_steps=20,
-        batch_size=16,
-        max_replay_buffer_size=20000,
-        min_replay_buffer_size=200,
+        batch_size=128,
+        max_replay_buffer_size=100000,
+        min_replay_buffer_size=1000,
         log_interval=200,
-        similarity_weight=0.1,
+        similarity_weight=1.0,
         value_weight=1.0,
     ),
     mcts=MCTSConfig(
-        max_depth=3,
-        num_samples=8,
+        max_depth=4,
+        num_samples=16,
         temperature=1.0,
         ucb_c1=1.25,
-        ucb_c2=10000.0,
-        exploration_alpha=0.5,
+        ucb_c2=15000.0,
+        exploration_alpha=0.1,
         exploration_epsilon=0.25,
-        rollout_length=2,
-        epsilon_min=0.01,
-        epsilon_decay_steps=100000,
+        rollout_length=4,
+        epsilon_min=0.25,
+        epsilon_decay_steps=1,
         min_temperature=0.25,
-        temperature_decay_steps=100000,
+        temperature_decay_steps=10000,
     ),
     representation_network=MLPNetworkConfig(
-        hidden_size=32,
-        num_hidden_layers=1,
+        hidden_size=64,
+        num_hidden_layers=2,
     ),
     projector_network=MLPNetworkConfig(
         hidden_size=32,
@@ -113,17 +114,17 @@ DEFAULT_MUZERO_RUN_CONFIG = MuZeroRunConfig(
         output_size=16,
     ),
     dynamics_network=MLPNetworkConfig(
-        num_hidden_layers=1,
+        num_hidden_layers=2,
     ),
     policy_network=MLPNetworkConfig(
-        num_hidden_layers=1,
+        num_hidden_layers=2,
     ),
     value_network=MLPNetworkConfig(
-        num_hidden_layers=1,
+        num_hidden_layers=2,
     ),
     reward_distribution=DistributionConfig(min_value=-100.0, max_value=100.0, num_bins=16),
     value_distribution=DistributionConfig(min_value=-1000.0, max_value=1000.0, num_bins=64),
-    trial_count=1000,
+    trial_count=10000,
     max_parallel_trials=2,
     demonstration_trials=0,
     train_device="cpu",
@@ -288,9 +289,9 @@ class MuZeroAgentAdapter(AgentAdapter):
             running_stats = RunningStats()
 
             xp_tracker.log_params(
-                config.environment,
-                config.actor,
-                config.training,
+                flatten_dict(
+                    MessageToDict(config, preserving_proto_field_name=True, including_default_value_fields=True),
+                )
             )
 
             trial_configs = make_trial_configs(run_session.run_id, config, model_id, -1)
