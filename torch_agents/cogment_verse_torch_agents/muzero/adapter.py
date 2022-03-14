@@ -293,7 +293,7 @@ class MuZeroAgentAdapter(AgentAdapter):
                 config.training,
             )
 
-            trial_configs = make_trial_configs(run_session, config, model_id, -1)
+            trial_configs = make_trial_configs(run_session.run_id, config, model_id, -1)
 
             total_samples = 0
             training_step = 0
@@ -387,7 +387,7 @@ class MuZeroAgentAdapter(AgentAdapter):
         }
 
 
-def make_trial_configs(run_session, config, model_id, model_version_number):
+def make_trial_configs(run_id, config, model_id, model_version_number):
     def clone_config(config, render, seed):
         config = copy.deepcopy(config)
         config.render = render
@@ -395,7 +395,7 @@ def make_trial_configs(run_session, config, model_id, model_version_number):
         return config
 
     actor_config = AgentConfig(
-        run_id=run_session.run_id,
+        run_id=run_id,
         model_id=model_id,
         model_version=model_version_number,
         device=config.actor_device,
@@ -417,7 +417,7 @@ def make_trial_configs(run_session, config, model_id, model_version_number):
     )
     demonstration_configs = [
         TrialConfig(
-            run_id=run_session.run_id,
+            run_id=run_id,
             environment=EnvironmentParams(
                 config=clone_config(
                     config.environment.config,
@@ -433,7 +433,7 @@ def make_trial_configs(run_session, config, model_id, model_version_number):
 
     trial_configs = [
         TrialConfig(
-            run_id=run_session.run_id,
+            run_id=run_id,
             environment=EnvironmentParams(
                 config=clone_config(
                     config.environment.config,

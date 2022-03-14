@@ -32,6 +32,7 @@ from cogment_verse_torch_agents.muzero.adapter import (
     MuZeroSample,
     DEFAULT_MUZERO_RUN_CONFIG,
     make_workers,
+    make_trial_configs,
 )
 
 from data_pb2 import EnvironmentSpecs
@@ -273,3 +274,11 @@ def test_workers(lander_specs):
         for worker in workers:
             worker.join(timeout=2.0)
             assert worker.exitcode == 0
+
+
+def test_trial_configs():
+    config = copy.deepcopy(DEFAULT_MUZERO_RUN_CONFIG)
+    config.demonstration_trials = 10
+    config.trial_count = 100
+    trial_configs = make_trial_configs("mock_run_id", config, "mock_model_id", -1)
+    assert len(trial_configs) == config.trial_count
