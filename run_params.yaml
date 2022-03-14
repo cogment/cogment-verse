@@ -658,6 +658,14 @@ cartpole_muzero: &default_muzero
     environment:
       specs: *cartpole_specs
       config: *default_env_config
+    mcts:
+      exploration_epsilon: 0.25
+      epsilon_min: 0.25
+      epsilon_decay_steps: 1
+      exploration_alpha: 0.1
+    training:
+      min_replay_buffer_size: 200
+      max_replay_buffer_size: 100000
     reward_distribution:
       min_value: -1.0
       max_value: 1.0
@@ -666,6 +674,19 @@ cartpole_muzero: &default_muzero
       min_value: -200.0
       max_value: 200.0
       num_bins: 32
+    representation_network:
+      hidden_size: 64
+      num_hidden_layers: 2
+    dynamics_network:
+      num_hidden_layers: 2
+    policy_network:
+      num_hidden_layers: 2
+    value_network:
+      num_hidden_layers: 2
+    projector_network:
+      hidden_size: 128
+      num_hidden_layers: 1
+      output_size: 64
 
 lander_muzero:
   implementation: muzero_mlp_training
