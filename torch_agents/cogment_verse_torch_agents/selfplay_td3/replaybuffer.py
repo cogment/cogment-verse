@@ -72,13 +72,5 @@ class Memory:
 
         return rval
 
-    def reset_replay_buffer(self):
-        """
-        Resets the pointer of the buffer to its initial position,
-        thereby making previous trajectory data unavailable to the
-        Reinforce agent
-        """
-        self._ptr = 0
-
     def get_size(self):
         return self._size

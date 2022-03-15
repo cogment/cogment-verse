@@ -655,7 +655,7 @@ selfplay_td3_driving: &default_selfplay_td3_params
       epoch_count: 1000
       epoch_train_trial_count: 2
       epoch_test_trial_count: 2
-      max_parallel_trials: 2
+      max_parallel_trials: 1
       model_publication_interval: 10
       number_turns_per_trial: 5
       test_freq: 1
