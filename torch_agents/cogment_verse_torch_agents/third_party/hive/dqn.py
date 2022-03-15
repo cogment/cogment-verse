@@ -14,7 +14,7 @@ def legal_moves_adapter(cls):
         def forward(self, *args, legal_moves=None, **kwargs):
             val = super().forward(*args, **kwargs)
             if legal_moves is not None:
-                val += legal_moves
+                val = val + legal_moves
             return val
 
     return _Adapted

@@ -49,6 +49,8 @@ message AgentConfig {
   string model_id = 3;
   int32 model_version = 4;
   int32 actor_index = 5; // Used to figure out if an agent is the current_player in the observation space
+  string device = 6;
+  uint32 threads_per_worker = 7;
 }
 
 enum HumanRole {
@@ -94,9 +96,11 @@ message ContinuousAction {
 
 message AgentAction {
   oneof action {
-    ContinuousAction continuous_action = 1;
-    int32 discrete_action = 2;
+      ContinuousAction continuous_action = 1;
+      int32 discrete_action = 2;
   };
+  NDArray policy = 3; // optional: policy from which action was drawn
+  float value = 4; // optional: value of the state from which the action was taken
 }
 
 message ModelArgs {
@@ -126,7 +130,7 @@ message RunConfig {
   uint32 demonstration_count = 8;
   uint32 total_trial_count = 9;
   uint32 model_publication_interval = 10;
-  uint32 model_archive_interval_multiplier = 11; // Archive every fourth published model
+  uint32 model_archive_interval = 11;
   uint32 batch_size = 12;
   uint32 min_replay_buffer_size = 13;
   uint32 max_parallel_trials = 14;
@@ -138,7 +142,10 @@ message RunConfig {
 }
 
 message MLPNetworkConfig {
-  uint32 hidden_size = 1;
+  uint32 input_size = 1;
+  uint32 hidden_size = 2;
+  uint32 num_hidden_layers = 3;
+  uint32 output_size = 4;
 }
 
 message SimpleA2CTrainingConfig {
@@ -157,6 +164,71 @@ message SimpleA2CTrainingRunConfig {
   SimpleA2CTrainingConfig training = 2;
   MLPNetworkConfig actor_network = 3;
   MLPNetworkConfig critic_network = 4;
+}
+
+message DistributionConfig {
+  float min_value = 1;
+  float max_value = 2;
+  uint32 num_bins = 3;
+}
+
+message MCTSConfig {
+  uint32 max_depth = 1;
+  uint32 num_samples = 2;
+  float temperature = 3;
+  float ucb_c1 = 4;
+  float ucb_c2 = 5;
+  float exploration_alpha = 6;
+  float exploration_epsilon = 7;
+  uint32 rollout_length = 8;
+  float epsilon_min = 9;
+  float epsilon_decay_steps = 10;
+  float min_temperature = 11;
+  uint32 temperature_decay_steps = 12;
+}
+
+message OptimizerConfig {
+  float learning_rate = 1;
+  float weight_decay = 2;
+  float min_learning_rate = 3;
+  uint32 lr_warmup_steps = 4;
+  uint32 lr_decay_steps = 5;
+  float max_norm = 6;
+}
+
+message MuZeroTrainingConfig {
+  uint32 model_publication_interval = 1;
+  float discount_rate = 2;
+  OptimizerConfig optimizer = 3;
+  uint32 bootstrap_steps = 4;
+  uint32 batch_size = 5;
+  uint32 max_replay_buffer_size = 6;
+  uint32 min_replay_buffer_size = 7;
+  uint32 log_interval = 8;
+  float similarity_weight = 9;
+  float value_weight = 10;
+}
+
+message MuZeroRunConfig {
+  EnvironmentParams environment = 1;
+  AgentConfig actor = 2;
+  MuZeroTrainingConfig training = 3;
+  MCTSConfig mcts = 4;
+  MLPNetworkConfig representation_network = 5;
+  MLPNetworkConfig projector_network = 6;
+  MLPNetworkConfig dynamics_network = 7;
+  MLPNetworkConfig policy_network = 8;
+  MLPNetworkConfig value_network = 9;
+  DistributionConfig reward_distribution = 10;
+  DistributionConfig value_distribution = 11;
+  uint32 trial_count = 12;
+  uint32 max_parallel_trials = 13;
+  uint32 demonstration_trials = 14;
+  string train_device = 15;
+  string actor_device = 16;
+  string reanalyze_device = 17;
+  uint32 reanalyze_workers = 18;
+  uint32 threads_per_worker = 19;
 }
 
 message SimpleBCTrainingConfig {

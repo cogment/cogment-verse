@@ -17,15 +17,19 @@ import json
 import logging
 import os
 import sys
-
-import cog_settings
+import torch.multiprocessing as mp
+from dotenv import load_dotenv
 import cogment
+
 from cogment_verse import RunContext
 from cogment_verse_torch_agents.hive_adapter.hive_agent_adapter import HiveAgentAdapter
+from cogment_verse_torch_agents.muzero.adapter import MuZeroAgentAdapter
 from cogment_verse_torch_agents.simple_a2c.simple_a2c_agent import SimpleA2CAgentAdapter
 from cogment_verse_torch_agents.simple_bc import SimpleBCAgentAdapter
 from cogment_verse_torch_agents.hf_sb3 import SimpleSB3AgentAdapter
 from dotenv import load_dotenv
+
+import cog_settings
 
 load_dotenv()
 
@@ -63,6 +67,9 @@ async def main():
     simple_a2c_adapter = SimpleA2CAgentAdapter()
     simple_a2c_adapter.register_implementations(context)
 
+    muzero_adapter = MuZeroAgentAdapter()
+    muzero_adapter.register_implementations(context)
+
     simple_bc_adapter = SimpleBCAgentAdapter()
     simple_bc_adapter.register_implementations(context)
 
@@ -75,6 +82,9 @@ async def main():
 
 
 if __name__ == "__main__":
+    mp.set_start_method("spawn")
+    # suggested fix https://github.com/pytorch/pytorch/issues/67864
+    mp.set_sharing_strategy("file_system")
     loop = asyncio.get_event_loop()
     try:
         loop.run_until_complete(main())
