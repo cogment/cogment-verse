@@ -60,6 +60,7 @@ def create_training_run(agent_adapter):
                     "learning_rate": config.training.learning_rate,
                     "policy_freq": config.training.policy_freq,
                     "max_action": config.training.max_action,
+                    "beta": config.training.beta,
                 },
             )
 
@@ -90,6 +91,7 @@ def create_training_run(agent_adapter):
                     "learning_rate": config.training.learning_rate,
                     "policy_freq": config.training.policy_freq,
                     "max_action": config.training.max_action,
+                    "beta": config.training.beta,
                 },
             )
 
@@ -170,11 +172,11 @@ def create_training_run(agent_adapter):
                         # penalize/reward alice if bob does/doesn't achieve goal
                         if sample.player_done:
                             if int(sample.reward) > 0:
-                                alice_reward = -5.0
-                                bob_reward = 5.0
+                                alice_reward = config.training.alice_penalty
+                                bob_reward = config.training.bob_reward
                             else:
-                                alice_reward = 5.0
-                                bob_reward = -2.0
+                                alice_reward = config.training.alice_reward
+                                bob_reward = config.training.bob_penalty
                             alice_samples[-1] = alice_samples[-1]._replace(reward=alice_reward)
                             bob_samples[-1] = bob_samples[-1]._replace(reward=bob_reward)
                             alice_rewards.append(alice_reward)

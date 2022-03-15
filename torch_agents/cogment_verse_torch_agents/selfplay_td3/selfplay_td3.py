@@ -125,7 +125,7 @@ class SelfPlayTD3:
             if self._params["name"] == "bob":
                 # print(state.shape)
                 alice_actions = alice._actor_network(state[:, :7], grid[:, :2, :, :])
-                actor_loss = actor_loss + 0.05 * F.mse_loss(actions, alice_actions).mean()
+                actor_loss = actor_loss + self._params["beta"] * F.mse_loss(actions, alice_actions).mean()
 
             # Optimize the actor
             self._actor_optimizer.zero_grad()

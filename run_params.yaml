@@ -670,6 +670,11 @@ selfplay_td3_driving: &default_selfplay_td3_params
       SIGMA: 0.2
       num_training_steps: 2
       max_action: 1
+      beta: 0.05
+      alice_reward: 5.0
+      bob_reward: 5.0
+      alice_penalty: -5.0
+      bob_penalty: -2.0
     replaybuffer:
       min_replay_buffer_size: 64
       max_replay_buffer_size: 100000

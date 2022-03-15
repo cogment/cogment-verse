@@ -227,6 +227,11 @@ message SelfPlayTrainingConfig{
   float SIGMA = 8;
   uint32 num_training_steps = 9;
   uint32 max_action = 10;
+  float beta = 11;
+  float alice_reward = 12;
+  float bob_reward = 13;
+  float alice_penalty = 14;
+  float bob_penalty = 15;
 }
 
 
