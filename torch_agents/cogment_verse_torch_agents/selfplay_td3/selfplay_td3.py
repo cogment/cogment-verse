@@ -144,7 +144,7 @@ class SelfPlayTD3:
 
     def learn(self, alice=None):
         mean_actor_loss, mean_critic_loss = 0, 0
-        if self._replay_buffer.get_size() >= self._params["batch_size"]:
+        if self._replay_buffer.get_size() >= self._params["min_buffer_size"]:
             actor_loss, critic_loss = 0, 0
             for _ in range(self._params["num_training_steps"]):
                 actor_loss_, critic_loss_ = self.train(alice)
