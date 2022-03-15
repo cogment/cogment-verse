@@ -23,7 +23,6 @@ class Car:
         base_orientation = p.getEulerFromQuaternion(base_orientation)
         base_orientation = (0,0,base_orientation[2])
         base_orientation = p.getQuaternionFromEuler(base_orientation)
-        # _, base_orientation = p.getBasePositionAndOrientation(self.car, self.client)
         p.resetBasePositionAndOrientation(self.car, base_position, base_orientation)
 
     def get_ids(self):
@@ -36,11 +35,8 @@ class Car:
         # Clip throttle and steering angle to reasonable values
         throttle = min(max(throttle, 0), 1)
         steering_angle = max(min(steering_angle, 0.6), -0.6)
-        # if throttle<0:
-        #     throttle = 0.2*throttle
 
         # Set the steering joint positions
-        # print("set joint control")
         p.setJointMotorControlArray(self.car, self.steering_joints,
                                     controlMode=p.POSITION_CONTROL,
                                     targetPositions=[steering_angle] * 2,
@@ -70,14 +66,12 @@ class Car:
         pos, ang = p.getBasePositionAndOrientation(self.car, self.client)
         ang = p.getEulerFromQuaternion(ang)
         ang = (ang[0]/np.pi, ang[1]/np.pi, ang[2]/np.pi)
-        # ori = (math.cos(ang[2]), math.sin(ang[2]))
         pos = pos[:2]
         # Get the velocity of the car
         vel = p.getBaseVelocity(self.car, self.client)[0][0:2]
 
         # Concatenate position, orientation, velocity
         observation = (pos + ang + vel)
-        #print(ang)
         return observation
 
 
