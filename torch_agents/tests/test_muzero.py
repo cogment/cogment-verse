@@ -114,13 +114,13 @@ def test_learn(device, lander_specs):
 
     model = agent.muzero
     optimizer = torch.optim.Adam(model.parameters())
-    observation = torch.rand((4, 3, obs_dim))
-    next_observation = torch.rand((4, 3, obs_dim))
-    reward = torch.rand((4, 3))
-    target_policy = torch.rand((4, 3, act_dim))
-    target_value = torch.rand((4, 3))
-    done = torch.rand((4, 3))
-    action = torch.randint(low=0, high=act_dim, size=(4, 3))
+    observation = torch.rand((4, 3, obs_dim)).to(device)
+    next_observation = torch.rand((4, 3, obs_dim)).to(device)
+    reward = torch.rand((4, 3)).to(device)
+    target_policy = torch.rand((4, 3, act_dim)).to(device)
+    target_value = torch.rand((4, 3)).to(device)
+    done = torch.rand((4, 3)).to(device)
+    action = torch.randint(low=0, high=act_dim, size=(4, 3)).to(device)
 
     target_reward_probs = agent.muzero.reward_distribution.compute_target(reward).to(device)
     target_value_probs = agent.muzero.value_distribution.compute_target(target_value).to(device)
@@ -212,12 +212,12 @@ def test_workers(lander_specs):
     manager = mp.get_context("spawn")
 
     config = copy.deepcopy(DEFAULT_MUZERO_RUN_CONFIG)
-    config.representation_network.hidden_size = 4
-    config.dynamics_network.hidden_size = 4
-    config.policy_network.hidden_size = 4
-    config.value_network.hidden_size = 4
-    config.projector_network.input_size = 4
-    config.projector_network.hidden_size = 4
+    # config.representation_network.hidden_sizes = [4]
+    # config.dynamics_network.hidden_sizes = [4]
+    # config.policy_network.hidden_sizes = [4]
+    # config.value_network.hidden_sizes = [4]
+    # config.projector_network.input_sizes = [4]
+    # config.projector_network.hidden_sizes = [4]
     config.training.batch_size = 4
     config.training.min_replay_buffer_size = 10
     config.mcts.max_depth = 2

@@ -209,16 +209,24 @@ message MuZeroTrainingConfig {
   float value_weight = 10;
 }
 
+message MuZeroNetworkConfig {
+  uint32 encoding_size = 1;
+  repeated uint32 hidden_sizes = 2;
+  uint32 output_size = 3;
+  bool residual = 4;
+  bool batch_norm = 5;
+}
+
 message MuZeroRunConfig {
   EnvironmentParams environment = 1;
   AgentConfig actor = 2;
   MuZeroTrainingConfig training = 3;
   MCTSConfig mcts = 4;
-  MLPNetworkConfig representation_network = 5;
-  MLPNetworkConfig projector_network = 6;
-  MLPNetworkConfig dynamics_network = 7;
-  MLPNetworkConfig policy_network = 8;
-  MLPNetworkConfig value_network = 9;
+  MuZeroNetworkConfig representation_network = 5;
+  MuZeroNetworkConfig projector_network = 6;
+  MuZeroNetworkConfig dynamics_network = 7;
+  MuZeroNetworkConfig policy_network = 8;
+  MuZeroNetworkConfig value_network = 9;
   DistributionConfig reward_distribution = 10;
   DistributionConfig value_distribution = 11;
   uint32 trial_count = 12;

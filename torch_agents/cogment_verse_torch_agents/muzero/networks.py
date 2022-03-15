@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from os import X_OK
 import numpy as np
 
 import torch
@@ -48,6 +49,20 @@ def mlp(
     return torch.nn.Sequential(*layers)
 
 
+class FullyConnectedBlock(torch.nn.Module):
+    def __init__(self, channels, batch_norm):
+        super().__init__()
+        self._fc = torch.nn.Linear(channels, channels)
+        self._bn = torch.nn.BatchNorm1d(channels) if batch_norm else None
+        self._act = torch.nn.ReLU()
+
+    def forward(self, x):
+        y = self._fc(x)
+        if self._bn is not None:
+            y = self._bn(y)
+        return self._act(y)
+
+
 class ResidualBlock(torch.nn.Module):
     def __init__(self, channels):
         super().__init__()
@@ -66,15 +81,14 @@ class ResidualBlock(torch.nn.Module):
         return self._act(x + y)
 
 
-def resnet(num_in, num_hidden, num_out, hidden_layers=1):
-    layers = []
-    if num_in != num_hidden:
-        layers.append(lin_bn_act(num_in, num_hidden, bn=True, act=torch.nn.ReLU()))
+def muzero_block(channels, residual, batch_norm):
+    if residual:
+        return ResidualBlock(channels)
+    return FullyConnectedBlock(channels, batch_norm)
 
-    layers.extend([ResidualBlock(num_hidden) for _ in range(hidden_layers)])
-    if num_hidden != num_out:
-        layers.append(lin_bn_act(num_hidden, num_out, bn=True, act=torch.nn.ReLU()))
-    return torch.nn.Sequential(*layers)
+
+def muzero_net(channels, num_layers, residual, batch_norm):
+    return torch.nn.ModuleList([muzero_block(channels, residual, batch_norm) for _ in range(num_layers)])
 
 
 def reward_transform(reward, eps=0.001):
@@ -102,19 +116,19 @@ def reward_transform_inverse(transformed_reward, eps=0.001):
 
 
 class Distributional(torch.nn.Module):
-    def __init__(self, vmin, vmax, num_input, count, transform=None, inverse_transform=None):
+    def __init__(self, num_input, config, transform=None, inverse_transform=None):
         super().__init__()
-        assert count >= 2
+        assert config.num_bins >= 2
         self._transform = transform or torch.nn.Identity()
         self._inverse_transform = inverse_transform or torch.nn.Identity()
         self._act = torch.nn.Softmax(dim=1)
-        self._vmin = self._transform(torch.tensor(vmin)).detach().cpu().item()
-        self._vmax = self._transform(torch.tensor(vmax)).detach().cpu().item()
+        self._vmin = self._transform(torch.tensor(config.min_value)).detach().cpu().item()
+        self._vmax = self._transform(torch.tensor(config.max_value)).detach().cpu().item()
 
         self.register_buffer(
-            "_bins", torch.from_numpy(np.linspace(self._vmin, self._vmax, num=count, dtype=np.float32))
+            "_bins", torch.from_numpy(np.linspace(self._vmin, self._vmax, num=config.num_bins, dtype=np.float32))
         )
-        self._fc = torch.nn.Linear(num_input, count)
+        self._fc = torch.nn.Linear(num_input, config.num_bins)
 
     def forward(self, x):
         probs = self._act(self._fc(x))
@@ -172,11 +186,11 @@ def normalize_scale(state):
     return (state - min_state) / (max_state - min_state)
 
 
-class RepresentationNetwork(torch.nn.Module):
-    def __init__(self, stem, num_hidden, num_hidden_layers):
+class RepresentationNetworkOld(torch.nn.Module):
+    def __init__(self, stem, num_hidden, num_hidden_layers, residual, batch_norm):
         super().__init__()
         self.stem = stem
-        self.blocks = torch.nn.ModuleList([ResidualBlock(num_hidden) for _ in range(num_hidden_layers)])
+        self.blocks = muzero_net(num_hidden, num_hidden_layers, residual, batch_norm)
 
     def forward(self, x):
         features = self.stem(x)
@@ -185,50 +199,75 @@ class RepresentationNetwork(torch.nn.Module):
         return normalize_scale(features)
 
 
-class PolicyNetwork(torch.nn.Module):
-    def __init__(self, num_hidden, num_hidden_layers, num_act):
+class MLP(torch.nn.Module):
+    def __init__(self, channel_dims, final_act=False):
         super().__init__()
-        self.blocks = torch.nn.ModuleList([ResidualBlock(num_hidden) for _ in range(num_hidden_layers)])
-        self.linear = torch.nn.Linear(num_hidden, num_act)
+        self.final_act = final_act
+        self.fc_layers = torch.nn.ModuleList(
+            [torch.nn.Linear(chan_in, chan_out) for chan_in, chan_out in zip(channel_dims[:-1], channel_dims[1:])]
+        )
 
     def forward(self, x):
-        for block in self.blocks:
-            x = block(x)
-        x = self.linear(x)
-        return torch.nn.functional.softmax(x, dim=1)
+        for i, fc in enumerate(self.fc_layers):
+            x = fc(x)
+            if self.final_act or i < len(self.fc_layers) - 1:
+                x = torch.nn.functional.relu(x)
+        return x
+
+
+class RepresentationNetwork(torch.nn.Module):
+    def __init__(self, input_size, config):
+        super().__init__()
+        assert not config.residual  # still testing
+        assert not config.batch_norm  # still testing
+        channel_dims = [input_size] + list(config.hidden_sizes) + [config.encoding_size]
+        self.net = MLP(channel_dims)
+
+    def forward(self, x):
+        return normalize_scale(self.net(x))
+
+
+class PolicyNetwork(torch.nn.Module):
+    def __init__(self, num_actions, config):
+        super().__init__()
+        assert not config.residual  # still testing
+        assert not config.batch_norm  # still testing
+        channel_dims = [config.encoding_size] + list(config.hidden_sizes) + [num_actions]
+        self.net = MLP(channel_dims)
+
+    def forward(self, x):
+        return torch.nn.functional.softmax(self.net(x), dim=1)
 
 
 class ValueNetwork(torch.nn.Module):
-    def __init__(self, num_hidden, num_hidden_layers, vmin, vmax, vbins):
+    def __init__(self, config, distribution_config):
         super().__init__()
-        self.blocks = torch.nn.ModuleList([ResidualBlock(num_hidden) for _ in range(num_hidden_layers)])
-        self.distribution = Distributional(vmin, vmax, num_hidden, vbins)
+        assert not config.residual  # still testing
+        assert not config.batch_norm  # still testing
+        channel_dims = [config.encoding_size] + list(config.hidden_sizes)
+        self.net = MLP(channel_dims, final_act=True)
+        self.distribution = Distributional(config.hidden_sizes[-1], distribution_config)
 
     def forward(self, x):
-        for block in self.blocks:
-            x = block(x)
-        return self.distribution(x)
+        return self.distribution(self.net(x))
 
 
 class DynamicsNetwork(torch.nn.Module):
-    def __init__(self, num_action, num_hidden, num_hidden_layers, rmin, rmax, rbins):
+    def __init__(self, num_action, config, distribution_config):
         super().__init__()
+        assert not config.residual  # still testing
+        assert not config.batch_norm  # still testing
         self.num_action = num_action
-
-        self.encoding = mlp(num_action + num_hidden, num_hidden, num_hidden)
-        self.blocks = torch.nn.ModuleList([ResidualBlock(num_hidden) for _ in range(num_hidden_layers)])
-        self.distribution = Distributional(rmin, rmax, num_hidden, rbins)
-        self.state_predictor = torch.nn.Linear(num_hidden, num_hidden)
+        channel_dims = [config.encoding_size + num_action] + list(config.hidden_sizes)
+        self.net = MLP(channel_dims, final_act=True)
+        self.distribution = Distributional(config.hidden_sizes[-1], distribution_config)
+        self.state_predictor = torch.nn.Linear(config.hidden_sizes[-1], config.encoding_size)
 
     def forward(self, state, action):
         action_one_hot = torch.nn.functional.one_hot(action, self.num_action)
-        encoded_state = self.encoding(torch.cat((state, action_one_hot), dim=1))
-
-        for block in self.blocks:
-            encoded_state = block(encoded_state)
-
-        reward_probs, reward = self.distribution(encoded_state)
-        next_state = self.state_predictor(encoded_state)
+        x = self.net(torch.cat((state, action_one_hot), dim=1))
+        reward_probs, reward = self.distribution(x)
+        next_state = self.state_predictor(x)
         return normalize_scale(next_state), reward_probs, reward
 
 

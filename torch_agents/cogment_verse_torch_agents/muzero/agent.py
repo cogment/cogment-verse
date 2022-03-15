@@ -22,7 +22,7 @@ import numpy as np
 from cogment_verse_torch_agents.muzero.networks import (
     MuZero,
     lin_bn_act,
-    mlp,
+    MLP,
     RepresentationNetwork,
     PolicyNetwork,
     ValueNetwork,
@@ -54,50 +54,26 @@ class MuZeroAgent(torch.nn.Module):
 
     def set_device(self, device):
         self._device = torch.device(device)
-        # self.muzero = self.muzero.to(self._device)
-        # self.target_muzero = self.target_muzero.to(self._device)
-        # self._optimizer.to(self._device)
         state_dict = self.state_dict()
         self._make_networks()
         self._make_optimizer()
         self.load_state_dict(state_dict)
 
     def _make_networks(self):
-        latent_size = self.params.representation_network.hidden_size
+        representation = RepresentationNetwork(self._obs_dim, self.params.representation_network)
+        policy = PolicyNetwork(self._act_dim, self.params.policy_network)
+        value = ValueNetwork(self.params.value_network, self.params.value_distribution)
+        dynamics = DynamicsNetwork(self._act_dim, self.params.dynamics_network, self.params.reward_distribution)
 
-        stem = lin_bn_act(self._obs_dim, latent_size, bn=True, act=torch.nn.ReLU())
-        representation = RepresentationNetwork(stem, latent_size, self.params.representation_network.num_hidden_layers)
-        policy = PolicyNetwork(latent_size, self.params.policy_network.num_hidden_layers, self._act_dim)
-
-        value = ValueNetwork(
-            latent_size,
-            self.params.value_network.num_hidden_layers,
-            self.params.value_distribution.min_value,
-            self.params.value_distribution.max_value,
-            self.params.value_distribution.num_bins,
+        projector = MLP(
+            [self.params.projector_network.encoding_size]
+            + list(self.params.projector_network.hidden_sizes)
+            + [self.params.projector_network.output_size]
         )
-
-        dynamics = DynamicsNetwork(
-            self._act_dim,
-            latent_size,
-            self.params.dynamics_network.num_hidden_layers,
-            self.params.reward_distribution.min_value,
-            self.params.reward_distribution.max_value,
-            self.params.reward_distribution.num_bins,
-        )
-
-        projector = mlp(
-            num_in=latent_size,
-            num_hidden=self.params.projector_network.hidden_size,
-            num_out=self.params.projector_network.output_size,
-            hidden_layers=self.params.projector_network.num_hidden_layers,
-        )
-        # todo: check number of hidden layers used in predictor (same as projector??)
-        predictor = mlp(
-            num_in=self.params.projector_network.output_size,
-            num_hidden=self.params.projector_network.hidden_size,
-            num_out=self.params.projector_network.output_size,
-            hidden_layers=1,
+        predictor = MLP(
+            [self.params.projector_network.output_size]
+            + list(self.params.projector_network.hidden_sizes)
+            + [self.params.projector_network.output_size]
         )
 
         self.muzero = MuZero(

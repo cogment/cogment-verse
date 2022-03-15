@@ -28,7 +28,7 @@ from data_pb2 import (
     MuZeroRunConfig,
     MuZeroTrainingConfig,
     MCTSConfig,
-    MLPNetworkConfig,
+    MuZeroNetworkConfig,
     DistributionConfig,
     OptimizerConfig,
     TrialConfig,
@@ -104,23 +104,26 @@ DEFAULT_MUZERO_RUN_CONFIG = MuZeroRunConfig(
         min_temperature=0.25,
         temperature_decay_steps=10000,
     ),
-    representation_network=MLPNetworkConfig(
-        hidden_size=64,
-        num_hidden_layers=2,
+    representation_network=MuZeroNetworkConfig(
+        encoding_size=16,
+        hidden_sizes=[64],
     ),
-    projector_network=MLPNetworkConfig(
-        hidden_size=32,
-        num_hidden_layers=1,
+    projector_network=MuZeroNetworkConfig(
+        encoding_size=16,
+        hidden_sizes=[64],
         output_size=16,
     ),
-    dynamics_network=MLPNetworkConfig(
-        num_hidden_layers=2,
+    dynamics_network=MuZeroNetworkConfig(
+        encoding_size=16,
+        hidden_sizes=[64],
     ),
-    policy_network=MLPNetworkConfig(
-        num_hidden_layers=2,
+    policy_network=MuZeroNetworkConfig(
+        encoding_size=16,
+        hidden_sizes=[64],
     ),
-    value_network=MLPNetworkConfig(
-        num_hidden_layers=2,
+    value_network=MuZeroNetworkConfig(
+        encoding_size=16,
+        hidden_sizes=[64],
     ),
     reward_distribution=DistributionConfig(min_value=-100.0, max_value=100.0, num_bins=16),
     value_distribution=DistributionConfig(min_value=-1000.0, max_value=1000.0, num_bins=64),
