@@ -17,12 +17,13 @@ import json
 import logging
 import os
 import sys
+from dotenv import load_dotenv
 
-import cog_settings
 import cogment
 from cogment_verse import RunContext
 from cogment_verse_tf_agents.reinforce.reinforce_agent_adapter import ReinforceAgentAdapter
-from dotenv import load_dotenv
+
+import cog_settings
 
 load_dotenv()
 

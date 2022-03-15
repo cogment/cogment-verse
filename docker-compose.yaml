@@ -65,6 +65,7 @@ services:
       args:
         DEVICE: cpu
         BASE_PYTHON_IMAGE: cogment/cogment-verse-python-sdk:${IMAGE_TAG:-local}
+    shm_size: "32gb"
     restart: on-failure
     environment:
       - PYTHONUNBUFFERED=1

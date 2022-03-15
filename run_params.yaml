@@ -108,7 +108,7 @@ cartpole_rainbow: &default_params
     demonstration_count: 0
     total_trial_count: 10000
     model_publication_interval: 1000
-    model_archive_interval_multiplier: 4 # Archive every fourth published model
+    model_archive_interval: 4000 # Archive every 4000 training steps
     batch_size: 256
     min_replay_buffer_size: 1000
     max_parallel_trials: 4
@@ -191,13 +191,13 @@ atari_breakout_cnn:
     demonstration_count: 0
     total_trial_count: 10000
     model_publication_interval: 1000
-    model_archive_interval_multiplier: 100
+    model_archive_interval: 1000000
     max_parallel_trials: 2
-    batch_size: 1024
-    min_replay_buffer_size: 10000
-    max_replay_buffer_size: 350000
+    batch_size: 32
+    min_replay_buffer_size: 1000
+    max_replay_buffer_size: 10000
     target_net_update_schedule: 100
-    epsilon_steps: 100000
+    epsilon_steps: 1000000
     learning_rate: 1.0e-4
     lr_warmup_steps: 10000
     model_kwargs:
@@ -698,7 +698,6 @@ procgen_bigfish:
     demonstration_count: 100
     total_trial_count: 10000
     model_publication_interval: 1000
-    model_archive_interval_multiplier: 10
     max_parallel_trials: 2
     batch_size: 32
     min_replay_buffer_size: 10000
@@ -713,6 +712,46 @@ procgen_bigfish:
     replay_buffer_config:
       observation_dtype: uint8
       action_dtype: int8
+
+cartpole_muzero: &default_muzero
+  implementation: muzero_mlp_training
+  config: &default_muzero_config
+    class_name: data_pb2.MuZeroRunConfig
+    environment:
+      specs: *cartpole_specs
+      config: *default_env_config
+    reward_distribution:
+      min_value: -1.0
+      max_value: 1.0
+      num_bins: 4
+    value_distribution:
+      min_value: -200.0
+      max_value: 200.0
+      num_bins: 32
+
+lander_muzero:
+  implementation: muzero_mlp_training
+  config: &lander_muzero_config
+    <<: *default_muzero_config
+    environment:
+      specs: *lander_specs
+      config: *default_env_config
+    reward_distribution:
+      min_value: -100.0
+      max_value: 100.0
+      num_bins: 32
+    value_distribution:
+      min_value: -1000.0
+      max_value: 1000.0
+      num_bins: 128
+
+lander_muzero_gpu:
+  implementation: muzero_mlp_training
+  config:
+    <<: *lander_muzero_config
+    train_device: "cuda:1"
+    reanalyze_device: "cuda:1"
+    actor_device: "cuda:0"
 
 simple_bc_lander: &simple_bc_experiment
   implementation: simple_bc_training
