@@ -29,6 +29,7 @@ message EnvironmentConfig {
   int32 render_width = 7;
   uint32 framestack = 8;
   uint32 seed = 9;
+  string mode = 10;
 }
 
 message EnvironmentSpecs {
@@ -88,6 +89,7 @@ message Observation {
   repeated int32 legal_moves_as_int = 3;
   int32 current_player = 4; // active player for multi-agent turn-based environments
   int32 player_override = 5;  // player that _actually_ acted (in case of override/intervention)
+  NDArray segmentation = 6;
 }
 
 message ContinuousAction {
@@ -107,8 +109,8 @@ message ModelArgs {
   float v_min = 1;
   float v_max = 2;
   uint32 start_timesteps = 4;
-  repeated int32 high_action = 5;
-  repeated int32 low_action = 6;
+  repeated float high_action = 5;
+  repeated float low_action = 6;
   float expl_noise = 7;
   bool target_net_soft_update = 8;
   uint32 screensize = 9;
@@ -250,4 +252,71 @@ message PlayRunConfig {
   repeated ActorParams actors = 2;
   bool observer = 3;
   uint32 trial_count = 4;
+}
+
+message SelfPlayActorConfig{
+  uint32 num_input = 1;
+  uint32 num_input_2 = 2;
+  uint32 num_action = 3;
+  MLPNetworkConfig actor_network = 4;
+  MLPNetworkConfig critic_network = 5;
+  ModelArgs model_kwargs = 6;
+  string run_id = 7;
+  string model_id = 8;
+  int32 model_version = 9;
+  string environment_implementation = 10;
+  repeated float action_scale = 11;
+  repeated float action_bias = 12;
+  uint32 max_action = 13;
+  repeated uint32 alice_grid_shape = 14;
+  repeated uint32 bob_grid_shape = 15;
+}
+
+message SelfPlayRolloutConfig{
+  uint32 epoch_count = 1;
+  uint32 epoch_train_trial_count = 2;
+  uint32 epoch_test_trial_count = 3;
+  uint32 max_parallel_trials = 4;
+  uint32 model_publication_interval = 5;
+  uint32 number_turns_per_trial = 6;
+  uint32 test_freq = 7;
+}
+
+message SelfPlayReplaybufferConfig{
+  uint32 min_replay_buffer_size = 1;
+  uint32 max_replay_buffer_size = 2;
+  ReplayBufferConfig replay_buffer_config = 3;
+}
+
+message SelfPlayTrainingConfig{
+  float discount_factor = 1;
+  float tau = 2;
+  float policy_noise = 3;
+  float noise_clip = 4;
+  float learning_rate = 5;
+  uint32 policy_freq = 6;
+  uint32 batch_size = 7;
+  float SIGMA = 8;
+  uint32 num_training_steps = 9;
+  float beta = 10;
+  float alice_reward = 11;
+  float bob_reward = 12;
+  float alice_penalty = 13;
+  float bob_penalty = 14;
+}
+
+
+message SelfPlayActorParams{
+  string name = 1;
+  string actor_class = 2;
+  string implementation = 3;
+  SelfPlayActorConfig config = 4;
+}
+
+message SelfPlayTD3TrainingRunConfig {
+  EnvironmentParams environment = 1;
+  SelfPlayActorParams actor = 2;
+  SelfPlayRolloutConfig rollout = 3;
+  SelfPlayTrainingConfig training = 4;
+  SelfPlayReplaybufferConfig replaybuffer = 5;
 }

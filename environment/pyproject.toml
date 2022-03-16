@@ -27,7 +27,9 @@ pytest = "^6.2.5"
 pytest-cov = "^3.0.0"
 coverage = "^6.0.2"
 pytest-asyncio = "^0.16.0"
+pybullet = "3.2.1"
 watchdog = {extras = ["watchmedo"], version = "^2.1.6"}
+
 
 [tool.taskipy.tasks]
 import_atari_roms = "mkdir -p .atari_roms && curl -s http://www.atarimania.com/roms/Roms.rar -o .atari_roms/roms.rar && unrar x -r .atari_roms/roms.rar .atari_roms/ && python -m atari_py.import_roms .atari_roms"

@@ -619,6 +619,67 @@ simple_a2c_cartpole: &default_simple_a2c_params
     critic_network:
       hidden_size: 64
 
+selfplay_td3_driving: &default_selfplay_td3_params
+  implementation: selfplay_td3_training
+  config: &default_elfplay_td3_config
+    class_name: data_pb2.SelfPlayTD3TrainingRunConfig
+    environment:
+      specs:
+        implementation: driving/SimpleDriving-v0
+        num_players: 2
+      config:
+        seed: 12
+        render_width: 1000
+        framestack: 4
+    actor:
+      implementation: selfplay_td3
+      config:
+        num_input: 7
+        num_input_2: 2
+        num_action: 2
+        action_scale: [ 0.5,0.6 ]
+        action_bias: [ 1.0,0.0 ]
+        max_action: 1
+        alice_grid_shape: [75, 75, 2]
+        bob_grid_shape: [75, 75, 3]
+        actor_network:
+          hidden_size: 64
+        critic_network:
+          hidden_size: 64
+        model_kwargs:
+          start_timesteps: 5000
+          high_action: [ 0, -1 ]
+          low_action: [ 1, 1 ]
+          expl_noise: 0.1
+    rollout:
+      epoch_count: 1000
+      epoch_train_trial_count: 2
+      epoch_test_trial_count: 2
+      max_parallel_trials: 1
+      model_publication_interval: 10
+      number_turns_per_trial: 5
+      test_freq: 1
+    training:
+      batch_size: 64
+      discount_factor: 0.99
+      tau: 0.005
+      policy_noise: 0.1
+      noise_clip: 0.2
+      learning_rate: 3e-4
+      policy_freq: 2
+      SIGMA: 0.2
+      num_training_steps: 2
+      beta: 0.05
+      alice_reward: 5.0
+      bob_reward: 5.0
+      alice_penalty: -5.0
+      bob_penalty: -2.0
+    replaybuffer:
+      min_replay_buffer_size: 256
+      max_replay_buffer_size: 100000
+      replay_buffer_config:
+        observation_dtype: float32
+        action_dtype: float32
 
 # procgen environments follow
 procgen_bigfish:

@@ -26,6 +26,7 @@ from cogment_verse_torch_agents.hive_adapter.hive_agent_adapter import HiveAgent
 from cogment_verse_torch_agents.muzero.adapter import MuZeroAgentAdapter
 from cogment_verse_torch_agents.simple_a2c.simple_a2c_agent import SimpleA2CAgentAdapter
 from cogment_verse_torch_agents.simple_bc import SimpleBCAgentAdapter
+from cogment_verse_torch_agents.selfplay_td3.selfplay_agent import SelfPlayAgentAdapter
 
 import cog_settings
 
@@ -70,6 +71,9 @@ async def main():
 
     simple_bc_adapter = SimpleBCAgentAdapter()
     simple_bc_adapter.register_implementations(context)
+
+    selfplay_td3_adapter = SelfPlayAgentAdapter()
+    selfplay_td3_adapter.register_implementations(context)
 
     log.info(f"Torch agents service starts on {PORT}...")
 
