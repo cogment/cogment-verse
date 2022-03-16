@@ -16,7 +16,6 @@ import logging
 from data_pb2 import (
     AgentConfig,
     ActorParams,
-    EnvironmentParams,
     TrialConfig,
 )
 from cogment_verse import MlflowExperimentTracker

@@ -12,12 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import copy
 from cogment_verse_torch_agents.selfplay_td3.replaybuffer import Memory
 from cogment_verse_torch_agents.selfplay_td3.model import ActorNetwork, CriticNetwork
 import numpy as np
 import torch.nn.functional as F
 import torch
-import copy
 
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

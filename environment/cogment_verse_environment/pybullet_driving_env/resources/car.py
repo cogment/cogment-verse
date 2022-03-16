@@ -10,9 +10,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# pylint: skip-file
 import pybullet as p
 import os
-import math
 import numpy as np
 
 class Car:
