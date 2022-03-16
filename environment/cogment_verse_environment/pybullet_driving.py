@@ -10,6 +10,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# pylint: skip-file
 import sys
 # inserting pybullet-driving-env to the path
 # sys.path.insert(1, '/home/ck/pybullet-driving-env')

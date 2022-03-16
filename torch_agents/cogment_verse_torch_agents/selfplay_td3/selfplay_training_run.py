@@ -12,18 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
 from data_pb2 import (
     AgentConfig,
     ActorParams,
-    EnvironmentConfig,
     EnvironmentParams,
     TrialConfig,
 )
 from cogment_verse import MlflowExperimentTracker
-import logging
-import numpy as np
+
 
 # pylint: disable=protected-access
+# pylint: disable=W0612
 log = logging.getLogger(__name__)
 
 
@@ -60,7 +60,6 @@ def create_training_run(agent_adapter):
                     "noise_clip": config.training.noise_clip,
                     "learning_rate": config.training.learning_rate,
                     "policy_freq": config.training.policy_freq,
-                    "max_action": config.training.max_action,
                     "beta": config.training.beta,
                 },
             )
@@ -92,7 +91,6 @@ def create_training_run(agent_adapter):
                     "noise_clip": config.training.noise_clip,
                     "learning_rate": config.training.learning_rate,
                     "policy_freq": config.training.policy_freq,
-                    "max_action": config.training.max_action,
                     "beta": config.training.beta,
                 },
             )
@@ -100,7 +98,7 @@ def create_training_run(agent_adapter):
             # create Alice_config
             alice_configs = [
                 ActorParams(
-                    name=f"selfplayRL_Alice",
+                    name="selfplayRL_Alice",
                     actor_class="agent",
                     implementation=config.actor.implementation,
                     agent_config=AgentConfig(
@@ -115,7 +113,7 @@ def create_training_run(agent_adapter):
             # create Bob_config
             bob_configs = [
                 ActorParams(
-                    name=f"selfplayRL_Bob",
+                    name="selfplayRL_Bob",
                     actor_class="agent",
                     implementation=config.actor.implementation,
                     agent_config=AgentConfig(
@@ -231,8 +229,8 @@ def create_training_run(agent_adapter):
 
             run_xp_tracker.terminate_success()
 
-        except Exception as e:
-            logging.error(f"An exception occurred: {e}")
+        except Exception as exception:
+            logging.error(f"An exception occurred: {exception}")
             run_xp_tracker.terminate_failure()
             raise
 

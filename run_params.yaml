@@ -669,7 +669,6 @@ selfplay_td3_driving: &default_selfplay_td3_params
       policy_freq: 2
       SIGMA: 0.2
       num_training_steps: 2
-      max_action: 1
       beta: 0.05
       alice_reward: 5.0
       bob_reward: 5.0
