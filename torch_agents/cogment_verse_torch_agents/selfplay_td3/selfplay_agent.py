@@ -26,6 +26,7 @@ log = logging.getLogger(__name__)
 
 
 # pylint: disable=W0212
+# pylint: disable=W0221
 # pylint: disable=W0622
 # pylint: disable=C0103
 class SelfPlayAgentAdapter(AgentAdapter):
