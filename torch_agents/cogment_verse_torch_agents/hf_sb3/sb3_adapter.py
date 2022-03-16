@@ -17,6 +17,7 @@ import copy
 import logging
 from collections import namedtuple
 import os
+
 cwd = os.getcwd()
 print("cwd = ", cwd)
 
@@ -25,6 +26,7 @@ import cogment
 import torch
 from cogment.api.common_pb2 import TrialState
 from cogment_verse import AgentAdapter
+
 # from cogment_verse import MlflowExperimentTracker
 from cogment_verse_torch_agents.utils.tensors import tensor_from_cog_obs
 from data_pb2 import (
@@ -39,6 +41,7 @@ from data_pb2 import (
 )
 from huggingface_sb3 import load_from_hub
 from stable_baselines3 import PPO
+
 # from stable_baselines3.common.evaluation import evaluate_policy
 
 SimpleSB3Model = namedtuple("SimpleSB3Model", ["model_id", "version_number", "policy_network"])
@@ -106,21 +109,20 @@ class SimpleSB3AgentAdapter(AgentAdapter):
                 env_params.config.seed = env_params.config.seed + trial_idx
 
                 agent_actor_params = ActorParams(
-                        name="agent_1",
-                        actor_class="agent",
-                        implementation="simple_sb3",
-                        agent_config=AgentConfig(
-                            run_id=run_session.run_id,
-                            environment_specs=env_params.specs,
-                        ),
-                    )
+                    name="agent_1",
+                    actor_class="agent",
+                    implementation="simple_sb3",
+                    agent_config=AgentConfig(
+                        run_id=run_session.run_id,
+                        environment_specs=env_params.specs,
+                    ),
+                )
 
                 return TrialConfig(
                     run_id=run_session.run_id,
                     environment=env_params,
                     actors=[agent_actor_params],
                 )
-
 
             # Rollout a bunch of trials
             async for (
@@ -148,7 +150,7 @@ class SimpleSB3AgentAdapter(AgentAdapter):
                         specs=EnvironmentSpecs(implementation="gym/LunarLander-v2", num_input=8, num_action=4),
                         config=EnvironmentConfig(seed=12, framestack=1, render=True, render_width=256),
                     ),
-                    policy_network = "ppo"
+                    policy_network="ppo",
                 ),
             )
         }

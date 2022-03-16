@@ -13,4 +13,3 @@
 # limitations under the License.
 
 from cogment_verse_torch_agents.hf_sb3.sb3_adapter import SimpleSB3AgentAdapter
-
