@@ -14,14 +14,69 @@
 
 import numpy as np
 import torch
+from typing import List
 
 # pylint: disable=invalid-name
 
 
-class ValInfo:
+class MinMaxInfo:
+    def __init__(self, min_value=-1.0, max_value=1.0):
+        self.min_value = min_value
+        self.max_value = max_value
+
+    def update(self, val):
+        self.min_value = min(self.min_value, val)
+        self.max_value = max(self.max_value, val)
+
+    def normalize(self, val):
+        return (val - self.min_value) / max(self.max_value - self.min_value, 1)
+
+
+class Node:
     def __init__(self):
-        self.vmin: float = np.inf
-        self.vmax: float = -np.inf
+        self.reward = 0.0
+        self.value_sum = 0.0
+        self.visit_count = 0
+        self.prior = None
+        self.state = None
+        self.children = []
+
+    def value(self):
+        if self.visit_count == 0:
+            return 0
+        return self.value_sum / self.visit_count
+
+    def expanded(self):
+        return bool(self.children)
+
+    def expand(self, reward, prior, state):
+        self.reward = reward
+        self.prior = prior
+        self.state = state
+        self.children = [Node() for _ in range(len(prior.view(-1)))]
+
+    def Q(self):
+        return torch.tensor([node.value() for node in self.children], device=self.prior.device)
+
+    def N(self):
+        return torch.tensor([node.visit_count for node in self.children], device=self.prior.device)
+
+    def policy(self):
+        return self.N() / self.visit_count
+
+    def ucb(self, c1, c2, min_max_stats):
+        """
+        upper confidence bound
+        """
+        if self.visit_count == 0:
+            return self.prior
+        q = min_max_stats.normalize(torch.tensor(self.Q()))
+        N = torch.tensor(self.N(), device=self.prior.device)
+        p = self.prior
+        N_sum = torch.sum(N)
+
+        # 1911.08265 equation (2)
+        return q + p * torch.sqrt(N_sum) / (1 + N) * (c1 + torch.log((N_sum + c2 + 1) / c2))
 
 
 class MCTS:
@@ -31,123 +86,76 @@ class MCTS:
         policy,
         value,
         dynamics,
-        representation,
-        max_depth,
+        state,
         discount=0.99,
         epsilon=0.1,
         alpha=1.0,
         ucb_c1=1.5,
         ucb_c2=20000.0,
-        valinfo=None,
-        root=True,
     ):
-
         self._policy = policy
         self._value = value
         self._dynamics = dynamics
-        self._prior = self._policy(representation)
-        self._root = root
-
-        self.representation = representation
-        self._max_depth = max_depth
-        self._valinfo = valinfo or ValInfo()
+        self._max_depth = 0
+        self._min_max_stats = MinMaxInfo()
         self._epsilon = epsilon
         self._alpha = alpha
         self._c1 = ucb_c1
         self._c2 = ucb_c2
-
         self._discount = discount
 
-        self._children = {}
-        self._Q = torch.zeros_like(self._prior)
-        self._N = torch.zeros_like(self._prior, dtype=torch.int32)
-        self._R = torch.zeros_like(self._prior)
+        prior = self._policy(state)
+        # add exploration noise to prior at root
+        concentration = torch.zeros_like(prior)
+        concentration[:, :] = self._alpha
+        noise = torch.distributions.Dirichlet(concentration).sample()
+        prior = (1 - self._epsilon) * prior + self._epsilon * noise
 
-        self._cache_value = None
-
-        if self._root:
-            concentration = torch.zeros_like(self._prior)
-            concentration[:, :] = self._alpha
-            noise = torch.distributions.Dirichlet(concentration).sample()
-            self._prior = (1 - self._epsilon) * self._prior + self._epsilon * noise
-
-    def build_search_tree(self, count):
-        for _ in range(count):
-            self.rollout()
-
-    def q_normalized(self):
-        return torch.clamp(
-            (self._Q - self._valinfo.vmin) / max(self._valinfo.vmax - self._valinfo.vmin, 0.01), 0.0, 1.0
-        )
+        self.root = Node()
+        self.root.expand(0.0, prior, state)
 
     def improved_targets(self, temperature):
         """
         :return: Tuple (target policy, target q, target value)
         """
-        policy = self._N / torch.sum(self._N)
-        policy = torch.pow(policy, 1 / temperature)
-        policy /= torch.sum(policy, dim=1)
-        value = torch.sum(policy * self._Q)
-        return policy, self._Q, value
+        policy = self.root.policy().view(1, -1)
+        q = self.root.Q().view(1, -1)
+        value = torch.tensor(self.root.value().item(), device=self.root.prior.device)
+        return policy, q, value
 
-    def ucb(self, c1, c2):
-        """
-        upper confidence bound
-        """
-        # 1911.08265 equation (2)
-        q = self.q_normalized()
-        N = torch.sum(self._N)
-        p = self._prior
-
-        if N == 0:
-            return p
-
-        return q + p * torch.sqrt(N) / (1 + self._N) * (c1 + torch.log((N + c2 + 1) / c2))
-
-    def select_child(self):
-        ucb = self.ucb(self._c1, self._c2)
+    def select_child(self, node):
+        assert node.expanded()
+        ucb = node.ucb(self._c1, self._c2, self._min_max_stats)
         action = torch.argmax(ucb, dim=1)
         action_int = action.cpu().numpy().item()
+        return action, node.children[action_int]
 
-        if action_int not in self._children.keys():
-            representation, reward = self._dynamics(self.representation, action)
-            self._R[:, action_int] = reward
-            self._children[action_int] = MCTS(
-                policy=self._policy,
-                value=self._value,
-                dynamics=self._dynamics,
-                representation=representation,
-                discount=self._discount,
-                max_depth=self._max_depth - 1,
-                valinfo=self._valinfo,
-                root=False,
-            )
+    def run_simulation(self):
+        node = self.root
+        search_path = [self.root]
 
-        return action_int, self._children[action_int]
+        # follow UCB policy until we reach a leaf
+        while node.expanded():
+            action, node = self.select_child(node)
+            search_path.append(node)
 
-    def update_valinfo(self, val):
-        vmax = torch.max(val).detach().cpu().numpy().item()
-        vmin = torch.min(val).detach().cpu().numpy().item()
-        self._valinfo.vmin = min(self._valinfo.vmin, vmin)
-        self._valinfo.vmax = max(self._valinfo.vmax, vmax)
+        # update and expand the leaf
+        parent = search_path[-2]
+        value = self._value(parent.state)
+        prior = self._policy(parent.state)
+        state, reward = self._dynamics(parent.state, action)
+        node.expand(reward, prior, state)
+        self.backpropagate(search_path, value)
 
-    def rollout(self):
-        if self._max_depth == 0:
-            if self._cache_value is None:
-                G = self._value(self.representation)
-                self.update_valinfo(G)
-                self._cache_value = G
-            else:
-                G = self._cache_value
-            return G
+    def build_search_tree(self, num_simulations):
+        for _ in range(num_simulations):
+            self.run_simulation()
 
-        # 1911.08265 equation (3)
-        action_int, child = self.select_child()
-        G = self._R[:, action_int] + self._discount * child.rollout()
-
-        # 1911.08265 equation (4)
-        self._Q[:, action_int] = (self._N[:, action_int] * self._Q[:, action_int] + G) / (self._N[:, action_int] + 1)
-        self._N[:, action_int] += 1
-
-        self.update_valinfo(self._Q)
-        return G
+    def backpropagate(self, search_path: List[Node], value):
+        for node in reversed(search_path):
+            node.value_sum += value
+            node.visit_count += 1
+            # 1911.08265 equation (3)
+            self._min_max_stats.update(node.reward + self._discount * node.value())
+            # 1911.08265 equation (4)
+            value = node.reward + self._discount * value

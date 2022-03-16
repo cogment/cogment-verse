@@ -682,6 +682,26 @@ lander_muzero:
       min_value: -1000.0
       max_value: 1000.0
       num_bins: 64
+    mcts:
+      num_samples: 32
+      max_depth: 5
+      rollout_length: 4
+    representation_network:
+      encoding_size: 8
+      #hidden_sizes: [64]
+    dynamics_network:
+      encoding_size: 8
+      #hidden_sizes=[64],
+    policy_network:
+      encoding_size: 8
+      #hidden_sizes=[64],
+    value_network:
+      encoding_size: 8
+      #hidden_sizes=[64],
+    projector_network:
+      encoding_size: 8
+      output_size: 4
+
 
 cartpole_muzero_gpu:
   implementation: muzero_mlp_training

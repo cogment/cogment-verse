@@ -32,9 +32,9 @@ def mock_policy():
         def forward(self, x):
             # uniform + small random perturbation
             prob = torch.ones((x.shape[0], self.num_actions), dtype=torch.float32)
-            prob += 0.01 * torch.rand_like(prob)
+            # prob += 0.01 * torch.rand_like(prob)
             prob /= self.num_actions
-            return prob
+            return prob / torch.sum(prob)
 
     return Policy()
 
@@ -75,14 +75,21 @@ def test_mcts(device, mock_policy, mock_value, mock_dynamics):
     mock_value = mock_value.to(device)
 
     for state in [[0, 1], [1, 0]]:
-        representation = torch.tensor(state).unsqueeze(0)
-        root = MCTS(
-            policy=mock_policy, value=mock_value, dynamics=mock_dynamics, representation=representation, max_depth=8
-        )
-        root.build_search_tree(100)
-        policy, _q, value = root.improved_targets(0.75)
+        state = torch.tensor(state).unsqueeze(0)
+        mcts = MCTS(policy=mock_policy, value=mock_value, dynamics=mock_dynamics, state=state)
+        mcts.build_search_tree(69)
+        policy, q, value = mcts.improved_targets(0.75)
         assert policy.shape == (1, 2)
         assert value.shape == ()
         action = torch.argmax(policy).cpu().item()
+        greedy_action = torch.argmax(q).cpu().item()
         wrong_action = torch.argmax(torch.tensor(state)).item()
+        print("state", state)
+        print("policy", policy)
+        print("q", q)
+        print("prior", mcts.root.prior)
+        print("visit_count", mcts.root.visit_count)
+        print("children visits", mcts.root.N())
+        print("--------------------------------------")
         assert action != wrong_action
+        assert greedy_action == action
