@@ -27,7 +27,6 @@ from cogment_verse_torch_agents.muzero.adapter import MuZeroAgentAdapter
 from cogment_verse_torch_agents.simple_a2c.simple_a2c_agent import SimpleA2CAgentAdapter
 from cogment_verse_torch_agents.simple_bc import SimpleBCAgentAdapter
 from cogment_verse_torch_agents.hf_sb3 import SimpleSB3AgentAdapter
-from dotenv import load_dotenv
 
 import cog_settings
 

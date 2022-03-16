@@ -16,14 +16,17 @@ import asyncio
 import copy
 import logging
 from collections import namedtuple
+import os
+cwd = os.getcwd()
+print("cwd = ", cwd)
 
 import cogment
 
-import numpy as np
 import torch
 from cogment.api.common_pb2 import TrialState
-from cogment_verse import AgentAdapter, MlflowExperimentTracker
-from cogment_verse_torch_agents.utils.tensors import cog_action_from_tensor, tensor_from_cog_action, tensor_from_cog_obs
+from cogment_verse import AgentAdapter
+# from cogment_verse import MlflowExperimentTracker
+from cogment_verse_torch_agents.utils.tensors import tensor_from_cog_obs
 from data_pb2 import (
     ActorParams,
     AgentAction,
@@ -31,13 +34,12 @@ from data_pb2 import (
     EnvironmentConfig,
     EnvironmentParams,
     EnvironmentSpecs,
-    MLPNetworkConfig,
     TrialConfig,
     SimpleSB3TrainingRunConfig,
 )
-from huggingface_sb3 import load_from_hub, push_to_hub
+from huggingface_sb3 import load_from_hub
 from stable_baselines3 import PPO
-from stable_baselines3.common.evaluation import evaluate_policy
+# from stable_baselines3.common.evaluation import evaluate_policy
 
 SimpleSB3Model = namedtuple("SimpleSB3Model", ["model_id", "version_number", "policy_network"])
 
@@ -59,7 +61,7 @@ class SimpleSB3AgentAdapter(AgentAdapter):
         async def impl(actor_session):
             actor_session.start()
 
-            config = actor_session.config
+            # config = actor_session.config
 
             checkpoint = load_from_hub(
                 repo_id="ThomasSimonini/ppo-LunarLander-v2",
@@ -122,8 +124,8 @@ class SimpleSB3AgentAdapter(AgentAdapter):
 
             # Rollout a bunch of trials
             async for (
-                step_idx,
-                step_timestamp,
+                # step_idx,
+                # step_timestamp,
                 _trial_id,
                 _tick_id,
                 sample,
@@ -133,10 +135,10 @@ class SimpleSB3AgentAdapter(AgentAdapter):
             ):
                 log.info(f"Got sample {sample}")
 
-        checkpoint = load_from_hub(
-            repo_id="ThomasSimonini/ppo-LunarLander-v2",
-            filename="ppo-LunarLander-v2.zip",
-        )
+        # checkpoint = load_from_hub(
+        #     repo_id="ThomasSimonini/ppo-LunarLander-v2",
+        #     filename="ppo-LunarLander-v2.zip",
+        # )
         return {
             "simple_sb3_training": (
                 sample_producer_impl,
