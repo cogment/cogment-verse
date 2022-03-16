@@ -56,7 +56,7 @@ class Memory:
         """
         for sample in data:
             sample = sample._asdict()
-            for idx, key in enumerate(self._data):
+            for _, key in enumerate(self._data):
                 self._data[key][self._ptr, :] = sample[key]
 
             self._ptr = (self._ptr + 1) % self.buffer_size

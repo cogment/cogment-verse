@@ -12,27 +12,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
 from data_pb2 import SelfPlayTD3TrainingRunConfig
-
 from cogment_verse_torch_agents.selfplay_td3.selfplay_td3 import SelfPlayTD3
 from cogment_verse_torch_agents.selfplay_td3.selfplay_sample_producer import sample_producer
 from cogment_verse_torch_agents.selfplay_td3.selfplay_training_run import create_training_run
 from cogment_verse_torch_agents.selfplay_td3.wrapper import cog_action_from_tensor, tensor_from_cog_state, tensor_from_cog_goal, tensor_from_cog_grid
-
 from cogment_verse import AgentAdapter
-import cogment, torch
-
-from prometheus_client import Summary
-
-import logging
-
+import cogment
+import torch
 
 log = logging.getLogger(__name__)
+
 
 # pylint: disable=W0212
 # pylint: disable=W0622
 # pylint: disable=C0103
 class SelfPlayAgentAdapter(AgentAdapter):
+
     def _create(self, model_id, **kwargs):
         model = SelfPlayTD3(id=model_id, **kwargs)
         return model, kwargs
@@ -65,15 +62,14 @@ class SelfPlayAgentAdapter(AgentAdapter):
                     # process observation
                     # agent acts when its turn
                     if (obs.current_player == 1 and agent == "alice") or \
-                        (obs.current_player == 0 and agent == "bob"):
-                            state = tensor_from_cog_state(obs)
-                            goal = tensor_from_cog_goal(obs)
-                            grid = tensor_from_cog_grid(obs)
-                            action = model.act(state, goal, grid)
-                            cog_action = cog_action_from_tensor(action)
-                            actor_session.do_action(cog_action)
-
-                    else: # agent stays put when not its turn
+                       (obs.current_player == 0 and agent == "bob"):
+                        state = tensor_from_cog_state(obs)
+                        goal = tensor_from_cog_goal(obs)
+                        grid = tensor_from_cog_grid(obs)
+                        action = model.act(state, goal, grid)
+                        cog_action = cog_action_from_tensor(action)
+                        actor_session.do_action(cog_action)
+                    else:  # agent stays put when not its turn
                         cog_action = cog_action_from_tensor(torch.tensor([0.0, 0.0]))
                         actor_session.do_action(cog_action)
 
@@ -81,5 +77,4 @@ class SelfPlayAgentAdapter(AgentAdapter):
 
     def _create_run_implementations(self):
         return {"selfplay_td3_training": (sample_producer, create_training_run(self),
-                                      SelfPlayTD3TrainingRunConfig())}
-
+                                          SelfPlayTD3TrainingRunConfig())}

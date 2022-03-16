@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from collections import namedtuple
 import cogment.api.common_pb2 as common_api
 from cogment_verse_torch_agents.selfplay_td3.wrapper import (
     tensor_from_cog_state,
@@ -20,9 +21,7 @@ from cogment_verse_torch_agents.selfplay_td3.wrapper import (
     current_player_from_obs,
     tensor_from_cog_goal,
     current_player_done_flag,
-    trial_done_flag,
 )
-from collections import namedtuple
 
 Sample = namedtuple("Sample", ["current_player", "state", "grid",
                                 "action", "reward", "next_state",
@@ -57,7 +56,7 @@ async def sample_producer(run_sample_producer_session):
 
     async for sample in run_sample_producer_session.get_all_samples():
         if previous_sample:
-            Sample = get_samples(previous_sample, sample)
-            if Sample:
-                run_sample_producer_session.produce_training_sample(Sample)
+            processed_sample = get_samples(previous_sample, sample)
+            if processed_sample:
+                run_sample_producer_session.produce_training_sample(processed_sample)
         previous_sample = sample
