@@ -18,9 +18,6 @@ import logging
 from collections import namedtuple
 import os
 
-cwd = os.getcwd()
-print("cwd = ", cwd)
-
 import cogment
 
 import torch
