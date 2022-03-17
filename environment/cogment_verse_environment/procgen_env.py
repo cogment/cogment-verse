@@ -40,7 +40,6 @@ ENV_NAMES = [
     "starpilot",
 ]
 
-
 def _grayscale(image):
     return np.mean(image, axis=2)
 

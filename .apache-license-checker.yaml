@@ -15,6 +15,7 @@ ignore:
   - "**/htmlcov"
   - "**/node_modules"
   - "web_client/build"
+  - "**/pybullet_driving_env/*"
 license:
   CopyrightYear: 2021
   Author: "AI Redefined Inc. <dev+cogment@ai-r.com>"

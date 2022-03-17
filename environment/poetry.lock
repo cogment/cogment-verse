@@ -868,6 +868,14 @@ optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*"
 
 [[package]]
+name = "pybullet"
+version = "3.2.1"
+description = "Official Python Interface for the Bullet Physics SDK specialized for Robotics Simulation and Reinforcement Learning"
+category = "dev"
+optional = false
+python-versions = "*"
+
+[[package]]
 name = "pycparser"
 version = "2.21"
 description = "C parser in Python"
@@ -2089,6 +2097,15 @@ psutil = [
 py = [
     {file = "py-1.11.0-py2.py3-none-any.whl", hash = "sha256:607c53218732647dff4acdfcd50cb62615cedf612e72d1724fb1a0cc6405b378"},
     {file = "py-1.11.0.tar.gz", hash = "sha256:51c75c4126074b472f746a24399ad32f6053d1b34b68d2fa41e558e6f4a98719"},
+]
+pybullet = [
+    {file = "pybullet-3.2.1-cp27-cp27m-manylinux_2_5_x86_64.manylinux1_x86_64.whl", hash = "sha256:a7558b63c754ee13e5937d348a6a1e496bc317983b0229a0351f896bd5678ed7"},
+    {file = "pybullet-3.2.1-cp27-cp27mu-manylinux_2_5_x86_64.manylinux1_x86_64.whl", hash = "sha256:ed73517895eee6b238e5bc140040edab9fd6883b49fce2fed03f8fe87877e36d"},
+    {file = "pybullet-3.2.1-cp35-cp35m-manylinux_2_5_x86_64.manylinux1_x86_64.whl", hash = "sha256:86ea0d85d538ffdbdc4684708fc81bff3371b14b5ad2207e67d653b5083879d2"},
+    {file = "pybullet-3.2.1-cp36-cp36m-manylinux_2_5_x86_64.manylinux1_x86_64.whl", hash = "sha256:10f0b947eeea4d42f324a727be701bef1cfebf3cb532332a9c7549cf34b76475"},
+    {file = "pybullet-3.2.1-cp37-cp37m-manylinux_2_5_x86_64.manylinux1_x86_64.whl", hash = "sha256:8c3cfff5f2c3797891ccfdfe5893945be9545c44596034f7240a2c766b1f4d73"},
+    {file = "pybullet-3.2.1-cp38-cp38-manylinux_2_5_x86_64.manylinux1_x86_64.whl", hash = "sha256:ef8101bcac2f618b4b9fdd926394d5611b0c7c8df8217f98b728da254b597cb6"},
+    {file = "pybullet-3.2.1-cp39-cp39-manylinux_2_5_x86_64.manylinux1_x86_64.whl", hash = "sha256:6196110885debf7528f03ab9aecd5f61d5de4654a39c8cbea3ce496220ea6e4f"},
 ]
 pycparser = [
     {file = "pycparser-2.21-py2.py3-none-any.whl", hash = "sha256:8ee45429555515e1f6b185e78100aea234072576aa43ab53aefcae078162fca9"},

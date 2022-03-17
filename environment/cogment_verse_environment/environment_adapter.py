@@ -23,6 +23,7 @@ from cogment_verse_environment.procgen_env import ProcGenEnv
 from cogment_verse_environment.tetris import TetrisEnv
 from cogment_verse_environment.utils.serialization_helpers import serialize_img, serialize_np_array
 from cogment_verse_environment.zoo_env import PettingZooEnv
+from cogment_verse_environment.pybullet_driving import DrivingEnv
 from data_pb2 import Observation
 
 ENVIRONMENT_CONSTRUCTORS = {
@@ -32,6 +33,7 @@ ENVIRONMENT_CONSTRUCTORS = {
     "tetris": TetrisEnv,
     "pettingzoo": PettingZooEnv,
     "procgen": ProcGenEnv,
+    "driving": DrivingEnv,
 }
 
 log = logging.getLogger(__name__)
@@ -116,6 +118,7 @@ class EnvironmentAdapter:
             "procgen/ninja",
             "procgen/plunder",
             "procgen/starpilot",
+            "driving/SimpleDriving-v0",
         ]
 
     def _create_implementations(self):
@@ -130,6 +133,7 @@ class EnvironmentAdapter:
                     env_name=env_name,
                     flatten=env_config.flatten,
                     framestack=env_config.framestack,
+                    mode=env_config.mode,
                 )
                 env.seed(env_config.seed)
                 return env
