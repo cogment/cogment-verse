@@ -16,7 +16,6 @@ import asyncio
 import copy
 import logging
 from collections import namedtuple
-import os
 
 import cogment
 
