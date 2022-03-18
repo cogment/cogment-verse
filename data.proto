@@ -119,6 +119,47 @@ message ModelArgs {
 message ReplayBufferConfig {
   string action_dtype = 1;
   string observation_dtype = 2;
+  string name = 3;
+  uint32 capacity = 4;
+  uint32 stack_size = 5;
+  float gamma = 6;
+}
+
+message TargetNetUpdateSchedule {
+    string name = 1;
+    bool off_value = 2;
+    bool on_value = 3;
+    uint32 period = 4;
+}
+
+message UpdatePeriodSchedule {
+    string name = 1;
+    bool off_value = 2;
+    bool on_value = 3;
+    uint32 period = 4;
+}
+
+message EpsilonSchedule {
+    string name = 1;
+    float init_value = 2;
+    float end_value = 3;
+    uint32 steps = 4;
+}
+
+message LearnSchedule {
+    string name = 1;
+    bool off_value = 2;
+    bool on_value = 3;
+    uint32 steps = 4;
+}
+
+message RepresentationNetConfig {
+    string name = 1;
+    repeated int32 channels = 2;
+    repeated int32 kernel_sizes = 3;
+    repeated int32 strides = 4;
+    repeated int32 paddings = 5;
+    repeated int32 mlp_layers = 6;
 }
 
 message RunConfig {
@@ -141,6 +182,15 @@ message RunConfig {
   bool aggregate_by_actor = 17;
   ReplayBufferConfig replay_buffer_config = 18;
   float discount_factor = 19;
+  RepresentationNetConfig representation_net = 20;
+  OptimizerFnConfig optimizer_fn = 21;
+  float discount_rate = 22;
+  float reward_clip = 23;
+  TargetNetUpdateSchedule target_net_updateschedule = 24;
+  UpdatePeriodSchedule update_period_schedule = 25;
+  EpsilonSchedule epsilon_schedule = 26;
+  float test_epsilon = 27;
+  LearnSchedule learn_schedule = 28;
 }
 
 message MLPNetworkConfig {
@@ -196,6 +246,11 @@ message OptimizerConfig {
   uint32 lr_warmup_steps = 4;
   uint32 lr_decay_steps = 5;
   float max_norm = 6;
+  string name = 7;
+  bool centered = 8;
+  float momentum = 9;
+  float eps = 10;
+  float alpha = 11;
 }
 
 message MuZeroTrainingConfig {
