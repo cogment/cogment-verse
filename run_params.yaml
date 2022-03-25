@@ -801,6 +801,10 @@ simple_sb3_lander: &simple_sb3_lander
       max_parallel_trials: 1
       learning_rate: 0.001
       batch_size: 32
+    model_load:
+      repo_id: "ThomasSimonini/ppo-LunarLander-v2"
+      file_name: "ppo-LunarLander-v2.zip"
+
 
 
 #sb3_lander:

@@ -60,12 +60,17 @@ class SimpleSB3AgentAdapter(AgentAdapter):
         async def impl(actor_session):
             actor_session.start()
 
-            # config = actor_session.config
+            config = actor_session.config
 
+            # checkpoint = load_from_hub(
+            #     repo_id="ThomasSimonini/ppo-LunarLander-v2",
+            #     filename="ppo-LunarLander-v2.zip",
+            # )
             checkpoint = load_from_hub(
-                repo_id="ThomasSimonini/ppo-LunarLander-v2",
-                filename="ppo-LunarLander-v2.zip",
+                repo_id=config.model_load.repo_id,
+                filename=config.model_load.filename,
             )
+
             model = PPO.load(checkpoint)
 
             @torch.no_grad()
