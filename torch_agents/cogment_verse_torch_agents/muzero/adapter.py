@@ -91,8 +91,7 @@ DEFAULT_MUZERO_RUN_CONFIG = MuZeroRunConfig(
         value_weight=1.0,
     ),
     mcts=MCTSConfig(
-        max_depth=4,
-        num_samples=16,
+        num_samples=64,
         temperature=1.0,
         ucb_c1=1.25,
         ucb_c2=20000.0,

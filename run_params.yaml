@@ -682,10 +682,18 @@ lander_muzero:
       min_value: -1000.0
       max_value: 1000.0
       num_bins: 64
+    training:
+      similarity_weight: 0.0
+      optimizer:
+        learning_rate: 0.001
+        min_learning_rate: 0.001
+        lr_warmup_steps: 1000
+        lr_decay_steps: 1
+        max_norm: 100.0
     mcts:
       num_samples: 32
       max_depth: 5
-      rollout_length: 4
+      rollout_length: 10
     representation_network:
       encoding_size: 8
       #hidden_sizes: [64]

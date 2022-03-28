@@ -65,7 +65,8 @@ def mock_value():
 
 
 @pytest.mark.parametrize("device", ["cpu", "cuda"])
-def test_mcts(device, mock_policy, mock_value, mock_dynamics):
+@pytest.mark.parametrize("state", [[0, 1], [1, 0]])
+def test_mcts(device, state, mock_policy, mock_value, mock_dynamics):
     if device == "cuda" and not torch.cuda.is_available():
         pytest.skip()
 
@@ -74,22 +75,21 @@ def test_mcts(device, mock_policy, mock_value, mock_dynamics):
     mock_policy = mock_policy.to(device)
     mock_value = mock_value.to(device)
 
-    for state in [[0, 1], [1, 0]]:
-        state = torch.tensor(state).unsqueeze(0)
-        mcts = MCTS(policy=mock_policy, value=mock_value, dynamics=mock_dynamics, state=state)
-        mcts.build_search_tree(69)
-        policy, q, value = mcts.improved_targets(0.75)
-        assert policy.shape == (1, 2)
-        assert value.shape == ()
-        action = torch.argmax(policy).cpu().item()
-        greedy_action = torch.argmax(q).cpu().item()
-        wrong_action = torch.argmax(torch.tensor(state)).item()
-        print("state", state)
-        print("policy", policy)
-        print("q", q)
-        print("prior", mcts.root.prior)
-        print("visit_count", mcts.root.visit_count)
-        print("children visits", mcts.root.N())
-        print("--------------------------------------")
-        assert action != wrong_action
-        assert greedy_action == action
+    state = torch.tensor(state).unsqueeze(0)
+    mcts = MCTS(policy=mock_policy, value=mock_value, dynamics=mock_dynamics, state=state)
+    mcts.build_search_tree(69)
+    policy, q, value = mcts.improved_targets()
+    assert policy.shape == (1, 2)
+    assert value.shape == ()
+    action = torch.argmax(policy).cpu().item()
+    greedy_action = torch.argmax(q).cpu().item()
+    wrong_action = torch.argmax(torch.tensor(state)).item()
+    print("state", state)
+    print("policy", policy)
+    print("q", q)
+    print("prior", mcts.root.prior)
+    print("visit_count", mcts.root.visit_count)
+    print("children visits", mcts.root.N())
+    print("--------------------------------------")
+    assert action != wrong_action
+    assert greedy_action == action

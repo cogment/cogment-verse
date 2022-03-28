@@ -302,7 +302,9 @@ class MuZero(torch.nn.Module):
         policy, q, value = self.reanalyze(
             observation, epsilon, alpha, discount_rate, mcts_depth, mcts_count, ucb_c1, ucb_c2, temperature
         )
-        action = torch.distributions.Categorical(policy).sample()
+        greedy_policy = torch.pow(policy, 1 / temperature)
+        greedy_policy /= torch.sum(greedy_policy)
+        action = torch.distributions.Categorical(greedy_policy).sample()
         action = action.cpu().numpy().item()
         return action, policy, q, value
 
@@ -455,4 +457,4 @@ class MuZero(torch.nn.Module):
         )
 
         mcts.build_search_tree(mcts_count)
-        return mcts.improved_targets(temperature)
+        return mcts.improved_targets()

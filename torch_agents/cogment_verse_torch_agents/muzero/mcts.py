@@ -55,8 +55,9 @@ class Node:
         self.state = state
         self.children = [Node() for _ in range(len(prior.view(-1)))]
 
-    def Q(self):
-        return torch.tensor([node.value() for node in self.children], device=self.prior.device)
+    def Q(self, discount):
+        ### ????
+        return torch.tensor([node.reward + discount * node.value() for node in self.children], device=self.prior.device)
 
     def N(self):
         return torch.tensor([node.visit_count for node in self.children], device=self.prior.device)
@@ -64,13 +65,13 @@ class Node:
     def policy(self):
         return self.N() / self.visit_count
 
-    def ucb(self, c1, c2, min_max_stats):
+    def ucb(self, c1, c2, discount, min_max_stats):
         """
         upper confidence bound
         """
         if self.visit_count == 0:
             return self.prior
-        q = min_max_stats.normalize(torch.tensor(self.Q()))
+        q = min_max_stats.normalize(torch.tensor(self.Q(discount)))
         N = torch.tensor(self.N(), device=self.prior.device)
         p = self.prior
         N_sum = torch.sum(N)
@@ -114,18 +115,18 @@ class MCTS:
         self.root = Node()
         self.root.expand(0.0, prior, state)
 
-    def improved_targets(self, temperature):
+    def improved_targets(self):
         """
         :return: Tuple (target policy, target q, target value)
         """
         policy = self.root.policy().view(1, -1)
-        q = self.root.Q().view(1, -1)
+        q = self.root.Q(self._discount).view(1, -1)
         value = torch.tensor(self.root.value().item(), device=self.root.prior.device)
         return policy, q, value
 
     def select_child(self, node):
         assert node.expanded()
-        ucb = node.ucb(self._c1, self._c2, self._min_max_stats)
+        ucb = node.ucb(self._c1, self._c2, self._discount, self._min_max_stats)
         action = torch.argmax(ucb, dim=1)
         action_int = action.cpu().numpy().item()
         return action, node.children[action_int]
