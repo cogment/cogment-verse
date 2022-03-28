@@ -9,7 +9,7 @@ license = "Apache-2.0"
 python = ">=3.7,<3.10"
 grpcio = "^1.38.0"
 click = "^8.0.1"
-cogment = {extras = ["generate"], version = "^2.0.2"}
+cogment = {extras = ["generate"], version = "^2.1.0"}
 PyYAML = "^5.4.1"
 
 [tool.poetry.dev-dependencies]
