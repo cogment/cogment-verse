@@ -266,6 +266,7 @@ message SimpleSB3TrainingRunConfig {
   EnvironmentParams environment = 1;
   SimpleSB3TrainingConfig training = 2;
   string policy_network = 3;
+}
 
 message SelfPlayActorConfig{
   uint32 num_input = 1;
