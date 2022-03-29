@@ -804,29 +804,3 @@ simple_sb3_lander: &simple_sb3_lander
     model_load:
       repo_id: "ThomasSimonini/ppo-LunarLander-v2"
       file_name: "ppo-LunarLander-v2.zip"
-
-
-
-#sb3_lander:
-#  implementation: play
-#  config:
-#    class_name: data_pb2.PlayRunConfig
-#    # Set to true to have the ability to observe the run in the web client
-#    observer: true
-#    trial_count: 10
-#    environment:
-#      specs: *cartpole_specs
-#    actors:
-#    # Configure the players (only the first ones are used, up to the number of required players)
-#    - name: agent_1
-#      actor_class: agent
-#      # implementation: random
-#      # To use an already trained agent use the following.
-#      # Make sure the model is compatible with the implementation and the environment
-#      implementation: rainbowtorch
-#      agent_config:
-#       model_id: compassionate_aryabhata_model
-#       model_version: -1
-#    - name: agent_2
-#      actor_class: agent
-#      implementation: random
