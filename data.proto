@@ -262,10 +262,15 @@ message SimpleSB3TrainingConfig {
   uint32 batch_size = 5;
 }
 
+message SimpleSB3ModelConfig {
+  string repo_id = 1;
+  string file_name = 2;
+}
+
 message SimpleSB3TrainingRunConfig {
   EnvironmentParams environment = 1;
   SimpleSB3TrainingConfig training = 2;
-  string policy_network = 3;
+  SimpleSB3ModelConfig model_load = 3;
 }
 
 message SelfPlayActorConfig{
