@@ -118,6 +118,19 @@ Ongoing run identifiers to define `RUN_ID` can be retrieved by listing the ongoi
 
 You can monitor ongoing run using [mlflow](https://mlflow.org). By default a local instance of mlflow is started by cogment-verse and is accessible at <http://localhost:3000>.
 
+#### StableBaselines3 - HuggingFace Hub
+
+You can also load a model from hugging face hub. A sample run
+configuration `simple_sb3_lander` is defined in `run_params.yaml`.
+It loads a model from hugging face hub based as specified by
+`repo_id` and `file_name`. Note that the `class_name: data_pb2.SimpleSB3TrainingRunConfig` is
+defined in `data.proto`.
+
+You can start the run by:
+
+```RUN_PARAMS=simple_sb3_lander cogment run start_run```
+
+
 #### Human player
 
 Some of the availabe run involve a human player, for example `benchmark_lander_hill` enables a human player to momentarily take control of the lunar lander to help the AI agents during the training process.
