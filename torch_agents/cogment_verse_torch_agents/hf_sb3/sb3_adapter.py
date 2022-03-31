@@ -120,11 +120,7 @@ class SimpleSB3AgentAdapter(AgentAdapter):
                 )
 
             # Rollout a bunch of trials
-            async for (
-                _trial_id,
-                _tick_id,
-                sample,
-            ) in run_session.start_trials_and_wait_for_termination(
+            async for (_trial_id, _tick_id, sample,) in run_session.start_trials_and_wait_for_termination(
                 trial_configs=[create_trial_config(trial_idx) for trial_idx in range(config.training.trial_count)],
                 max_parallel_trials=config.training.max_parallel_trials,
             ):

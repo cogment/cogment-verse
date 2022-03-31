@@ -57,7 +57,7 @@ class ActorNetwork(nn.Module):
             nn.Conv2d(20, 20, (4, 4), stride=2),
             nn.LeakyReLU(),
             nn.Conv2d(20, 20, (3, 3)),
-            nn.LeakyReLU()
+            nn.LeakyReLU(),
         )
 
         self.cnnfc1 = nn.Linear(320, 100)
@@ -80,6 +80,7 @@ class ActorNetwork(nn.Module):
         a = self.l4(a)
 
         return self.action_scale * torch.tanh(a) + self.action_bias
+
 
 class CriticNetwork(nn.Module):
     """Initialize a CriticNetwork.
@@ -117,7 +118,7 @@ class CriticNetwork(nn.Module):
             nn.Conv2d(20, 20, (4, 4), stride=2),
             nn.LeakyReLU(),
             nn.Conv2d(20, 20, (3, 3)),
-            nn.LeakyReLU()
+            nn.LeakyReLU(),
         )
 
         self.cnnfc1 = nn.Linear(320, 100)
@@ -138,7 +139,7 @@ class CriticNetwork(nn.Module):
             nn.Conv2d(20, 20, (4, 4), stride=2),
             nn.LeakyReLU(),
             nn.Conv2d(20, 20, (3, 3)),
-            nn.LeakyReLU()
+            nn.LeakyReLU(),
         )
 
         self.cnnfc2 = nn.Linear(320, 100)

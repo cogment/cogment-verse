@@ -31,7 +31,7 @@ class SelfPlayTD3:
     def __init__(self, model_params=None, **params):
 
         self._params = params
-        self._params['name'] = self._params['id'].split("_")[-1]
+        self._params["name"] = self._params["id"].split("_")[-1]
 
         self._actor_network = ActorNetwork(**self._params)
         self._critic_network = CriticNetwork(**self._params)
@@ -48,14 +48,17 @@ class SelfPlayTD3:
     def act(self, state, goal, grid):
 
         # if alice: filter observation
-        if self._params['name'] == "bob":
+        if self._params["name"] == "bob":
             state = np.concatenate([state, goal])
         grid = np.reshape(grid, self._params["grid_shape"])
 
         state = torch.FloatTensor(state.reshape(1, -1)).to(device)
         grid = torch.transpose(torch.FloatTensor(grid).to(device).unsqueeze_(0), 1, 3)
         # TBD refactor noise
-        action = self._actor_network(state, grid).cpu().data.numpy().flatten() + np.random.normal(0, self._params["SIGMA"], (1, 2))[0]
+        action = (
+            self._actor_network(state, grid).cpu().data.numpy().flatten()
+            + np.random.normal(0, self._params["SIGMA"], (1, 2))[0]
+        )
         return action
 
     def prepare_data(self, data):
@@ -69,13 +72,26 @@ class SelfPlayTD3:
         state = torch.FloatTensor(state).to(device)
         next_state = torch.FloatTensor(next_state).to(device)
 
-        grid = np.reshape(data["grid"],
-                          [data["grid"].shape[0], self._params["grid_shape"][0], self._params["grid_shape"][1], self._params["grid_shape"][2]])
+        grid = np.reshape(
+            data["grid"],
+            [
+                data["grid"].shape[0],
+                self._params["grid_shape"][0],
+                self._params["grid_shape"][1],
+                self._params["grid_shape"][2],
+            ],
+        )
         grid = torch.transpose(torch.from_numpy(grid).to(device).float(), 1, 3)
 
-        next_grid = np.reshape(data["next_grid"],
-                          [data["next_grid"].shape[0], self._params["grid_shape"][0], self._params["grid_shape"][1],
-                           self._params["grid_shape"][2]])
+        next_grid = np.reshape(
+            data["next_grid"],
+            [
+                data["next_grid"].shape[0],
+                self._params["grid_shape"][0],
+                self._params["grid_shape"][1],
+                self._params["grid_shape"][2],
+            ],
+        )
         next_grid = torch.transpose(torch.from_numpy(next_grid).to(device).float(), 1, 3)
 
         action = torch.FloatTensor(data["action"]).to(device)
@@ -91,13 +107,13 @@ class SelfPlayTD3:
 
         with torch.no_grad():
             # Select action according to policy and add clipped noise
-            noise = (
-                torch.randn_like(action) * self._params["policy_noise"]
-            ).clamp(-self._params["noise_clip"], self._params["noise_clip"])
+            noise = (torch.randn_like(action) * self._params["policy_noise"]).clamp(
+                -self._params["noise_clip"], self._params["noise_clip"]
+            )
 
-            next_action = (
-                self._actor_target_network(next_state, next_grid) + noise
-            ).clamp(-self._params["max_action"], self._params["max_action"])
+            next_action = (self._actor_target_network(next_state, next_grid) + noise).clamp(
+                -self._params["max_action"], self._params["max_action"]
+            )
 
             # Compute the target Q value
             target_Q1, target_Q2 = self._critic_target_network(next_state, next_action, next_grid)
@@ -134,10 +150,14 @@ class SelfPlayTD3:
 
             # Update the frozen target models
             for param, target_param in zip(self._critic_network.parameters(), self._critic_target_network.parameters()):
-                target_param.data.copy_(self._params["tau"] * param.data + (1 - self._params["tau"]) * target_param.data)
+                target_param.data.copy_(
+                    self._params["tau"] * param.data + (1 - self._params["tau"]) * target_param.data
+                )
 
             for param, target_param in zip(self._actor_network.parameters(), self._actor_target_network.parameters()):
-                target_param.data.copy_(self._params["tau"] * param.data + (1 - self._params["tau"]) * target_param.data)
+                target_param.data.copy_(
+                    self._params["tau"] * param.data + (1 - self._params["tau"]) * target_param.data
+                )
 
             return actor_loss.item(), critic_loss.item() / self._params["batch_size"]
         return 0, critic_loss.item() / self._params["batch_size"]
@@ -151,8 +171,8 @@ class SelfPlayTD3:
                 actor_loss += actor_loss_
                 critic_loss += critic_loss_
 
-            mean_actor_loss = actor_loss/self._params["num_training_steps"]
-            mean_critic_loss = critic_loss/self._params["num_training_steps"]
+            mean_actor_loss = actor_loss / self._params["num_training_steps"]
+            mean_critic_loss = critic_loss / self._params["num_training_steps"]
 
         return {"mean_actor_loss": mean_actor_loss, "mean_critic_loss": mean_critic_loss}
 
