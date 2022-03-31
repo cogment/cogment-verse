@@ -57,11 +57,9 @@ class SimpleSB3AgentAdapter(AgentAdapter):
         async def impl(actor_session):
             actor_session.start()
 
-            config = actor_session.config
-
             checkpoint = load_from_hub(
-                repo_id=config.model_load.repo_id,
-                filename=config.model_load.filename,
+                repo_id=repo_id,
+                filename=file_name,
             )
 
             model = PPO.load(checkpoint)
@@ -95,6 +93,9 @@ class SimpleSB3AgentAdapter(AgentAdapter):
 
         async def run_impl(run_session):
             config = run_session.config
+            global repo_id, file_name
+            repo_id = config.model_load.repo_id
+            file_name = config.model_load.file_name
             assert config.environment.specs.num_players == 1
 
             # Helper function to create a trial configuration
@@ -138,7 +139,6 @@ class SimpleSB3AgentAdapter(AgentAdapter):
                         specs=EnvironmentSpecs(implementation="gym/LunarLander-v2", num_input=8, num_action=4),
                         config=EnvironmentConfig(seed=12, framestack=1, render=True, render_width=256),
                     ),
-                    policy_network="ppo",
                 ),
             )
         }
