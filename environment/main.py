@@ -22,6 +22,7 @@ from dotenv import load_dotenv
 import cogment
 from cogment_verse import RunContext
 from cogment_verse_environment.base_agent_adapter import BaseAgentAdapter
+# from cogment_verse_environment.sb3_adapter import SimpleSB3AgentAdapter
 from cogment_verse_environment.environment_adapter import EnvironmentAdapter
 
 import cog_settings
@@ -60,6 +61,9 @@ async def main():
 
     base_agent_adapter = BaseAgentAdapter()
     base_agent_adapter.register_implementations(context)
+
+    # sb3_agent_adapter = SimpleSB3AgentAdapter()
+    # sb3_agent_adapter.register_implementations(context)
 
     log.info(f"Environment service starting on port {PORT}...")
     await context.serve_all_registered(cogment.ServedEndpoint(port=PORT), prometheus_port=PROMETHEUS_PORT)

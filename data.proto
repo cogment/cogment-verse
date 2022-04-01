@@ -52,6 +52,8 @@ message AgentConfig {
   int32 actor_index = 5; // Used to figure out if an agent is the current_player in the observation space
   string device = 6;
   uint32 threads_per_worker = 7;
+  string repo_id = 8;
+  string filename = 9;
 }
 
 enum HumanRole {

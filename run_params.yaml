@@ -788,19 +788,42 @@ simple_bc_mountaincar:
       config:
         seed: 12
 
-simple_sb3_lander: &simple_sb3_lander
-  implementation: simple_sb3_training
-  config: &simple_sb3_config
-    class_name: data_pb2.SimpleSB3TrainingRunConfig
+#simple_sb3_lander: &simple_sb3_lander
+#  implementation: simple_sb3_training
+#  config: &simple_sb3_config
+#    class_name: data_pb2.SimpleSB3TrainingRunConfig
+#    environment:
+#      specs: *lander_specs
+#      config:
+#        seed: 12
+#    training:
+#      trial_count: 1000
+#      max_parallel_trials: 1
+#      learning_rate: 0.001
+#      batch_size: 32
+#    model_load:
+#      repo_id: "ThomasSimonini/ppo-LunarLander-v2"
+#      file_name: "ppo-LunarLander-v2.zip"
+
+simple_sb3_lander:
+  implementation: play
+  config:
+    class_name: data_pb2.PlayRunConfig
+    # Set to true to have the ability to observe the run in the web client
+    observer: true
+    trial_count: 10
     environment:
-      specs: *lander_specs
-      config:
-        seed: 12
-    training:
-      trial_count: 1000
-      max_parallel_trials: 1
-      learning_rate: 0.001
-      batch_size: 32
-    model_load:
-      repo_id: "ThomasSimonini/ppo-LunarLander-v2"
-      file_name: "ppo-LunarLander-v2.zip"
+      specs: *cartpole_specs
+    actors:
+    # Configure the players (only the first ones are used, up to the number of required players)
+    - name: agent_1
+      actor_class: agent
+      # implementation: random
+      # To use an already trained agent use the following.
+      # Make sure the model is compatible with the implementation and the environment
+      implementation: simple_sb3
+      agent_config:
+       model_id: compassionate_aryabhata_model
+       model_version: -1
+       repo_id: "ThomasSimonini/ppo-LunarLander-v2"
+       filename: "ppo-LunarLander-v2.zip"

@@ -22,6 +22,7 @@ import cogment
 import torch
 from cogment.api.common_pb2 import TrialState
 from cogment_verse import AgentAdapter
+# from cogment_verse_environment import BaseAgentAdapter
 
 from cogment_verse_torch_agents.utils.tensors import tensor_from_cog_obs
 from data_pb2 import (
@@ -56,11 +57,16 @@ class SimpleSB3AgentAdapter(AgentAdapter):
     def _create_actor_implementations(self):
         async def impl(actor_session):
             actor_session.start()
+            print("action_session config = ", actor_session.config)
 
             checkpoint = load_from_hub(
-                repo_id=repo_id,
-                filename=file_name,
+                repo_id=actor_session.config.repo_id,
+                filename=actor_session.config.file_name,
             )
+            # checkpoint = load_from_hub(
+            #     repo_id = "ThomasSimonini/ppo-LunarLander-v2",
+            #     filename = "ppo-LunarLander-v2.zip"
+            # )
 
             model = PPO.load(checkpoint)
 
@@ -82,59 +88,62 @@ class SimpleSB3AgentAdapter(AgentAdapter):
         }
 
     def _create_run_implementations(self):
-        async def sample_producer_impl(run_sample_producer_session):
-            assert run_sample_producer_session.count_actors() == 1
+        return {}
 
-            async for sample in run_sample_producer_session.get_all_samples():
-                if sample.get_trial_state() == TrialState.ENDED:
-                    break
-
-                log.info("Got raw sample")
-
-        async def run_impl(run_session):
-            config = run_session.config
-            global repo_id, file_name
-            repo_id = config.model_load.repo_id
-            file_name = config.model_load.file_name
-            assert config.environment.specs.num_players == 1
-
-            # Helper function to create a trial configuration
-            def create_trial_config(trial_idx):
-                env_params = copy.deepcopy(config.environment)
-                env_params.config.seed = env_params.config.seed + trial_idx
-
-                agent_actor_params = ActorParams(
-                    name="agent_1",
-                    actor_class="agent",
-                    implementation="simple_sb3",
-                    agent_config=AgentConfig(
-                        run_id=run_session.run_id,
-                        environment_specs=env_params.specs,
-                    ),
-                )
-
-                return TrialConfig(
-                    run_id=run_session.run_id,
-                    environment=env_params,
-                    actors=[agent_actor_params],
-                )
-
-            # Rollout a bunch of trials
-            async for (_trial_id, _tick_id, sample,) in run_session.start_trials_and_wait_for_termination(
-                trial_configs=[create_trial_config(trial_idx) for trial_idx in range(config.training.trial_count)],
-                max_parallel_trials=config.training.max_parallel_trials,
-            ):
-                log.info(f"Got sample {sample}")
-
-        return {
-            "simple_sb3_training": (
-                sample_producer_impl,
-                run_impl,
-                SimpleSB3TrainingRunConfig(
-                    environment=EnvironmentParams(
-                        specs=EnvironmentSpecs(implementation="gym/LunarLander-v2", num_input=8, num_action=4),
-                        config=EnvironmentConfig(seed=12, framestack=1, render=True, render_width=256),
-                    ),
-                ),
-            )
-        }
+    # def _create_run_implementations(self):
+    #     async def sample_producer_impl(run_sample_producer_session):
+    #         assert run_sample_producer_session.count_actors() == 1
+    #
+    #         async for sample in run_sample_producer_session.get_all_samples():
+    #             if sample.get_trial_state() == TrialState.ENDED:
+    #                 break
+    #
+    #             log.info("Got raw sample")
+    #
+    #     async def run_impl(run_session):
+    #         config = run_session.config
+    #         global repo_id, file_name
+    #         repo_id = config.model_load.repo_id
+    #         file_name = config.model_load.file_name
+    #         assert config.environment.specs.num_players == 1
+    #
+    #         # Helper function to create a trial configuration
+    #         def create_trial_config(trial_idx):
+    #             env_params = copy.deepcopy(config.environment)
+    #             env_params.config.seed = env_params.config.seed + trial_idx
+    #
+    #             agent_actor_params = ActorParams(
+    #                 name="agent_1",
+    #                 actor_class="agent",
+    #                 implementation="simple_sb3",
+    #                 agent_config=AgentConfig(
+    #                     run_id=run_session.run_id,
+    #                     environment_specs=env_params.specs,
+    #                 ),
+    #             )
+    #
+    #             return TrialConfig(
+    #                 run_id=run_session.run_id,
+    #                 environment=env_params,
+    #                 actors=[agent_actor_params],
+    #             )
+    #
+    #         # Rollout a bunch of trials
+    #         async for (_trial_id, _tick_id, sample,) in run_session.start_trials_and_wait_for_termination(
+    #             trial_configs=[create_trial_config(trial_idx) for trial_idx in range(config.training.trial_count)],
+    #             max_parallel_trials=config.training.max_parallel_trials,
+    #         ):
+    #             log.info(f"Got sample {sample}")
+    #
+    #     return {
+    #         "simple_sb3_training": (
+    #             sample_producer_impl,
+    #             run_impl,
+    #             SimpleSB3TrainingRunConfig(
+    #                 environment=EnvironmentParams(
+    #                     specs=EnvironmentSpecs(implementation="gym/LunarLander-v2", num_input=8, num_action=4),
+    #                     config=EnvironmentConfig(seed=12, framestack=1, render=True, render_width=256),
+    #                 ),
+    #             ),
+    #         )
+    #     }

@@ -4,6 +4,7 @@ FROM ${BASE_PYTHON_IMAGE} as base
 #########
 # "dev" is the developpment image
 FROM python:3.7-slim as dev
+#RUN pip install torch==1.11.0+cpu -f https://download.pytorch.org/whl/cpu/torch_stable.html
 
 # Install system dependencies
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y software-properties-common && apt-add-repository non-free
