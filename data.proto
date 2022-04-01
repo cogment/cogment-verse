@@ -76,6 +76,8 @@ message ActorParams {
     AgentConfig agent_config = 4;
     HumanConfig human_config = 5;
   }
+  string repo_id = 6;
+  string filename = 7;
 }
 
 message TrialConfig {

@@ -823,7 +823,7 @@ simple_sb3_lander:
       # Make sure the model is compatible with the implementation and the environment
       implementation: simple_sb3
       agent_config:
-       model_id: compassionate_aryabhata_model
-       model_version: -1
-       repo_id: "ThomasSimonini/ppo-LunarLander-v2"
-       filename: "ppo-LunarLander-v2.zip"
+        model_id: compassionate_aryabhata_model
+        model_version: -1
+      repo_id: "ThomasSimonini/ppo-LunarLander-v2"
+      filename: "ppo-LunarLander-v2.zip"
