@@ -57,11 +57,10 @@ class SimpleSB3AgentAdapter(AgentAdapter):
     def _create_actor_implementations(self):
         async def impl(actor_session):
             actor_session.start()
-            print("action_session config = ", actor_session.config)
 
             checkpoint = load_from_hub(
                 repo_id=actor_session.config.repo_id,
-                filename=actor_session.config.file_name,
+                filename=actor_session.config.filename,
             )
 
             model = PPO.load(checkpoint)

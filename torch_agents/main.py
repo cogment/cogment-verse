@@ -26,7 +26,7 @@ from cogment_verse_torch_agents.hive_adapter.hive_agent_adapter import HiveAgent
 from cogment_verse_torch_agents.muzero.adapter import MuZeroAgentAdapter
 from cogment_verse_torch_agents.simple_a2c.simple_a2c_agent import SimpleA2CAgentAdapter
 from cogment_verse_torch_agents.simple_bc import SimpleBCAgentAdapter
-from cogment_verse_torch_agents.hf_sb3 import SimpleSB3AgentAdapter
+from cogment_verse_torch_agents.hf_sb3.sb3_adapter import SimpleSB3AgentAdapter
 from cogment_verse_torch_agents.selfplay_td3.selfplay_agent import SelfPlayAgentAdapter
 
 import cog_settings
