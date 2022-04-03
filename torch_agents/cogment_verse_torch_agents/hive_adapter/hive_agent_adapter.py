@@ -18,9 +18,6 @@ from cogment_verse import AgentAdapter
 
 from hive.agents.dqn import DQNAgent
 from hive.agents.rainbow import RainbowDQNAgent
-from cogment_verse_torch_agents.third_party.td3.td3 import TD3Agent
-
-# from cogment_verse_torch_agents.third_party.td3.td3 import TD3Agent
 from cogment_verse_torch_agents.wrapper import format_legal_moves, cog_action_from_torch_action, torch_obs_from_cog_obs
 from cogment_verse_torch_agents.hive_adapter.sample_producer import sample_producer
 from cogment_verse_torch_agents.hive_adapter.training_run import create_training_run
@@ -47,8 +44,6 @@ class HiveAgentAdapter(AgentAdapter):
     def __init__(self):
         super().__init__()
         self._agent_classes = {
-            # "td3": TD3Agent,
-            # "ddpg": DDPGAgent,
             "rainbowtorch": RainbowDQNAgent,
             "dqn": DQNAgent,
         }
