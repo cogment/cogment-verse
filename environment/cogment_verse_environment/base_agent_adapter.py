@@ -36,12 +36,14 @@ from data_pb2 import (
 
 log = logging.getLogger(__name__)
 
+
 def extend_actor_config(actor_config_template, run_id, environment_specs):
     config = AgentConfig()
     config.CopyFrom(actor_config_template)
     config.run_id = run_id
     config.environment_specs.CopyFrom(environment_specs)
     return config
+
 
 # pylint: disable=arguments-differ
 class BaseAgentAdapter(AgentAdapter):

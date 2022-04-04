@@ -85,4 +85,3 @@ class SimpleSB3AgentAdapter(AgentAdapter):
 
     def _create_run_implementations(self):
         return {}
-
