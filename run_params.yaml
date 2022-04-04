@@ -801,5 +801,7 @@ simple_sb3_lander:
       actor_class: agent
       implementation: simple_sb3
       agent_config:
+        model_id: compassionate_aryabhata_model
+        model_version: -1
         repo_id: "sb3/demo-hf-CartPole-v1"
-        filename: "ppo-CartPole-v1"
+        filename: "ppo-CartPole-v1.zip"

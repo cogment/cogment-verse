@@ -22,7 +22,6 @@ import cogment
 import torch
 from cogment.api.common_pb2 import TrialState
 from cogment_verse import AgentAdapter
-# from cogment_verse_environment import BaseAgentAdapter
 
 from cogment_verse_torch_agents.utils.tensors import tensor_from_cog_obs
 from data_pb2 import (
@@ -37,6 +36,8 @@ from data_pb2 import (
 )
 from huggingface_sb3 import load_from_hub
 from stable_baselines3 import PPO
+
+global repo_id, filename
 
 SimpleSB3Model = namedtuple("SimpleSB3Model", ["model_id", "version_number", "policy_network"])
 

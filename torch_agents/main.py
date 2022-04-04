@@ -29,6 +29,9 @@ from cogment_verse_torch_agents.simple_bc import SimpleBCAgentAdapter
 from cogment_verse_torch_agents.hf_sb3.sb3_adapter import SimpleSB3AgentAdapter
 from cogment_verse_torch_agents.selfplay_td3.selfplay_agent import SelfPlayAgentAdapter
 
+from data_pb2 import AgentConfig
+from google.protobuf.json_format import MessageToJson
+
 import cog_settings
 
 load_dotenv()

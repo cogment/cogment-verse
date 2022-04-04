@@ -85,6 +85,8 @@ class BaseAgentAdapter(AgentAdapter):
                         environment_specs=config.environment.specs,
                         model_id=actor_params.agent_config.model_id,
                         model_version=actor_params.agent_config.model_version,
+                        repo_id=actor_params.agent_config.repo_id,
+                        filename=actor_params.agent_config.filename,
                     ),
                 )
                 for actor_params in config.actors[: config.environment.specs.num_players]
