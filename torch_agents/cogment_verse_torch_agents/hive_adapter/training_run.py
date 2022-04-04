@@ -20,7 +20,7 @@ from prometheus_client import Summary, Gauge
 from google.protobuf.json_format import MessageToDict
 
 from data_pb2 import (
-    ActorConfig,
+    AgentConfig,
     ActorParams,
     EnvironmentConfig,
     EnvironmentParams,
@@ -64,13 +64,9 @@ def create_progress_logger(params_name, run_id, total_trial_count):
 def create_training_run(agent_adapter):
     async def training_run(run_session):
         run_id = run_session.run_id
-
         config = run_session.config
 
         run_xp_tracker = MlflowExperimentTracker(run_session.params_name, run_id)
-
-        print("obs dim = ", config.num_input)
-        print("representation net  = ", config.representation_net)
 
         try:
             # Initializing a model
@@ -83,16 +79,8 @@ def create_training_run(agent_adapter):
                 model_id,
                 impl_name=config.agent_implementation,
                 **{
-                    "obs_dim": config.num_input,
-                    "act_dim": config.num_action,
-                    # "qnet": FunctionApproximator(config.representation_net.name)(
-                    #     in_dim = config.num_input,
-                    #     channels = config.representation_net.channels,
-                    #     mlp_layers = config.representation_net.mlp_layers,
-                    #     kernel_sizes = config.representation_net.kernel_sizes,
-                    #     strides = config.representation_net.strides,
-                    #     paddings = config.representation_net.paddings,
-                    # ),
+                    "obs_dim": config.environment.specs.num_input,
+                    "act_dim": config.environment.specs.num_action,
                     "representation_net": FunctionApproximator(config.representation_net.name),
                     "epsilon_schedule": LinearSchedule(1, config.epsilon_schedule.init_value, config.epsilon_schedule.steps),
                     "learn_schedule": SwitchSchedule(False, True, 1),
@@ -129,7 +117,7 @@ def create_training_run(agent_adapter):
                     name=f"agent_player_{player_idx}",
                     actor_class="agent",
                     implementation=config.agent_implementation,
-                    config=ActorConfig(
+                    config=AgentConfig(
                         model_id=model_id,
                         model_version=np.random.randint(-100, -1),  # TODO this actually won't work anymore
                         run_id=run_id,
