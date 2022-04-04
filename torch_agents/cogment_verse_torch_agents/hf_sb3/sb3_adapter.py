@@ -20,26 +20,13 @@ from collections import namedtuple
 import cogment
 
 import torch
-from cogment.api.common_pb2 import TrialState
 from cogment_verse import AgentAdapter
 
 from cogment_verse_torch_agents.utils.tensors import tensor_from_cog_obs
-from data_pb2 import (
-    ActorParams,
-    AgentAction,
-    AgentConfig,
-    EnvironmentConfig,
-    EnvironmentParams,
-    EnvironmentSpecs,
-    TrialConfig,
-    SimpleSB3TrainingRunConfig,
-)
+from data_pb2 import AgentAction
+
 from huggingface_sb3 import load_from_hub
 from stable_baselines3 import PPO
-
-global repo_id, filename
-
-SimpleSB3Model = namedtuple("SimpleSB3Model", ["model_id", "version_number", "policy_network"])
 
 log = logging.getLogger(__name__)
 
@@ -60,8 +47,8 @@ class SimpleSB3AgentAdapter(AgentAdapter):
             actor_session.start()
 
             checkpoint = load_from_hub(
-                repo_id=actor_session.config.repo_id,
-                filename=actor_session.config.filename,
+                repo_id=actor_session.config.hf_hub_model.repo_id,
+                filename=actor_session.config.hf_hub_model.filename,
             )
 
             model = PPO.load(checkpoint)

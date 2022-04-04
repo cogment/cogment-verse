@@ -44,6 +44,11 @@ message EnvironmentParams {
   EnvironmentConfig config = 3;
 }
 
+message HFHubModel {
+    string repo_id = 1;
+    string filename = 2;
+}
+
 message AgentConfig {
   string run_id = 1;
   EnvironmentSpecs environment_specs = 2;
@@ -52,8 +57,7 @@ message AgentConfig {
   int32 actor_index = 5; // Used to figure out if an agent is the current_player in the observation space
   string device = 6;
   uint32 threads_per_worker = 7;
-  string repo_id = 8;
-  string filename = 9;
+  HFHubModel hf_hub_model = 8;
 }
 
 enum HumanRole {
@@ -76,8 +80,6 @@ message ActorParams {
     AgentConfig agent_config = 4;
     HumanConfig human_config = 5;
   }
-  string repo_id = 6;
-  string filename = 7;
 }
 
 message TrialConfig {
@@ -256,25 +258,6 @@ message PlayRunConfig {
   repeated ActorParams actors = 2;
   bool observer = 3;
   uint32 trial_count = 4;
-}
-
-message SimpleSB3TrainingConfig {
-  uint32 trial_count = 2;
-  uint32 max_parallel_trials = 3;
-  float discount_factor = 4;
-  float learning_rate = 8;
-  uint32 batch_size = 5;
-}
-
-message SimpleSB3ModelConfig {
-  string repo_id = 1;
-  string file_name = 2;
-}
-
-message SimpleSB3TrainingRunConfig {
-  EnvironmentParams environment = 1;
-  SimpleSB3TrainingConfig training = 2;
-  SimpleSB3ModelConfig model_load = 3;
 }
 
 message SelfPlayActorConfig{
