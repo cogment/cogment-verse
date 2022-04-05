@@ -13,9 +13,7 @@
 # limitations under the License.
 
 import asyncio
-import copy
 import logging
-from collections import namedtuple
 
 import cogment
 
