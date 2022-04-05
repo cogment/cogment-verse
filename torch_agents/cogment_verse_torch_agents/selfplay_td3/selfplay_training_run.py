@@ -63,7 +63,6 @@ def create_training_run(agent_adapter):
                 },
             )
 
-
             # Initialize Bob Agent
             bob_id = f"{run_id}_bob"
             bob_version_number = 1
@@ -166,7 +165,7 @@ def create_training_run(agent_adapter):
                     max_parallel_trials=config.rollout.max_parallel_trials,
                 ):
 
-                    if sample.current_player == 0: # bob's sample
+                    if sample.current_player == 0:  # bob's sample
                         bob_samples.append(sample)
                         # penalize/reward alice if bob does/doesn't achieve goal
                         if sample.player_done:
@@ -186,9 +185,9 @@ def create_training_run(agent_adapter):
                                 step_idx,
                                 alice_rewards=alice_reward,
                                 bob_rewards=bob_reward,
-                                difference_bob_alice_rewards=bob_reward-alice_reward,
+                                difference_bob_alice_rewards=bob_reward - alice_reward,
                             )
-                    else: # alice's sample
+                    else:  # alice's sample
                         alice_samples.append(sample)
 
                 alice.consume_samples(alice_samples)
@@ -214,7 +213,7 @@ def create_training_run(agent_adapter):
                         trial_configs=test_trial_configs,
                         max_parallel_trials=config.rollout.max_parallel_trials,
                     ):
-                        if sample.current_player == 0: # bob' sample
+                        if sample.current_player == 0:  # bob' sample
                             if sample.player_done:
                                 test_success.append(0)
                                 if int(sample.reward) > 0:

@@ -787,3 +787,37 @@ simple_bc_mountaincar:
       specs: *mountain_car_specs
       config:
         seed: 12
+
+simple_sb3_cartpole:
+  implementation: play
+  config:
+    class_name: data_pb2.PlayRunConfig
+    observer: false
+    trial_count: 10
+    environment:
+      specs: *cartpole_specs
+    actors:
+    - name: agent_1
+      actor_class: agent
+      implementation: simple_sb3
+      agent_config:
+        hf_hub_model:
+          repo_id: "sb3/demo-hf-CartPole-v1"
+          filename: "ppo-CartPole-v1.zip"
+
+simple_sb3_lander:
+  implementation: play
+  config:
+    class_name: data_pb2.PlayRunConfig
+    observer: false
+    trial_count: 10
+    environment:
+      specs: *lander_specs
+    actors:
+    - name: agent_1
+      actor_class: agent
+      implementation: simple_sb3
+      agent_config:
+        hf_hub_model:
+          repo_id: "ThomasSimonini/ppo-LunarLander-v2"
+          filename: "ppo-LunarLander-v2.zip"

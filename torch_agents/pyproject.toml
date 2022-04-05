@@ -12,6 +12,9 @@ torch = {version="^1.11.0", optional = true}
 numpy = ">=1.21.5,<1.22"
 cogment-verse = {path = "../base_python", develop = true}
 opencv-python-headless = "^4.5.4"
+stable-baselines3 = "^1.4.0"
+huggingface-sb3 = "^1.0.7"
+huggingface-hub = "^0.4.0"
 python-dotenv = "^0.19.1"
 
 [tool.poetry.extras]

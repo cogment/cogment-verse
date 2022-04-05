@@ -14,10 +14,12 @@
 
 # pylint: skip-file
 import sys
+
 # inserting pybullet-driving-env to the path
 # sys.path.insert(1, '/home/ck/pybullet-driving-env')
 
 import gym
+
 # import pybullet_driving_env
 from cogment_verse_environment.pybullet_driving_env.envs.simple_driving_env import SimpleDrivingEnv
 from cogment_verse_environment.base import BaseEnv, GymObservation
@@ -27,7 +29,7 @@ import numpy as np
 
 class DrivingEnv(BaseEnv):
     """
-        Class for loading pybullet-driving-env
+    Class for loading pybullet-driving-env
     """
 
     def __init__(self, *, num_players=2, framestack=1, spawn=[10, 10], **kwargs):
@@ -45,15 +47,13 @@ class DrivingEnv(BaseEnv):
         self.total_num_turns = 5
         self.mode = kwargs["mode"]
 
-        super().__init__(
-            env_spec=self.create_env_spec(**kwargs), num_players=num_players, framestack=framestack
-        )
+        super().__init__(env_spec=self.create_env_spec(**kwargs), num_players=num_players, framestack=framestack)
 
     def create_env(self, **_kwargs):
         self._env = SimpleDrivingEnv()
 
     def create_env_spec(self, **_kwargs):
-        env_name = 'SimpleDriving-v0'
+        env_name = "SimpleDriving-v0"
         obs_spaces = self._env.observation_space.spaces
         act_dim = [self._env.action_space.shape]
         act_shape = [self._env.action_space.shape]
@@ -85,9 +85,9 @@ class DrivingEnv(BaseEnv):
 
         observation = self._env.reset(self.goal, self.spawn_position, self.spawn_orientation, agent)
         return GymObservation(
-            observation=np.concatenate((observation['car_qpos'],
-                                        np.ndarray.flatten(observation['segmentation'].astype('int32')),
-                                        self.goal)),
+            observation=np.concatenate(
+                (observation["car_qpos"], np.ndarray.flatten(observation["segmentation"].astype("int32")), self.goal)
+            ),
             rewards=[0.0],
             current_player=self._turn,
             legal_moves_as_int=[int(self.agent_done)],
@@ -116,14 +116,20 @@ class DrivingEnv(BaseEnv):
         observation, reward, self.agent_done, info = self._env.step(action, step_multiplier, agent)
         if self.agent_done:
             if agent == "alice":
-                self.goal = observation['car_qpos'][:2] + np.random.uniform(0.6, 0.8, [2, ]) # additional noise to accelerate learning
-                observation['car_qpos'][:2] = self.goal
+                self.goal = observation["car_qpos"][:2] + np.random.uniform(
+                    0.6,
+                    0.8,
+                    [
+                        2,
+                    ],
+                )  # additional noise to accelerate learning
+                observation["car_qpos"][:2] = self.goal
             if agent == "bob" and self.current_turn == self.total_num_turns:
                 self.trial_done = True
         return GymObservation(
-            observation=np.concatenate((observation['car_qpos'],
-                                        np.ndarray.flatten(observation['segmentation'].astype('int32')),
-                                        self.goal)),
+            observation=np.concatenate(
+                (observation["car_qpos"], np.ndarray.flatten(observation["segmentation"].astype("int32")), self.goal)
+            ),
             current_player=self._turn,
             legal_moves_as_int=[int(self.agent_done)],
             rewards=[reward],

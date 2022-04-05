@@ -23,10 +23,22 @@ from cogment_verse_torch_agents.selfplay_td3.wrapper import (
     current_player_done_flag,
 )
 
-Sample = namedtuple("Sample", ["current_player", "state", "grid",
-                                "action", "reward", "next_state",
-                                "next_grid", "player_done", "trial_done",
-                                "goal", "next_goal"])
+Sample = namedtuple(
+    "Sample",
+    [
+        "current_player",
+        "state",
+        "grid",
+        "action",
+        "reward",
+        "next_state",
+        "next_grid",
+        "player_done",
+        "trial_done",
+        "goal",
+        "next_goal",
+    ],
+)
 
 
 def get_samples(sample, next_sample):
@@ -44,7 +56,9 @@ def get_samples(sample, next_sample):
             next_state=tensor_from_cog_state(next_sample.get_actor_observation(current_player)),
             next_grid=tensor_from_cog_grid(next_sample.get_actor_observation(current_player)),
             player_done=current_player_done_flag(next_sample.get_actor_observation(current_player)),
-            trial_done=1 if next_sample.get_trial_state() == common_api.TrialState.ENDED else 0,  # trial end flag never set,
+            trial_done=1
+            if next_sample.get_trial_state() == common_api.TrialState.ENDED
+            else 0,  # trial end flag never set,
             goal=tensor_from_cog_goal(sample.get_actor_observation(current_player)),
             next_goal=tensor_from_cog_goal(sample.get_actor_observation(current_player)),
         )

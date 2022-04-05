@@ -22,6 +22,7 @@ from mock_environment_session import ActorInfo
 # pylint doesn't like test fixtures
 # pylint: disable=redefined-outer-name
 
+
 @pytest.mark.asyncio
 @pytest.mark.parametrize("framestack", [1, 2, 4])
 @pytest.mark.parametrize("env_name", ENV_NAMES)
@@ -50,6 +51,7 @@ async def test_observation(create_mock_environment_session, env_name, framestack
     assert deserialize_img(tick_0_observation.pixel_data).shape == (1, 1, 3)
 
     await session.terminate()
+
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("env_name", ENV_NAMES)

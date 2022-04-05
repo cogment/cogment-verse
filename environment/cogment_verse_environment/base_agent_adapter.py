@@ -36,6 +36,15 @@ from data_pb2 import (
 
 log = logging.getLogger(__name__)
 
+
+def extend_actor_config(actor_config_template, run_id, environment_specs):
+    config = AgentConfig()
+    config.CopyFrom(actor_config_template)
+    config.run_id = run_id
+    config.environment_specs.CopyFrom(environment_specs)
+    return config
+
+
 # pylint: disable=arguments-differ
 class BaseAgentAdapter(AgentAdapter):
     def _create_actor_implementations(self):
@@ -80,11 +89,10 @@ class BaseAgentAdapter(AgentAdapter):
                     name=actor_params.name,
                     actor_class=actor_params.actor_class,
                     implementation=actor_params.implementation,
-                    agent_config=AgentConfig(
+                    agent_config=extend_actor_config(
+                        actor_config_template=actor_params.agent_config,
                         run_id=run_session.run_id,
                         environment_specs=config.environment.specs,
-                        model_id=actor_params.agent_config.model_id,
-                        model_version=actor_params.agent_config.model_version,
                     ),
                 )
                 for actor_params in config.actors[: config.environment.specs.num_players]
