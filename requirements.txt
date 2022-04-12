@@ -1,0 +1,5 @@
+mlflow==1.25.0
+
+# For testing
+black
+pylint~=2.9.6

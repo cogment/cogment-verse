@@ -60,7 +60,7 @@ class ProcGenEnv(GymEnv):
         framestack=4,
         **_kwargs,
     ):
-        full_env_name = f"procgen:procgen-{env_name}-v0"
+        full_env_name = f"procgen-{env_name}-v0"
 
         self._framestack = framestack
 

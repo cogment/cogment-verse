@@ -1,7 +1,0 @@
-# Generated files
-*_pb2.py
-cog_settings.py
-
-# Caches
-__pycache__
-.pytest_cache

@@ -79,13 +79,13 @@ play:
     # Configure the players (only the first ones are used, up to the number of required players)
     - name: agent_1
       actor_class: agent
-      # implementation: random
+      implementation: random
       # To use an already trained agent use the following.
       # Make sure the model is compatible with the implementation and the environment
-      implementation: rainbowtorch
-      agent_config:
-       model_id: compassionate_aryabhata_model
-       model_version: -1
+      # implementation: rainbowtorch
+      # agent_config:
+      #  model_id: compassionate_aryabhata_model
+      #  model_version: -1
     - name: agent_2
       actor_class: agent
       implementation: random

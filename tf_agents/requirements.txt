@@ -1,0 +1,7 @@
+# Install the base cogment verse package
+-e ../base_python
+
+tensorflow==2.6.2
+tensorflow-probability~=0.14.1
+opencv-python-headless~=4.4.0.40
+python-dotenv~=0.19.1

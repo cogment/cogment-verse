@@ -1,125 +1,60 @@
 #!/usr/bin/env bash
 
+# This script acts as a command "menu" for this cogment project.
+# - You can list the available commands using `./run.sh commands`
+# - You can add a command as a bash function in this file
+
 set -o errexit
 
 ROOT_DIR=$(cd "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 RUN_SCRIPT="./$(basename -- "${BASH_SOURCE[0]}")"
 
-cd "${ROOT_DIR}"
-DEFAULT_THUNDERBLADE_AGENTS_DIR=$(cd ../thunderblade_agents/heuristic && pwd)
+### PRIVATE SUPPORT FUNCTIONS ###
 
-export ORCHESTRATOR_HOST=localhost
-export ORCHESTRATOR_PORT=9000
-export SERVICE_DISCOVERY_HOST=localhost
-export SERVICE_DISCOVERY_PORT=9010
-export PYTHON_SERVICES_HOST=localhost
-export PYTHON_SERVICES_PORT=9001
-export WEB_PROXY_HOST=localhost
-export WEB_PROXY_PORT=8080
-export COGMENT_VERSION=2.2.0-rc3
-
-if [[ "$1" == "python_services_build" ]]; then
-  "${RUN_SCRIPT}" _py_build python_services
-
-elif [[ "$1" == "python_services_start" ]]; then
-  "${RUN_SCRIPT}" _py_start python_services
-
-elif [[ "$1" == "agents_build" ]]; then
-  if [[ -z "${THUNDERBLADE_AGENTS_DIR}" ]]; then
-    THUNDERBLADE_AGENTS_DIR="${DEFAULT_THUNDERBLADE_AGENTS_DIR}"
-    printf "** Using default value '%s' for the thunderblade agents directory, set THUNDERBLADE_AGENTS_DIR to specify another one\n" "${THUNDERBLADE_AGENTS_DIR}"
+function _load_dot_env() {
+  cd "${ROOT_DIR}"
+  if [ -f ".env" ]; then
+    set -o allexport
+    # shellcheck disable=SC1091
+    source ".env"
+    set +o allexport
   fi
-  "${RUN_SCRIPT}" _py_build "${THUNDERBLADE_AGENTS_DIR}"
+}
 
-elif [[ "$1" == "agents_start" ]]; then
-  if [[ -z "${THUNDERBLADE_AGENTS_DIR}" ]]; then
-    THUNDERBLADE_AGENTS_DIR="${DEFAULT_THUNDERBLADE_AGENTS_DIR}"
-    printf "** Using default value '%s' for the thunderblade agents directory, set THUNDERBLADE_AGENTS_DIR to specify another one\n" "${THUNDERBLADE_AGENTS_DIR}"
-  fi
-  "${RUN_SCRIPT}" _py_start "${THUNDERBLADE_AGENTS_DIR}"
-
-elif [[ "$1" == "cli_build" ]]; then
-  "${RUN_SCRIPT}" _py_build cli
-
-elif [[ "$1" == "cli_start" ]]; then
-  "${RUN_SCRIPT}" _py_start cli
-
-elif [[ "$1" == "wait_and_cli_start" ]]; then
-  sleep 10
-  "${RUN_SCRIPT}" cli_start
-
-elif [[ "$1" == "web_client_build" ]]; then
-  "${RUN_SCRIPT}" _js_build web_client
-
-elif [[ "$1" == "web_client_start" ]]; then
-  "${RUN_SCRIPT}" _js_start web_client
-
-elif [[ "$1" == "cogment_install" ]]; then
-  curl --silent -L https://raw.githubusercontent.com/cogment/cogment-cli/main/install.sh | bash -s -- --version "${COGMENT_VERSION}" --skip-install
-  if command -v "setrpaths.sh" &>/dev/null; then
-    printf "** Compute Canada's 'setrpaths.sh' is available, using it to patch the downloaded version of cogment\n"
-    setrpaths.sh --path ./cogment
-  fi
-
-elif [[ "$1" == "orchestrator_start" ]]; then
-  ./cogment services orchestrator \
-    --actor_port="${ORCHESTRATOR_PORT}" \
-    --lifecycle_port="${ORCHESTRATOR_PORT}" \
-    --actor_http_port="${WEB_PROXY_PORT}" \
-    --pre_trial_hooks="grpc://${PYTHON_SERVICES_HOST}:${PYTHON_SERVICES_PORT}"
-
-elif [[ "$1" == "build" ]]; then
-  "${RUN_SCRIPT}" cogment_install
-  "${RUN_SCRIPT}" python_services_build
-  "${RUN_SCRIPT}" agents_build
-  "${RUN_SCRIPT}" cli_build
-  "${RUN_SCRIPT}" web_client_build
-
-elif [[ "$1" == "python_build" ]]; then
-  "${RUN_SCRIPT}" cogment_install
-  "${RUN_SCRIPT}" python_services_build
-  "${RUN_SCRIPT}" agents_build
-  "${RUN_SCRIPT}" cli_build
-
-elif [[ "$1" == "services_start" ]]; then
-  "${RUN_SCRIPT}" "_parallel" "python_services_start" "orchestrator_start" "agents_start"
-
-elif [[ "$1" == "start" ]]; then
-  "${RUN_SCRIPT}" "_parallel" "python_services_start" "orchestrator_start" "agents_start" "wait_and_cli_start"
-
-elif [[ "$1" == "_py_build" ]]; then
-  shift
+function _py_build() {
+  _load_dot_env
   directory=$1
-  cp data.proto cogment.yaml "${directory}"
-  cd "${directory}"
+  cp "${ROOT_DIR}/data.proto" "${ROOT_DIR}/cogment.yaml" "${ROOT_DIR}/${directory}"
+  pushd "${ROOT_DIR}/${directory}"
   virtualenv -p python3 .venv
+  # shellcheck disable=SC1091
   source .venv/bin/activate
   pip install -r requirements.txt
-  .venv/bin/python -m cogment.generate
+  python -m cogment.generate
   deactivate
+  popd
+}
 
-elif [[ "$1" == "_py_start" ]]; then
-  shift
+function _py_test() {
+  _load_dot_env
   directory=$1
-  cd "${directory}"
-  .venv/bin/python main.py
+  pushd "${ROOT_DIR}/${directory}"
+  # shellcheck disable=SC1091
+  source .venv/bin/activate
+  python -m pytest
+  deactivate
+  popd
+}
 
-elif [[ "$1" == "_js_build" ]]; then
-  shift
+function _py_start() {
+  _load_dot_env
   directory=$1
-  cp data.proto cogment.yaml "${directory}"
-  cd "${directory}"
-  npm install
-  npx cogment-js-sdk-generate cogment.yaml
+  pushd "${ROOT_DIR}/${directory}"
+  .venv/bin/python -m main
+  popd
+}
 
-elif [[ "$1" == "_js_start" ]]; then
-  shift
-  directory=$1
-  cd "${directory}"
-  npm run start
-
-elif [[ "$1" == "_parallel" ]]; then
-  shift
+function _run_parallel() {
   commands=("$@")
   commands_num="${#commands[@]}"
 
@@ -132,7 +67,209 @@ elif [[ "$1" == "_parallel" ]]; then
   # - All the output are printed as they are generated by the command (`-u`)
   # - As many jobs as there are provided commands are ran (`-j "${commands_num}"`)
   parallel -j "${commands_num}" -u --halt now,fail=1 "${RUN_SCRIPT}" ::: "${commands[@]}"
+}
 
+function _run_sequence() {
+  commands=("$@")
+
+  for command in "${commands[@]}"; do
+    "${command}"
+  done
+}
+
+### GENERIC PUBLIC COMMANDS ###
+
+function commands() {
+  all_commands=$(declare -F | awk '{print $NF}' | sort | grep -Ev "^_")
+  for command in "${all_commands[@]}"; do
+    if [[ ! ("${command}" =~ ^_.*) ]]; then
+      printf "%s\n" "${command}"
+    fi
+  done
+}
+
+### PROJECT SPECIFIC PUBLIC COMMANDS ###
+
+function base_python_build() {
+  _py_build base_python
+  pushd "${ROOT_DIR}/base_python"
+  cp "${ROOT_DIR}/run_api.proto" "./cogment_verse/api/"
+  # shellcheck disable=SC1091
+  source .venv/bin/activate
+  pip install -e . # This is a reusable package, it needs to install itself
+  python -m grpc.tools.protoc --proto_path=. --python_out=. --grpc_python_out=. ./cogment_verse/api/run_api.proto
+  deactivate
+  popd
+}
+
+function base_python_test() {
+  _py_test base_python
+}
+
+function client_build() {
+  _py_build client
+  pushd "${ROOT_DIR}/client"
+  cp "${ROOT_DIR}/run_api.proto" "./"
+  # shellcheck disable=SC1091
+  source .venv/bin/activate
+  python -m grpc.tools.protoc --proto_path=. --python_out=. --grpc_python_out=. ./run_api.proto
+  deactivate
+  popd
+}
+
+function client() {
+  _load_dot_env
+  pushd "${ROOT_DIR}/client"
+  COGMENT_VERSE_RUN_PARAMS_PATH="${ROOT_DIR}/run_params.yaml" .venv/bin/python -m main "$@"
+}
+
+function environment_build() {
+  _py_build base_python
+  _py_build environment
+}
+
+function environment_start() {
+  _py_start environment
+}
+
+function environment_test() {
+  _py_test environment
+}
+
+function tf_agents_build() {
+  _py_build base_python
+  _py_build tf_agents
+}
+
+function tf_agents_start() {
+  _py_start tf_agents
+}
+
+function torch_agents_build() {
+  _py_build base_python
+  _py_build torch_agents
+}
+
+function torch_agents_start() {
+  _py_start torch_agents
+}
+
+function torch_agents_test() {
+  _py_test torch_agents
+}
+
+function root_build() {
+  _load_dot_env
+  virtualenv -p python3 "${ROOT_DIR}/.venv"
+  # shellcheck disable=SC1091
+  source "${ROOT_DIR}/.venv/bin/activate"
+  pip install -r "${ROOT_DIR}/requirements.txt"
+  deactivate
+}
+
+function lint() {
+  _load_dot_env
+  # shellcheck disable=SC1091
+  source "${ROOT_DIR}/.venv/bin/activate"
+  black --diff .
+  find . -type f -print0 -name '*.py' | xargs pylint
+  deactivate
+}
+
+function lint_fix() {
+  _load_dot_env
+  # shellcheck disable=SC1091
+  source "${ROOT_DIR}/.venv/bin/activate"
+  black .
+  deactivate
+}
+
+function mlflow_build() {
+  root_build
+}
+
+function mlflow_start() {
+  _load_dot_env
+  # shellcheck disable=SC1091
+  source "${ROOT_DIR}/.venv/bin/activate"
+  mlflow server \
+    --host 0.0.0.0 \
+    --port "${COGMENT_VERSE_MLFLOW_PORT}" \
+    --backend-store-uri "sqlite:///${ROOT_DIR}/data/mlflow/mlflow.db" \
+    --default-artifact-root "${ROOT_DIR}/data/mlflow/"
+  deactivate
+}
+
+function web_client_build() {
+  _load_dot_env
+  export PORT="${COGMENT_VERSE_WEBCLIENT_PORT}"
+  export REACT_APP_ORCHESTRATOR_HTTP_ENDPOINT="${COGMENT_VERSE_ORCHESTRATOR_HTTP_ENDPOINT}"
+  cd "${ROOT_DIR}/web_client"
+  npm install
+  npm run build
+}
+
+function web_client_start() {
+  _load_dot_env
+  export PORT="${COGMENT_VERSE_WEBCLIENT_PORT}"
+  cd "${ROOT_DIR}/web_client"
+  npm run start
+}
+
+function web_client_start_dev() {
+  _load_dot_env
+  export PORT="${COGMENT_VERSE_WEBCLIENT_PORT}"
+  export REACT_APP_ORCHESTRATOR_HTTP_ENDPOINT="${COGMENT_VERSE_ORCHESTRATOR_HTTP_ENDPOINT}"
+  cd "${ROOT_DIR}/web_client"
+  npm run dev
+}
+
+function orchestrator_start() {
+  _load_dot_env
+  cogment services orchestrator \
+    --actor_port="${COGMENT_VERSE_ORCHESTRATOR_PORT}" \
+    --lifecycle_port="${COGMENT_VERSE_ORCHESTRATOR_PORT}" \
+    --actor_http_port="${COGMENT_VERSE_ORCHESTRATOR_HTTP_PORT}" \
+    --pre_trial_hooks="grpc://${COGMENT_VERSE_PRETRIAL_HOOK_ENDPOINT}"
+}
+
+function trial_datastore_start() {
+  _load_dot_env
+  cogment services trial_datastore \
+    --port="${COGMENT_VERSE_TRIAL_DATASTORE_PORT}" \
+    --memory_storage_max_samples_size=1073741824
+}
+
+function model_registry_start() {
+  _load_dot_env
+  cogment services model_registry \
+    --port="${COGMENT_VERSE_MODEL_REGISTRY_PORT}" \
+    --archive_dir="${ROOT_DIR}/data/model-registry" \
+    --sent_version_chunk_size=2097152 \
+    --cache_max_items=100
+}
+
+function build() {
+  _run_sequence root_build client_build environment_build tf_agents_build torch_agents_build web_client_build
+}
+
+function test() {
+  _run_sequence lint base_python_test environment_test torch_agents_test
+}
+
+function services_start() {
+  _run_parallel orchestrator_start trial_datastore_start model_registry_start environment_start tf_agents_start torch_agents_start mlflow_start
+}
+
+### MAIN SCRIPT ###
+
+available_commands=$(commands)
+command=$1
+if [[ "${available_commands[*]}" = *"$1"* ]]; then
+  shift
+  ${command} "$@"
 else
-  echo "Unknown command [$1]"
+  printf "Unknown command [%s]\n" "${command}"
+  printf "Available commands are:\n%s\n" "${available_commands[*]}"
+  exit 1
 fi
