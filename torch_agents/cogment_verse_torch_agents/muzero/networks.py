@@ -31,14 +31,7 @@ def lin_bn_act(num_in, num_out, bn=True, act=None):
 
 
 def mlp(
-    num_in,
-    num_hidden,
-    num_out,
-    hidden_layers=1,
-    bn=True,
-    act=torch.nn.ReLU(),
-    final_bn=False,
-    final_act=None,
+    num_in, num_hidden, num_out, hidden_layers=1, bn=True, act=torch.nn.ReLU(), final_bn=False, final_act=None,
 ):
     act = torch.nn.ReLU()
     stem = lin_bn_act(num_in, num_hidden, bn, act)
@@ -234,15 +227,7 @@ class DynamicsNetwork(torch.nn.Module):
 
 class MuZero(torch.nn.Module):
     def __init__(
-        self,
-        representation,
-        dynamics,
-        policy,
-        value,
-        projector,
-        predictor,
-        reward_distribution,
-        value_distribution,
+        self, representation, dynamics, policy, value, projector, predictor, reward_distribution, value_distribution,
     ):
         super().__init__()
         self.representation = representation

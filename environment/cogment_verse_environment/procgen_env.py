@@ -51,14 +51,7 @@ class ProcGenEnv(GymEnv):
     """
 
     def __init__(
-        self,
-        *,
-        env_name,
-        frame_skip=1,
-        screen_size=64,
-        flatten=True,
-        framestack=4,
-        **_kwargs,
+        self, *, env_name, frame_skip=1, screen_size=64, flatten=True, framestack=4, **_kwargs,
     ):
         full_env_name = f"procgen-{env_name}-v0"
 
@@ -161,11 +154,7 @@ class ProcGenEnv(GymEnv):
         """
         image = _grayscale(self._last_pixels)
         if image.shape != (self.screen_size, self.screen_size):
-            image = cv2.resize(
-                image,
-                (self.screen_size, self.screen_size),
-                interpolation=cv2.INTER_AREA,
-            )
+            image = cv2.resize(image, (self.screen_size, self.screen_size), interpolation=cv2.INTER_AREA,)
         image = np.asarray(image, dtype=dtype)
         if self._flatten:
             image = image.reshape(-1)

@@ -63,11 +63,7 @@ MuZeroSample = namedtuple("MuZeroSample", ["state", "action", "reward", "next_st
 
 DEFAULT_MUZERO_RUN_CONFIG = MuZeroRunConfig(
     environment=EnvironmentParams(
-        config=EnvironmentConfig(
-            seed=12,
-            framestack=1,
-            render=False,
-        ),
+        config=EnvironmentConfig(seed=12, framestack=1, render=False,),
         specs=EnvironmentSpecs(implementation="gym/CartPole-v0", num_players=1, num_input=4, num_action=2),
     ),
     training=MuZeroTrainingConfig(
@@ -103,24 +99,11 @@ DEFAULT_MUZERO_RUN_CONFIG = MuZeroRunConfig(
         min_temperature=0.25,
         temperature_decay_steps=100000,
     ),
-    representation_network=MLPNetworkConfig(
-        hidden_size=32,
-        num_hidden_layers=1,
-    ),
-    projector_network=MLPNetworkConfig(
-        hidden_size=32,
-        num_hidden_layers=1,
-        output_size=16,
-    ),
-    dynamics_network=MLPNetworkConfig(
-        num_hidden_layers=1,
-    ),
-    policy_network=MLPNetworkConfig(
-        num_hidden_layers=1,
-    ),
-    value_network=MLPNetworkConfig(
-        num_hidden_layers=1,
-    ),
+    representation_network=MLPNetworkConfig(hidden_size=32, num_hidden_layers=1,),
+    projector_network=MLPNetworkConfig(hidden_size=32, num_hidden_layers=1, output_size=16,),
+    dynamics_network=MLPNetworkConfig(num_hidden_layers=1,),
+    policy_network=MLPNetworkConfig(num_hidden_layers=1,),
+    value_network=MLPNetworkConfig(num_hidden_layers=1,),
     reward_distribution=DistributionConfig(min_value=-100.0, max_value=100.0, num_bins=16),
     value_distribution=DistributionConfig(min_value=-1000.0, max_value=1000.0, num_bins=64),
     trial_count=1000,
@@ -157,12 +140,7 @@ class MuZeroAgentAdapter(AgentAdapter):
         self._dtype = torch.float
 
     def _create(
-        self,
-        model_id,
-        environment_specs,
-        device,
-        run_config,
-        **kwargs,
+        self, model_id, environment_specs, device, run_config, **kwargs,
     ):
         model = MuZeroAgent(
             obs_dim=environment_specs.num_input,
@@ -179,13 +157,7 @@ class MuZeroAgentAdapter(AgentAdapter):
         return model, model_user_data
 
     def _load(
-        self,
-        model_id,
-        version_number,
-        model_user_data,
-        version_user_data,
-        model_data_f,
-        **kwargs,
+        self, model_id, version_number, model_user_data, version_user_data, model_data_f, **kwargs,
     ):
         return MuZeroAgent.load(model_data_f, "cpu")
 
@@ -274,10 +246,7 @@ class MuZeroAgentAdapter(AgentAdapter):
         assert config.environment.specs.num_players == 1
 
         agent, version_info = await self.create_and_publish_initial_version(
-            model_id=model_id,
-            environment_specs=config.environment.specs,
-            device="cpu",
-            run_config=config,
+            model_id=model_id, environment_specs=config.environment.specs, device="cpu", run_config=config,
         )
 
         with mp.Manager() as manager:
@@ -288,9 +257,7 @@ class MuZeroAgentAdapter(AgentAdapter):
             running_stats = RunningStats()
 
             xp_tracker.log_params(
-                config.environment,
-                config.actor,
-                config.training,
+                config.environment, config.actor, config.training,
             )
 
             trial_configs = make_trial_configs(run_session.run_id, config, model_id, -1)
@@ -310,8 +277,7 @@ class MuZeroAgentAdapter(AgentAdapter):
                 start_time = time.time()
 
                 sample_generator = run_session.start_trials_and_wait_for_termination(
-                    trial_configs,
-                    max_parallel_trials=config.max_parallel_trials,
+                    trial_configs, max_parallel_trials=config.max_parallel_trials,
                 )
 
                 async for _step, timestamp, trial_id, _tick, (sample, total_reward) in sample_generator:
@@ -359,10 +325,7 @@ class MuZeroAgentAdapter(AgentAdapter):
 
                     if total_samples % config.training.log_interval == 0:
                         xp_tracker.log_metrics(
-                            timestamp,
-                            total_samples,
-                            total_samples=total_samples,
-                            **running_stats.get(),
+                            timestamp, total_samples, total_samples=total_samples, **running_stats.get(),
                         )
                         running_stats.reset()
 
@@ -404,10 +367,7 @@ def make_trial_configs(run_id, config, model_id, model_version_number):
         threads_per_worker=config.threads_per_worker,
     )
     muzero_config = ActorParams(
-        name="agent_1",
-        actor_class="agent",
-        implementation="muzero_mlp",
-        agent_config=actor_config,
+        name="agent_1", actor_class="agent", implementation="muzero_mlp", agent_config=actor_config,
     )
     teacher_config = ActorParams(
         name="web_actor",
@@ -457,11 +417,7 @@ def make_workers(manager, agent, model_id, config):
 
     train_worker = TrainWorker(agent, config, manager)
     replay_buffer = ReplayBufferWorker(
-        train_worker.batch_queue,
-        config,
-        reward_distribution,
-        value_distribution,
-        manager,
+        train_worker.batch_queue, config, reward_distribution, value_distribution, manager,
     )
 
     reanalyze_workers = [

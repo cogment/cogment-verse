@@ -22,6 +22,7 @@ import click
 import yaml
 from google.protobuf.json_format import ParseDict
 from run_controller import RunController, RunStatus
+
 # from google.protobuf.json_format import MessageToDict
 
 # pylint: disable=too-many-arguments,import-outside-toplevel
@@ -97,7 +98,7 @@ async def retrieve_list():
 @click.option("--run_id", default=None, help="Unique identifier for the run")
 @click.option(
     "--params_path",
-    default=os.getenv("COGMENT_VERSE_RUN_PARAMS_PATH","./run_params.yaml"),
+    default=os.getenv("COGMENT_VERSE_RUN_PARAMS_PATH", "./run_params.yaml"),
     help="Path for the parameters definitions yaml file",
     type=click.Path(exists=True, file_okay=True, dir_okay=False, readable=True, resolve_path=True),
 )

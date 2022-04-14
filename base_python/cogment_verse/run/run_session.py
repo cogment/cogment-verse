@@ -122,8 +122,7 @@ class RunSession:
                 raise
             except Exception as error:
                 log.error(
-                    f"[{self.run_id}] Uncaught error occured during the run",
-                    exc_info=error,
+                    f"[{self.run_id}] Uncaught error occured during the run", exc_info=error,
                 )
                 raise error
 

@@ -63,11 +63,7 @@ class SimpleBCAgentAdapterTutorialStep3(AgentAdapter):
 
     ############ TUTORIAL STEP 3 ############
     def _create(
-        self,
-        model_id,
-        environment_specs,
-        policy_network_hidden_size=64,
-        **kwargs,
+        self, model_id, environment_specs, policy_network_hidden_size=64, **kwargs,
     ):
         model = SimpleBCModel(
             model_id=model_id,
@@ -205,10 +201,7 @@ class SimpleBCAgentAdapterTutorialStep3(AgentAdapter):
                     name="web_actor",
                     actor_class="teacher_agent",
                     implementation="client",
-                    human_config=HumanConfig(
-                        environment_specs=env_params.specs,
-                        role=HumanRole.TEACHER,
-                    ),
+                    human_config=HumanConfig(environment_specs=env_params.specs, role=HumanRole.TEACHER,),
                 )
 
                 return TrialConfig(

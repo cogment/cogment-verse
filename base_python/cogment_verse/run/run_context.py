@@ -41,18 +41,10 @@ def set_config_index(config, actor_idx):
 # RunContext holds the context information to exectute runs
 class RunContext(cogment.Context):
     def __init__(
-        self,
-        user_id,
-        cog_settings,
-        services_endpoints,
-        asyncio_loop=None,
-        prometheus_registry=REGISTRY,
+        self, user_id, cog_settings, services_endpoints, asyncio_loop=None, prometheus_registry=REGISTRY,
     ):
         super().__init__(
-            user_id,
-            cog_settings,
-            asyncio_loop=asyncio_loop,
-            prometheus_registry=prometheus_registry,
+            user_id, cog_settings, asyncio_loop=asyncio_loop, prometheus_registry=prometheus_registry,
         )
 
         self._cog_settings = cog_settings
@@ -123,8 +115,7 @@ class RunContext(cogment.Context):
 
     def get_model_registry_client(self):
         return ModelRegistryClient(
-            endpoint=self._get_service_endpoint("model_registry"),
-            cache=self._model_registry_cache,
+            endpoint=self._get_service_endpoint("model_registry"), cache=self._model_registry_cache,
         )
 
     def _create_run_session(self, run_params_name, run_implementation, serialized_config, run_id=None):
@@ -174,9 +165,7 @@ class RunContext(cogment.Context):
         await run_session.exec()
 
     async def serve_all_registered(
-        self,
-        served_endpoint,
-        prometheus_port=cogment.context.DEFAULT_PROMETHEUS_PORT,
+        self, served_endpoint, prometheus_port=cogment.context.DEFAULT_PROMETHEUS_PORT,
     ):
         serve_all_registered_task = asyncio.create_task(super().serve_all_registered(served_endpoint, prometheus_port))
 
@@ -188,11 +177,7 @@ class RunContext(cogment.Context):
             add_RunServicer_to_server(servicer, self._grpc_server)
 
         reflection.enable_server_reflection(
-            (
-                RUN_DESCRIPTOR.services_by_name["Run"].full_name,
-                reflection.SERVICE_NAME,
-            ),
-            self._grpc_server,
+            (RUN_DESCRIPTOR.services_by_name["Run"].full_name, reflection.SERVICE_NAME,), self._grpc_server,
         )
 
         try:

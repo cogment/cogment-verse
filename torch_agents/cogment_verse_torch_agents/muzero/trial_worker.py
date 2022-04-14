@@ -17,9 +17,7 @@ import queue
 import torch
 import torch.multiprocessing as mp
 
-from data_pb2 import (
-    AgentAction,
-)
+from data_pb2 import AgentAction
 
 from cogment_verse_torch_agents.wrapper import np_array_from_proto_array, proto_array_from_np_array
 from cogment_verse_torch_agents.muzero.utils import MuZeroWorker

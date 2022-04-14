@@ -92,8 +92,7 @@ class MlflowExperimentTracker:
             metrics_batch = self._metrics_buffer[:MAX_METRICS_BATCH_SIZE]
             with EXPERIMENT_TRACKER_LOG_METRICS_TIME.time():
                 client.log_batch(
-                    run_id=self._mlflow_run_id,
-                    metrics=metrics_batch,
+                    run_id=self._mlflow_run_id, metrics=metrics_batch,
                 )
             self._metrics_buffer = self._metrics_buffer[MAX_METRICS_BATCH_SIZE:]
 

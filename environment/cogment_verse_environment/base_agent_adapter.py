@@ -135,11 +135,7 @@ class BaseAgentAdapter(AgentAdapter):
                 env_params = copy.deepcopy(config.environment)
                 env_params.config.seed = env_params.config.seed + trial_idx
 
-                return TrialConfig(
-                    run_id=run_session.run_id,
-                    environment=env_params,
-                    actors=actors_params,
-                )
+                return TrialConfig(run_id=run_session.run_id, environment=env_params, actors=actors_params,)
 
             # Rollout a bunch of trials
             async for (

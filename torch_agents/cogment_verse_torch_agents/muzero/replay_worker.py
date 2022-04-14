@@ -23,12 +23,7 @@ from cogment_verse_torch_agents.muzero.utils import MuZeroWorker, flush_queue
 
 class ReplayBufferWorker(MuZeroWorker):
     def __init__(
-        self,
-        batch_queue,
-        config,
-        reward_distribution,
-        value_distribution,
-        manager,
+        self, batch_queue, config, reward_distribution, value_distribution, manager,
     ):
         super().__init__(config, manager)
         self._sample_queue = manager.Queue()

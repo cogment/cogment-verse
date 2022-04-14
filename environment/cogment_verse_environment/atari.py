@@ -39,15 +39,7 @@ class AtariEnv(GymEnv):
     """
 
     def __init__(
-        self,
-        *,
-        env_name,
-        frame_skip=4,
-        screen_size=84,
-        sticky_actions=True,
-        flatten=True,
-        framestack=4,
-        **_kwargs,
+        self, *, env_name, frame_skip=4, screen_size=84, sticky_actions=True, flatten=True, framestack=4, **_kwargs,
     ):
         """
         Args:
@@ -164,9 +156,7 @@ class AtariEnv(GymEnv):
             np.maximum(self.screen_buffer[0], self.screen_buffer[1], out=self.screen_buffer[1])
 
         transformed_image = cv2.resize(
-            self.screen_buffer[1],
-            (self.screen_size, self.screen_size),
-            interpolation=cv2.INTER_AREA,
+            self.screen_buffer[1], (self.screen_size, self.screen_size), interpolation=cv2.INTER_AREA,
         )
         int_image = np.asarray(transformed_image, dtype=np.uint8)
         if self._flatten:

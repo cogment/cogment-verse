@@ -33,10 +33,7 @@ def vectorized_training_sample_from_samples(sample, next_sample, last_tick):
     )
 
 
-TrainingSample = namedtuple(
-    "TrainingSample",
-    ["player_sample", "trial_cumulative_reward"],
-)
+TrainingSample = namedtuple("TrainingSample", ["player_sample", "trial_cumulative_reward"],)
 
 
 async def sample_producer(run_sample_producer_session):
