@@ -31,12 +31,15 @@ Cogment verse includes environments from:
 
 ## Getting started
 
-### Setup
+### Setup, Build and Run
 
-1. Install [docker](https://docs.docker.com/desktop/#download-and-install)
-2. Install [docker-compose](https://docs.docker.com/compose/install/#install-compose) (⚠️ you'll need version > 1.29.2 for this project)
-3. Install [cogment](https://docs.cogment.ai/introduction/installation/) (⚠️ version >= 2.0.0 is required)
-4. Clone this repository
+1. Install [cogment](https://docs.cogment.ai/introduction/installation/) (⚠️ version >= 2.2.0 is required)
+2. Clone this repository
+3. Install parallel
+4. `./run.sh build`
+5. `./run.sh`
+6. In a different terminal, start the trials with `./run.sh client start <run-name>`.
+Different run names can be found in `run_params.yaml`
 
 ### Copy the shared definitions
 
@@ -45,74 +48,6 @@ After a fresh close or whenever either the `cogment.yaml` or any protobuf file i
 ```console
 cogment run copy
 ```
-
-### Start development _auto-reload_ mode
-
-Cogment verse can be started in development mode where the services restart whenever a source is edited without needing to restart the docker images. It can be started with the following
-
-```console
-cogment run dev
-```
-
-> 🚧 In this mode, changes to the source files in the shared `base_dev` directory won't be reflected in the running services until you re-start `cogment run dev`.
-
-To be able to use the client properly, you'll need to build it whenever something changes using
-
-```console
-cogment run build_client
-```
-
-#### Troubleshooting
-
-This project is using rather large libraries such as tensorflow and pytorch, because of that the build might fail if docker doesn't have access to sufficient memory.
-
-### Build production images
-
-```console
-cogment run build
-```
-
-#### Build the GPU versions
-
-```console
-cogment run build_gpu
-```
-
-### Start the production images
-
-```console
-cogment run start
-```
-
-#### Start the GPU versions
-
-```console
-cogment run start_gpu
-```
-
-### Start and stop runs
-
-Once the services are running in either production or development mode, you can launch a _run_ with the following command
-
-```console
-RUN_PARAMS=cartpole_dqn cogment run start_run
-```
-
-The available `RUN_PARAMS` are defined in `run_params.yaml`. You can add new parameters as you wish as long as the environments and agents are supported.
-
-To list ongoing runs you can run
-
-```console
-cogment run list_runs
-```
-
-To terminate a given run you can run
-
-```console
-RUN_ID=angry_gould cogment run terminate_run
-```
-
-Ongoing run identifiers to define `RUN_ID` can be retrieved by listing the ongoing runs with `cogment run list_runs`
 
 #### Run monitoring
 
