@@ -91,12 +91,14 @@ function commands() {
 ### PROJECT SPECIFIC PUBLIC COMMANDS ###
 
 function base_python_build() {
-  _py_build base_python
   pushd "${ROOT_DIR}/base_python"
+  cp "${ROOT_DIR}/data.proto" "${ROOT_DIR}/cogment.yaml" "${ROOT_DIR}/base_python"
   cp "${ROOT_DIR}/run_api.proto" "./cogment_verse/api/"
   # shellcheck disable=SC1091
   source .venv/bin/activate
   pip install -e . # This is a reusable package, it needs to install itself
+  pip install -r requirements.txt
+  python -m cogment.generate
   python -m grpc.tools.protoc --proto_path=. --python_out=. --grpc_python_out=. ./cogment_verse/api/run_api.proto
   deactivate
   popd
@@ -204,6 +206,7 @@ function web_client_build() {
   _load_dot_env
   export PORT="${COGMENT_VERSE_WEBCLIENT_PORT}"
   export REACT_APP_ORCHESTRATOR_HTTP_ENDPOINT="${COGMENT_VERSE_ORCHESTRATOR_HTTP_ENDPOINT}"
+  cp "${ROOT_DIR}/data.proto" "${ROOT_DIR}/cogment.yaml" "${ROOT_DIR}/web_client"
   cd "${ROOT_DIR}/web_client"
   npm install
   npm run build
