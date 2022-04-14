@@ -40,30 +40,28 @@ Cogment verse includes environments from:
 5. `./run.sh`
 6. In a different terminal, start the trials with `./run.sh client start <run-name>`.
 Different run names can be found in `run_params.yaml`
-
-### Copy the shared definitions
-
-After a fresh close or whenever either the `cogment.yaml` or any protobuf file in the root directory is changed, you need to copy those changes to the different services source directories. This is achieved with the following.
-
-```console
-cogment run copy
-```
+7. (Optional) To launch webclient, run `./run.sh web_client_start` in a different
+terminal. Open http://localhost:5004 to join or visualize trials
 
 #### Run monitoring
 
-You can monitor ongoing run using [mlflow](https://mlflow.org). By default a local instance of mlflow is started by cogment-verse and is accessible at <http://localhost:3000>.
+You can monitor ongoing run using [mlflow](https://mlflow.org). By default a local instance of mlflow is started by cogment-verse and is accessible at <http://localhost:5005>.
 
 #### Human player
 
-Some of the availabe run involve a human player, for example `benchmark_lander_hill` enables a human player to momentarily take control of the lunar lander to help the AI agents during the training process.
+Some of the availabe run involve a human player,
+for example `benchmark_lander_hill` enables a human player
+to momentarily take control of the lunar lander to help the
+AI agents during the training process.
 
 Then start the run
 
 ```console
-RUN_PARAMS=benchmark_lander_hill cogment run start_run
+./run.sh client start benchmark_lander_hill
 ```
 
-Access the playing interface by navigating to <http://localhost:8080>
+Access the playing interface by launching a webclient with
+`./run.sh web_client_start` and navigating to <http://localhost:5004>
 
 #### The **Play** run
 
