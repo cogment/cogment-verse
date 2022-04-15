@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from urllib.parse import urlparse
+
 import grpc.aio
 from cogment.api.trial_datastore_pb2 import RetrieveSamplesRequest, RetrieveTrialsRequest
 from cogment.api.trial_datastore_pb2_grpc import TrialDatastoreSPStub
@@ -19,7 +21,11 @@ from cogment.api.trial_datastore_pb2_grpc import TrialDatastoreSPStub
 
 class TrialDatastoreClient:
     def __init__(self, endpoint):
-        channel = grpc.aio.insecure_channel(endpoint)
+        endpoint_components = urlparse(endpoint)
+        if endpoint_components.scheme != "grpc":
+            raise RuntimeError(f"Unsupported scheme for [{endpoint}], expected 'grpc'")
+
+        channel = grpc.aio.insecure_channel(endpoint_components.netloc)
         self._stub = TrialDatastoreSPStub(channel)
 
     async def retrieve_trials(self, trial_ids, timeout=30000):

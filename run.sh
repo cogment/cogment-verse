@@ -254,7 +254,7 @@ function orchestrator_start() {
     --actor_port="${COGMENT_VERSE_ORCHESTRATOR_PORT}" \
     --lifecycle_port="${COGMENT_VERSE_ORCHESTRATOR_PORT}" \
     --actor_http_port="${COGMENT_VERSE_ORCHESTRATOR_HTTP_PORT}" \
-    --pre_trial_hooks="grpc://${COGMENT_VERSE_PRETRIAL_HOOK_ENDPOINT}"
+    --pre_trial_hooks="${COGMENT_VERSE_PRETRIAL_HOOK_ENDPOINT}"
 }
 
 function trial_datastore_start() {
