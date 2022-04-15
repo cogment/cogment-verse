@@ -53,8 +53,8 @@ class SimpleBCAgentAdapterTutorialStep2(AgentAdapter):
     @staticmethod
     async def run_async(func, *args):
         """Run a given function asynchronously in the default thread pool"""
-        event_loop = asyncio.get_running_loop()
-        return await event_loop.run_in_executor(None, func, *args)
+        all_events = asyncio.get_running_loop()
+        return await all_events.run_in_executor(None, func, *args)
 
     def _create_actor_implementations(self):
         async def impl(actor_session):
@@ -62,7 +62,7 @@ class SimpleBCAgentAdapterTutorialStep2(AgentAdapter):
 
             config = actor_session.config
 
-            async for event in actor_session.event_loop():
+            async for event in actor_session.all_events():
                 if event.observation and event.type == cogment.EventType.ACTIVE:
                     action = np.random.default_rng().integers(0, config.environment_specs.num_action)
                     actor_session.do_action(AgentAction(discrete_action=action))

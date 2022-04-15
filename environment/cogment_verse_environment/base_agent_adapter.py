@@ -53,7 +53,7 @@ class BaseAgentAdapter(AgentAdapter):
 
             config = actor_session.config
 
-            async for event in actor_session.event_loop():
+            async for event in actor_session.all_events():
                 if event.observation and event.type == cogment.EventType.ACTIVE:
                     action = np.random.default_rng().integers(0, config.environment_specs.num_action)
                     actor_session.do_action(AgentAction(discrete_action=action))

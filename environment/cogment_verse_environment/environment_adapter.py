@@ -180,7 +180,7 @@ class EnvironmentAdapter:
                 )
                 environment_session.start([("*", cog_obs)])
 
-                async for event in environment_session.event_loop():
+                async for event in environment_session.all_events():
                     if event.actions:
                         player_override = -1
                         # special handling of human intervention

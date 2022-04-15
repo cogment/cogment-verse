@@ -101,7 +101,7 @@ class SimpleA2CAgentAdapter(AgentAdapter):
                 config.model_id, config.model_version, environment_specs=config.environment_specs
             )
 
-            async for event in actor_session.event_loop():
+            async for event in actor_session.all_events():
                 if event.observation and event.type == cogment.EventType.ACTIVE:
                     obs = tensor_from_cog_obs(event.observation.snapshot, dtype=self._dtype)
                     scores = model.actor_network(obs)
