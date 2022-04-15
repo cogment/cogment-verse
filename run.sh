@@ -125,9 +125,30 @@ function client() {
   COGMENT_VERSE_RUN_PARAMS_PATH="${ROOT_DIR}/run_params.yaml" .venv/bin/python -m main "$@"
 }
 
+function atari_roms_install() {
+  _load_dot_env
+  pushd "${ROOT_DIR}/environment"
+  # shellcheck disable=SC1091
+  source .venv/bin/activate
+  if [ -d ".atari_roms" ]; then
+    printf "environment/.atari_roms already exists, skipping atari roms import \n"
+  else
+    mkdir .atari_roms
+    # Download the roms.
+    curl -s http://www.atarimania.com/roms/Roms.rar --output .atari_roms/roms.rar
+    # And unrar them
+    unrar x -r .atari_roms/roms.rar .atari_roms/
+    # import everything that is supported
+    ale-import-roms .atari_roms
+  fi
+  deactivate
+  popd
+}
+
 function environment_build() {
   _py_build base_python
   _py_build environment
+  atari_roms_install
 }
 
 function environment_start() {
