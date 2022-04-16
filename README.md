@@ -44,7 +44,7 @@ Cogment verse includes environments from:
 
 #### Run monitoring
 
-You can monitor ongoing run using [mlflow](https://mlflow.org). By default a local instance of mlflow is started by cogment-verse and is accessible at <http://localhost:5005>.
+You can monitor ongoing run using [mlflow](https://mlflow.org). By default a local instance of mlflow is started by cogment-verse and is accessible at <http://localhost:3000>.
 
 #### Human player
 
@@ -60,7 +60,7 @@ Then start the run
 ```
 
 Access the playing interface by launching a webclient with
-`./run.sh web_client_start` and navigating to <http://localhost:5004>
+`./run.sh web_client_start` and navigating to <http://localhost:8000>
 
 #### The **Play** run
 

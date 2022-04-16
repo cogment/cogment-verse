@@ -1,8 +1,3 @@
-stages:
-  - build
-  - lint
-  - test
-
 .base:
   image: python:3.9
   variables:
@@ -36,28 +31,14 @@ stages:
       paths:
         - environment/.atari_roms
 
-build:
+build_and_test:
   extends: .base
-  stage: build
   script:
     - ./run.sh build
+    - ./run.sh lint
+    - ./run.sh test
 
 apache_licenses_check:
-  stage: lint
   image: registry.gitlab.com/ai-r/apache-license-checker:latest
   script:
     - apache-license-checker
-
-lint:
-  extends: .base
-  stage: lint
-  script:
-    - ./run.sh lint_build
-    - ./run.sh lint
-
-test:
-  extends: .base
-  stage: test
-  script:
-    - ./run.sh test_build
-    - ./run.sh test

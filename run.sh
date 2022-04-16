@@ -194,10 +194,6 @@ function root_build() {
   deactivate
 }
 
-function lint_build() {
-  root_build
-}
-
 function lint() {
   _load_dot_env
   # shellcheck disable=SC1091
@@ -290,10 +286,6 @@ function model_registry_start() {
 
 function build() {
   _run_sequence cogment_install root_build base_python_build client_build environment_build tf_agents_build torch_agents_build web_client_build
-}
-
-function test_build() {
-  _run_sequence cogment_install root_build base_python_build environment_build torch_agents_build
 }
 
 function test() {
