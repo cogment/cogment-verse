@@ -28,6 +28,13 @@ stages:
           - web_client/package-lock.json
       paths:
         - .cache/npm/
+    # atari roms cache
+    - key:
+        files:
+          - run.sh
+          - environment/requirements.txr
+      paths:
+        - environment/.atari_roms
 
 build:
   extends: .base

@@ -141,7 +141,7 @@ function atari_roms_install() {
     # Download the roms.
     curl -s http://www.atarimania.com/roms/Roms.rar --output .atari_roms/roms.rar
     # And unrar them
-    unrar x -r .atari_roms/roms.rar .atari_roms/
+    unrar x -y -r .atari_roms/roms.rar .atari_roms/
     # import everything that is supported
     ale-import-roms .atari_roms
   fi
