@@ -13,7 +13,7 @@ stages:
     - mkdir -p ${NPM_CACHE_DIR}
     # Installation instructions from https://github.com/nodesource/distributions/blob/master/README.md#installation-instructions
     - curl -fsSL https://deb.nodesource.com/setup_14.x | bash -
-    - apt-get install -y nodejs swig
+    - apt-get install -y nodejs swig unrar
     - pip install virtualenv
     - npm config set cache ${NPM_CACHE_DIR} --global
   cache:
@@ -48,6 +48,6 @@ lint:
 
 test:
   extends: .base
-  stage: lint
+  stage: test
   script:
     - ./run.sh test
