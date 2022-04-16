@@ -97,6 +97,7 @@ function base_python_build() {
   cp "${ROOT_DIR}/data.proto" "${ROOT_DIR}/cogment.yaml" "${ROOT_DIR}/base_python"
   cp "${ROOT_DIR}/run_api.proto" "${ROOT_DIR}/base_python/cogment_verse/api/"
   pushd "${ROOT_DIR}/base_python"
+  virtualenv -p python3 .venv
   # shellcheck disable=SC1091
   source .venv/bin/activate
   pip install -e . # This is a reusable package, it needs to install itself
