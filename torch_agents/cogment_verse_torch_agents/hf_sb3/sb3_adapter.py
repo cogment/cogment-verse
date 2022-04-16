@@ -45,7 +45,8 @@ class SimpleSB3AgentAdapter(AgentAdapter):
             actor_session.start()
 
             checkpoint = load_from_hub(
-                repo_id=actor_session.config.hf_hub_model.repo_id, filename=actor_session.config.hf_hub_model.filename,
+                repo_id=actor_session.config.hf_hub_model.repo_id,
+                filename=actor_session.config.hf_hub_model.filename,
             )
 
             model = PPO.load(checkpoint)

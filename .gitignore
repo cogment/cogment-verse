@@ -24,3 +24,6 @@ node_modules/
 
 # Runtime data
 /data
+
+# Cogment
+/.cogment

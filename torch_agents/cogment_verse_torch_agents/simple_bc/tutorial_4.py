@@ -60,7 +60,11 @@ class SimpleBCAgentAdapterTutorialStep4(AgentAdapter):
         return await all_events.run_in_executor(None, func, *args)
 
     def _create(
-        self, model_id, environment_specs, policy_network_hidden_size=64, **kwargs,
+        self,
+        model_id,
+        environment_specs,
+        policy_network_hidden_size=64,
+        **kwargs,
     ):
         model = SimpleBCModel(
             model_id=model_id,
@@ -190,7 +194,10 @@ class SimpleBCAgentAdapterTutorialStep4(AgentAdapter):
                     name="web_actor",
                     actor_class="teacher_agent",
                     implementation="client",
-                    human_config=HumanConfig(environment_specs=env_params.specs, role=HumanRole.TEACHER,),
+                    human_config=HumanConfig(
+                        environment_specs=env_params.specs,
+                        role=HumanRole.TEACHER,
+                    ),
                 )
 
                 return TrialConfig(
@@ -201,7 +208,10 @@ class SimpleBCAgentAdapterTutorialStep4(AgentAdapter):
 
             ############ TUTORIAL STEP 4 ############
             # Configure the optimizer
-            optimizer = torch.optim.Adam(model.policy_network.parameters(), lr=config.training.learning_rate,)
+            optimizer = torch.optim.Adam(
+                model.policy_network.parameters(),
+                lr=config.training.learning_rate,
+            )
 
             # Keep accumulated observations/actions around
             observations = []
@@ -279,7 +289,10 @@ class SimpleBCAgentAdapterTutorialStep4(AgentAdapter):
                     ),
                     ############ TUTORIAL STEP 4 ############
                     training=SimpleBCTrainingConfig(
-                        trial_count=100, max_parallel_trials=1, discount_factor=0.95, learning_rate=0.01,
+                        trial_count=100,
+                        max_parallel_trials=1,
+                        discount_factor=0.95,
+                        learning_rate=0.01,
                     ),
                     ##########################################
                     policy_network=MLPNetworkConfig(hidden_size=64),

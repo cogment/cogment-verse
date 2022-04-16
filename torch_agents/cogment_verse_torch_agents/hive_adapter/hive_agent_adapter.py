@@ -28,7 +28,9 @@ from data_pb2 import RunConfig
 from prometheus_client import Summary
 
 COMPUTE_NEXT_ACTION_TIME = Summary(
-    "actor_implementation_compute_next_action_seconds", "Time spent computing the next action", ["impl_name"],
+    "actor_implementation_compute_next_action_seconds",
+    "Time spent computing the next action",
+    ["impl_name"],
 )
 
 log = logging.getLogger(__name__)
@@ -74,7 +76,9 @@ class HiveAgentAdapter(AgentAdapter):
 
     def _load(self, model_id, version_number, model_user_data, version_user_data, model_data_f, **kwargs):
         model = self.agent_class_from_impl_name(model_user_data["agent_implementation"])(
-            id=model_id, obs_dim=int(model_user_data["num_input"]), act_dim=int(model_user_data["num_action"]),
+            id=model_id,
+            obs_dim=int(model_user_data["num_input"]),
+            act_dim=int(model_user_data["num_action"]),
         )
 
         model.load(model_data_f)

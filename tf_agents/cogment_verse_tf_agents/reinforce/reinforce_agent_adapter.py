@@ -24,7 +24,9 @@ from data_pb2 import RunConfig
 from prometheus_client import Summary
 
 COMPUTE_NEXT_ACTION_TIME = Summary(
-    "actor_implementation_compute_next_action_seconds", "Time spent computing the next action", ["impl_name"],
+    "actor_implementation_compute_next_action_seconds",
+    "Time spent computing the next action",
+    ["impl_name"],
 )
 
 log = logging.getLogger(__name__)

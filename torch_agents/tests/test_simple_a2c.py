@@ -39,7 +39,10 @@ def test_create():
 def test_save_and_load():
     adapter = SimpleA2CAgentAdapter()
     environment_specs = EnvironmentSpecs(implementation="foo", num_input=4, num_action=3)
-    model, model_user_data = adapter._create(model_id="test", environment_specs=environment_specs,)
+    model, model_user_data = adapter._create(
+        model_id="test",
+        environment_specs=environment_specs,
+    )
 
     with io.BytesIO() as serialized_model_io:
         adapter._save(

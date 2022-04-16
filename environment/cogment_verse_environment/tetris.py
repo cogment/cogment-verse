@@ -26,7 +26,15 @@ class TetrisEnv(AtariEnv):
 
     # pylint: disable=super-init-not-called
     def __init__(
-        self, *, env_name, frame_skip=4, screen_size=84, _sticky_actions=True, flatten=True, framestack=4, **_kwargs,
+        self,
+        *,
+        env_name,
+        frame_skip=4,
+        screen_size=84,
+        _sticky_actions=True,
+        flatten=True,
+        framestack=4,
+        **_kwargs,
     ):  # pylint: disable=super-init-not-called,non-parent-init-called
         """
         Args:

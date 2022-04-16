@@ -118,14 +118,20 @@ class SimpleBCAgentAdapterTutorialStep2(AgentAdapter):
                     name="agent_1",
                     actor_class="agent",
                     implementation="simple_bc",
-                    agent_config=AgentConfig(run_id=run_session.run_id, environment_specs=env_params.specs,),
+                    agent_config=AgentConfig(
+                        run_id=run_session.run_id,
+                        environment_specs=env_params.specs,
+                    ),
                 )
 
                 teacher_actor_params = ActorParams(
                     name="web_actor",
                     actor_class="teacher_agent",
                     implementation="client",
-                    human_config=HumanConfig(environment_specs=env_params.specs, role=HumanRole.TEACHER,),
+                    human_config=HumanConfig(
+                        environment_specs=env_params.specs,
+                        role=HumanRole.TEACHER,
+                    ),
                 )
 
                 return TrialConfig(

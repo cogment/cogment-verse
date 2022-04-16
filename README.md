@@ -33,15 +33,14 @@ Cogment verse includes environments from:
 
 ### Setup, Build and Run
 
-1. Install [cogment](https://docs.cogment.ai/introduction/installation/) (⚠️ version >= 2.2.0 is required)
-2. Clone this repository
-3. Install parallel
-4. `./run.sh build`
-5. `./run.sh`
-6. In a different terminal, start the trials with `./run.sh client start <run-name>`.
-Different run names can be found in `run_params.yaml`
-7. (Optional) To launch webclient, run `./run.sh web_client_start` in a different
-terminal. Open http://localhost:5004 to join or visualize trials
+1. Clone this repository
+2. Install `parallel`, on ubuntu it is installable using `apt-get install parallel`, on mac it is available through `brew install parallel`
+3. `./run.sh build`
+4. `./run.sh services_start`
+5. In a different terminal, start the trials with `./run.sh client start <run-name>`.
+   Different run names can be found in `run_params.yaml`
+6. (Optional) To launch webclient, run `./run.sh web_client_start` in a different
+   terminal. Open http://localhost:5004 to join or visualize trials
 
 #### Run monitoring
 
@@ -68,7 +67,7 @@ Access the playing interface by launching a webclient with
 The **`play`** is a run that is used to test any agent in an environment. The run is started by
 
 ```console
-RUN_PARAMS=play cogment run start_run
+./run.sh client start play
 ```
 
 It can be configured with the following parameters (to change in `run_params.yaml`):
@@ -102,24 +101,6 @@ play:
       actor_class: agent
       implementation: random
 ```
-
-## Debug
-
-### Resources monitoring
-
-Cogment verse comes with [prometheus](https://prometheus.io), in [`/prometheus`](/prometheus), and [grafana](https://grafana.com), in [`/grafana`](/grafana), services to facilitate the monitoring of the cluster.
-
-When running with the default `cogment run start`, the grafana dashboard can be accessed at <http://localhost:3001>.
-
-### Profiling
-
-Steps
-
-- Add viztracer to python requirements.txt
-- Modify docker-compose override
-  - Add a mount for the profile results json/html file
-  - Change the entrypoint of the service `viztracer --output_file /output/results.html script.py`
-- Rebuild and run jobs
 
 ## Acknowledgements
 

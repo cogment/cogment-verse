@@ -92,7 +92,8 @@ def create_training_run(agent_adapter):
                 _tick_id,
                 sample,
             ) in run_session.start_trials_and_wait_for_termination(
-                trial_configs=trial_configs, max_parallel_trials=config.max_parallel_trials,
+                trial_configs=trial_configs,
+                max_parallel_trials=config.max_parallel_trials,
             ):
                 model.consume_training_sample(sample.player_sample)
 

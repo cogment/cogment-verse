@@ -65,14 +65,16 @@ class BaseAgentAdapter(AgentAdapter):
     def _create_run_implementations(self):
         async def total_rewards_producer_impl(run_sample_producer_session):
             actors_total_rewards = [0.0 for actor_idx in range(run_sample_producer_session.count_actors())]
+            num_ticks = 0
             async for sample in run_sample_producer_session.get_all_samples():
                 if sample.get_trial_state() == TrialState.ENDED:
                     break
 
+                num_ticks += 1
                 for actor_idx in range(run_sample_producer_session.count_actors()):
                     actors_total_rewards[actor_idx] += sample.get_actor_reward(actor_idx, 0.0)
 
-            run_sample_producer_session.produce_training_sample(actors_total_rewards)
+            run_sample_producer_session.produce_training_sample((actors_total_rewards, num_ticks))
 
         async def play_impl(run_session):
             xp_tracker = MlflowExperimentTracker(run_session.params_name, run_session.run_id)
@@ -135,7 +137,11 @@ class BaseAgentAdapter(AgentAdapter):
                 env_params = copy.deepcopy(config.environment)
                 env_params.config.seed = env_params.config.seed + trial_idx
 
-                return TrialConfig(run_id=run_session.run_id, environment=env_params, actors=actors_params,)
+                return TrialConfig(
+                    run_id=run_session.run_id,
+                    environment=env_params,
+                    actors=actors_params,
+                )
 
             # Rollout a bunch of trials
             async for (
@@ -148,14 +154,16 @@ class BaseAgentAdapter(AgentAdapter):
                 trial_configs=[create_trial_config(trial_idx) for trial_idx in range(config.trial_count)],
                 max_parallel_trials=1,
             ):
+                (actors_total_rewards, num_ticks) = sample
                 xp_tracker.log_metrics(
                     step_timestamp,
                     step_idx,
                     **{
-                        f"actor_{actor_idx}_reward": sample[actor_idx]
+                        f"actor_{actor_idx}_reward": actors_total_rewards[actor_idx]
                         for actor_idx in range(config.environment.specs.num_players)
                     },
-                    total_reward=sum(sample),
+                    total_reward=sum(actors_total_rewards),
+                    num_ticks=num_ticks,
                 )
 
         return {

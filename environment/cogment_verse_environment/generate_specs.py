@@ -89,7 +89,10 @@ for minatar_env_id in (
         "max_episode_steps": None,
         "action_space": gym.spaces.Discrete(len(minatar_env.minimal_action_set())),
         "observation_space": gym.spaces.Box(
-            low=0, high=minatar_state_shape[2], shape=(minatar_state_shape[0], minatar_state_shape[1]), dtype=np.uint8,
+            low=0,
+            high=minatar_state_shape[2],
+            shape=(minatar_state_shape[0], minatar_state_shape[1]),
+            dtype=np.uint8,
         ),
         "agents": ["player"],
     }

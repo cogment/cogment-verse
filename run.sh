@@ -9,6 +9,9 @@ set -o errexit
 ROOT_DIR=$(cd "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 RUN_SCRIPT="./$(basename -- "${BASH_SOURCE[0]}")"
 
+COGMENT_VERSION=2.2.0
+COGMENT_DIR=${ROOT_DIR}/.cogment
+
 ### PRIVATE SUPPORT FUNCTIONS ###
 
 function _load_dot_env() {
@@ -229,7 +232,7 @@ function web_client_build() {
   export REACT_APP_ORCHESTRATOR_HTTP_ENDPOINT="${COGMENT_VERSE_ORCHESTRATOR_HTTP_ENDPOINT}"
   cp "${ROOT_DIR}/data.proto" "${ROOT_DIR}/cogment.yaml" "${ROOT_DIR}/web_client"
   cd "${ROOT_DIR}/web_client"
-  npm install
+  npm install --no-audit
   npm run build
 }
 
@@ -248,9 +251,16 @@ function web_client_start_dev() {
   npm run dev
 }
 
+function cogment_install() {
+  mkdir -p "${COGMENT_DIR}"
+  pushd "${COGMENT_DIR}"
+  curl --silent -L https://raw.githubusercontent.com/cogment/cogment/main/install.sh | bash /dev/stdin --skip-install --version "${COGMENT_VERSION}"
+  popd
+}
+
 function orchestrator_start() {
   _load_dot_env
-  cogment services orchestrator \
+  "${COGMENT_DIR}/cogment" services orchestrator \
     --actor_port="${COGMENT_VERSE_ORCHESTRATOR_PORT}" \
     --lifecycle_port="${COGMENT_VERSE_ORCHESTRATOR_PORT}" \
     --actor_http_port="${COGMENT_VERSE_ORCHESTRATOR_HTTP_PORT}" \
@@ -259,14 +269,14 @@ function orchestrator_start() {
 
 function trial_datastore_start() {
   _load_dot_env
-  cogment services trial_datastore \
+  "${COGMENT_DIR}/cogment" services trial_datastore \
     --port="${COGMENT_VERSE_TRIAL_DATASTORE_PORT}" \
     --memory_storage_max_samples_size=1073741824
 }
 
 function model_registry_start() {
   _load_dot_env
-  cogment services model_registry \
+  "${COGMENT_DIR}/cogment" services model_registry \
     --port="${COGMENT_VERSE_MODEL_REGISTRY_PORT}" \
     --archive_dir="${ROOT_DIR}/data/model-registry" \
     --sent_version_chunk_size=2097152 \
@@ -274,11 +284,11 @@ function model_registry_start() {
 }
 
 function build() {
-  _run_sequence root_build base_python_build client_build environment_build tf_agents_build torch_agents_build web_client_build
+  _run_sequence cogment_install root_build base_python_build client_build environment_build tf_agents_build torch_agents_build web_client_build
 }
 
 function test() {
-  _run_sequence lint base_python_test environment_test torch_agents_test
+  _run_sequence base_python_test environment_test torch_agents_test
 }
 
 function services_start() {

@@ -94,6 +94,7 @@ class EnvironmentAdapter:
             "atari/TetrisALE",
             "gym/BipedalWalker-v3",
             "gym/CartPole-v0",
+            "gym/CartPole-v0",
             "gym/LunarLander-v2",
             "gym/MountainCar-v0",
             "gym/LunarLanderContinuous-v2",
@@ -204,7 +205,9 @@ class EnvironmentAdapter:
                         for idx, reward in enumerate(gym_obs.rewards):
                             if player_override != -1 and idx == current_player:
                                 environment_session.add_reward(
-                                    value=reward, confidence=1.0, to=[actors[player_override].actor_name],
+                                    value=reward,
+                                    confidence=1.0,
+                                    to=[actors[player_override].actor_name],
                                 )
                             else:
                                 environment_session.add_reward(
