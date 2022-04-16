@@ -74,6 +74,7 @@ def pretty_print(val):
     def converter(val):
         if isinstance(val, datetime.datetime):
             return val.__str__()
+        # pylint: disable=isinstance-second-argument-not-valid-type
         if isinstance(val, RunStatus):
             return val.name
         return None

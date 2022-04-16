@@ -41,6 +41,7 @@ def extend_actor_config(actor_config_template, run_id, environment_specs):
     config = AgentConfig()
     config.CopyFrom(actor_config_template)
     config.run_id = run_id
+    # pylint: disable=no-member
     config.environment_specs.CopyFrom(environment_specs)
     return config
 

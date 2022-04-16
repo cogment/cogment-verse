@@ -199,7 +199,7 @@ function lint() {
   # shellcheck disable=SC1091
   source "${ROOT_DIR}/.venv/bin/activate"
   black --diff .
-  find . -type f -print0 -name '*.py' | xargs pylint
+  find . -name '*.py' -not -path '*/.venv/*' -print0 | xargs -0 pylint -j 4
   deactivate
 }
 

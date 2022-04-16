@@ -100,12 +100,12 @@ def cog_action_from_torch_action(action):
     if dtype in (int, np.int32, np.int64):
         if isinstance(action, np.ndarray):
             return AgentAction(discrete_action=action.item())
-        elif isinstance(action, list):
+        if isinstance(action, list):
             return AgentAction(discrete_action=action[0])
-        else:
-            return AgentAction(discrete_action=action)
+        return AgentAction(discrete_action=action)
 
     # else
+    # pylint: disable=no-member
     agent_action = AgentAction(continuous_action=ContinuousAction())
     action = np.squeeze(action)
     if action.shape == ():

@@ -22,7 +22,7 @@ from run_api_pb2_grpc import RunStub
 
 log = logging.getLogger(__name__)
 
-
+# pylint: disable=no-member
 class RunController:
     def __init__(self, endpoints):
         self._endpoints = []

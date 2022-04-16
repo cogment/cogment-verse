@@ -52,10 +52,12 @@ lint:
   extends: .base
   stage: lint
   script:
+    - ./run.sh build
     - ./run.sh lint
 
 test:
   extends: .base
   stage: test
   script:
+    - ./run.sh build
     - ./run.sh test

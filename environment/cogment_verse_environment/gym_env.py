@@ -21,6 +21,7 @@ from cogment_verse_environment.env_spec import EnvSpec
 # configure pygame to use a dummy video server to be able to render headlessly
 os.environ["SDL_VIDEODRIVER"] = "dummy"
 
+
 class GymEnv(BaseEnv):
     """
     Class for loading gym built-in environments.
