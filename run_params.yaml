@@ -72,7 +72,7 @@ play:
     class_name: data_pb2.PlayRunConfig
     # Set to true to have the ability to observe the run in the web client
     observer: false
-    trial_count: 1
+    trial_count: 10
     environment:
       specs: *mountain_car_specs
     actors:

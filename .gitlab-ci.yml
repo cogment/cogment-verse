@@ -9,7 +9,7 @@ stages:
     PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
   before_script:
     # Installation instructions from https://github.com/nodesource/distributions/blob/master/README.md#installation-instructions
-    - curl -fsSL https://deb.nodesource.com/setup_14.x | sudo -E bash -
+    - curl -fsSL https://deb.nodesource.com/setup_14.x | bash -
     - apt-get install -y nodejs
     - pip install virtualenv
     - npm ci --cache .npm --prefer-offline
