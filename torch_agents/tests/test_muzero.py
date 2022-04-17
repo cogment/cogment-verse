@@ -35,7 +35,7 @@ from cogment_verse_torch_agents.muzero.adapter import (
     make_trial_configs,
 )
 
-from data_pb2 import EnvironmentSpecs
+from data_pb2 import EnvironmentSpecs, Space
 
 # pylint: disable=redefined-outer-name
 # pylint: disable=invalid-name
@@ -44,7 +44,12 @@ from data_pb2 import EnvironmentSpecs
 
 @pytest.fixture
 def lander_specs():
-    return EnvironmentSpecs(implementation="gym/LunarLander-v2", num_players=1, num_input=8, num_action=4)
+    return EnvironmentSpecs(
+        implementation="gym/LunarLander-v2",
+        num_players=1,
+        observation_space=Space(properties=[Space.Property(box=Space.Box(shape=[8]))]),
+        action_space=Space(properties=[Space.Property(discrete=Space.Discrete(num=4))]),
+    )
 
 
 @pytest.fixture
@@ -207,6 +212,7 @@ def test_agentadapter(lander_specs):
     )
     agent.act(torch.rand(8))
 
+
 @pytest.mark.skip(reason="hangs on mac, doesn't wrk with torch on linux")
 def test_workers(lander_specs):
     manager = mp.get_context("spawn")
@@ -255,7 +261,9 @@ def test_workers(lander_specs):
                 sample = MuZeroSample(state, action, reward, next_state, done, policy, value)
                 replay_buffer.add_sample(f"{trial_id+1}", sample)
 
-        time.sleep(5) # A little bit flaky, this is enough time so that the replay buffer worker has consumed the samples from 2 lines above
+        time.sleep(
+            5
+        )  # A little bit flaky, this is enough time so that the replay buffer worker has consumed the samples from 2 lines above
         assert replay_buffer.size() > config.training.min_replay_buffer_size
 
         for worker in workers:

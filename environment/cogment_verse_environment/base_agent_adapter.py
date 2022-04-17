@@ -20,13 +20,13 @@ import cogment
 
 from cogment.api.common_pb2 import TrialState
 from cogment_verse import AgentAdapter, MlflowExperimentTracker
+from cogment_verse.spaces import flattened_dimensions
 from data_pb2 import (
     ActorParams,
     AgentAction,
     AgentConfig,
     EnvironmentConfig,
     EnvironmentParams,
-    EnvironmentSpecs,
     HumanConfig,
     HumanRole,
     PlayRunConfig,
@@ -54,9 +54,11 @@ class BaseAgentAdapter(AgentAdapter):
 
             config = actor_session.config
 
+            num_action = flattened_dimensions(config.environment_specs.action_space)
+
             async for event in actor_session.all_events():
                 if event.observation and event.type == cogment.EventType.ACTIVE:
-                    action = np.random.default_rng().integers(0, config.environment_specs.num_action)
+                    action = np.random.default_rng().integers(0, num_action)
                     actor_session.do_action(AgentAction(discrete_action=action))
 
         return {
@@ -173,9 +175,7 @@ class BaseAgentAdapter(AgentAdapter):
                 play_impl,
                 PlayRunConfig(
                     environment=EnvironmentParams(
-                        specs=EnvironmentSpecs(
-                            implementation="gym/LunarLander-v2", num_input=8, num_action=4, num_players=1
-                        ),
+                        specs=None,  # Needs to be specified
                         config=EnvironmentConfig(seed=12, framestack=1, render=True, render_width=256),
                     ),
                     actors=[],

@@ -32,11 +32,51 @@ message EnvironmentConfig {
   string mode = 10;
 }
 
+// Space messages are used to define environments action or observation space
+// Similar to gym's "dict" space
+message Space {
+  message Discrete {
+    int32 num = 1;
+    repeated string labels = 2; // Define labels for the discrete elements in the space, overrides `num`
+  }
+  message Box {
+    repeated uint32 shape = 1;
+    optional float low = 2; // lower bound on all dimensions, not set means unbounded
+    repeated float lows = 3; // independant lower bounds for each dimensions (gets reshaped), overrides `low`
+    optional float high = 4; // higher bound on all dimensions, not set means unbounded
+    repeated float highs = 5; // independant upper bounds for each dimensions (gets reshaped), overrides `high`
+  }
+  message Property {
+    string key = 1;
+    oneof definition {
+      Discrete discrete = 2;
+      Box box = 3;
+    }
+  }
+  repeated Property properties = 1;
+}
+
+// SpaceValue messages are values within a Space
+// `properties` are sorted in the same way than the value's Space
+message SpaceValue {
+  message SimpleBox {
+    repeated float values = 1;
+  }
+  message PropertyValue {
+    oneof value {
+      int32 discrete = 1;
+      NDArray box = 2;
+      SimpleBox simple_box = 3;
+    }
+  }
+  repeated PropertyValue properties = 1;
+}
+
 message EnvironmentSpecs {
   string implementation = 1;
   int32 num_players = 2;
-  int32 num_input = 3;
-  int32 num_action = 4;
+  Space observation_space = 3;
+  Space action_space = 4;
 }
 
 message EnvironmentParams {

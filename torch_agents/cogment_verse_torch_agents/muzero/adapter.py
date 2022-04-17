@@ -34,13 +34,13 @@ from data_pb2 import (
     ActorParams,
     EnvironmentConfig,
     EnvironmentParams,
-    EnvironmentSpecs,
     AgentConfig,
 )
 
 from cogment_verse.utils import LRU
 from cogment_verse import AgentAdapter
 from cogment_verse import MlflowExperimentTracker
+from cogment_verse.spaces import flattened_dimensions
 from cogment_verse_torch_agents.muzero.agent import MuZeroAgent
 from cogment_verse_torch_agents.muzero.utils import RunningStats
 
@@ -68,7 +68,7 @@ DEFAULT_MUZERO_RUN_CONFIG = MuZeroRunConfig(
             framestack=1,
             render=False,
         ),
-        specs=EnvironmentSpecs(implementation="gym/CartPole-v0", num_players=1, num_input=4, num_action=2),
+        specs=None,  # Needs to be specified
     ),
     training=MuZeroTrainingConfig(
         model_publication_interval=500,
@@ -164,16 +164,19 @@ class MuZeroAgentAdapter(AgentAdapter):
         run_config,
         **kwargs,
     ):
+        num_input = flattened_dimensions(environment_specs.observation_space)
+        num_output = flattened_dimensions(environment_specs.action_space)
+
         model = MuZeroAgent(
-            obs_dim=environment_specs.num_input,
-            act_dim=environment_specs.num_action,
+            obs_dim=num_input,
+            act_dim=num_output,
             device=device,
             run_config=run_config,
         )
         model_user_data = {
             "environment_implementation": environment_specs.implementation,
-            "num_input": environment_specs.num_input,
-            "num_action": environment_specs.num_action,
+            "num_input": num_input,
+            "num_output": num_output,
             "run_config": run_config,
         }
         return model, model_user_data

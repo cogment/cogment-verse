@@ -27,7 +27,6 @@ from data_pb2 import (
     AgentConfig,
     EnvironmentConfig,
     EnvironmentParams,
-    EnvironmentSpecs,
     HumanConfig,
     HumanRole,
     SimpleBCTrainingRunConfig,
@@ -137,7 +136,7 @@ class SimpleBCAgentAdapterTutorialStep1(AgentAdapter):
                 run_impl,
                 SimpleBCTrainingRunConfig(
                     environment=EnvironmentParams(
-                        specs=EnvironmentSpecs(implementation="gym/LunarLander-v2", num_input=8, num_action=4),
+                        specs=None,  # Needs to be specified
                         config=EnvironmentConfig(seed=12, framestack=1, render=True, render_width=256),
                     )
                 ),

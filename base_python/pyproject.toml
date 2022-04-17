@@ -2,9 +2,5 @@
 requires = ["setuptools", "wheel"]
 build-backend = "setuptools.build_meta"
 
-[tool.black]
-line-length = 120
-target-version = ["py37"]
-
 [tool.pytest.ini_options]
 addopts = "-rfs"

@@ -28,8 +28,14 @@ environment:
     specs:
         implementation: gym/CartPole-v0
         num_players: 1
-        num_input: 4
-        num_action: 2
+        observation_space:
+            properties:
+                - box:
+                    shape: [4]
+        action_space:
+            properties:
+                - discrete:
+                    num: 2
     config:
         render_width: 256
         flatten: True

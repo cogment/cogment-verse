@@ -198,7 +198,7 @@ function lint() {
   _load_dot_env
   # shellcheck disable=SC1091
   source "${ROOT_DIR}/.venv/bin/activate"
-  black --diff .
+  black --check --diff .
   find . -name '*.py' -not -path '*/.venv/*' -print0 | xargs -0 pylint -j 4
   deactivate
 }
