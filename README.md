@@ -40,7 +40,7 @@ Cogment verse includes environments from:
 5. In a different terminal, start the trials with `./run.sh client start <run-name>`.
    Different run names can be found in `run_params.yaml`
 6. (Optional) To launch webclient, run `./run.sh web_client_start` in a different
-   terminal. Open http://localhost:5004 to join or visualize trials
+   terminal. Open http://localhost:8000 to join or visualize trials
 
 #### Run monitoring
 
