@@ -168,7 +168,7 @@ class EnvironmentAdapter:
 
                 gym_obs = env.reset()
                 render = environment_session.config.render
-
+                print("render=", render)
                 if render:
                     pixels = shrink_image(env.render(mode="rgb_array"), max_size)
                 else:

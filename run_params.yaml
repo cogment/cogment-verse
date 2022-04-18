@@ -57,8 +57,10 @@ environment_specs:
             shape: [8]
     action_space:
       properties:
-        - discrete:
-            num: 2
+        - box:
+            shape: [2]
+            high: 1
+            low: -1
   bipedal_walker_specs: &bipedal_walker_specs
     implementation: gym/BipedalWalker-v3
     num_players: 1
@@ -148,18 +150,17 @@ environment_specs:
         - discrete:
             num: 1353
 
-play:
+headless_play:
   implementation: play
   config:
     class_name: data_pb2.PlayRunConfig
-    # Set to true to have the ability to observe the run in the web client
-    observer: true
+    observer: false
     trial_count: 10
     environment:
       specs: *mountain_car_specs
     actors:
-    # Configure the players (only the first ones are used, up to the number of required players)
-    - name: agent_1
+      # Configure the players (only the first ones are used, up to the number of required players)
+    - name: player_1
       actor_class: agent
       implementation: random
       # To use an already trained agent use the following.
@@ -168,9 +169,43 @@ play:
       # agent_config:
       #  model_id: compassionate_aryabhata_model
       #  model_version: -1
-    - name: agent_2
+    - name: player_2
       actor_class: agent
       implementation: random
+
+observe:
+  implementation: play
+  config:
+    class_name: data_pb2.PlayRunConfig
+    observer: true
+    trial_count: 10
+    environment:
+      specs: *pettingzoo_connect_four_specs
+    actors:
+    # Configure the players (only the first ones are used, up to the number of required players)
+    - name: player_1
+      actor_class: agent
+      implementation: random
+    - name: player_2
+      actor_class: agent
+      implementation: random
+
+play:
+  implementation: play
+  config:
+    class_name: data_pb2.PlayRunConfig
+    trial_count: 10
+    environment:
+      specs: *tetris_specs
+    actors:
+    - name: player_1
+      actor_class: teacher_agent
+      implementation: client
+    - name: player_2
+      actor_class: agent
+      implementation: random
+
+
 
 cartpole_rainbow: &default_params
   implementation: "cogment_verse_run_impl"

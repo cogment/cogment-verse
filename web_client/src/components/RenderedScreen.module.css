@@ -1,0 +1,21 @@
+.container {
+  position: relative;
+  width: 100%;
+  min-height: 200px;
+
+  display: grid;
+}
+
+.canvas, .overlay {
+  grid-area: 1/-1;
+  width: 100%;
+  z-index: 0;
+}
+
+.overlay {
+  z-index: 1;
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}

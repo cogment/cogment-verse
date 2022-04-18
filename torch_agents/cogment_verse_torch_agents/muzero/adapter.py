@@ -38,6 +38,7 @@ from data_pb2 import (
 )
 
 from cogment_verse.utils import LRU
+from cogment_verse.constants import HUMAN_ACTOR_NAME, HUMAN_ACTOR_CLASS, HUMAN_ACTOR_IMPL
 from cogment_verse import AgentAdapter
 from cogment_verse import MlflowExperimentTracker
 from cogment_verse.spaces import flattened_dimensions
@@ -413,9 +414,9 @@ def make_trial_configs(run_id, config, model_id, model_version_number):
         agent_config=actor_config,
     )
     teacher_config = ActorParams(
-        name="web_actor",
-        actor_class="teacher_agent",
-        implementation="client",
+        name=HUMAN_ACTOR_NAME,
+        actor_class=HUMAN_ACTOR_CLASS,
+        implementation=HUMAN_ACTOR_IMPL,
         agent_config=actor_config,  # todo: this needs to be modified to HumanConfig
     )
     demonstration_configs = [

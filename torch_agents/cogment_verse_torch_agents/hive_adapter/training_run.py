@@ -20,6 +20,7 @@ import torch
 
 from cogment_verse import MlflowExperimentTracker
 from cogment_verse.utils import sizeof_fmt, throttle
+from cogment_verse.constants import HUMAN_ACTOR_NAME, HUMAN_ACTOR_CLASS, HUMAN_ACTOR_IMPL
 from cogment_verse_torch_agents.third_party.hive.utils.schedule import (
     CosineSchedule,
     LinearSchedule,
@@ -155,9 +156,9 @@ def create_training_run(agent_adapter):
             if config.demonstration_count > 0:
                 # create the config for the teacher agent
                 teacher_actor_config = ActorParams(
-                    name="web_actor",
-                    actor_class="teacher_agent",
-                    implementation="client",
+                    name=HUMAN_ACTOR_NAME,
+                    actor_class=HUMAN_ACTOR_CLASS,
+                    implementation=HUMAN_ACTOR_IMPL,
                     human_config=HumanConfig(
                         run_id=run_id,
                         environment_specs=config.environment.specs,

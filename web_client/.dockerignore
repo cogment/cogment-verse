@@ -1,8 +1,0 @@
-/node_modules
-/build
-
-# Generated files
-src/CogSettings.*
-src/data_pb.*
-src/data.*
-src/data_pb_service.*

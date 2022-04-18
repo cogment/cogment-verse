@@ -103,6 +103,7 @@ message AgentConfig {
 enum HumanRole {
   TEACHER = 0;
   OBSERVER = 1;
+  PLAYER = 2;
 }
 
 message HumanConfig {

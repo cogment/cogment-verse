@@ -63,45 +63,29 @@ Then start the run
 Access the playing interface by launching a webclient with
 `./run.sh web_client_start` and navigating to <http://localhost:8000>
 
-#### The **Play** run
+#### **Play**
 
-The **`play`** is a run that is used to test any agent in an environment. The run is started by
+The `play` run implementation can be used to have any actor play in any environment. 3 example run parameters are provided:
+
+**`headless_play`** instanciates any agents and start a number of trials.
+
+```console
+./run.sh client start headless_play
+```
+
+**`observe`** instanciates any agents and start a number of trials with a human observer through the webclient.
+
+```console
+./run.sh client start observe
+```
+
+**`play`** instanciates let a human player play in a supported environment.
 
 ```console
 ./run.sh client start play
 ```
 
-It can be configured with the following parameters (to change in `run_params.yaml`):
-
-```yaml
-play:
-  implementation: play
-  config:
-    class_name: data_pb2.PlayRunConfig
-    # Set to true to have the ability to observe the run in the web client
-    observer: true
-    # Number of trials to run
-    trial_count: 10
-    environment:
-      # Reference one of the environment specs defined at the top of `run_params.yaml`
-      specs: *cartpole_specs
-    actors:
-    # Configure the players (only the first ones are used, up to the number of required players)
-    ## follows the `cogment_verse.ActorParams` datastructure
-    - name: agent_1
-      actor_class: agent
-      # Select the implementation to use
-      implementation: random
-      agent_config:
-        # Define the agent config here
-        ## follows the `cogment_verse.AgentConfig` datastructure
-        ## Make sure that the selected model is compatible with the selected implementation
-        model_id: compassionate_aryabhata_model
-        model_version: -1
-    - name: agent_2
-      actor_class: agent
-      implementation: random
-```
+They can be inspected and adapted to your needs in `run_params.yaml`:
 
 ## Acknowledgements
 
