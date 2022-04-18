@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import logging
+from urllib.parse import urlparse
 
 import grpc.aio
 from google.protobuf.json_format import MessageToDict
@@ -21,10 +22,15 @@ from run_api_pb2_grpc import RunStub
 
 log = logging.getLogger(__name__)
 
-
+# pylint: disable=no-member
 class RunController:
     def __init__(self, endpoints):
-        self._endpoints = [(e, RunStub(grpc.aio.insecure_channel(e))) for e in endpoints]
+        self._endpoints = []
+        for endpoint_url in endpoints:
+            endpoint_components = urlparse(endpoint_url)
+            if endpoint_components.scheme != "grpc":
+                raise RuntimeError(f"Unsupported scheme for [{endpoint_url}], expected 'grpc'")
+            self._endpoints.append((endpoint_url, RunStub(grpc.aio.insecure_channel(endpoint_components.netloc))))
 
     async def start_run(self, name, implementation, config, run_id=None):
         log.debug(

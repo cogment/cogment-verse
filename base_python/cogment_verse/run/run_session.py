@@ -206,7 +206,7 @@ class RunSession:
                         with TRIALLAUNCHER_START_TRIAL_TIME.time():
                             done_start_trial_tasks, _ = await asyncio.wait(
                                 [
-                                    self._controller.start_trial(trial_config=trial_config)
+                                    asyncio.create_task(self._controller.start_trial(trial_config=trial_config))
                                     for trial_config in to_start_trial_configs
                                 ]
                             )

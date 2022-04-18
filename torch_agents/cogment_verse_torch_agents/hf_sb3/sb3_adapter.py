@@ -37,8 +37,8 @@ class SimpleSB3AgentAdapter(AgentAdapter):
     @staticmethod
     async def run_async(func, *args):
         """Run a given function asynchronously in the default thread pool"""
-        event_loop = asyncio.get_running_loop()
-        return await event_loop.run_in_executor(None, func, *args)
+        all_events = asyncio.get_running_loop()
+        return await all_events.run_in_executor(None, func, *args)
 
     def _create_actor_implementations(self):
         async def impl(actor_session):
@@ -59,7 +59,7 @@ class SimpleSB3AgentAdapter(AgentAdapter):
 
                 return action
 
-            async for event in actor_session.event_loop():
+            async for event in actor_session.all_events():
                 if event.observation and event.type == cogment.EventType.ACTIVE:
                     action = await self.run_async(compute_action, event)
                     actor_session.do_action(AgentAction(discrete_action=action[0]))

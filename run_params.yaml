@@ -71,21 +71,21 @@ play:
   config:
     class_name: data_pb2.PlayRunConfig
     # Set to true to have the ability to observe the run in the web client
-    observer: true
+    observer: false
     trial_count: 10
     environment:
-      specs: *cartpole_specs
+      specs: *mountain_car_specs
     actors:
     # Configure the players (only the first ones are used, up to the number of required players)
     - name: agent_1
       actor_class: agent
-      # implementation: random
+      implementation: random
       # To use an already trained agent use the following.
       # Make sure the model is compatible with the implementation and the environment
-      implementation: rainbowtorch
-      agent_config:
-       model_id: compassionate_aryabhata_model
-       model_version: -1
+      # implementation: rainbowtorch
+      # agent_config:
+      #  model_id: compassionate_aryabhata_model
+      #  model_version: -1
     - name: agent_2
       actor_class: agent
       implementation: random
@@ -801,8 +801,8 @@ simple_sb3_cartpole:
       implementation: simple_sb3
       agent_config:
         hf_hub_model:
-          repo_id: "sb3/demo-hf-CartPole-v1"
-          filename: "ppo-CartPole-v1.zip"
+          repo_id: "sb3/demo-hf-CartPole-v0"
+          filename: "ppo-CartPole-v0.zip"
 
 simple_sb3_lander:
   implementation: play

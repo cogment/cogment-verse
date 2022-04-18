@@ -231,10 +231,7 @@ class EfficientCircularBuffer(BaseReplayBuffer):
         self._stack_size = stack_size
         self._n_step = n_step
         self._gamma = gamma
-        self._discount = np.asarray(
-            [self._gamma ** i for i in range(self._n_step)],
-            dtype=self._specs["reward"][0],
-        )
+        self._discount = np.asarray([self._gamma ** i for i in range(self._n_step)], dtype=self._specs["reward"][0],)
         self._episode_start = True
         self._cursor = 0
         self._num_added = 0
@@ -242,10 +239,7 @@ class EfficientCircularBuffer(BaseReplayBuffer):
 
     def size(self):
         """Returns the number of transitions stored in the buffer."""
-        return max(
-            min(self._num_added, self._capacity) - self._stack_size - self._n_step + 1,
-            0,
-        )
+        return max(min(self._num_added, self._capacity) - self._stack_size - self._n_step + 1, 0,)
 
     def _create_storage(self, capacity, specs):
         """Creates the storage buffer for each type of item in the buffer.
@@ -370,9 +364,7 @@ class EfficientCircularBuffer(BaseReplayBuffer):
         for key in self._specs:
             if key == "observation":
                 batch[key] = self._get_from_storage(
-                    "observation",
-                    indices - self._stack_size + 1,
-                    num_to_access=self._stack_size,
+                    "observation", indices - self._stack_size + 1, num_to_access=self._stack_size,
                 )
             elif key == "done":
                 batch["done"] = is_terminal
@@ -389,9 +381,7 @@ class EfficientCircularBuffer(BaseReplayBuffer):
             else:
                 batch[key] = self._get_from_storage(key, indices)
         batch["next_observation"] = self._get_from_storage(
-            "observation",
-            indices + trajectory_lengths - self._stack_size + 1,
-            num_to_access=self._stack_size,
+            "observation", indices + trajectory_lengths - self._stack_size + 1, num_to_access=self._stack_size,
         )
         return batch
 

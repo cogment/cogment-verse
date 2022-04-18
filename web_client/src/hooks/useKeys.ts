@@ -65,7 +65,6 @@ export const useKeys = (
   const [timer, setTimer] = useState<NodeJS.Timeout>();
 
   useEffect(() => {
-    console.log(actorConfig);
     if (
       trialJoined &&
       actorConfig?.environmentSpecs?.implementation &&
@@ -90,13 +89,10 @@ export const useKeys = (
         }
 
         action.discreteAction = action_int;
-        if (sendAction) {
-          sendAction(action);
-        }
 
-        const minDelta = 1000.0 / 30.0; // 30 fps
+        const targetDelta = 1000.0 / 30.0; // 30 fps
         const currentTime = new Date().getTime();
-        const timeout = lastTime ? Math.max(0, minDelta - (currentTime - lastTime) - 1) : 0;
+        const timeout = lastTime ? Math.max(0, targetDelta - (currentTime - lastTime)) : 0;
 
         if (!timer) {
           setTimer(

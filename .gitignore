@@ -4,7 +4,7 @@
 cog_settings.py
 *_pb2.py
 *_pb2_grpc.py
-autoreload.yaml
+base_python/cogment_verse/api
 
 # Python stuffs
 __pycache__/
@@ -12,22 +12,18 @@ __pycache__/
 .pytest_cache/
 htmlcov/
 .coverage
+.venv
+*.egg-info
 
 # Atari roms
 .atari_roms/
 
 .vscode
 
-docker-compose.override.yaml
-py_service.override.dockerfile
-
-base_python/cogment_verse/api
-
 node_modules/
 
 # Runtime data
 /data
-./data
 
-# Environment variables definition files
-.env
+# Cogment
+/.cogment

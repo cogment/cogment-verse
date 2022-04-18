@@ -53,7 +53,7 @@ async def main():
         cog_settings=cog_settings,
         user_id="cogment_verse_torch_agents",
         services_endpoints={
-            "orchestrator": "grpc://" + ORCHESTRATOR_ENDPOINT,
+            "orchestrator": ORCHESTRATOR_ENDPOINT,
             "trial_datastore": TRIAL_DATASTORE_ENDPOINT,
             "model_registry": MODEL_REGISTRY_ENDPOINT,
             **ACTOR_ENDPOINTS,

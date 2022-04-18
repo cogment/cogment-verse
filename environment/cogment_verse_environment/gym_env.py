@@ -12,9 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
+
 import gym
 from cogment_verse_environment.base import BaseEnv, GymObservation
 from cogment_verse_environment.env_spec import EnvSpec
+
+# configure pygame to use a dummy video server to be able to render headlessly
+os.environ["SDL_VIDEODRIVER"] = "dummy"
 
 
 class GymEnv(BaseEnv):
@@ -28,6 +33,7 @@ class GymEnv(BaseEnv):
             env_name: Name of the environment (NOTE: make sure it is available at gym.envs.registry.all())
         """
         self.create_env(env_name, **kwargs)
+
         super().__init__(
             env_spec=self.create_env_spec(env_name, **kwargs), num_players=num_players, framestack=framestack
         )

@@ -63,9 +63,7 @@ class NoisyLinear(nn.Module):
         if self.training:
             weight_eps, bias_eps = self.sample_noise()
             return F.linear(
-                inp,
-                self.weight_mu + self.weight_sigma * weight_eps,
-                self.bias_mu + self.bias_sigma * bias_eps,
+                inp, self.weight_mu + self.weight_sigma * weight_eps, self.bias_mu + self.bias_sigma * bias_eps,
             )
         else:
             return F.linear(inp, self.weight_mu, self.bias_mu)
@@ -102,15 +100,11 @@ class ComplexMLP(nn.Module):
     def init_networks(self):
         if self._noisy:
             self.input_layer = nn.Sequential(
-                NoisyLinear(self._in_dim, self._hidden_units, self._sigma_init),
-                nn.ReLU(),
+                NoisyLinear(self._in_dim, self._hidden_units, self._sigma_init), nn.ReLU(),
             )
             self.hidden_layers = nn.Sequential(
                 *[
-                    nn.Sequential(
-                        NoisyLinear(self._hidden_units, self._hidden_units, self._sigma_init),
-                        nn.ReLU(),
-                    )
+                    nn.Sequential(NoisyLinear(self._hidden_units, self._hidden_units, self._sigma_init), nn.ReLU(),)
                     for _ in range(self._num_hidden_layers - 1)
                 ]
             )
@@ -134,42 +128,26 @@ class ComplexMLP(nn.Module):
                 self.output_layer_adv = nn.Sequential(
                     NoisyLinear(self._hidden_units, self._hidden_units, self._sigma_init),
                     nn.ReLU(),
-                    NoisyLinear(
-                        self._hidden_units,
-                        self._out_dim * self._atoms,
-                        self._sigma_init,
-                    ),
+                    NoisyLinear(self._hidden_units, self._out_dim * self._atoms, self._sigma_init,),
                 )
 
                 self.output_layer_val = nn.Sequential(
                     NoisyLinear(self._hidden_units, self._hidden_units, self._sigma_init),
                     nn.ReLU(),
-                    NoisyLinear(
-                        self._hidden_units,
-                        1 * self._atoms,
-                        self._sigma_init,
-                    ),
+                    NoisyLinear(self._hidden_units, 1 * self._atoms, self._sigma_init,),
                 )
 
             else:
                 self.output_layer_adv = nn.Sequential(
                     nn.Linear(self._hidden_units, self._hidden_units, self._sigma_init),
                     nn.ReLU(),
-                    nn.Linear(
-                        self._hidden_units,
-                        self._out_dim * self._atoms,
-                        self._sigma_init,
-                    ),
+                    nn.Linear(self._hidden_units, self._out_dim * self._atoms, self._sigma_init,),
                 )
 
                 self.output_layer_val = nn.Sequential(
                     nn.Linear(self._hidden_units, self._hidden_units, self._sigma_init),
                     nn.ReLU(),
-                    nn.Linear(
-                        self._hidden_units,
-                        1 * self._atoms,
-                        self._sigma_init,
-                    ),
+                    nn.Linear(self._hidden_units, 1 * self._atoms, self._sigma_init,),
                 )
         else:
             if self._noisy:
@@ -214,14 +192,7 @@ class DistributionalMLP(ComplexMLP):
         atoms=51,
     ):
         super().__init__(
-            in_dim,
-            out_dim,
-            hidden_units,
-            num_hidden_layers,
-            noisy,
-            dueling,
-            sigma_init,
-            atoms,
+            in_dim, out_dim, hidden_units, num_hidden_layers, noisy, dueling, sigma_init, atoms,
         )
         self._supports = supports
 

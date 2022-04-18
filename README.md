@@ -31,88 +31,16 @@ Cogment verse includes environments from:
 
 ## Getting started
 
-### Setup
+### Setup, Build and Run
 
-1. Install [docker](https://docs.docker.com/desktop/#download-and-install)
-2. Install [docker-compose](https://docs.docker.com/compose/install/#install-compose) (⚠️ you'll need version > 1.29.2 for this project)
-3. Install [cogment](https://docs.cogment.ai/introduction/installation/) (⚠️ version >= 2.0.0 is required)
-4. Clone this repository
-
-### Copy the shared definitions
-
-After a fresh close or whenever either the `cogment.yaml` or any protobuf file in the root directory is changed, you need to copy those changes to the different services source directories. This is achieved with the following.
-
-```console
-cogment run copy
-```
-
-### Start development _auto-reload_ mode
-
-Cogment verse can be started in development mode where the services restart whenever a source is edited without needing to restart the docker images. It can be started with the following
-
-```console
-cogment run dev
-```
-
-> 🚧 In this mode, changes to the source files in the shared `base_dev` directory won't be reflected in the running services until you re-start `cogment run dev`.
-
-To be able to use the client properly, you'll need to build it whenever something changes using
-
-```console
-cogment run build_client
-```
-
-#### Troubleshooting
-
-This project is using rather large libraries such as tensorflow and pytorch, because of that the build might fail if docker doesn't have access to sufficient memory.
-
-### Build production images
-
-```console
-cogment run build
-```
-
-#### Build the GPU versions
-
-```console
-cogment run build_gpu
-```
-
-### Start the production images
-
-```console
-cogment run start
-```
-
-#### Start the GPU versions
-
-```console
-cogment run start_gpu
-```
-
-### Start and stop runs
-
-Once the services are running in either production or development mode, you can launch a _run_ with the following command
-
-```console
-RUN_PARAMS=cartpole_dqn cogment run start_run
-```
-
-The available `RUN_PARAMS` are defined in `run_params.yaml`. You can add new parameters as you wish as long as the environments and agents are supported.
-
-To list ongoing runs you can run
-
-```console
-cogment run list_runs
-```
-
-To terminate a given run you can run
-
-```console
-RUN_ID=angry_gould cogment run terminate_run
-```
-
-Ongoing run identifiers to define `RUN_ID` can be retrieved by listing the ongoing runs with `cogment run list_runs`
+1. Clone this repository
+2. Install `parallel`, on ubuntu it is installable using `apt-get install parallel`, on mac it is available through `brew install parallel`
+3. `./run.sh build`
+4. `./run.sh services_start`
+5. In a different terminal, start the trials with `./run.sh client start <run-name>`.
+   Different run names can be found in `run_params.yaml`
+6. (Optional) To launch webclient, run `./run.sh web_client_start` in a different
+   terminal. Open http://localhost:8000 to join or visualize trials
 
 #### Run monitoring
 
@@ -120,22 +48,26 @@ You can monitor ongoing run using [mlflow](https://mlflow.org). By default a loc
 
 #### Human player
 
-Some of the availabe run involve a human player, for example `benchmark_lander_hill` enables a human player to momentarily take control of the lunar lander to help the AI agents during the training process.
+Some of the availabe run involve a human player,
+for example `benchmark_lander_hill` enables a human player
+to momentarily take control of the lunar lander to help the
+AI agents during the training process.
 
 Then start the run
 
 ```console
-RUN_PARAMS=benchmark_lander_hill cogment run start_run
+./run.sh client start benchmark_lander_hill
 ```
 
-Access the playing interface by navigating to <http://localhost:8080>
+Access the playing interface by launching a webclient with
+`./run.sh web_client_start` and navigating to <http://localhost:8000>
 
 #### The **Play** run
 
 The **`play`** is a run that is used to test any agent in an environment. The run is started by
 
 ```console
-RUN_PARAMS=play cogment run start_run
+./run.sh client start play
 ```
 
 It can be configured with the following parameters (to change in `run_params.yaml`):
@@ -169,24 +101,6 @@ play:
       actor_class: agent
       implementation: random
 ```
-
-## Debug
-
-### Resources monitoring
-
-Cogment verse comes with [prometheus](https://prometheus.io), in [`/prometheus`](/prometheus), and [grafana](https://grafana.com), in [`/grafana`](/grafana), services to facilitate the monitoring of the cluster.
-
-When running with the default `cogment run start`, the grafana dashboard can be accessed at <http://localhost:3001>.
-
-### Profiling
-
-Steps
-
-- Add viztracer to python requirements.txt
-- Modify docker-compose override
-  - Add a mount for the profile results json/html file
-  - Change the entrypoint of the service `viztracer --output_file /output/results.html script.py`
-- Rebuild and run jobs
 
 ## Acknowledgements
 

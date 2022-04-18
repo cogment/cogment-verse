@@ -98,7 +98,7 @@ class MockEnvironmentSession:
     def end(self, observations):
         self._produce_observations(observations, done=True)
 
-    async def event_loop(self):
+    async def all_events(self):
         while not self._done:
             event = await self._recv_events_queue.get()
             self._done = (

@@ -1,0 +1,17 @@
+# Install the base cogment verse package
+-e ../base_python
+
+cffi~=1.15.0
+torch==1.11.0
+numpy>=1.21.5,<1.22
+opencv-python-headless~=4.5.4
+stable-baselines3~=1.4.0
+huggingface-sb3~=1.0.7
+huggingface-hub~=0.4.0
+python-dotenv~=0.19.1
+
+# For testing
+pytest~=6.2.5,<6.3
+pytest-cov~=3.0.0
+coverage~=6.0.2
+pytest-xdist~=2.5.0

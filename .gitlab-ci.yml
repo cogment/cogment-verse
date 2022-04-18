@@ -1,108 +1,44 @@
-stages:
-  - lint
-  - build
-  - test
-  - publish
-
-.base_poetry:
-  image: python:3.7
+.base:
+  image: python:3.9
+  variables:
+    PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+    NPM_CACHE_DIR: "$CI_PROJECT_DIR/.cache/npm"
   before_script:
-    - curl --silent -L https://raw.githubusercontent.com/cogment/cogment-cli/main/install.sh | bash
-    - cogment run copy
-    - curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/install-poetry.py | python -
-    - export PATH="/root/.local/bin:$PATH"
-    - poetry --version
+    - mkdir -p ${PIP_CACHE_DIR}
+    - mkdir -p ${NPM_CACHE_DIR}
+    # Installation instructions from https://github.com/nodesource/distributions/blob/master/README.md#installation-instructions
+    - curl -fsSL https://deb.nodesource.com/setup_14.x | bash -
+    - apt-get update && apt-get install -y software-properties-common && apt-add-repository non-free && apt-get update
+    - apt-get install -y nodejs swig unrar python3-opencv
+    - pip install virtualenv
+    - npm config set cache ${NPM_CACHE_DIR} --global
+  cache:
+    # pip's cache
+    - paths:
+        - .cache/pip
+        - "**/.venv"
+    # npm's cache
+    - key:
+        files:
+          - web_client/package-lock.json
+      paths:
+        - .cache/npm/
+    # atari roms cache
+    - key:
+        files:
+          - run.sh
+          - environment/requirements.txr
+      paths:
+        - environment/.atari_roms
 
-.base_node:
-  image: node:14
-  before_script:
-    - curl --silent -L https://raw.githubusercontent.com/cogment/cogment-cli/main/install.sh | bash
-    - cogment run copy
-
-.base_gh_ssh_agent:
-  before_script:
-    ## _Inspired by https://docs.gitlab.com/ee/ci/ssh_keys/_
-    ##
-    ## Install ssh-agent if not already installed.
-    - "command -v ssh-agent >/dev/null || ( apt-get update -y && apt-get install openssh-client -y )"
-    ## Run ssh-agent
-    - eval $(ssh-agent -s)
-    ## Add the private key file to ssh-agent
-    - echo "$GH_REPO_SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
-    ## Create the SSH directory and give it the right permissions
-    - mkdir -p ~/.ssh
-    - chmod 700 ~/.ssh
-    ## Using the set $SSH_KNOWN_HOSTS to be able to verify remote servers public keys
-    - echo "$SSH_KNOWN_HOSTS" >> ~/.ssh/known_hosts
-    - chmod 644 ~/.ssh/known_hosts
+build_and_test:
+  extends: .base
+  script:
+    - ./run.sh build
+    - ./run.sh lint
+    - ./run.sh test
 
 apache_licenses_check:
-  stage: lint
   image: registry.gitlab.com/ai-r/apache-license-checker:latest
   script:
     - apache-license-checker
-
-python_lint:
-  extends: .base_poetry
-  stage: lint
-  script:
-    - poetry install
-    - poetry run task lint
-
-npm_lint:
-  extends: .base_node
-  stage: lint
-  script:
-    - cd web_client
-    - npm install
-    - npm run lint
-
-test_base_python:
-  extends: .base_poetry
-  stage: test
-  script:
-    - cd base_python
-    - poetry install
-    - poetry run task build
-    - poetry run task test
-
-test_environment:
-  extends: .base_poetry
-  stage: test
-  script:
-    - apt-get update && apt-get install -y python3-opencv
-    - cd environment
-    - poetry install
-    - poetry run task build
-    - poetry run task test
-  artifacts:
-    paths:
-      - environment/htmlcov
-    expire_in: 1 week
-
-test_torch_agents:
-  extends: .base_poetry
-  stage: test
-  script:
-    - apt-get update && apt-get install -y python3-opencv
-    - cd base_python
-    - poetry install
-    - poetry run task build
-    - cd ..
-    - cd torch_agents
-    - poetry install -E test
-    - poetry run task build
-    - poetry run task test
-  artifacts:
-    paths:
-      - torch_agents/htmlcov
-    expire_in: 1 week
-
-npm_build:
-  extends: .base_node
-  stage: build
-  script:
-    - cd web_client
-    - npm install
-    - npx cogment-js-sdk-generate cogment.yaml
-    - npm run build

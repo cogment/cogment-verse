@@ -83,7 +83,6 @@ class TrainWorker(MuZeroWorker):
                 lr=lr,
                 epsilon=epsilon,
                 temperature=temperature,
-                batch_queue=self.batch_queue.qsize(),  # monitor if training process is starved
                 **info,
             )
 

@@ -1,25 +1,6 @@
-[tool.poetry]
-name = "cogment-verse"
-version = "0.1.0"
-description = "cogment verse python SDK"
-authors = ["AI Redefined Inc. <dev+cogment@ai-r.com>"]
-license = "Apache-2.0"
-
-[tool.poetry.dependencies]
-python = ">=3.7,<3.10"
-cogment = {extras = ["generate"], version = "^2.1.0"}
-names-generator = "^0.1.0"
-mlflow = "^1.21.0"
-
-[tool.poetry.dev-dependencies]
-taskipy = "^1.8.1"
-pytest = "^6.2.5"
-
-[tool.taskipy.tasks]
-generate = "python -m grpc.tools.protoc --proto_path=. --python_out=. --grpc_python_out=. ./cogment_verse/api/run_api.proto && python -m cogment.generate"
-build = "task generate"
-unit_tests = "python -m pytest"
-test="task unit_tests"
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
 
 [tool.black]
 line-length = 120
@@ -27,8 +8,3 @@ target-version = ["py37"]
 
 [tool.pytest.ini_options]
 addopts = "-rfs"
-
-
-[build-system]
-requires = ["poetry-core>=1.0.0"]
-build-backend = "poetry.core.masonry.api"

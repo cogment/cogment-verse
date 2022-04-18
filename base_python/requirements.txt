@@ -1,0 +1,6 @@
+cogment[generate]==2.1.1
+names_generator~=0.1.0
+mlflow~=1.21.0
+
+# For testing
+pytest~=6.2.5

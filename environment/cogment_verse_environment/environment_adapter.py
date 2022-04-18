@@ -94,6 +94,7 @@ class EnvironmentAdapter:
             "atari/TetrisALE",
             "gym/BipedalWalker-v3",
             "gym/CartPole-v0",
+            "gym/CartPole-v0",
             "gym/LunarLander-v2",
             "gym/MountainCar-v0",
             "gym/LunarLanderContinuous-v2",
@@ -180,7 +181,7 @@ class EnvironmentAdapter:
                 )
                 environment_session.start([("*", cog_obs)])
 
-                async for event in environment_session.event_loop():
+                async for event in environment_session.all_events():
                     if event.actions:
                         player_override = -1
                         # special handling of human intervention

@@ -87,11 +87,11 @@ def reward_transform_inverse(transformed_reward, eps=0.001):
     s = torch.sign(transformed_reward)
     y = torch.abs(transformed_reward)
 
-    a = eps ** 2
+    a = eps**2
     b = -2 * eps * (y + 1) - 1
-    c = y ** 2 + 2 * y
+    c = y**2 + 2 * y
 
-    d = torch.sqrt(b ** 2 - 4 * a * c)
+    d = torch.sqrt(b**2 - 4 * a * c)
     e = 2 * a
 
     x = torch.abs((-b - d) / e)

@@ -112,7 +112,7 @@ class HiveAgentAdapter(AgentAdapter):
 
                 total_reward = 0
 
-                async for event in actor_session.event_loop():
+                async for event in actor_session.all_events():
                     for reward in event.rewards:
                         total_reward += reward.value
 

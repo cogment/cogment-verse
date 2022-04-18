@@ -56,6 +56,7 @@ def cog_action_from_tf_action(action):
         return AgentAction(**kwargs)
 
     # else
+    # pylint: disable=no-member
     agent_action = AgentAction(continuous_action=ContinuousAction())
     action = np.squeeze(action)
     if action.shape == ():

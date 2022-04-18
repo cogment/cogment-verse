@@ -43,7 +43,7 @@ function App() {
     return btoa(binstr);
   }
 
-  const grpcURL = process.env.REACT_APP_GRPCWEBPROXY_URL || "http://localhost:8081";
+  const grpcURL = process.env.REACT_APP_ORCHESTRATOR_HTTP_ENDPOINT || "http://localhost:8081";
 
   type ObservationT = data_pb.cogment_verse.Observation;
   type ActionT = data_pb.cogment_verse.AgentAction;

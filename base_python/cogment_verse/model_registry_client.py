@@ -16,6 +16,7 @@ import asyncio
 import io
 import logging
 import time
+from urllib.parse import urlparse
 
 import grpc.aio
 from google.protobuf.json_format import MessageToDict
@@ -49,8 +50,11 @@ log = logging.getLogger(__name__)
 
 class ModelRegistryClient:
     def __init__(self, endpoint, cache=LRU()):
+        endpoint_components = urlparse(endpoint)
+        if endpoint_components.scheme != "grpc":
+            raise RuntimeError(f"Unsupported scheme for [{endpoint}], expected 'grpc'")
 
-        channel = grpc.aio.insecure_channel(endpoint)
+        channel = grpc.aio.insecure_channel(endpoint_components.netloc)
         self._stub = ModelRegistrySPStub(channel)
 
         self._cache = cache

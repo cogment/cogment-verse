@@ -61,28 +61,35 @@ class RunContext(cogment.Context):
         # Pre trial hook => actor/environment config + services urls resolution
         async def pre_trial_hook(pre_trial_hook_session):
             log.debug(f"[pre_trial_hook] Configuring trial {pre_trial_hook_session.get_trial_id()}")
+            trial_parameters = pre_trial_hook_session.trial_parameters
+            trial_config = trial_parameters.config
 
-            environment_params = pre_trial_hook_session.trial_config.environment
-            pre_trial_hook_session.environment_config = environment_params.config
-            pre_trial_hook_session.environment_implementation = environment_params.specs.implementation
-            pre_trial_hook_session.environment_endpoint = "grpc://" + self._get_service_endpoint(
-                pre_trial_hook_session.environment_implementation
+            # Environment
+            environment_params = trial_config.environment
+            trial_parameters.environment_name = f"{trial_config.run_id}_environment"
+            trial_parameters.environment_config = environment_params.config
+            trial_parameters.environment_implementation = environment_params.specs.implementation
+            trial_parameters.environment_endpoint = self._get_service_endpoint(
+                trial_parameters.environment_implementation
             )
-            pre_trial_hook_session.datalog_endpoint = "grpc://" + services_endpoints["trial_datastore"]
-            pre_trial_hook_session.actors = [
-                {
-                    "name": actor.name,
-                    "actor_class": actor.actor_class,
-                    "endpoint": "client"
-                    if actor.implementation == "client"
-                    else ("grpc://" + self._get_service_endpoint(actor.implementation)),
-                    "implementation": "" if actor.implementation == "client" else actor.implementation,
-                    "config": set_config_index(getattr(actor, actor.WhichOneof("config_oneof")), actor_idx),
-                }
-                for actor_idx, actor in enumerate(pre_trial_hook_session.trial_config.actors)
-            ]
 
-            pre_trial_hook_session.validate()
+            # Datalog
+            trial_parameters.datalog_endpoint = services_endpoints["trial_datastore"]
+
+            # Actors
+            trial_parameters.actors = [
+                cogment.ActorParameters(
+                    cog_settings=self._cog_settings,
+                    class_name=actor.actor_class,
+                    name=actor.name,
+                    endpoint="cogment://client"
+                    if actor.implementation == "client"
+                    else self._get_service_endpoint(actor.implementation),
+                    implementation=None if actor.implementation == "client" else actor.implementation,
+                    config=set_config_index(getattr(actor, actor.WhichOneof("config_oneof")), actor_idx),
+                )
+                for actor_idx, actor in enumerate(trial_config.actors)
+            ]
 
         self.register_pre_trial_hook(pre_trial_hook)
 

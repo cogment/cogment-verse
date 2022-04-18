@@ -113,7 +113,7 @@ class SimpleA2CAgentAdapter(AgentAdapter):
                 config.model_id, config.model_version, environment_specs=config.environment_specs
             )
 
-            async for event in actor_session.event_loop():
+            async for event in actor_session.all_events():
                 if event.observation and event.type == cogment.EventType.ACTIVE:
                     obs = tensor_from_cog_obs(event.observation.snapshot, dtype=self._dtype)
                     scores = model.actor_network(obs)
@@ -295,6 +295,8 @@ class SimpleA2CAgentAdapter(AgentAdapter):
                 log.info(
                     f"[{run_session.params_name}/{run_session.run_id}] epoch #{epoch_idx + 1}/{config.training.epoch_count} finished ({total_samples} samples seen)"
                 )
+
+            xp_tracker.terminate_success()
 
         return {
             "simple_a2c_training": (

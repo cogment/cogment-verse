@@ -20,7 +20,7 @@ from cogment_verse.run.run_session import RunSessionStatus
 from google.protobuf.json_format import MessageToDict
 from google.protobuf.timestamp_pb2 import Timestamp
 
-# pylint: disable=invalid-overridden-method, invalid-name
+# pylint: disable=invalid-overridden-method, invalid-name, no-member
 
 log = logging.getLogger(__name__)
 

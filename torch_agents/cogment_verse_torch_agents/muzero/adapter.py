@@ -204,7 +204,7 @@ class MuZeroAgentAdapter(AgentAdapter):
             worker.start()
 
             try:
-                async for event in actor_session.event_loop():
+                async for event in actor_session.all_events():
                     assert worker.is_alive()
                     if event.observation and event.type == cogment.EventType.ACTIVE:
                         await worker.put_event(event)

@@ -1,0 +1,19 @@
+# Install the base cogment verse package
+-e ../base_python
+
+atari-py==0.2.9
+gym[atari, box2d, classic_control]==0.23.1
+gym-tetris~=3.0.2
+-e git+https://github.com/kenjyoung/MinAtar.git@f1387b4123ea5a0203c81b2d3ad9572a8cc578cf#egg=minatar
+PettingZoo~=1.11.1
+procgen~=0.10.4
+python-dotenv~=0.19.1
+PyYAML~=5.4.1
+pybullet~=3.2.2
+opencv-python~=4.5.5
+
+# For testing
+pytest~=6.2.5
+pytest-cov~=3.0.0
+coverage~=6.0.2
+pytest-asyncio~=0.16.0

@@ -134,22 +134,23 @@ export const useActions: UseActions = <ObservationT, ActionT extends MessageBase
       }
     });
     setWatchTrials(() => async () => {
-      const watchTrialsGenerator = trialController.watchTrials();
-      try {
-        for await (const trialStateMsg of watchTrialsGenerator) {
-          const { trialId, state } = trialStateMsg;
-          console.log(`trial ${trialId} is in state ${state}`);
-
-          setTrialStates((trialStates) => {
-            const newTrials = { ...trialStates, [trialId]: state };
-            console.log(newTrials);
-            return newTrials;
-          });
+      const doWatchTrial = async () => {
+        const watchTrialsGenerator = trialController.watchTrials();
+        try {
+          for await (const trialStateMsg of watchTrialsGenerator) {
+            const { trialId, state } = trialStateMsg;
+            setTrialStates((trialStates) => {
+              const newTrials = { ...trialStates, [trialId]: state };
+              return newTrials;
+            });
+          }
+          console.error("watch trials returned early, restarting");
+        } catch (error) {
+          console.log(`error during watch trials, ${error} restarting`);
         }
-        console.error("watch trials returned early");
-      } catch (error) {
-        console.log(`failed to watch trials ${error}`);
+        await doWatchTrial();
       }
+      await doWatchTrial();
     });
   }, [cogSettings, actorName, actorClass, grpcURL]);
 
