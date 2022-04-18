@@ -1,3 +1,4 @@
+
 # Copyright 2021 AI Redefined Inc. <dev+cogment@ai-r.com>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,20 +13,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import logging
+from data_pb2 import RunConfig
 
-import cogment
 from cogment_verse import AgentAdapter
-from cogment_verse_torch_agents.atari_cnn import NatureAtariDQNModel
+
+from hive.agents.dqn import DQNAgent
+from hive.agents.rainbow import RainbowDQNAgent
+from cogment_verse_torch_agents.wrapper import format_legal_moves, cog_action_from_torch_action, torch_obs_from_cog_obs
 from cogment_verse_torch_agents.hive_adapter.sample_producer import sample_producer
 from cogment_verse_torch_agents.hive_adapter.training_run import create_training_run
-from cogment_verse_torch_agents.third_party.hive.ddpg import DDPGAgent
-from cogment_verse_torch_agents.third_party.hive.dqn import DQNAgent
-from cogment_verse_torch_agents.third_party.hive.rainbow import RainbowDQNAgent
-from cogment_verse_torch_agents.third_party.td3.td3 import TD3Agent
-from cogment_verse_torch_agents.wrapper import cog_action_from_torch_action, format_legal_moves, torch_obs_from_cog_obs
-from data_pb2 import RunConfig
+
+from hive.agents.qnets.base import FunctionApproximator
+from hive.agents.qnets import MLPNetwork
+
+import cogment
+
 from prometheus_client import Summary
+
+import logging
 
 COMPUTE_NEXT_ACTION_TIME = Summary(
     "actor_implementation_compute_next_action_seconds",
@@ -40,11 +45,8 @@ class HiveAgentAdapter(AgentAdapter):
     def __init__(self):
         super().__init__()
         self._agent_classes = {
-            "td3": TD3Agent,
-            "ddpg": DDPGAgent,
             "rainbowtorch": RainbowDQNAgent,
             "dqn": DQNAgent,
-            "atari_cnn": NatureAtariDQNModel,
         }
 
     def agent_class_from_impl_name(self, impl_name):
@@ -61,36 +63,32 @@ class HiveAgentAdapter(AgentAdapter):
         return impl_names[0]
 
     # pylint: disable=arguments-differ
-    def _create(self, model_id, impl_name, environment_specs, **kwargs):
+    def _create(self, model_id, impl_name, **kwargs):
+        return self.agent_class_from_impl_name(impl_name)(id=model_id, **kwargs)
+
+    def _load(self, model_id, version_number, version_user_data, model_data_f):
+        impl_name = version_user_data["impl_name"]
         model = self.agent_class_from_impl_name(impl_name)(
-            id=model_id, obs_dim=environment_specs.num_input, act_dim=environment_specs.num_action, **kwargs
-        )
-
-        model_user_data = {
-            "environment_implementation": environment_specs.implementation,
-            "num_input": environment_specs.num_input,
-            "num_action": environment_specs.num_action,
-        }
-
-        return model, model_user_data
-
-    def _load(self, model_id, version_number, model_user_data, version_user_data, model_data_f, **kwargs):
-        model = self.agent_class_from_impl_name(model_user_data["agent_implementation"])(
             id=model_id,
-            obs_dim=int(model_user_data["num_input"]),
-            act_dim=int(model_user_data["num_action"]),
+            obs_dim=int(version_user_data["obs_dim"]),
+            act_dim=int(version_user_data["act_dim"]),
+            qnet=FunctionApproximator(MLPNetwork)(hidden_units=256),
         )
 
         model.load(model_data_f)
-        model.set_version_info(version_number, None)
+        # model.set_version_info(version_number, None)
 
         return model
 
-    def _save(self, model, model_user_data, model_data_f, **kwargs):
+    def _save(self, model, model_data_f):
         model.save(model_data_f)
 
         # pylint: disable=protected-access
-        return {}
+        return {
+            "impl_name": self.impl_name_from_agent_class(model.__class__),
+            "obs_dim": model._obs_dim,
+            "act_dim": model._act_dim,
+        }
 
     def _create_actor_implementations(self):
         def create_actor_impl(impl_name):
@@ -99,7 +97,7 @@ class HiveAgentAdapter(AgentAdapter):
                 actor_session.start()
 
                 # Retrieve the latest version of the agent model (asynchronous so needs to be done after the start)
-                model, _, version_info = await self.retrieve_version(
+                model, version_info = await self.retrieve_version(
                     actor_session.config.model_id, actor_session.config.model_version
                 )
 
@@ -108,11 +106,12 @@ class HiveAgentAdapter(AgentAdapter):
                     f"[{impl_name} - {actor_session.name}] model {actor_session.config.model_id}@v{version_number} retrieved"
                 )
 
-                actor_index = actor_session.config.actor_index
+                actor_map = {actor.actor_name: idx for idx, actor in enumerate(actor_session.get_active_actors())}
+                actor_index = actor_map[actor_session.name]
 
                 total_reward = 0
 
-                async for event in actor_session.all_events():
+                async for event in actor_session.event_loop():
                     for reward in event.rewards:
                         total_reward += reward.value
 
@@ -123,14 +122,16 @@ class HiveAgentAdapter(AgentAdapter):
 
                             obs_input = obs["vectorized"]
                             legal_moves_input = format_legal_moves(
-                                obs["legal_moves_as_int"], actor_session.config.environment_specs.num_action
+                                obs["legal_moves_as_int"], actor_session.config.num_action
                             )
 
                             if obs["current_player"] != actor_index:
                                 # Use -1 to indicate no action, since not active player
                                 action = -1
                             else:
-                                action = model.act(obs_input, legal_moves_input)
+                                # action = model.act(obs_input, legal_moves_input)
+                                print("obs input shape = ", obs_input.shape)
+                                action = model.act(obs_input)
 
                             cog_action = cog_action_from_torch_action(action)
                             actor_session.do_action(cog_action)
