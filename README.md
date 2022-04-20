@@ -35,7 +35,8 @@ Cogment verse includes environments from:
 
 1. Clone this repository
 2. Install `parallel`, on ubuntu it is installable using `apt-get install parallel`, on mac it is available through `brew install parallel`
-3. `./run.sh build`
+3. Install `unrar`, on ubuntu it is installable using `apt-get install unrar`, on mac it is available through `brew install unrar`
+4. `./run.sh build`
 4. `./run.sh services_start`
 5. In a different terminal, start the trials with `./run.sh client start <run-name>`.
    Different run names can be found in `run_params.yaml`
