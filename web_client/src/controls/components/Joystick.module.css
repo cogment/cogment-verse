@@ -1,0 +1,52 @@
+:root {
+  --joystick-surface-size: 200px;
+  --joystick-stick-size: 50px;
+
+  --joystick-color: #5217b8;
+  --joystick-color-active: #ffb300;
+  --joystick-color-disabled: #bbb;
+}
+
+.joystick {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  overflow: hidden;
+
+  height: var(--joystick-surface-size);
+  width: var(--joystick-surface-size);
+  border-radius: calc(var(--joystick-stick-size) / 2);
+  border-color: var(--joystick-color);
+  border-width: 1px;
+  border-style: solid;
+
+  transition: all .25s;
+}
+
+.joystick > .stick {
+  height: var(--joystick-stick-size);
+  width: var(--joystick-stick-size);
+
+  border-radius: 50%;
+  background-color: var(--joystick-color);
+
+  transition: all .25s;
+}
+
+.joystick.active {
+  border-color: var(--joystick-color-active);
+}
+
+.joystick.active > .stick {
+  background-color: var(--joystick-color-active);
+}
+
+.joystick.disabled {
+  border-color: var(--joystick-color-disabled);
+}
+
+.joystick.disabled > .stick {
+  background-color: var(--joystick-color-disabled);
+}

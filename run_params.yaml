@@ -196,7 +196,7 @@ play:
     class_name: data_pb2.PlayRunConfig
     trial_count: 10
     environment:
-      specs: *tetris_specs
+      specs: *lander_continuous_specs
     actors:
     - name: player_1
       actor_class: teacher_agent

@@ -18,54 +18,95 @@ import { useDocumentKeypressListener, usePressedKeys } from "./hooks/usePressedK
 import { useRealTimeUpdate } from "./hooks/useRealTimeUpdate";
 import { TEACHER_NOOP_ACTION } from "./utils/constants";
 
+import { useJoystickState, Joystick } from "./components/Joystick";
+
 export const GymLunarLanderContinuousEnvironments = ["gym/LunarLanderContinuous-v2"];
-export const GymLunarLanderContinuousControls = ({ sendAction, fps = 30, role }) => {
+export const GymLunarLanderContinuousControls = ({ sendAction, fps = 20, role }) => {
+  const isTeacher = role === cogment_verse.HumanRole.TEACHER;
   const [paused, setPaused] = useState(false);
   const togglePause = useCallback(() => setPaused((paused) => !paused), [setPaused]);
   useDocumentKeypressListener("p", togglePause);
 
   const pressedKeys = usePressedKeys();
+  const { joystickPosition, isJoystickActive, setJoystickState } = useJoystickState();
 
-  const [lastAction, setLastAction] = useState(null);
+  const [isKeyboardActive, setKeyboardActive] = useState(false);
+
   const computeAndSendAction = useCallback(
     (dt) => {
-      if (pressedKeys.size === 0 && role === cogment_verse.HumanRole.TEACHER) {
-        sendAction(TEACHER_NOOP_ACTION);
+      if (isJoystickActive) {
+        sendAction(
+          new cogment_verse.AgentAction({
+            continuousAction: {
+              data: [joystickPosition[1], -joystickPosition[0]],
+            },
+          })
+        );
+        setKeyboardActive(false);
         return;
       }
 
-      const action_params = {
-        continuousAction: {
-          data: [0, 0],
-        },
-      };
-
+      let keyboardAction = null;
       const fast = pressedKeys.has("Shift");
-
       if (pressedKeys.has("ArrowLeft")) {
-        action_params.continuousAction.data[1] = fast ? -1.0 : -0.51;
+        keyboardAction = [0, 0];
+        keyboardAction[1] = fast ? 1.0 : 0.75;
       } else if (pressedKeys.has("ArrowRight")) {
-        action_params.continuousAction.data[1] = fast ? 1.0 : 0.51;
+        keyboardAction = [0, 0];
+        keyboardAction[1] = fast ? -1.0 : -0.75;
       }
 
       if (pressedKeys.has("ArrowDown")) {
-        action_params.continuousAction.data[0] = fast ? 1 : 0.01;
+        keyboardAction = keyboardAction || [0, 0];
+        keyboardAction[0] = fast ? 1 : 0.25;
       }
 
-      const action = new cogment_verse.AgentAction(action_params);
-      sendAction(action);
-      setLastAction(action);
+      if (keyboardAction != null) {
+        sendAction(
+          new cogment_verse.AgentAction({
+            continuousAction: {
+              data: keyboardAction,
+            },
+          })
+        );
+        setKeyboardActive(true);
+        setJoystickState([-keyboardAction[1], keyboardAction[0]], false);
+        return;
+      }
+
+      if (isTeacher) {
+        sendAction(TEACHER_NOOP_ACTION);
+      } else {
+        sendAction(
+          new cogment_verse.AgentAction({
+            continuousAction: {
+              data: [0, 0],
+            },
+          })
+        );
+      }
+      setKeyboardActive(false);
+      setJoystickState([0, 0], false);
     },
-    [pressedKeys, sendAction, setLastAction, role]
+    [isTeacher, pressedKeys, joystickPosition, isJoystickActive, setJoystickState, setKeyboardActive, sendAction]
   );
 
   const { currentFps } = useRealTimeUpdate(computeAndSendAction, fps, paused);
 
   return (
     <div>
-      <button onClick={togglePause}>{paused ? "Resume" : "Pause"}</button>
+      <div>
+        <Joystick
+          position={joystickPosition}
+          active={isJoystickActive}
+          onChange={setJoystickState}
+          disabled={paused || isKeyboardActive}
+        />
+      </div>
+      <div>
+        <button onClick={togglePause}>{paused ? "Resume" : "Pause"}</button>
+      </div>
       <div>{currentFps.toFixed(2)} fps</div>
-      <div>{lastAction != null ? JSON.stringify(lastAction.continuousAction.data) : "N/A"}</div>
       <ul>
         <li>Left Arrow: fire left engine</li>
         <li>Right Arrow: fire right engine</li>

@@ -12,16 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { useCallback, useEffect, useState } from "react";
-
-const useDocumentEventListener = (eventName, listener) => {
-  useEffect(() => {
-    document.addEventListener(eventName, listener);
-    return () => {
-      document.removeEventListener(eventName, listener);
-    };
-  }, [eventName, listener]);
-};
+import { useCallback, useState } from "react";
+import { useDocumentEventListener } from "../../hooks/useDocumentEventListener";
 
 export const useDocumentKeypressListener = (key, listener) => {
   const handleKeyUp = useCallback(

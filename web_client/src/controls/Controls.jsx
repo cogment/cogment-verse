@@ -34,7 +34,7 @@ const CONTROLS = [
   { environments: TetrisEnvironments, component: TetrisControls },
 ];
 
-export const Controls = ({ environment, role, sendAction, fps = 30 }) => {
+export const Controls = ({ environment, role, sendAction, fps }) => {
   const ControlsComponent = useMemo(() => {
     if (data_pb.cogment_verse.HumanRole.OBSERVER === role) {
       return ObserverControls;
