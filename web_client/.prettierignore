@@ -1,4 +1,5 @@
 build/
 src/CogSettings.*
+src/CogTypes.*
 src/data.*
 src/data_pb.*

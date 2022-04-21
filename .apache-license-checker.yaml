@@ -1,6 +1,7 @@
 ignore:
   - "?eggs"
   - "**/__pycache__"
+  - "**/.venv"
   - "**/cogment_*.yaml"
   - "**/*_pb2*.py"
   - "**/*.pb.go"
@@ -10,10 +11,11 @@ ignore:
   - "**/cog_settings.py"
   - "**/CogSettings.d.ts"
   - "**/CogSettings.js"
+  - "**/CogTypes.d.ts"
   - "**/third_party"
   - "*/cogment/api"
   - "**/htmlcov"
-  - "**/node_modules"
+  - "web_client/node_modules"
   - "web_client/build"
   - "**/pybullet_driving_env/*"
 license:
