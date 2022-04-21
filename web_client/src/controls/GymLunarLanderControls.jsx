@@ -14,17 +14,20 @@
 
 import { useCallback, useState } from "react";
 import { cogment_verse } from "../data_pb";
-import { useDocumentKeypressListener, usePressedKeys } from "./hooks/usePressedKeys";
-import { useRealTimeUpdate } from "./hooks/useRealTimeUpdate";
-import { TEACHER_NOOP_ACTION } from "./utils/constants";
-import { DPad, usePressedButtons, DPAD_BUTTONS } from "./components/DPad";
+import { useDocumentKeypressListener, usePressedKeys } from "../hooks/usePressedKeys";
+import { useRealTimeUpdate } from "../hooks/useRealTimeUpdate";
+import { TEACHER_NOOP_ACTION } from "../utils/constants";
+import { DPad, usePressedButtons, DPAD_BUTTONS } from "../components/DPad";
+import { Button } from "../components/Button";
+import { FpsCounter } from "../components/FpsCounter";
+import { KeyboardControlList } from "../components/KeyboardControlList";
 
 const DEACTIVATED_BUTTONS_TEACHER = [];
 const DEACTIVATED_BUTTONS_PLAYER = [DPAD_BUTTONS.UP];
 
 export const GymLunarLanderEnvironments = ["gym/LunarLander-v2"];
 
-export const GymLunarLanderControls = ({ sendAction, fps = 20, role }) => {
+export const GymLunarLanderControls = ({ sendAction, fps = 20, role, ...props }) => {
   const isTeacher = role === cogment_verse.HumanRole.TEACHER;
   const [paused, setPaused] = useState(false);
   const togglePause = useCallback(() => setPaused((paused) => !paused), [setPaused]);
@@ -87,8 +90,8 @@ export const GymLunarLanderControls = ({ sendAction, fps = 20, role }) => {
   const { currentFps } = useRealTimeUpdate(computeAndSendAction, fps, paused);
 
   return (
-    <div>
-      <div>
+    <div {...props}>
+      <div className="flex flex-row p-5 justify-center">
         <DPad
           pressedButtons={pressedButtons}
           onPressedButtonsChange={setPressedButtons}
@@ -96,17 +99,20 @@ export const GymLunarLanderControls = ({ sendAction, fps = 20, role }) => {
           disabled={paused || (isTeacher ? DEACTIVATED_BUTTONS_TEACHER : DEACTIVATED_BUTTONS_PLAYER)}
         />
       </div>
-      <div>
-        <button onClick={togglePause}>{paused ? "Resume" : "Pause"}</button>
+      <div className="flex flex-row gap-1">
+        <Button className="flex-1" onClick={togglePause}>
+          {paused ? "Resume" : "Pause"}
+        </Button>
+        <FpsCounter className="flex-none w-fit" value={currentFps} />
       </div>
-      <div>{currentFps.toFixed(2)} fps</div>
-      <ul>
-        <li>Left Arrow: fire left engine</li>
-        <li>Right Arrow: fire right engine</li>
-        <li>Down Arrow: fire main engine</li>
-        {isTeacher ? <li>Up Arrow: turn off engine</li> : null}
-        <li>Pause/Unpause: p</li>
-      </ul>
+      <KeyboardControlList
+        items={[
+          ["Left/Right Arrows", "Fire left/right engine"],
+          ["Down Arrow", "Fire the main engine"],
+          isTeacher ? ["Up Arrow", "turn off engine"] : null,
+          ["p", "Pause/Unpause"],
+        ]}
+      />
     </div>
   );
 };

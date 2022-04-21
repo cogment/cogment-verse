@@ -13,7 +13,7 @@
 // limitations under the License.
 
 import { useCallback, useState } from "react";
-import { useDocumentEventListener } from "../../hooks/useDocumentEventListener";
+import { useDocumentEventListener } from "./useDocumentEventListener";
 
 export const useDocumentKeypressListener = (key, listener) => {
   const handleKeyUp = useCallback(
@@ -33,6 +33,8 @@ export const usePressedKeys = () => {
   const [pressedKeys, setPressedKeys] = useState(new Set());
   const handleKeyDown = useCallback(
     (event) => {
+      event.stopPropagation();
+      event.preventDefault();
       setPressedKeys((pressedKeys) => {
         pressedKeys.add(event.key);
         return pressedKeys;
@@ -43,6 +45,8 @@ export const usePressedKeys = () => {
   useDocumentEventListener("keydown", handleKeyDown);
   const handleKeyUp = useCallback(
     (event) => {
+      event.stopPropagation();
+      event.preventDefault();
       setPressedKeys((pressedKeys) => {
         pressedKeys.delete(event.key);
         return pressedKeys;

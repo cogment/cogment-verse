@@ -13,11 +13,14 @@
 // limitations under the License.
 
 import { useCallback, useState } from "react";
-import { useDocumentKeypressListener } from "./hooks/usePressedKeys";
-import { useRealTimeUpdate } from "./hooks/useRealTimeUpdate";
-import { TEACHER_NOOP_ACTION } from "./utils/constants";
+import { useDocumentKeypressListener } from "../hooks/usePressedKeys";
+import { useRealTimeUpdate } from "../hooks/useRealTimeUpdate";
+import { TEACHER_NOOP_ACTION } from "../utils/constants";
+import { Button } from "../components/Button";
+import { FpsCounter } from "../components/FpsCounter";
+import { KeyboardControlList } from "../components/KeyboardControlList";
 
-export const ObserverControls = ({ sendAction, fps = 30 }) => {
+export const ObserverControls = ({ sendAction, fps = 30, ...props }) => {
   const [paused, setPaused] = useState(false);
   const togglePause = useCallback(() => setPaused((paused) => !paused), [setPaused]);
   useDocumentKeypressListener("p", togglePause);
@@ -32,12 +35,14 @@ export const ObserverControls = ({ sendAction, fps = 30 }) => {
   const { currentFps } = useRealTimeUpdate(computeAndSendAction, fps, paused);
 
   return (
-    <div>
-      <button onClick={togglePause}>{paused ? "Resume" : "Pause"}</button>
-      <div>{currentFps.toFixed(2)} fps</div>
-      <ul>
-        <li>Pause/Unpause: p</li>
-      </ul>
+    <div {...props}>
+      <div className="flex flex-row gap-1">
+        <Button className="flex-1" onClick={togglePause}>
+          {paused ? "Resume" : "Pause"}
+        </Button>
+        <FpsCounter className="flex-none w-fit" value={currentFps} />
+      </div>
+      <KeyboardControlList items={[["p", "Pause/Unpause"]]} />
     </div>
   );
 };

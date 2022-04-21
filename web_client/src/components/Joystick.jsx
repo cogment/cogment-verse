@@ -13,7 +13,7 @@
 // limitations under the License.
 
 import { useCallback, useEffect, useState } from "react";
-import { useDocumentEventListener } from "../../hooks/useDocumentEventListener";
+import { useDocumentEventListener } from "../hooks/useDocumentEventListener";
 import styles from "./Joystick.module.css";
 import classNames from "classnames";
 

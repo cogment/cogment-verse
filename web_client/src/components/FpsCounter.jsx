@@ -12,6 +12,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { cogment_verse } from "../../data_pb";
+import classNames from "classnames";
 
-export const TEACHER_NOOP_ACTION = new cogment_verse.AgentAction({ discreteAction: -1 });
+export const FpsCounter = ({ value, className, ...props }) => {
+  return (
+    <div
+      className={classNames(
+        className,
+        "text-sm",
+        "py-2",
+        "px-5",
+        "bg-slate-600",
+        "text-white",
+        "text-center",
+        "rounded-full"
+      )}
+      {...props}
+    >
+      {value.toFixed(0).padStart(2, "0")} fps
+    </div>
+  );
+};

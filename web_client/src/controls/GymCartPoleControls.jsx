@@ -14,12 +14,15 @@
 
 import { useCallback, useState } from "react";
 import { cogment_verse } from "../data_pb";
-import { useDocumentKeypressListener, usePressedKeys } from "./hooks/usePressedKeys";
-import { useRealTimeUpdate } from "./hooks/useRealTimeUpdate";
-import { TEACHER_NOOP_ACTION } from "./utils/constants";
+import { useDocumentKeypressListener, usePressedKeys } from "../hooks/usePressedKeys";
+import { useRealTimeUpdate } from "../hooks/useRealTimeUpdate";
+import { TEACHER_NOOP_ACTION } from "../utils/constants";
+import { Button } from "../components/Button";
+import { FpsCounter } from "../components/FpsCounter";
+import { KeyboardControlList } from "../components/KeyboardControlList";
 
 export const GymCartPoleEnvironments = ["gym/CartPole-v0"];
-export const GymCartPoleControls = ({ sendAction, fps = 30, role }) => {
+export const GymCartPoleControls = ({ sendAction, fps = 30, role, ...props }) => {
   const [paused, setPaused] = useState(true);
   const togglePause = useCallback(() => setPaused((paused) => !paused), [setPaused]);
   useDocumentKeypressListener("p", togglePause);
@@ -51,14 +54,19 @@ export const GymCartPoleControls = ({ sendAction, fps = 30, role }) => {
   const { currentFps } = useRealTimeUpdate(computeAndSendAction, fps, paused);
 
   return (
-    <div>
-      <button onClick={togglePause}>{paused ? "Resume" : "Pause"}</button>
-      <div>{currentFps.toFixed(2)} fps</div>
-      <ul>
-        <li>Left Arrow: push cart to the left</li>
-        <li>Right Arrow: push cart to the right</li>
-        <li>Pause/Unpause: p</li>
-      </ul>
+    <div {...props}>
+      <div className="flex flex-row gap-1">
+        <Button className="flex-1" onClick={togglePause}>
+          {paused ? "Resume" : "Pause"}
+        </Button>
+        <FpsCounter className="flex-none w-fit" value={currentFps} />
+      </div>
+      <KeyboardControlList
+        items={[
+          ["Left/Right Arrows", "push cart to the left/right"],
+          ["p", "Pause/Unpause"],
+        ]}
+      />
     </div>
   );
 };

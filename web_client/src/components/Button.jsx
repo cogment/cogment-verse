@@ -12,12 +12,26 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import styles from "./Layout.module.css";
+import classNames from "classnames";
 
-export const Layout = ({ children, ...props }) => {
+export const Button = ({ className, ...props }) => {
   return (
-    <div className={styles.container} {...props}>
-      <div className={styles.containee}>{children}</div>
-    </div>
+    <button
+      className={classNames(
+        className,
+        "text-sm",
+        "font-semibold",
+        "block",
+        "w-full",
+        "py-2",
+        "px-5",
+        "bg-indigo-600",
+        "hover:bg-indigo-900",
+        "text-white",
+        "text-center",
+        "rounded"
+      )}
+      {...props}
+    />
   );
 };

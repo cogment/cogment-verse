@@ -14,6 +14,7 @@
 
 import { useEffect, useRef } from "react";
 import styles from "./RenderedScreen.module.css";
+import classNames from "classnames";
 
 function bufferToBase64(buf) {
   const binstr = Array.prototype.map
@@ -26,7 +27,7 @@ function bufferToBase64(buf) {
 
 const DEFAULT_SCREEN_SRC = `${process.env.PUBLIC_URL}/assets/cogment-splash.png`;
 
-export const RenderedScreen = ({ observation, overlay }) => {
+export const RenderedScreen = ({ observation, overlay, className, ...props }) => {
   const canvasRef = useRef();
 
   useEffect(() => {
@@ -43,17 +44,14 @@ export const RenderedScreen = ({ observation, overlay }) => {
   }, [canvasRef, observation]);
 
   return (
-    <div>
-      <div className={styles.container}>
-        <img
-          className={styles.canvas}
-          style={{ filter: overlay != null ? "blur(3px)" : "none" }}
-          ref={canvasRef}
-          src={DEFAULT_SCREEN_SRC}
-          alt="current observation rendered pixels"
-        />
-        {overlay ? <div className={styles.overlay}>{overlay}</div> : null}
-      </div>
+    <div className={classNames(styles.container, className)} {...props}>
+      <img
+        className={classNames(styles.canvas, { blur: overlay != null })}
+        ref={canvasRef}
+        src={DEFAULT_SCREEN_SRC}
+        alt="current observation rendered pixels"
+      />
+      {overlay ? <div className={styles.overlay}>{overlay}</div> : null}
     </div>
   );
 };

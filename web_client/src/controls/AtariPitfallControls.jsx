@@ -14,10 +14,13 @@
 
 import { useCallback, useState } from "react";
 import { cogment_verse } from "../data_pb";
-import { useDocumentKeypressListener, usePressedKeys } from "./hooks/usePressedKeys";
-import { useRealTimeUpdate } from "./hooks/useRealTimeUpdate";
-import { createLookup } from "./utils/controlLookup";
-import { TEACHER_NOOP_ACTION } from "./utils/constants";
+import { useDocumentKeypressListener, usePressedKeys } from "../hooks/usePressedKeys";
+import { useRealTimeUpdate } from "../hooks/useRealTimeUpdate";
+import { createLookup } from "../utils/controlLookup";
+import { TEACHER_NOOP_ACTION } from "../utils/constants";
+import { Button } from "../components/Button";
+import { FpsCounter } from "../components/FpsCounter";
+import { KeyboardControlList } from "../components/KeyboardControlList";
 
 // cf. https://www.gymlibrary.ml/environments/atari/#action-space
 const ATARI_LOOKUP = createLookup();
@@ -41,14 +44,13 @@ ATARI_LOOKUP.setAction(["DOWN", "RIGHT", "FIRE"], new cogment_verse.AgentAction(
 ATARI_LOOKUP.setAction(["DOWN", "LEFT", "FIRE"], new cogment_verse.AgentAction({ discreteAction: 17 }));
 
 export const AtariPitfallEnvironments = ["atari/Pitfall"];
-export const AtariPitfallControls = ({ sendAction, fps = 30, role }) => {
+export const AtariPitfallControls = ({ sendAction, fps = 30, role, ...props }) => {
   const [paused, setPaused] = useState(false);
   const togglePause = useCallback(() => setPaused((paused) => !paused), [setPaused]);
   useDocumentKeypressListener("p", togglePause);
 
   const pressedKeys = usePressedKeys();
 
-  const [lastControls, setLastControls] = useState([]);
   const computeAndSendAction = useCallback(
     (dt) => {
       if (pressedKeys.size === 0 && role === cogment_verse.HumanRole.TEACHER) {
@@ -73,7 +75,6 @@ export const AtariPitfallControls = ({ sendAction, fps = 30, role }) => {
       }
       const action = ATARI_LOOKUP.getAction(controls);
       sendAction(action);
-      setLastControls(controls);
     },
     [pressedKeys, sendAction, role]
   );
@@ -81,15 +82,20 @@ export const AtariPitfallControls = ({ sendAction, fps = 30, role }) => {
   const { currentFps } = useRealTimeUpdate(computeAndSendAction, fps, paused);
 
   return (
-    <div>
-      <button onClick={togglePause}>{paused ? "Resume" : "Pause"}</button>
-      <div>{currentFps.toFixed(2)} fps</div>
-      <div>{ATARI_LOOKUP.getCombo(lastControls)}</div>
-      <ul>
-        <li>Left/Right/Down/Up Arrows: Move</li>
-        <li>Space: "Fire"</li>
-        <li>Pause/Unpause: p</li>
-      </ul>
+    <div {...props}>
+      <div className="flex flex-row gap-1">
+        <Button className="flex-1" onClick={togglePause}>
+          {paused ? "Resume" : "Pause"}
+        </Button>
+        <FpsCounter className="flex-none w-fit" value={currentFps} />
+      </div>
+      <KeyboardControlList
+        items={[
+          ["Left/Right/Down/Up Arrows", "Move the character"],
+          ["Space", "Jump"],
+          ["p", "Pause/Unpause"],
+        ]}
+      />
     </div>
   );
 };

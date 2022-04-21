@@ -13,12 +13,11 @@
 // limitations under the License.
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import "./App.css";
 import { cogSettings } from "./CogSettings";
 import { Countdown } from "./components/Countdown";
 import { useActions } from "./hooks/useActions";
-import { Layout } from "./components/Layout";
 import { RenderedScreen } from "./components/RenderedScreen";
+import { Button } from "./components/Button";
 import { Controls } from "./controls/Controls";
 
 function App() {
@@ -83,24 +82,29 @@ function App() {
   }, [joinAnyTrial]);
 
   return (
-    <Layout>
-      <h1>{environment}</h1>
-      <div>
-        {runId}/{trialId}
+    <div className="max-w-screen-md mx-auto min-h-screen">
+      <div className="p-2">
+        <h1 className="text-xl font-semibold">{environment}</h1>
+        <div className="text-base">
+          {runId}/{trialId}
+        </div>
       </div>
+
       <RenderedScreen
         observation={event.observation}
         overlay={
           countdown ? (
             <Countdown onAfterCountdown={joinTrial} />
           ) : trialId == null ? (
-            <button onClick={joinTrial}>Join Trial</button>
+            <Button onClick={joinTrial}>Join Trial</Button>
           ) : null
         }
       />
-      <div>Status: {trialStatus}</div>
-      {trialJoined ? <Controls role={role} environment={environment} sendAction={sendAction} /> : null}
-    </Layout>
+      <div className="p-2 flex flex-col gap-2">
+        {trialJoined ? <Controls role={role} environment={environment} sendAction={sendAction} /> : null}
+        <div className="font-mono text-right text-xs lowercase">Status: {trialStatus}</div>
+      </div>
+    </div>
   );
 }
 

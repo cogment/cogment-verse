@@ -14,10 +14,13 @@
 
 import { useCallback, useState } from "react";
 import { cogment_verse } from "../data_pb";
-import { useDocumentKeypressListener, usePressedKeys } from "./hooks/usePressedKeys";
-import { useRealTimeUpdate } from "./hooks/useRealTimeUpdate";
-import { createLookup } from "./utils/controlLookup";
-import { TEACHER_NOOP_ACTION } from "./utils/constants";
+import { useDocumentKeypressListener, usePressedKeys } from "../hooks/usePressedKeys";
+import { useRealTimeUpdate } from "../hooks/useRealTimeUpdate";
+import { createLookup } from "../utils/controlLookup";
+import { TEACHER_NOOP_ACTION } from "../utils/constants";
+import { Button } from "../components/Button";
+import { FpsCounter } from "../components/FpsCounter";
+import { KeyboardControlList } from "../components/KeyboardControlList";
 
 const TETRIS_LOOKUP = createLookup();
 TETRIS_LOOKUP.setAction([], new cogment_verse.AgentAction({ discreteAction: 0 }));
@@ -34,7 +37,7 @@ TETRIS_LOOKUP.setAction(["DOWN", "TURN_CW"], new cogment_verse.AgentAction({ dis
 TETRIS_LOOKUP.setAction(["DOWN", "TURN_CCW"], new cogment_verse.AgentAction({ discreteAction: 11 }));
 
 export const TetrisEnvironments = ["tetris/TetrisA-v0"];
-export const TetrisControls = ({ sendAction, fps = 30, role }) => {
+export const TetrisControls = ({ sendAction, fps = 30, role, ...props }) => {
   const [paused, setPaused] = useState(false);
   const togglePause = useCallback(() => setPaused((paused) => !paused), [setPaused]);
   useDocumentKeypressListener("p", togglePause);
@@ -70,15 +73,21 @@ export const TetrisControls = ({ sendAction, fps = 30, role }) => {
   const { currentFps } = useRealTimeUpdate(computeAndSendAction, fps, paused);
 
   return (
-    <div>
-      <button onClick={togglePause}>{paused ? "Resume" : "Pause"}</button>
-      <div>{currentFps.toFixed(2)} fps</div>
-      <ul>
-        <li>Left/Right Arrows: Move piece left/right</li>
-        <li>Down Arrow: Send piece down</li>
-        <li>w/x: Turn piece couterclockwise/clockwise</li>
-        <li>Pause/Unpause: p</li>
-      </ul>
+    <div {...props}>
+      <div className="flex flex-row gap-1">
+        <Button className="flex-1" onClick={togglePause}>
+          {paused ? "Resume" : "Pause"}
+        </Button>
+        <FpsCounter className="flex-none w-fit" value={currentFps} />
+      </div>
+      <KeyboardControlList
+        items={[
+          ["Left/Right Arrows", "Move piece left/right"],
+          ["Down Arrow", "Send piece down"],
+          ["w/x", "Turn piece couterclockwise/clockwise"],
+          ["p", "Pause/Unpause"],
+        ]}
+      />
     </div>
   );
 };
