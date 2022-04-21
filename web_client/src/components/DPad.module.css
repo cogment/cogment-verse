@@ -29,10 +29,13 @@
 
 /* Buttons background */
 
-.up, .right, .down, .left {
+.up,
+.right,
+.down,
+.left {
   display: block;
   position: absolute;
-  -webkit-tap-highlight-color:  rgba(255, 255, 255, 0);
+  -webkit-tap-highlight-color: rgba(255, 255, 255, 0);
 
   line-height: 40%;
   text-align: center;
@@ -44,12 +47,14 @@
   color: transparent;
 }
 
-.up, .down {
+.up,
+.down {
   width: 33.3%;
   height: 43%;
 }
 
-.left, .right {
+.left,
+.right {
   width: 43%;
   height: 33%;
 }
@@ -58,21 +63,24 @@
   top: 0;
   left: 50%;
   transform: translate(-50%, 0);
-  border-radius: var(--dpad-button-outer-radius) var(--dpad-button-outer-radius) var(--dpad-button-inner-radius) var(--dpad-button-inner-radius);
+  border-radius: var(--dpad-button-outer-radius) var(--dpad-button-outer-radius) var(--dpad-button-inner-radius)
+    var(--dpad-button-inner-radius);
 }
 
 .down {
   bottom: 0;
   left: 50%;
   transform: translate(-50%, 0);
-  border-radius: var(--dpad-button-inner-radius) var(--dpad-button-inner-radius) var(--dpad-button-outer-radius) var(--dpad-button-outer-radius);
+  border-radius: var(--dpad-button-inner-radius) var(--dpad-button-inner-radius) var(--dpad-button-outer-radius)
+    var(--dpad-button-outer-radius);
 }
 
 .left {
   top: 50%;
   left: 0;
   transform: translate(0, -50%);
-  border-radius: var(--dpad-button-outer-radius) var(--dpad-button-inner-radius) var(--dpad-button-inner-radius) var(--dpad-button-outer-radius);
+  border-radius: var(--dpad-button-outer-radius) var(--dpad-button-inner-radius) var(--dpad-button-inner-radius)
+    var(--dpad-button-outer-radius);
 }
 
 .right {
@@ -83,14 +91,17 @@
 }
 
 /* Buttons arrows */
-.up:before, .right:before, .down:before, .left:before {
-  content: '';
+.up:before,
+.right:before,
+.down:before,
+.left:before {
+  content: "";
   position: absolute;
   width: 0;
   height: 0;
   border-radius: 5px;
   border-style: solid;
-  transition: all .25s;
+  transition: all 0.25s;
 }
 
 .up:before {
@@ -105,7 +116,7 @@
   bottom: var(--dpad-arrow-position);
   left: 50%;
   transform: translate(-50%, 50%);
-  border-width: var(--dpad-arrow-base) var(--dpad-arrow-height)  0px var(--dpad-arrow-height);
+  border-width: var(--dpad-arrow-base) var(--dpad-arrow-height) 0px var(--dpad-arrow-height);
   border-color: var(--dpad-fg-color) transparent transparent transparent;
 }
 
@@ -127,7 +138,10 @@
 
 /* Hover */
 
-.up:hover, .right:hover, .down:hover, .left:hover {
+.up:hover,
+.right:hover,
+.down:hover,
+.left:hover {
   background: var(--dpad-bg-color-hover);
   border-color: var(--dpad-fg-color-hover);
 }
@@ -154,31 +168,44 @@
 
 /* Active */
 
-.up:active, .right:active, .down:active, .left:active,
-.up.active, .right.active, .down.active, .left.active {
+.up:active,
+.right:active,
+.down:active,
+.left:active,
+.up.active,
+.right.active,
+.down.active,
+.left.active {
   background: var(--dpad-bg-color-active);
   border-color: var(--dpad-fg-color-active);
 }
 
-.up:active:before, .up.active:before {
+.up:active:before,
+.up.active:before {
   border-bottom-color: var(--dpad-fg-color-active);
 }
 
-.down:active:before, .down.active:before {
+.down:active:before,
+.down.active:before {
   border-top-color: var(--dpad-fg-color-active);
 }
 
-.left:active:before, .left.active:before {
+.left:active:before,
+.left.active:before {
   border-right-color: var(--dpad-fg-color-active);
 }
 
-.right:active:before, .right.active:before {
+.right:active:before,
+.right.active:before {
   border-left-color: var(--dpad-fg-color-active);
 }
 
 /* Disabled */
 
-.up.disabled, .right.disabled, .down.disabled, .left.disabled {
+.up.disabled,
+.right.disabled,
+.down.disabled,
+.left.disabled {
   background: var(--dpad-bg-color-disabled);
   border-color: var(--dpad-fg-color-disabled);
 }

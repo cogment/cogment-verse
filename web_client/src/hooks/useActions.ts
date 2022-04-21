@@ -149,7 +149,7 @@ export const useActions: UseActions = <ObservationT, ActionT extends MessageBase
           console.log(`error during watch trials, ${error} restarting`);
         }
         await doWatchTrial();
-      }
+      };
       await doWatchTrial();
     });
   }, [cogSettings, actorName, actorClass, grpcURL]);

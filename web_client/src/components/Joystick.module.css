@@ -22,7 +22,7 @@
   border-width: 1px;
   border-style: solid;
 
-  transition: all .25s;
+  transition: all 0.25s;
 }
 
 .joystick > .stick {
@@ -32,7 +32,7 @@
   border-radius: 50%;
   background-color: var(--joystick-color);
 
-  transition: all .25s;
+  transition: all 0.25s;
 }
 
 .joystick.active {

@@ -106,21 +106,21 @@ class BaseAgentAdapter(AgentAdapter):
                                 run_id=run_session.run_id,
                                 environment_specs=config.environment.specs,
                                 role=HumanRole.PLAYER,
-                            )
+                            ),
                         )
                     )
-                    has_human_actor=True
+                    has_human_actor = True
                 else:
                     actors_params.append(
                         ActorParams(
                             name=actor_params.name,
                             actor_class=actor_params.actor_class,
                             implementation=actor_params.implementation,
-                            agent_config= extend_actor_config(
+                            agent_config=extend_actor_config(
                                 actor_config_template=actor_params.agent_config,
                                 run_id=run_session.run_id,
                                 environment_specs=config.environment.specs,
-                            )
+                            ),
                         )
                     )
 

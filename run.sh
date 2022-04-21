@@ -201,6 +201,9 @@ function lint() {
   black --check --diff .
   find . -name '*.py' -not -path '*/.venv/*' -print0 | xargs -0 pylint -j 4
   deactivate
+  pushd web_client
+  npm run lint
+  popd
 }
 
 function lint_fix() {
@@ -209,6 +212,9 @@ function lint_fix() {
   source "${ROOT_DIR}/.venv/bin/activate"
   black .
   deactivate
+  pushd web_client
+  npm run lint_fix
+  popd
 }
 
 function mlflow_build() {
