@@ -208,7 +208,7 @@ class RainbowDQNAgent(Agent):
         observation = torch.tensor(observation).to(self._device).float()
         formatted_legal_moves = torch.tensor(formatted_legal_moves).to(self._device).float()
 
-        observation = torch.tensor(np.expand_dims(observation, axis=0)).to(self._device).float()
+        observation = torch.tensor(np.expand_dims(observation.cpu(), axis=0)).to(self._device).float()
 
         # if not self._params["distributional"]:
         epsilon = self.get_epsilon_schedule(update_schedule)
