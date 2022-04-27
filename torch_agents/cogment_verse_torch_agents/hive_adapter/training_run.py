@@ -27,7 +27,15 @@ from cogment_verse_torch_agents.third_party.hive.utils.schedule import (
     PeriodicSchedule,
     SwitchSchedule,
 )
-from data_pb2 import ActorParams, AgentConfig, EnvironmentConfig, EnvironmentParams, HumanConfig, HumanRole, TrialConfig
+from data_pb2 import (
+    ActorParams,
+    AgentConfig,
+    EnvironmentConfig,
+    EnvironmentParams,
+    HumanConfig,
+    HumanRole,
+    TrialConfig,
+)
 from google.protobuf.json_format import MessageToDict
 from prometheus_client import Gauge, Summary
 
@@ -35,7 +43,8 @@ from prometheus_client import Gauge, Summary
 
 TRAINING_ADD_SAMPLE_TIME = Summary("training_add_sample_seconds", "Time spent adding samples in the replay buffer")
 TRAINING_SAMPLE_BATCH_TIME = Summary(
-    "training_sample_batch_seconds", "Time spent sampling the replay buffer to create a batch"
+    "training_sample_batch_seconds",
+    "Time spent sampling the replay buffer to create a batch",
 )
 TRAINING_LEARN_TIME = Summary("training_learn_seconds", "Time spent learning")
 TRAINING_REPLAY_BUFFER_SIZE = Gauge("replay_buffer_size", "Size of the replay buffer")
@@ -91,7 +100,11 @@ def create_training_run(agent_adapter):
             )
 
             model_publication_schedule = PeriodicSchedule(False, True, config.model_publication_interval)
-            model_archive_schedule = PeriodicSchedule(False, True, config.model_archive_interval)
+            model_archive_schedule = PeriodicSchedule(
+                False,
+                True,
+                config.model_archive_interval,
+            )
 
             training_step = 0
             samples_seen = 0
@@ -147,7 +160,9 @@ def create_training_run(agent_adapter):
                     actor_class=HUMAN_ACTOR_CLASS,
                     implementation=HUMAN_ACTOR_IMPL,
                     human_config=HumanConfig(
-                        run_id=run_id, environment_specs=config.environment.specs, role=HumanRole.TEACHER
+                        run_id=run_id,
+                        environment_specs=config.environment.specs,
+                        role=HumanRole.TEACHER,
                     ),
                 )
                 demonstration_trial_configs = [
@@ -185,7 +200,12 @@ def create_training_run(agent_adapter):
                 return num_samples_seen
 
             async def archive_model(
-                model_archive_schedule, model_publication_schedule, step_timestamp, step_idx, training_batch, info
+                model_archive_schedule,
+                model_publication_schedule,
+                step_timestamp,
+                step_idx,
+                training_batch,
+                info,
             ):
 
                 archive = model_archive_schedule.update()
@@ -292,7 +312,10 @@ def create_training_run(agent_adapter):
                 )
 
             if demonstration_trial_configs:
-                await run_trials(demonstration_trial_configs, max_parallel_trials=config.max_parallel_trials)
+                await run_trials(
+                    demonstration_trial_configs,
+                    max_parallel_trials=config.max_parallel_trials,
+                )
             if self_play_trial_configs:
                 await run_trials(self_play_trial_configs, max_parallel_trials=config.max_parallel_trials)
 

@@ -80,7 +80,15 @@ def test_replay_buffer(act_dim, seed):
         rewards = rng.random(1, dtype=np.float32)
         done = rng.integers(0, high=2)
 
-        data = (obs.astype(np.float32), np.array(legal_moves), action, rewards, next_obs, np.array(legal_moves), done)
+        data = (
+            obs.astype(np.float32),
+            np.array(legal_moves),
+            action,
+            rewards,
+            next_obs,
+            np.array(legal_moves),
+            done,
+        )
 
         dqn.consume_training_sample(data)
 

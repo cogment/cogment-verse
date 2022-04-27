@@ -230,7 +230,12 @@ def test_workers(lander_specs):
     config.mcts.num_samples = 2
     agent_adapter = MuZeroAgentAdapter()
     agent, _agent_user_data = agent_adapter._create(
-        "dummy_id", obs_dim=8, act_dim=4, device="cpu", run_config=config, environment_specs=lander_specs
+        "dummy_id",
+        obs_dim=8,
+        act_dim=4,
+        device="cpu",
+        run_config=config,
+        environment_specs=lander_specs,
     )
 
     train_worker, replay_buffer, reanalyze_workers = make_workers(manager, agent, "muzero_test_model", config)

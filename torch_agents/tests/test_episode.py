@@ -66,7 +66,14 @@ def test_add(env, policy, zero_probs, distribution):
     episode = Episode(state, 0.99, zero_reward_probs=zero_probs, zero_value_probs=zero_probs)
     next_state, reward, done, _info = env.step(0)
     episode.add_step(
-        next_state, 0, distribution.compute_target(torch.tensor(reward)), reward, done, policy, zero_probs, 0.0
+        next_state,
+        0,
+        distribution.compute_target(torch.tensor(reward)),
+        reward,
+        done,
+        policy,
+        zero_probs,
+        0.0,
     )
 
 
@@ -76,7 +83,14 @@ def test_sample(env, policy, zero_probs, distribution):
     for _ in range(1000):
         next_state, reward, done, _info = env.step(0)
         episode.add_step(
-            next_state, 0, distribution.compute_target(torch.tensor(reward)), reward, done, policy, zero_probs, 0.0
+            next_state,
+            0,
+            distribution.compute_target(torch.tensor(reward)),
+            reward,
+            done,
+            policy,
+            zero_probs,
+            0.0,
         )
         if done:
             episode.bootstrap_value(10, 0.99)

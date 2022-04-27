@@ -30,7 +30,16 @@ def lin_bn_act(num_in, num_out, bn=True, act=None):
     return torch.nn.Sequential(*layers)
 
 
-def mlp(num_in, num_hidden, num_out, hidden_layers=1, bn=True, act=torch.nn.ReLU(), final_bn=False, final_act=None):
+def mlp(
+    num_in,
+    num_hidden,
+    num_out,
+    hidden_layers=1,
+    bn=True,
+    act=torch.nn.ReLU(),
+    final_bn=False,
+    final_act=None,
+):
     act = torch.nn.ReLU()
     stem = lin_bn_act(num_in, num_hidden, bn, act)
     hiddens = [lin_bn_act(num_hidden, num_hidden, bn, act) for _ in range(hidden_layers - 1)]
@@ -78,11 +87,11 @@ def reward_transform_inverse(transformed_reward, eps=0.001):
     s = torch.sign(transformed_reward)
     y = torch.abs(transformed_reward)
 
-    a = eps ** 2
+    a = eps**2
     b = -2 * eps * (y + 1) - 1
-    c = y ** 2 + 2 * y
+    c = y**2 + 2 * y
 
-    d = torch.sqrt(b ** 2 - 4 * a * c)
+    d = torch.sqrt(b**2 - 4 * a * c)
     e = 2 * a
 
     x = torch.abs((-b - d) / e)
@@ -225,7 +234,15 @@ class DynamicsNetwork(torch.nn.Module):
 
 class MuZero(torch.nn.Module):
     def __init__(
-        self, representation, dynamics, policy, value, projector, predictor, reward_distribution, value_distribution
+        self,
+        representation,
+        dynamics,
+        policy,
+        value,
+        projector,
+        predictor,
+        reward_distribution,
+        value_distribution,
     ):
         super().__init__()
         self.representation = representation

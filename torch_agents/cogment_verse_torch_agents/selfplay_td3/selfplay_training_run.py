@@ -13,7 +13,11 @@
 # limitations under the License.
 
 import logging
-from data_pb2 import AgentConfig, ActorParams, TrialConfig
+from data_pb2 import (
+    AgentConfig,
+    ActorParams,
+    TrialConfig,
+)
 from cogment_verse import MlflowExperimentTracker
 
 
@@ -121,13 +125,21 @@ def create_training_run(agent_adapter):
 
             config.environment.config.mode = "train"
             train_trial_configs = [
-                TrialConfig(run_id=run_id, environment=config.environment, actors=bob_configs + alice_configs)
+                TrialConfig(
+                    run_id=run_id,
+                    environment=config.environment,
+                    actors=bob_configs + alice_configs,
+                )
                 for _ in range(config.rollout.epoch_train_trial_count)
             ]
 
             config.environment.config.mode = "test"
             test_trial_configs = [
-                TrialConfig(run_id=run_id, environment=config.environment, actors=bob_configs + alice_configs)
+                TrialConfig(
+                    run_id=run_id,
+                    environment=config.environment,
+                    actors=bob_configs + alice_configs,
+                )
                 for _ in range(config.rollout.epoch_test_trial_count)
             ]
 
@@ -149,7 +161,8 @@ def create_training_run(agent_adapter):
                     _tick_id,
                     sample,
                 ) in run_session.start_trials_and_wait_for_termination(
-                    trial_configs=train_trial_configs, max_parallel_trials=config.rollout.max_parallel_trials
+                    trial_configs=train_trial_configs,
+                    max_parallel_trials=config.rollout.max_parallel_trials,
                 ):
 
                     if sample.current_player == 0:  # bob's sample
@@ -197,7 +210,8 @@ def create_training_run(agent_adapter):
                         _tick_id,
                         sample,
                     ) in run_session.start_trials_and_wait_for_termination(
-                        trial_configs=test_trial_configs, max_parallel_trials=config.rollout.max_parallel_trials
+                        trial_configs=test_trial_configs,
+                        max_parallel_trials=config.rollout.max_parallel_trials,
                     ):
                         if sample.current_player == 0:  # bob' sample
                             if sample.player_done:
@@ -205,7 +219,11 @@ def create_training_run(agent_adapter):
                                 if int(sample.reward) > 0:
                                     test_success[-1] = 1
 
-                                run_xp_tracker.log_metrics(step_timestamp, step_idx, bob_success=test_success[-1])
+                                run_xp_tracker.log_metrics(
+                                    step_timestamp,
+                                    step_idx,
+                                    bob_success=test_success[-1],
+                                )
 
             run_xp_tracker.terminate_success()
 

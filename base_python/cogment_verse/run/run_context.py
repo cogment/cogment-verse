@@ -40,8 +40,20 @@ def set_config_index(config, actor_idx):
 
 # RunContext holds the context information to exectute runs
 class RunContext(cogment.Context):
-    def __init__(self, user_id, cog_settings, services_endpoints, asyncio_loop=None, prometheus_registry=REGISTRY):
-        super().__init__(user_id, cog_settings, asyncio_loop=asyncio_loop, prometheus_registry=prometheus_registry)
+    def __init__(
+        self,
+        user_id,
+        cog_settings,
+        services_endpoints,
+        asyncio_loop=None,
+        prometheus_registry=REGISTRY,
+    ):
+        super().__init__(
+            user_id,
+            cog_settings,
+            asyncio_loop=asyncio_loop,
+            prometheus_registry=prometheus_registry,
+        )
 
         self._cog_settings = cog_settings
         self._services_endpoints = services_endpoints
@@ -104,7 +116,11 @@ class RunContext(cogment.Context):
             raise RuntimeError("Cannot register a run after the server is started")
         if impl_name in self._run_impls:
             raise RuntimeError(f"The run implementation name must be unique: [{impl_name}]")
-        self._run_impls[impl_name] = (run_impl, run_sample_producer_impl, default_config)
+        self._run_impls[impl_name] = (
+            run_impl,
+            run_sample_producer_impl,
+            default_config,
+        )
 
     def _get_controller(self):
         return self.get_controller(endpoint=cogment.Endpoint(self._get_service_endpoint("orchestrator")))
@@ -114,7 +130,8 @@ class RunContext(cogment.Context):
 
     def get_model_registry_client(self):
         return ModelRegistryClient(
-            endpoint=self._get_service_endpoint("model_registry"), cache=self._model_registry_cache
+            endpoint=self._get_service_endpoint("model_registry"),
+            cache=self._model_registry_cache,
         )
 
     def _create_run_session(self, run_params_name, run_implementation, serialized_config, run_id=None):
@@ -163,7 +180,11 @@ class RunContext(cogment.Context):
 
         await run_session.exec()
 
-    async def serve_all_registered(self, served_endpoint, prometheus_port=cogment.context.DEFAULT_PROMETHEUS_PORT):
+    async def serve_all_registered(
+        self,
+        served_endpoint,
+        prometheus_port=cogment.context.DEFAULT_PROMETHEUS_PORT,
+    ):
         serve_all_registered_task = asyncio.create_task(super().serve_all_registered(served_endpoint, prometheus_port))
 
         while self._grpc_server is None:
@@ -174,7 +195,11 @@ class RunContext(cogment.Context):
             add_RunServicer_to_server(servicer, self._grpc_server)
 
         reflection.enable_server_reflection(
-            (RUN_DESCRIPTOR.services_by_name["Run"].full_name, reflection.SERVICE_NAME), self._grpc_server
+            (
+                RUN_DESCRIPTOR.services_by_name["Run"].full_name,
+                reflection.SERVICE_NAME,
+            ),
+            self._grpc_server,
         )
 
         try:

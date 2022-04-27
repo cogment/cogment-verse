@@ -31,7 +31,10 @@ class SimpleDrivingEnv(gym.Env):
                 low=np.array([-np.Inf, -np.Inf, -1, -1, -1, -np.Inf, -np.Inf], dtype=np.float32),
                 high=np.array([np.Inf, np.Inf, 1, 1, 1, np.Inf, np.Inf], dtype=np.float32),
             ),
-            "segmentation": gym.spaces.box.Box(low=np.zeros((75, 75, 3)), high=np.ones((75, 75, 3))),
+            "segmentation": gym.spaces.box.Box(
+                low=np.zeros((75, 75, 3)),
+                high=np.ones((75, 75, 3)),
+            ),
         }
 
         self.observation_space = gym.spaces.dict.Dict(obs_space)

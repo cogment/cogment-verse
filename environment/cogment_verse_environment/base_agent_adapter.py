@@ -62,7 +62,9 @@ class BaseAgentAdapter(AgentAdapter):
                     action = np.random.default_rng().integers(0, num_action)
                     actor_session.do_action(AgentAction(discrete_action=action))
 
-        return {"random": (random_impl, ["agent"])}
+        return {
+            "random": (random_impl, ["agent"]),
+        }
 
     def _create_run_implementations(self):
         async def total_rewards_producer_impl(run_sample_producer_session):
@@ -163,7 +165,11 @@ class BaseAgentAdapter(AgentAdapter):
                 if has_human_actor:
                     env_params.config.render = True
 
-                return TrialConfig(run_id=run_session.run_id, environment=env_params, actors=actors_params)
+                return TrialConfig(
+                    run_id=run_session.run_id,
+                    environment=env_params,
+                    actors=actors_params,
+                )
 
             # Rollout a bunch of trials
             async for (

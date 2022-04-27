@@ -63,7 +63,13 @@ class SimpleBCAgentAdapterTutorialStep3(AgentAdapter):
         return await all_events.run_in_executor(None, func, *args)
 
     ############ TUTORIAL STEP 3 ############
-    def _create(self, model_id, environment_specs, policy_network_hidden_size=64, **kwargs):
+    def _create(
+        self,
+        model_id,
+        environment_specs,
+        policy_network_hidden_size=64,
+        **kwargs,
+    ):
         num_input = flattened_dimensions(environment_specs.observation_space)
         num_output = flattened_dimensions(environment_specs.action_space)
 
@@ -130,7 +136,9 @@ class SimpleBCAgentAdapterTutorialStep3(AgentAdapter):
                     actor_session.do_action(cog_action_from_tensor(action))
             ##########################################
 
-        return {"simple_bc": (impl, ["agent"])}
+        return {
+            "simple_bc": (impl, ["agent"]),
+        }
 
     def _create_run_implementations(self):
         async def sample_producer_impl(run_sample_producer_session):
@@ -201,11 +209,16 @@ class SimpleBCAgentAdapterTutorialStep3(AgentAdapter):
                     name=HUMAN_ACTOR_NAME,
                     actor_class=HUMAN_ACTOR_CLASS,
                     implementation=HUMAN_ACTOR_IMPL,
-                    human_config=HumanConfig(environment_specs=env_params.specs, role=HumanRole.TEACHER),
+                    human_config=HumanConfig(
+                        environment_specs=env_params.specs,
+                        role=HumanRole.TEACHER,
+                    ),
                 )
 
                 return TrialConfig(
-                    run_id=run_session.run_id, environment=env_params, actors=[agent_actor_params, teacher_actor_params]
+                    run_id=run_session.run_id,
+                    environment=env_params,
+                    actors=[agent_actor_params, teacher_actor_params],
                 )
 
             # Rollout a bunch of trials

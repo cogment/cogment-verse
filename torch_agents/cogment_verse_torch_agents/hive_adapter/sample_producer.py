@@ -57,7 +57,10 @@ def vectorized_training_sample_from_samples(
     )
 
 
-TrainingSample = namedtuple("TrainingSample", ["current_player_sample", "trial_total_reward"])
+TrainingSample = namedtuple(
+    "TrainingSample",
+    ["current_player_sample", "trial_total_reward"],
+)
 
 
 async def sample_producer(run_sample_producer_session):
@@ -89,7 +92,7 @@ async def sample_producer(run_sample_producer_session):
                             flattened_dimensions(run_sample_producer_session.run_config.environment.specs.action_space),
                         ),
                         trial_total_reward=trial_total_reward if last_tick else None,
-                    )
+                    ),
                 )
 
             previous_sample = sample
@@ -136,7 +139,7 @@ async def sample_producer(run_sample_producer_session):
                                     actor_idx=actor_idx,
                                 ),
                                 trial_total_reward=trial_total_reward if last_tick else None,
-                            )
+                            ),
                         )
                         actor_rewards[actor_idx] = 0.0
 

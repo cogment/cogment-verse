@@ -45,7 +45,12 @@ class SimpleA2CAgentAdapter(AgentAdapter):
         self._dtype = torch.float
 
     def _create(
-        self, model_id, environment_specs, actor_network_hidden_size=64, critic_network_hidden_size=64, **kwargs
+        self,
+        model_id,
+        environment_specs,
+        actor_network_hidden_size=64,
+        critic_network_hidden_size=64,
+        **kwargs,
     ):
         num_input = flattened_dimensions(environment_specs.observation_space)
         num_output = flattened_dimensions(environment_specs.action_space)
@@ -77,7 +82,14 @@ class SimpleA2CAgentAdapter(AgentAdapter):
         return model, model_user_data
 
     def _load(
-        self, model_id, version_number, model_user_data, version_user_data, model_data_f, environment_specs, **kwargs
+        self,
+        model_id,
+        version_number,
+        model_user_data,
+        version_user_data,
+        model_data_f,
+        environment_specs,
+        **kwargs,
     ):
         (actor_network, critic_network) = torch.load(model_data_f)
         assert model_user_data["environment_implementation"] == environment_specs.implementation
@@ -111,7 +123,9 @@ class SimpleA2CAgentAdapter(AgentAdapter):
                     action = torch.distributions.Categorical(probs).sample()
                     actor_session.do_action(cog_action_from_tensor(action))
 
-        return {"simple_a2c": (impl, ["agent"])}
+        return {
+            "simple_a2c": (impl, ["agent"]),
+        }
 
     def _create_run_implementations(self):
         async def sample_producer_impl(run_sample_producer_session):
@@ -292,7 +306,8 @@ class SimpleA2CAgentAdapter(AgentAdapter):
                 run_impl,
                 SimpleA2CTrainingRunConfig(
                     environment=EnvironmentParams(
-                        specs=None, config=EnvironmentConfig(seed=12, framestack=1)  # Needs to be specified
+                        specs=None,  # Needs to be specified
+                        config=EnvironmentConfig(seed=12, framestack=1),
                     ),
                     training=SimpleA2CTrainingConfig(
                         epoch_count=100,

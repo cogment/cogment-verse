@@ -74,7 +74,13 @@ for gym_env_spec in gym.envs.registry.all():
         "agents": ["player"],
     }
 
-for minatar_env_id in ("asterix", "breakout", "freeway", "seaquest", "space_invaders"):
+for minatar_env_id in (
+    "asterix",
+    "breakout",
+    "freeway",
+    "seaquest",
+    "space_invaders",
+):
     minatar_env = MinatarEnvironment(env_name=minatar_env_id)
     minatar_state_shape = minatar_env.state_shape()
     env_specs[f"minatar/{minatar_env_id}"] = {
@@ -83,7 +89,10 @@ for minatar_env_id in ("asterix", "breakout", "freeway", "seaquest", "space_inva
         "max_episode_steps": None,
         "action_space": gym.spaces.Discrete(len(minatar_env.minimal_action_set())),
         "observation_space": gym.spaces.Box(
-            low=0, high=minatar_state_shape[2], shape=(minatar_state_shape[0], minatar_state_shape[1]), dtype=np.uint8
+            low=0,
+            high=minatar_state_shape[2],
+            shape=(minatar_state_shape[0], minatar_state_shape[1]),
+            dtype=np.uint8,
         ),
         "agents": ["player"],
     }
