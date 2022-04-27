@@ -121,10 +121,7 @@ class RunSession:
                 log.info(f"[{self.run_id}] Run terminated")
                 raise
             except Exception as error:
-                log.error(
-                    f"[{self.run_id}] Uncaught error occured during the run",
-                    exc_info=error,
-                )
+                log.error(f"[{self.run_id}] Uncaught error occured during the run", exc_info=error)
                 raise error
 
         self._task = asyncio.create_task(exec_run())

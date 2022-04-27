@@ -91,10 +91,7 @@ class MlflowExperimentTracker:
         while len(self._metrics_buffer) > 0:
             metrics_batch = self._metrics_buffer[:MAX_METRICS_BATCH_SIZE]
             with EXPERIMENT_TRACKER_LOG_METRICS_TIME.time():
-                client.log_batch(
-                    run_id=self._mlflow_run_id,
-                    metrics=metrics_batch,
-                )
+                client.log_batch(run_id=self._mlflow_run_id, metrics=metrics_batch)
             self._metrics_buffer = self._metrics_buffer[MAX_METRICS_BATCH_SIZE:]
 
     def _start_flush_metrics_worker(self):

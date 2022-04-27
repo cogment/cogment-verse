@@ -60,13 +60,7 @@ class SimpleBCAgentAdapterTutorialStep4(AgentAdapter):
         all_events = asyncio.get_running_loop()
         return await all_events.run_in_executor(None, func, *args)
 
-    def _create(
-        self,
-        model_id,
-        environment_specs,
-        policy_network_hidden_size=64,
-        **kwargs,
-    ):
+    def _create(self, model_id, environment_specs, policy_network_hidden_size=64, **kwargs):
         num_input = flattened_dimensions(environment_specs.observation_space)
         num_output = flattened_dimensions(environment_specs.action_space)
 
@@ -129,9 +123,7 @@ class SimpleBCAgentAdapterTutorialStep4(AgentAdapter):
                     action = await self.run_async(compute_action, event)
                     actor_session.do_action(cog_action_from_tensor(action))
 
-        return {
-            "simple_bc": (impl, ["agent"]),
-        }
+        return {"simple_bc": (impl, ["agent"])}
 
     def _create_run_implementations(self):
         async def sample_producer_impl(run_sample_producer_session):
@@ -198,24 +190,16 @@ class SimpleBCAgentAdapterTutorialStep4(AgentAdapter):
                     name=HUMAN_ACTOR_NAME,
                     actor_class=HUMAN_ACTOR_CLASS,
                     implementation=HUMAN_ACTOR_IMPL,
-                    human_config=HumanConfig(
-                        environment_specs=env_params.specs,
-                        role=HumanRole.TEACHER,
-                    ),
+                    human_config=HumanConfig(environment_specs=env_params.specs, role=HumanRole.TEACHER),
                 )
 
                 return TrialConfig(
-                    run_id=run_session.run_id,
-                    environment=env_params,
-                    actors=[agent_actor_params, teacher_actor_params],
+                    run_id=run_session.run_id, environment=env_params, actors=[agent_actor_params, teacher_actor_params]
                 )
 
             ############ TUTORIAL STEP 4 ############
             # Configure the optimizer
-            optimizer = torch.optim.Adam(
-                model.policy_network.parameters(),
-                lr=config.training.learning_rate,
-            )
+            optimizer = torch.optim.Adam(model.policy_network.parameters(), lr=config.training.learning_rate)
 
             # Keep accumulated observations/actions around
             observations = []
@@ -293,10 +277,7 @@ class SimpleBCAgentAdapterTutorialStep4(AgentAdapter):
                     ),
                     ############ TUTORIAL STEP 4 ############
                     training=SimpleBCTrainingConfig(
-                        trial_count=100,
-                        max_parallel_trials=1,
-                        discount_factor=0.95,
-                        learning_rate=0.01,
+                        trial_count=100, max_parallel_trials=1, discount_factor=0.95, learning_rate=0.01
                     ),
                     ##########################################
                     policy_network=MLPNetworkConfig(hidden_size=64),

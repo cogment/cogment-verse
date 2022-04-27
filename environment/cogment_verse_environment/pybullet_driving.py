@@ -117,11 +117,7 @@ class DrivingEnv(BaseEnv):
         if self.agent_done:
             if agent == "alice":
                 self.goal = observation["car_qpos"][:2] + np.random.uniform(
-                    0.6,
-                    0.8,
-                    [
-                        2,
-                    ],
+                    0.6, 0.8, [2]
                 )  # additional noise to accelerate learning
                 observation["car_qpos"][:2] = self.goal
             if agent == "bob" and self.current_turn == self.total_num_turns:

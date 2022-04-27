@@ -47,10 +47,7 @@ def test_save_and_load():
         observation_space=Space(properties=[Space.Property(box=Space.Box(shape=[2]))]),
         action_space=Space(properties=[Space.Property(discrete=Space.Discrete(num=3))]),
     )
-    model, model_user_data = adapter._create(
-        model_id="test",
-        environment_specs=environment_specs,
-    )
+    model, model_user_data = adapter._create(model_id="test", environment_specs=environment_specs)
 
     with io.BytesIO() as serialized_model_io:
         adapter._save(

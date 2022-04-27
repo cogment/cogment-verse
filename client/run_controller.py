@@ -52,10 +52,7 @@ class RunController:
 
         req = StartRunRequest(run_params=run_params, run_id=run_id)
         rep = await stub.StartRun(req)
-        return {
-            **MessageToDict(rep.run),
-            "endpoint": endpoint,
-        }
+        return {**MessageToDict(rep.run), "endpoint": endpoint}
 
     async def list_runs(self):
         log.debug("list_runs()")
@@ -76,8 +73,5 @@ class RunController:
             if has_target_run:
                 req = TerminateRunRequest(run_id=run_id)
                 rep = await stub.TerminateRun(req)
-                return {
-                    **MessageToDict(rep.run),
-                    "endpoint": endpoint,
-                }
+                return {**MessageToDict(rep.run), "endpoint": endpoint}
         raise RuntimeError(f"Unknown run [{run_id}]")

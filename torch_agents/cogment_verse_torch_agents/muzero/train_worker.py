@@ -50,17 +50,11 @@ class TrainWorker(MuZeroWorker):
         )
 
         epsilon_schedule = LinearScheduleWithWarmup(
-            self.config.mcts.exploration_epsilon,
-            self.config.mcts.epsilon_min,
-            self.config.mcts.epsilon_decay_steps,
-            0,
+            self.config.mcts.exploration_epsilon, self.config.mcts.epsilon_min, self.config.mcts.epsilon_decay_steps, 0
         )
 
         temperature_schedule = LinearScheduleWithWarmup(
-            self.config.mcts.temperature,
-            self.config.mcts.min_temperature,
-            self.config.mcts.temperature_decay_steps,
-            0,
+            self.config.mcts.temperature, self.config.mcts.min_temperature, self.config.mcts.temperature_decay_steps, 0
         )
 
         while not self.done.value:
@@ -79,12 +73,7 @@ class TrainWorker(MuZeroWorker):
             info = agent.learn(batch)
             del batch
 
-            info = dict(
-                lr=lr,
-                epsilon=epsilon,
-                temperature=temperature,
-                **info,
-            )
+            info = dict(lr=lr, epsilon=epsilon, temperature=temperature, **info)
 
             for key, val in info.items():
                 if isinstance(val, torch.Tensor):

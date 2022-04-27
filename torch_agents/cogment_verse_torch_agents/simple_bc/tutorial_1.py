@@ -61,9 +61,7 @@ class SimpleBCAgentAdapterTutorialStep1(AgentAdapter):
                     action = np.random.default_rng().integers(0, config.environment_specs.num_action)
                     actor_session.do_action(AgentAction(discrete_action=action))
 
-        return {
-            "simple_bc": (impl, ["agent"]),
-        }
+        return {"simple_bc": (impl, ["agent"])}
 
     def _create_run_implementations(self):
         async def sample_producer_impl(run_sample_producer_session):
@@ -96,26 +94,18 @@ class SimpleBCAgentAdapterTutorialStep1(AgentAdapter):
                     name="agent_1",
                     actor_class="agent",
                     implementation="simple_bc",
-                    agent_config=AgentConfig(
-                        run_id=run_session.run_id,
-                        environment_specs=env_params.specs,
-                    ),
+                    agent_config=AgentConfig(run_id=run_session.run_id, environment_specs=env_params.specs),
                 )
 
                 teacher_actor_params = ActorParams(
                     name=HUMAN_ACTOR_NAME,
                     actor_class=HUMAN_ACTOR_CLASS,
                     implementation=HUMAN_ACTOR_IMPL,
-                    human_config=HumanConfig(
-                        environment_specs=env_params.specs,
-                        role=HumanRole.TEACHER,
-                    ),
+                    human_config=HumanConfig(environment_specs=env_params.specs, role=HumanRole.TEACHER),
                 )
 
                 return TrialConfig(
-                    run_id=run_session.run_id,
-                    environment=env_params,
-                    actors=[agent_actor_params, teacher_actor_params],
+                    run_id=run_session.run_id, environment=env_params, actors=[agent_actor_params, teacher_actor_params]
                 )
 
             # Rollout a bunch of trials

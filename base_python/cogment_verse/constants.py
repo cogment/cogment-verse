@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-HUMAN_ACTOR_NAME = "web_actor"  # At the moment the web client can only join the trial using the actor name which means a unique name is required
+HUMAN_ACTOR_NAME = (
+    "web_actor"
+)  # At the moment the web client can only join the trial using the actor name which means a unique name is required
 HUMAN_ACTOR_CLASS = "teacher_agent"
 HUMAN_ACTOR_IMPL = "client"

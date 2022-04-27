@@ -101,23 +101,14 @@ class MuZeroAgent(torch.nn.Module):
         )
 
         self.muzero = MuZero(
-            representation,
-            dynamics,
-            policy,
-            value,
-            projector,
-            predictor,
-            dynamics.distribution,
-            value.distribution,
+            representation, dynamics, policy, value, projector, predictor, dynamics.distribution, value.distribution
         ).to(self._device)
 
         self.target_muzero = copy.deepcopy(self.muzero)
 
     def _make_optimizer(self):
         self._optimizer = torch.optim.AdamW(
-            self.muzero.parameters(),
-            lr=1e-3,
-            weight_decay=self.params.training.optimizer.weight_decay,
+            self.muzero.parameters(), lr=1e-3, weight_decay=self.params.training.optimizer.weight_decay
         )
 
     def forward(self, obs):

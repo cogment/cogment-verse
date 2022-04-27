@@ -45,8 +45,7 @@ class SimpleSB3AgentAdapter(AgentAdapter):
             actor_session.start()
 
             checkpoint = load_from_hub(
-                repo_id=actor_session.config.hf_hub_model.repo_id,
-                filename=actor_session.config.hf_hub_model.filename,
+                repo_id=actor_session.config.hf_hub_model.repo_id, filename=actor_session.config.hf_hub_model.filename
             )
 
             model = PPO.load(checkpoint)
@@ -64,9 +63,7 @@ class SimpleSB3AgentAdapter(AgentAdapter):
                     action = await self.run_async(compute_action, event)
                     actor_session.do_action(AgentAction(discrete_action=action[0]))
 
-        return {
-            "simple_sb3": (impl, ["agent"]),
-        }
+        return {"simple_sb3": (impl, ["agent"])}
 
     def _create_run_implementations(self):
         return {}
