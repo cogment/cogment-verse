@@ -125,7 +125,8 @@ class HiveAgentAdapter(AgentAdapter):
 
                             obs_input = obs["vectorized"]
                             legal_moves_input = format_legal_moves(
-                                obs["legal_moves_as_int"], flattened_dimensions(actor_session.config.environment_specs.action_space)
+                                obs["legal_moves_as_int"],
+                                flattened_dimensions(actor_session.config.environment_specs.action_space)
                             )
 
                             if obs["current_player"] != actor_index:
