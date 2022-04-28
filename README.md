@@ -4,13 +4,19 @@
 
 [Cogment](https://cogment.ai) is an innovative open source AI platform designed to leverage the advent of AI to benefit humankind through human-AI collaboration developed by [AI Redefined](https://ai-r.com). Cogment enables AI researchers and engineers to build, train and operate AI agents in simulated or real environments shared with humans. For the full user documentation visit <https://docs.cogment.ai>
 
-🚧 This repository is under construction, it propose a library of environments and agent implementations to get started with Human In the Loop Learning (HILL) and Reinforcement Learning (RL) with Cogment in minutes. Cogment Verse is designed both for practionners discovering the field as well as for experienced researchers or engineers as an framework to develop and benchmark new approaches.
+This repository contains a library of environments and agent implementations
+to get started with Human In the Loop Learning (HILL) and Reinforcement
+Learning (RL) with Cogment in minutes. Cogment Verse is designed both
+for practitioners discovering the field as well as for experienced
+researchers or engineers as a framework to develop and benchmark new
+approaches.
 
 Cogment verse includes environments from:
 
 - [OpenAI Gym](https://gym.openai.com),
 - [Petting Zoo](https://www.pettingzoo.ml).
 - [MinAtar](https://github.com/kenjyoung/MinAtar).
+- [Procgen](https://github.com/openai/procgen).
 
 ## Documentation table of contents
 
@@ -90,9 +96,16 @@ The `play` run implementation can be used to have any actor play in any environm
 
 They can be inspected and adapted to your needs in `run_params.yaml`:
 
+## List of publications and submissions using Cogment and/or Cogment Verse
+
+- Analyzing and Overcoming Degradation in Warm-Start Off-Policy Reinforcement Learning [code](https://github.com/benwex93/cogment-verse)
+- Multi-Teacher Curriculum Design for Sparse Reward Environments [code](https://github.com/kharyal/cogment-verse/)
+
+(please open a pull request to add missing entries)
+
 ## Acknowledgements
 
 The subdirectories `/tf_agents/cogment_verse_tf_agents/third_party` and `/torch_agents/cogment_verse_torch_agents/third_party` contains code from third party sources
 
-- `hive`: Taken from the Hive library by MILA/CRL
+- `hive`: Taken from the [Hive library](https://github.com/chandar-lab/RLHive)
 - `td3`: Taken form the [authors' implementation](https://github.com/sfujim/TD3)
