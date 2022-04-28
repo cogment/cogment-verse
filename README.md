@@ -34,9 +34,12 @@ Cogment verse includes environments from:
 ### Setup, Build and Run
 
 1. Clone this repository
-2. Install `parallel`, on ubuntu it is installable using `apt-get install parallel`, on mac it is available through `brew install parallel`
-3. Install `unrar`, on ubuntu it is installable using `apt-get install unrar`, on mac it is available through `brew install unrar`
-4. `./run.sh build`
+2. Install the following dependencies:
+   - [Python 3.9](https://www.python.org/) or above,
+   - [Node.JS v14](https://nodejs.org/) or above,
+   - `parallel`, on ubuntu it is installable using `apt-get install parallel`, on mac it is available through `brew install parallel`,
+   - `unrar`, on ubuntu it is installable using `apt-get install unrar`, on mac it is available through `brew install unrar`.
+3. `./run.sh build`
 4. `./run.sh services_start`
 5. In a different terminal, start the trials with `./run.sh client start <run-name>`.
    Different run names can be found in `run_params.yaml`
