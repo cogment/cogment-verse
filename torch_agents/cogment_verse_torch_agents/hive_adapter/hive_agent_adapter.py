@@ -16,6 +16,7 @@ import logging
 
 import cogment
 from cogment_verse import AgentAdapter
+from cogment_verse.spaces import flattened_dimensions
 from cogment_verse_torch_agents.atari_cnn import NatureAtariDQNModel
 from cogment_verse_torch_agents.hive_adapter.sample_producer import sample_producer
 from cogment_verse_torch_agents.hive_adapter.training_run import create_training_run
@@ -62,14 +63,15 @@ class HiveAgentAdapter(AgentAdapter):
 
     # pylint: disable=arguments-differ
     def _create(self, model_id, impl_name, environment_specs, **kwargs):
-        model = self.agent_class_from_impl_name(impl_name)(
-            id=model_id, obs_dim=environment_specs.num_input, act_dim=environment_specs.num_action, **kwargs
-        )
+        num_input = flattened_dimensions(environment_specs.observation_space)
+        num_output = flattened_dimensions(environment_specs.action_space)
+
+        model = self.agent_class_from_impl_name(impl_name)(id=model_id, obs_dim=num_input, act_dim=num_output, **kwargs)
 
         model_user_data = {
             "environment_implementation": environment_specs.implementation,
-            "num_input": environment_specs.num_input,
-            "num_action": environment_specs.num_action,
+            "num_input": num_input,
+            "num_output": num_output,
         }
 
         return model, model_user_data
@@ -123,7 +125,8 @@ class HiveAgentAdapter(AgentAdapter):
 
                             obs_input = obs["vectorized"]
                             legal_moves_input = format_legal_moves(
-                                obs["legal_moves_as_int"], actor_session.config.environment_specs.num_action
+                                obs["legal_moves_as_int"],
+                                flattened_dimensions(actor_session.config.environment_specs.action_space),
                             )
 
                             if obs["current_player"] != actor_index:

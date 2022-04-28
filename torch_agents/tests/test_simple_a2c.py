@@ -16,7 +16,7 @@ import io
 
 import torch
 from cogment_verse_torch_agents.simple_a2c.simple_a2c_agent import SimpleA2CAgentAdapter
-from data_pb2 import EnvironmentSpecs
+from data_pb2 import EnvironmentSpecs, Space
 
 # pylint: disable=protected-access
 
@@ -25,7 +25,11 @@ def test_create():
     adapter = SimpleA2CAgentAdapter()
     model, model_user_data = adapter._create(
         model_id="test",
-        environment_specs=EnvironmentSpecs(implementation="foo", num_input=2, num_action=3),
+        environment_specs=EnvironmentSpecs(
+            implementation="foo",
+            observation_space=Space(properties=[Space.Property(box=Space.Box(shape=[2]))]),
+            action_space=Space(properties=[Space.Property(discrete=Space.Discrete(num=3))]),
+        ),
         actor_network_hidden_size=10,
         critic_network_hidden_size=12,
     )
@@ -33,12 +37,16 @@ def test_create():
     assert model.version_number == 1
     assert isinstance(model.actor_network, torch.nn.Module)
     assert isinstance(model.critic_network, torch.nn.Module)
-    assert model_user_data == {"environment_implementation": "foo", "num_input": 2, "num_action": 3}
+    assert model_user_data == {"environment_implementation": "foo", "num_input": 2, "num_output": 3}
 
 
 def test_save_and_load():
     adapter = SimpleA2CAgentAdapter()
-    environment_specs = EnvironmentSpecs(implementation="foo", num_input=4, num_action=3)
+    environment_specs = EnvironmentSpecs(
+        implementation="foo",
+        observation_space=Space(properties=[Space.Property(box=Space.Box(shape=[2]))]),
+        action_space=Space(properties=[Space.Property(discrete=Space.Discrete(num=3))]),
+    )
     model, model_user_data = adapter._create(
         model_id="test",
         environment_specs=environment_specs,

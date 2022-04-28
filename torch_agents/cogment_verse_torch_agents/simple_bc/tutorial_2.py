@@ -21,6 +21,8 @@ import numpy as np
 import torch
 from cogment.api.common_pb2 import TrialState
 from cogment_verse import AgentAdapter, MlflowExperimentTracker
+from cogment_verse.constants import HUMAN_ACTOR_NAME, HUMAN_ACTOR_CLASS, HUMAN_ACTOR_IMPL
+
 
 ############ TUTORIAL STEP 2 ############
 from cogment_verse_torch_agents.utils.tensors import tensor_from_cog_action, tensor_from_cog_obs
@@ -30,7 +32,6 @@ from data_pb2 import (
     AgentConfig,
     EnvironmentConfig,
     EnvironmentParams,
-    EnvironmentSpecs,
     HumanConfig,
     HumanRole,
     SimpleBCTrainingRunConfig,
@@ -125,9 +126,9 @@ class SimpleBCAgentAdapterTutorialStep2(AgentAdapter):
                 )
 
                 teacher_actor_params = ActorParams(
-                    name="web_actor",
-                    actor_class="teacher_agent",
-                    implementation="client",
+                    name=HUMAN_ACTOR_NAME,
+                    actor_class=HUMAN_ACTOR_CLASS,
+                    implementation=HUMAN_ACTOR_IMPL,
                     human_config=HumanConfig(
                         environment_specs=env_params.specs,
                         role=HumanRole.TEACHER,
@@ -159,7 +160,7 @@ class SimpleBCAgentAdapterTutorialStep2(AgentAdapter):
                 run_impl,
                 SimpleBCTrainingRunConfig(
                     environment=EnvironmentParams(
-                        specs=EnvironmentSpecs(implementation="gym/LunarLander-v2", num_input=8, num_action=4),
+                        specs=None,  # Needs to be specified
                         config=EnvironmentConfig(seed=12, framestack=1, render=True, render_width=256),
                     )
                 ),

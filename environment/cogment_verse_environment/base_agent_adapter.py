@@ -20,13 +20,14 @@ import cogment
 
 from cogment.api.common_pb2 import TrialState
 from cogment_verse import AgentAdapter, MlflowExperimentTracker
+from cogment_verse.spaces import flattened_dimensions
+from cogment_verse.constants import HUMAN_ACTOR_NAME, HUMAN_ACTOR_CLASS, HUMAN_ACTOR_IMPL
 from data_pb2 import (
     ActorParams,
     AgentAction,
     AgentConfig,
     EnvironmentConfig,
     EnvironmentParams,
-    EnvironmentSpecs,
     HumanConfig,
     HumanRole,
     PlayRunConfig,
@@ -54,9 +55,11 @@ class BaseAgentAdapter(AgentAdapter):
 
             config = actor_session.config
 
+            num_action = flattened_dimensions(config.environment_specs.action_space)
+
             async for event in actor_session.all_events():
                 if event.observation and event.type == cogment.EventType.ACTIVE:
-                    action = np.random.default_rng().integers(0, config.environment_specs.num_action)
+                    action = np.random.default_rng().integers(0, num_action)
                     actor_session.do_action(AgentAction(discrete_action=action))
 
         return {
@@ -87,19 +90,39 @@ class BaseAgentAdapter(AgentAdapter):
                     f"Expecting at least {config.environment.specs.num_players} configured actors, got {len(config.actors)}"
                 )
 
-            actors_params = [
-                ActorParams(
-                    name=actor_params.name,
-                    actor_class=actor_params.actor_class,
-                    implementation=actor_params.implementation,
-                    agent_config=extend_actor_config(
-                        actor_config_template=actor_params.agent_config,
-                        run_id=run_session.run_id,
-                        environment_specs=config.environment.specs,
-                    ),
-                )
-                for actor_params in config.actors[: config.environment.specs.num_players]
-            ]
+            actors_params = []
+            has_human_actor = False
+            for actor_params in config.actors[: config.environment.specs.num_players]:
+                if actor_params.implementation == HUMAN_ACTOR_IMPL:
+                    if has_human_actor:
+                        raise RuntimeError("Can't have more than one human involved in the trial")
+                    # Human actor
+                    actors_params.append(
+                        ActorParams(
+                            name=HUMAN_ACTOR_NAME,
+                            actor_class=HUMAN_ACTOR_CLASS,
+                            implementation=HUMAN_ACTOR_IMPL,
+                            human_config=HumanConfig(
+                                run_id=run_session.run_id,
+                                environment_specs=config.environment.specs,
+                                role=HumanRole.PLAYER,
+                            ),
+                        )
+                    )
+                    has_human_actor = True
+                else:
+                    actors_params.append(
+                        ActorParams(
+                            name=actor_params.name,
+                            actor_class=actor_params.actor_class,
+                            implementation=actor_params.implementation,
+                            agent_config=extend_actor_config(
+                                actor_config_template=actor_params.agent_config,
+                                run_id=run_session.run_id,
+                                environment_specs=config.environment.specs,
+                            ),
+                        )
+                    )
 
             xp_tracker.log_params(
                 config.environment.config,
@@ -119,12 +142,14 @@ class BaseAgentAdapter(AgentAdapter):
             )
 
             if config.observer:
+                if has_human_actor:
+                    raise RuntimeError("Can't have more than one human involved in the trial")
                 # Add an observer agent
                 actors_params.append(
                     ActorParams(
-                        name="web_actor",
-                        actor_class="teacher_agent",
-                        implementation="client",
+                        name=HUMAN_ACTOR_NAME,
+                        actor_class=HUMAN_ACTOR_CLASS,
+                        implementation=HUMAN_ACTOR_IMPL,
                         human_config=HumanConfig(
                             run_id=run_session.run_id,
                             environment_specs=config.environment.specs,
@@ -137,6 +162,8 @@ class BaseAgentAdapter(AgentAdapter):
             def create_trial_config(trial_idx):
                 env_params = copy.deepcopy(config.environment)
                 env_params.config.seed = env_params.config.seed + trial_idx
+                if has_human_actor:
+                    env_params.config.render = True
 
                 return TrialConfig(
                     run_id=run_session.run_id,
@@ -173,9 +200,7 @@ class BaseAgentAdapter(AgentAdapter):
                 play_impl,
                 PlayRunConfig(
                     environment=EnvironmentParams(
-                        specs=EnvironmentSpecs(
-                            implementation="gym/LunarLander-v2", num_input=8, num_action=4, num_players=1
-                        ),
+                        specs=None,  # Needs to be specified
                         config=EnvironmentConfig(seed=12, framestack=1, render=True, render_width=256),
                     ),
                     actors=[],

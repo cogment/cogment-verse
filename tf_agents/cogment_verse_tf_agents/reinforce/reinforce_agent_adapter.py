@@ -16,6 +16,7 @@ import logging
 
 import cogment
 from cogment_verse import AgentAdapter
+from cogment_verse.spaces import flattened_dimensions
 from cogment_verse_tf_agents.reinforce.reinforce import ReinforceAgent
 from cogment_verse_tf_agents.reinforce.sample_producer import sample_producer
 from cogment_verse_tf_agents.reinforce.training_run import create_training_run
@@ -37,13 +38,13 @@ log = logging.getLogger(__name__)
 # pylint: disable=arguments-differ
 class ReinforceAgentAdapter(AgentAdapter):
     def _create(self, model_id, environment_specs, **kwargs):
-        model = ReinforceAgent(
-            id=model_id, obs_dim=environment_specs.num_input, act_dim=environment_specs.num_action, **kwargs
-        )
+        num_input = flattened_dimensions(environment_specs.observation_space)
+        num_output = flattened_dimensions(environment_specs.action_space)
+        model = ReinforceAgent(id=model_id, obs_dim=num_input, act_dim=num_output, **kwargs)
         model_user_data = {
             "environment_implementation": environment_specs.implementation,
-            "num_input": environment_specs.num_input,
-            "num_action": environment_specs.num_action,
+            "num_input": num_input,
+            "num_output": num_output,
         }
         return model, model_user_data
 
