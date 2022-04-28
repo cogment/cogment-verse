@@ -96,6 +96,13 @@ The `play` run implementation can be used to have any actor play in any environm
 
 They can be inspected and adapted to your needs in `run_params.yaml`:
 
+## List of publications and submissions using Cogment and/or Cogment Verse
+
+- Analyzing and Overcoming Degradation in Warm-Start Off-Policy Reinforcement Learning [code](https://github.com/benwex93/cogment-verse)
+- Multi-Teacher Curriculum Design for Sparse Reward Environments [code](https://github.com/kharyal/cogment-verse/)
+
+(please open a pull request to add missing entries)
+
 ## Acknowledgements
 
 The subdirectories `/tf_agents/cogment_verse_tf_agents/third_party` and `/torch_agents/cogment_verse_torch_agents/third_party` contains code from third party sources
