@@ -1,4 +1,4 @@
-mlflow==1.25.0
+mlflow==1.26.1
 
 # For testing
 black
