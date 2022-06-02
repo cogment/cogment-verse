@@ -59,10 +59,14 @@ In the first step, the run implementation is pretty minimal. It setup an experim
 
 Make sure you are using step 1 version of the adapter by editing the "default" export in `/torch_agents/cogment_verse_torch_agents/simple_bc/__init__.py`.
 
-First copy the project specification files and start the service in development mode:
+First start the service:
 
 ```
-cogment run copy && cogment run dev
+./run.sh services_start
+```
+and web client in another terminal:
+```
+./run.sh web_client_start
 ```
 
 Open `localhost:8080`.
@@ -73,10 +77,10 @@ Now we can launch a training run. There are three configurations provided:
 - simple_bc_mountaincar
 - simple_bc_lander
 
-Start a training run as follows
+Start a training run as follows in the third terminal:
 
 ```
-RUN_PARAMS=simple_bc_lander cogment run start_run
+./run.sh client start simple_bc_lander
 ```
 
 and open the web client to start interacting with the agent. At this step the agent will take random actions, as a human you can take over to play the game. In the console, the run implementation will log every time a sample is retrieved.
@@ -105,7 +109,7 @@ Nothing should change in the web browser but received samples should be logged. 
 >
 > Changes from the previous step are surrounded by `############ TUTORIAL STEP 3 ############` comments
 
-In this third step, we introduce an actual model: it is initialized it in the **run implementation** and used in the **actor implementation**. TO achieve that that `_create`, `_save` and `_load` are fully implemented. 
+In this third step, we introduce an actual model: it is initialized in the **run implementation** and used in the **actor implementation**. To achieve that, `_create`, `_save`, and `_load` are fully implemented.
 
 At the top of the file, we include the configuration structure for multi-layer perceptrons (MLPs) and we define a named tuple structure for the model.
 
