@@ -1,0 +1,8 @@
+class_name: runs.play.PlayRun
+num_trials: 20
+seed: 12
+players:
+  - name: p1
+    implementation: actors.random_actor.RandomActor
+  - name: p2
+    implementation: actors.random_actor.RandomActor

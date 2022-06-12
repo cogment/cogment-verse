@@ -1,37 +1,45 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
 [tool.black]
 line-length = 120
 target-version = ["py39"]
-extend-exclude = '''
-/(
-  .*/third_party/.*
-)/
-'''
 color = true
 
 [tool.pylint.MASTER]
 disable=[
-  "C0330", "C0326", "C0199", "C0412", # Disable checks in conflict with black
-  "line-too-long", # Dealt with by black
-  "import-error", "no-name-in-module", "no-member", # Import checks don't work given the way the projects are setup
-  "missing-module-docstring", "missing-function-docstring", "missing-class-docstring", # Don't require docstrings for this demo code
+  "ungrouped-imports", "line-too-long", # Disable checks in conflict with black
+  "missing-module-docstring", "missing-function-docstring", "missing-class-docstring", # Don't require docstrings (yet)
   "logging-fstring-interpolation",
-  "broad-except",
+  "fixme", # Don't consider TODO as errors
+  "no-value-for-parameter", # seems to be buggy
+  # The following are basically stupid tests
+  "duplicate-code",
   "too-few-public-methods",
   "too-many-arguments",
-  "too-many-locals",
-  "too-many-statements",
   "too-many-branches",
   "too-many-function-args",
   "too-many-instance-attributes",
-  "attribute-defined-outside-init", # seems to be buggy
-  "fixme", # Don't consider TODO as errors
-  "duplicate-code", # This is a stupid test
+  "too-many-locals",
+  "too-many-statements",
 ]
 ignore-patterns=[".*_pb2.py",".*_pb2_grpc.py","cog_settings.py"]
-ignore-paths=[".*/third_party/.*", ".*/node_modules/.*"]
+ignore-paths=[
+  ".*/node_modules/.*",
+  ".*/_old/.*", "_old", # The two variants seems needed depending on the platform
+  ".*/.venv/.*", ".venv",
+]
 jobs=0
+
 [tool.pylint.LOGGING]
 logging-format-style="new"
 
 [tool.pylint.FORMAT]
-good-names=["i","j","k","c","h","w","x","id","f","to"]
+good-names=["i","j","k","c","h","t","w","x","id","f","to"]
+
+[tool.pylint.Typecheck]
+generated-members=["cv2", "torch"]
+
+[tool.pytest.ini_options]
+addopts = "-rfs --ignore=_old"

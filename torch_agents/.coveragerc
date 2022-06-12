@@ -1,7 +1,0 @@
-# .coveragerc
-[report]
-show_missing = True
-omit =
-    tests/*
-    cog_settings.py
-    data_pb2.py

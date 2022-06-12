@@ -2,9 +2,7 @@
 
 [![Apache 2 License](https://img.shields.io/badge/license-Apache%202-green?style=flat-square)](./LICENSE) [![Changelog](https://img.shields.io/badge/-Changelog%20-blueviolet?style=flat-square)](./CHANGELOG.md)
 
-> 🚧 A new major version of Cogment Verse is under develelopment in the [`next`](https://github.com/cogment/cogment-verse/tree/next). Not all the algorithms and environments are available yet but it is fully operational. Do not hesitate to test it! 
->
-> Follow and discuss the development in this [Pull Request](https://github.com/cogment/cogment-verse/pull/71). 
+> 🚧 Cogment-Verse is still under heavy development but has already been successfully used by several research teams, join the [Cogment community](https://cogment.ai/docs/community-channels) to get support and be notified of updates.
 
 [Cogment](https://cogment.ai) is an innovative open source AI platform designed to leverage the advent of AI to benefit humankind through human-AI collaboration developed by [AI Redefined](https://ai-r.com). Cogment enables AI researchers and engineers to build, train and operate AI agents in simulated or real environments shared with humans. For the full user documentation visit <https://docs.cogment.ai>
 
@@ -41,66 +39,72 @@ Cogment verse includes environments from:
 
 ## Getting started
 
-### Setup, Build and Run
-
 1. Clone this repository
-2. Install the following dependencies:
-   - [Python 3.9](https://www.python.org/),
-   - [Node.JS v14](https://nodejs.org/) or above and npm,
-   - `parallel`, on ubuntu it is installable using `apt-get install parallel`, on mac it is available through `brew install parallel`,
-   - `unrar`, on ubuntu it is installable using `apt-get install unrar`, on mac it is available through `brew install unrar`,
-   - `swig`, (required to install box2d-py), on ubuntu it is installable using `apt-get install swig`, on mac it is available through `brew install swig`,
-   - `virtualenv`, installable using `pip install virtualenv`.
-3. `./run.sh build`
-4. `./run.sh services_start`
-5. In a different terminal, start the trials with `./run.sh client start <run-name>`.
-   Different run names can be found in `run_params.yaml`
-6. (Optional) To launch webclient, run `./run.sh web_client_start` in a different
-   terminal. Open http://localhost:8000 to join or visualize trials
+2. Install [Python 3.9](https://www.python.org/)
+3. Depending on your specific machine, you might also need to following dependencies:
 
-#### Run monitoring
+   - `swig`, which is required for the Box2d gym environments, it can be installed using `apt-get install swig` on ubuntu or `brew install swig` on macOS
+   - `python3-opencv`, which is required on ubuntu systems, it can be installed using `apt-get install python3-opencv`
 
-You can monitor ongoing run using [mlflow](https://mlflow.org). By default a local instance of mlflow is started by cogment-verse and is accessible at <http://localhost:3000>.
+4. Create and activate a virtual environment by runnning
+   ```console
+   $ python -m venv .venv
+   $ source .venv/bin/activate
+   ```
+5. Install the python dependencies by running
+   ```console
+   $ pip install -r requirements.txt
+   ```
+6. In another terminal, launch a mlflow server on port 3000 by running
+   ```console
+   $ source .venv/bin/activate
+   $ python -m simple_mlflow
+   ```
+7. Start the default Cogment Verse run using `python -m main`
+8. Open Chrome (other web browser might work but haven't tested) and navigate to http://localhost:8080/
+9. Play the game!
 
-#### Human player
+That's the basic setup for Cogment Verse, you are now ready to train AI agents.
 
-Some of the availabe run involve a human player,
-for example `benchmark_lander_hill` enables a human player
-to momentarily take control of the lunar lander to help the
-AI agents during the training process.
+### Configuration
 
-Then start the run
+Cogment Verse relies on [hydra](https://hydra.cc) for configuration. This enables easy configuration and composition of configuration directly from yaml files and the command line.
 
-```console
-./run.sh client start benchmark_lander_hill
-```
+The configuration files are located in the `config` directory, with defaults defined in `config/config.yaml`.
 
-Access the playing interface by launching a webclient with
-`./run.sh web_client_start` and navigating to <http://localhost:8000>
+Here are a few examples:
 
-#### **Play**
+- Launch a Simple Behavior Cloning run with the [Mountain Car Gym environment](https://www.gymlibrary.ml/environments/classic_control/mountain_car/) (which is the default environment)
+  ```console
+  $ python -m main +experiment=simple_bc/mountain_car
+  ```
+- Launch a Simple Behavior Cloning run with the [Lunar Lander Gym environment](https://www.gymlibrary.ml/environments/box2d/lunar_lander/)
+  ```console
+  $ python -m main +experiment=simple_bc/mountain_car services/environment=lunar_lander
+  ```
+- Launch and play a single trial of the Lunar Lander Gym environment with continuous controls
+  ```console
+  $ python -m main services/environment=lunar_lander_continuous
+  ```
+- Launch an A2C training run with the [Cartpole Gym environment](https://www.gymlibrary.ml/environments/classic_control/cartpole/)
 
-The `play` run implementation can be used to have any actor play in any environment. 3 example run parameters are provided:
+  ```console
+  $ python -m main +experiment=simple_a2c/cartpole
+  ```
 
-**`headless_play`** instanciates any agents and start a number of trials.
+  This one is completely _headless_ (training doens't involve interaction with a human player). It will take a little while to run, you can monitor the progress using mlflow at <http://localhost:3000>
 
-```console
-./run.sh client start headless_play
-```
+- Launch an DQN self training run with the [Connect Four Petting Zoo environment](https://www.pettingzoo.ml/classic/connect_four)
 
-**`observe`** instanciates any agents and start a number of trials with a human observer through the webclient.
+  ```console
+  $ python -m main +experiment=simple_dqn/connect_four
+  ```
 
-```console
-./run.sh client start observe
-```
+  The same experiment can be launched with a ratio of human-in-the-loop training trials (that are playable on in the web client)
 
-**`play`** instanciates let a human player play in a supported environment.
-
-```console
-./run.sh client start play
-```
-
-They can be inspected and adapted to your needs in `run_params.yaml`:
+  ```console
+  $ python -m main +experiment=simple_dqn/connect_four +run.hill_training_trials_ratio=0.05
+  ```
 
 ## List of publications and submissions using Cogment and/or Cogment Verse
 
@@ -108,10 +112,3 @@ They can be inspected and adapted to your needs in `run_params.yaml`:
 - Multi-Teacher Curriculum Design for Sparse Reward Environments [code](https://github.com/kharyal/cogment-verse/)
 
 (please open a pull request to add missing entries)
-
-## Acknowledgements
-
-The subdirectories `/tf_agents/cogment_verse_tf_agents/third_party` and `/torch_agents/cogment_verse_torch_agents/third_party` contains code from third party sources
-
-- `hive`: Taken from the [Hive library](https://github.com/chandar-lab/RLHive)
-- `td3`: Taken form the [authors' implementation](https://github.com/sfujim/TD3)

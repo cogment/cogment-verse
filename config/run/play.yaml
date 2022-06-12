@@ -1,0 +1,8 @@
+class_name: runs.play.PlayRun
+num_trials: 5
+seed: 12
+players:
+  - name: player_1
+    implementation: client
+  - name: player_2
+    implementation: actors.random_actor.RandomActor
