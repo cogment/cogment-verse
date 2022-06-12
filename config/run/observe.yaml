@@ -1,0 +1,6 @@
+class_name: runs.play.PlayRun
+observer: True
+trial_count: 10
+players:
+  - name: player_1
+    implementation: actors.random_actor.RandomActor

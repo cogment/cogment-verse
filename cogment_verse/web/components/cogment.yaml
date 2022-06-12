@@ -1,0 +1,32 @@
+import:
+  proto:
+    - data.proto
+
+environment:
+  config_type: cogment_verse.EnvironmentConfig
+
+trial:
+  config_type: cogment_verse.TrialConfig
+
+# Static configuration
+actor_classes:
+  - name: player
+    action:
+      space: cogment_verse.PlayerAction
+    observation:
+      space: cogment_verse.Observation
+    config_type: cogment_verse.AgentConfig
+
+  - name: teacher
+    action:
+      space: cogment_verse.TeacherAction
+    observation:
+      space: cogment_verse.Observation
+    config_type: cogment_verse.AgentConfig
+
+  - name: observer
+    action:
+      space: cogment_verse.ObserverAction
+    observation:
+      space: cogment_verse.Observation
+    config_type: cogment_verse.AgentConfig

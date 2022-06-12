@@ -1,0 +1,2 @@
+- class_name: actors.tutorial.tutorial_4.SimpleBCActor
+  port: ${generate_port:actor_2}

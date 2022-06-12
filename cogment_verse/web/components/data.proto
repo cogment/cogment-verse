@@ -1,0 +1,126 @@
+// Copyright 2022 AI Redefined Inc. <dev+cogment@ai-r.com>
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax = "proto3";
+
+package cogment_verse;
+
+message NDArray {
+  string dtype = 1;
+  repeated uint32 shape = 2;
+  bytes data = 3;
+}
+
+// Space messages are used to define environments action or observation space
+// Similar to gym's "dict" space
+message Space {
+  message Discrete {
+    int32 num = 1;
+    repeated string labels = 2; // Define labels for the discrete elements in the space, overrides `num`
+  }
+  message Bound {
+    optional float bound = 1; // value of the bound, not set means unbounded
+  }
+  message Box {
+    repeated uint32 shape = 1;
+    repeated Bound low = 2; // independant lower bounds for each dimensions (gets reshaped)
+    repeated Bound high = 3; // independant upper bounds for each dimensions (gets reshaped)
+  }
+  message Property {
+    string key = 1;
+    oneof type_oneof {
+      Discrete discrete = 2;
+      Box box = 3;
+    }
+  }
+  repeated Property properties = 1;
+}
+
+// SpaceValue messages are values within a Space
+// `properties` are sorted in the same way than the value's Space
+message SpaceValue {
+  message SimpleBox {
+    repeated float values = 1;
+  }
+  message PropertyValue {
+    oneof value {
+      int32 discrete = 1;
+      NDArray box = 2;
+      SimpleBox simple_box = 3;
+    }
+  }
+  repeated PropertyValue properties = 1;
+}
+
+message EnvironmentSpecs {
+  string implementation = 1;
+  int32 num_players = 2;
+  Space observation_space = 3;
+  Space action_space = 4;
+}
+
+message EnvironmentConfig {
+  string run_id = 1;
+  bool render = 2;
+  int32 render_width = 3;
+  uint32 seed = 4;
+  bool flatten = 5;
+
+  // uint32 framestack = 8;
+  // string mode = 10;
+}
+
+message HFHubModel {
+    string repo_id = 1;
+    string filename = 2;
+}
+
+message AgentConfig {
+  string run_id = 1;
+  EnvironmentSpecs environment_specs = 2;
+  string model_id = 3;
+  int32 model_version = 4;
+  int32 actor_index = 5; // Used to figure out if an agent is the current_player in the observation space
+  string device = 6;
+  uint32 threads_per_worker = 7;
+  HFHubModel hf_hub_model = 8;
+}
+
+message TrialConfig {
+}
+
+message Observation {
+  SpaceValue value = 1;
+  optional bytes rendered_frame = 2;
+  repeated int32 legal_moves_as_int = 3;
+  int32 current_player = 4; // active player for multi-agent turn-based environments
+  repeated string overridden_players = 5;  // list of players that provided an action that was overriden during the last tick
+  NDArray segmentation = 6;
+}
+
+message PlayerAction {
+  SpaceValue value = 1;
+  // NDArray policy = 2; // optional: policy from which action was drawn
+  // float value = 3; // optional: value of the state from which the action was taken
+}
+
+message TeacherAction {
+  optional SpaceValue value = 1;
+  // NDArray policy = 2; // optional: policy from which action was drawn
+  // float value = 3; // optional: value of the state from which the action was taken
+}
+
+message ObserverAction {
+  // NOTHING
+}

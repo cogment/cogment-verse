@@ -1,0 +1,14 @@
+orchestrator:
+  - port: ${generate_port:orchestrator}
+    web_port: ${generate_port:orchestrator_web}
+    log_level: warning
+trial_datastore:
+  port: ${generate_port:trial_datastore}
+  log_level: warning
+model_registry:
+  port: ${generate_port:model_registry}
+  log_level: warning
+web:
+  port: 8080
+  build: False
+  dev: False

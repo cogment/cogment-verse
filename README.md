@@ -41,64 +41,55 @@ Cogment verse includes environments from:
 
 ## Getting started
 
-### Setup, Build and Run
-
 1. Clone this repository
-2. Install the following dependencies:
-   - [Python 3.9](https://www.python.org/) or above,
-   - [Node.JS v14](https://nodejs.org/) or above,
-   - `parallel`, on ubuntu it is installable using `apt-get install parallel`, on mac it is available through `brew install parallel`,
-   - `unrar`, on ubuntu it is installable using `apt-get install unrar`, on mac it is available through `brew install unrar`.
-3. `./run.sh build`
-4. `./run.sh services_start`
-5. In a different terminal, start the trials with `./run.sh client start <run-name>`.
-   Different run names can be found in `run_params.yaml`
-6. (Optional) To launch webclient, run `./run.sh web_client_start` in a different
-   terminal. Open http://localhost:8000 to join or visualize trials
+2. Install [Python 3.9](https://www.python.org/)
+3. Create and activate a virtual environment by runnning
+   ```console
+   $ python -m venv .venv
+   $ source .venv/bin/activate
+   ```
+4. Install the python dependencies by running
+   ```console
+   $ pip install -r requirements.txt
+   ```
+5. In another terminal, launch a mlflow server on port 3000 by running
+   ```console
+   $ source .venv/bin/activate
+   $ python -m simple_mlflow
+   ```
+6. Start the default Cogment Verse run using `python -m main`
+7. Open Chrome (other web browser might work but haven't tested) and navigate to http://localhost:8080/
+8. Play the game!
 
-#### Run monitoring
+That's the basic setup for Cogment Verse, you are now ready to train AI agents.
 
-You can monitor ongoing run using [mlflow](https://mlflow.org). By default a local instance of mlflow is started by cogment-verse and is accessible at <http://localhost:3000>.
+### Configuration
 
-#### Human player
+Cogment Verse relies on [hydra](https://hydra.cc) for configuration. This enables easy configuration and composition of configuration directly from yaml files and the command line.
 
-Some of the availabe run involve a human player,
-for example `benchmark_lander_hill` enables a human player
-to momentarily take control of the lunar lander to help the
-AI agents during the training process.
+The configuration files are located in the `config` directory, with defaults defined in `config/config.yaml`.
 
-Then start the run
+Here are a few examples:
 
-```console
-./run.sh client start benchmark_lander_hill
-```
+- Launch a Simple Behavior Cloning run with the [Mountain Car Gym environment](https://www.gymlibrary.ml/environments/classic_control/mountain_car/) (which is the default environment)
+  ```console
+  $ python -m main services/actor=simple_bc run=simple_bc
+  ```
+- Launch a Simple Behavior Cloning run with the [Lunar Lander Gym environment](https://www.gymlibrary.ml/environments/box2d/lunar_lander/)
+  ```console
+  $ python -m main services/actor=simple_bc services/environment=lunar_lander run=simple_bc
+  ```
+- Launch and play a single trial of the Lunar Lander Gym environment with continuous controls
+  ```console
+  $ python -m main services/environment=lunar_lander_continuous
+  ```
+- Launch an A2C training run with the [Cartpole Gym environment](https://www.gymlibrary.ml/environments/classic_control/cartpole/)
 
-Access the playing interface by launching a webclient with
-`./run.sh web_client_start` and navigating to <http://localhost:8000>
+  ```console
+  $ python -m main +experiment=simple_a2c/cartpole
+  ```
 
-#### **Play**
-
-The `play` run implementation can be used to have any actor play in any environment. 3 example run parameters are provided:
-
-**`headless_play`** instanciates any agents and start a number of trials.
-
-```console
-./run.sh client start headless_play
-```
-
-**`observe`** instanciates any agents and start a number of trials with a human observer through the webclient.
-
-```console
-./run.sh client start observe
-```
-
-**`play`** instanciates let a human player play in a supported environment.
-
-```console
-./run.sh client start play
-```
-
-They can be inspected and adapted to your needs in `run_params.yaml`:
+  This one is completely _headless_ (training doens't involve interaction with a human player). It will take a little while to run, you can monitor the progress using mlflow at <http://localhost:3000>
 
 ## List of publications and submissions using Cogment and/or Cogment Verse
 

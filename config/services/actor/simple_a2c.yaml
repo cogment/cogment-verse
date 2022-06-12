@@ -1,0 +1,2 @@
+- class_name: actors.simple_a2c.SimpleA2CActor
+  port: ${generate_port:actors.simple_a2c.SimpleA2CActor}

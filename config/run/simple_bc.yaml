@@ -1,0 +1,5 @@
+class_name: actors.tutorial.tutorial_4.SimpleBCTraining
+environment_config:
+  seed: 618
+training:
+  num_trials: 15

@@ -39,7 +39,7 @@ simple_a2c_cartpole:
       epoch_trial_count: 15
       max_parallel_trials: 8
       discount_factor: 0.95
-      entropy_coef: 0.01
+      entropy_loss_coef: 0.01
       value_loss_coef: 0.5
       action_loss_coef: 1.0
       learning_rate: 0.01
