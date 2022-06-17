@@ -41,7 +41,7 @@ def extend_actor_config(actor_config_template, run_id, environment_specs):
 
 
 class PlayRun:
-    default_cfg = {"trial_count": 1, "observer": False, "players": []}
+    default_cfg = {"num_trials": 1, "observer": False, "players": []}
 
     def __init__(self, environment_specs, cfg):
         super().__init__()
@@ -154,9 +154,9 @@ class PlayRun:
         )
 
         # Rollout a bunch of trials
-        for (_step_idx, _trial_id, sample,) in run_session.start_and_await_trials(
+        for (_step_idx, _trial_id, _trial_idx, sample,) in run_session.start_and_await_trials(
             trials_id_and_params=[
-                (f"{run_session.run_id}_{trial_idx}", trial_params) for trial_idx in range(self._cfg.trial_count)
+                (f"{run_session.run_id}_{trial_idx}", trial_params) for trial_idx in range(self._cfg.num_trials)
             ],
             sample_producer_impl=self.total_rewards_producer_impl,
             num_parallel_trials=1,

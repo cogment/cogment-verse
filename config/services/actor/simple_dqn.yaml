@@ -1,0 +1,2 @@
+- class_name: actors.simple_dqn.SimpleDQNActor
+  port: ${generate_port:actors.simple_dqn.SimpleDQNActor}

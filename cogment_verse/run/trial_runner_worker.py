@@ -25,13 +25,15 @@ log = logging.getLogger(__name__)
 
 
 class TrialStartedQueueEvent:
-    def __init__(self, trial_id=None, done=False):
+    def __init__(self, trial_id=None, trial_idx=None, done=False):
+        self.trial_idx = trial_idx
         self.trial_id = trial_id
         self.done = done
 
 
 class TrialEndedQueueEvent:
-    def __init__(self, trial_id=None, done=False):
+    def __init__(self, trial_id=None, trial_idx=None, done=False):
+        self.trial_idx = trial_idx
         self.trial_id = trial_id
         self.done = done
 
@@ -50,7 +52,7 @@ async def async_trial_runner_worker(
     num_trials = len(trials_id_and_params)
     num_started_trials = 0
     num_ended_trials = 0
-    running_trials = set()
+    running_trials = {}
 
     async def start_trials():
         nonlocal running_trials
@@ -80,21 +82,23 @@ async def async_trial_runner_worker(
             actual_trial_id = await controller.start_trial(trial_id_requested=trial_id, trial_params=trial_params)
             if actual_trial_id is None:
                 raise RuntimeError(f"Unable to start a trial with id [{trial_id}]")
-            running_trials.add(trial_id)
+            trial_idx = num_started_trials
+            running_trials[trial_id] = trial_idx
             num_started_trials += 1
             log.debug(f"Trial [{trial_id}] started, {num_trials-num_started_trials} trials remaining to start.")
             if trial_started_queue is not None:
-                trial_started_queue.put(TrialStartedQueueEvent(trial_id=trial_id))
+                trial_started_queue.put(TrialStartedQueueEvent(trial_id=trial_id, trial_idx=trial_idx))
 
     async def await_trials():
         nonlocal running_trials
         nonlocal num_ended_trials
         async for trial_info in controller.watch_trials(trial_state_filters=[cogment.TrialState.ENDED]):
             if trial_info.trial_id in running_trials:
-                running_trials.discard(trial_info.trial_id)
+                trial_idx = running_trials[trial_info.trial_id]
+                del running_trials[trial_info.trial_id]
                 num_ended_trials += 1
                 if trial_ended_queue is not None:
-                    trial_ended_queue.put(TrialEndedQueueEvent(trial_id=trial_info.trial_id))
+                    trial_ended_queue.put(TrialEndedQueueEvent(trial_id=trial_info.trial_id, trial_idx=trial_idx))
                 log.debug(f"Trial [{trial_info.trial_id}] ended, {num_trials-num_ended_trials} trials remaining.")
                 if num_ended_trials == num_trials:
                     break

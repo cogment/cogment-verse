@@ -51,10 +51,8 @@ class SimpleBCActor:
 
 class SimpleBCTraining:
     default_cfg = {
-        "environment_config": {"seed": 12},
-        "training": {
-            "num_trials": 10,
-        },
+        "seed": 12,
+        "num_trials": 10,
     }
 
     def __init__(self, environment_specs, cfg):
@@ -92,8 +90,7 @@ class SimpleBCTraining:
         assert self._environment_specs.num_players == 1
 
         run_session.log_params(
-            self._cfg.training,
-            self._cfg.environment_config,
+            self._cfg,
             environment_implementation=self._environment_specs.implementation,
         )
 
@@ -126,16 +123,16 @@ class SimpleBCTraining:
                 environment_name="env",
                 environment_implementation=self._environment_specs.implementation,
                 environment_config=EnvironmentConfig(
-                    run_id=run_session.run_id, render=True, seed=self._cfg.environment_config.seed + trial_idx
+                    run_id=run_session.run_id, render=True, seed=self._cfg.seed + trial_idx
                 ),
                 actors=[agent_actor_params, teacher_actor_params],
             )
 
         # Rollout a bunch of trials
-        for (step_idx, _trial_id, sample,) in run_session.start_and_await_trials(
+        for (step_idx, _trial_id, _trial_idx, sample,) in run_session.start_and_await_trials(
             trials_id_and_params=[
                 (f"{run_session.run_id}_{trial_idx}", create_trial_params(trial_idx))
-                for trial_idx in range(self._cfg.training.num_trials)
+                for trial_idx in range(self._cfg.num_trials)
             ],
             sample_producer_impl=self.sample_producer,
             num_parallel_trials=1,

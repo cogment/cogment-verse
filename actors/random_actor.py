@@ -35,8 +35,7 @@ class RandomActor:
 
         action_space = config.environment_specs.action_space
 
-        # TODO this is something that could be configured
-        random_seed = 0
+        random_seed = config.seed if config.seed is not None else 0
 
         async for event in actor_session.all_events():
             if event.observation and event.type == cogment.EventType.ACTIVE:

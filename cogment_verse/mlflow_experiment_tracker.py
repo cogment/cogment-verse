@@ -69,6 +69,9 @@ class MlflowExperimentTracker:
         self._flush_metrics_worker_frequency = flush_frequency
         self._flush_metrics_worker = None
 
+    def __del__(self):
+        self._stop_flush_metrics_worker()
+
     def _get_mlflow_client(self):
         client = MlflowClient(tracking_uri=self._mlflow_tracking_uri)
         if not self._mlflow_exp_id:

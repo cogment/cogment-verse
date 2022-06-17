@@ -89,12 +89,14 @@ message HFHubModel {
 message AgentConfig {
   string run_id = 1;
   EnvironmentSpecs environment_specs = 2;
-  string model_id = 3;
-  int32 model_version = 4;
-  int32 actor_index = 5; // Used to figure out if an agent is the current_player in the observation space
-  string device = 6;
-  uint32 threads_per_worker = 7;
-  HFHubModel hf_hub_model = 8;
+  uint32 seed = 3;
+  string model_id = 4;
+  int32 model_version = 5;
+  int32 model_update_frequency = 6;
+  // int32 actor_index = 6; // Used to figure out if an agent is the current_player in the observation space
+  // string device = 7;
+  // uint32 threads_per_worker = 8;
+  // HFHubModel hf_hub_model = 9;
 }
 
 message TrialConfig {

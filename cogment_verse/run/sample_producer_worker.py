@@ -25,21 +25,25 @@ log = logging.getLogger(__name__)
 
 
 class SampleQueueEvent:
-    def __init__(self, trial_id=None, sample=None, done=False):
+    def __init__(self, trial_id=None, trial_idx=None, sample=None, done=False):
         self.trial_id = trial_id
+        self.trial_idx = trial_idx
         self.sample = sample
         self.done = done
 
 
 class SampleProducerSession:
-    def __init__(self, datastore, trial_info, sample_queue, impl):
+    def __init__(self, datastore, trial_idx, trial_info, sample_queue, impl):
+        self.trial_idx = trial_idx
         self.datastore = datastore
         self.trial_info = trial_info
         self.sample_queue = sample_queue
         self.impl = impl
 
     def produce_sample(self, sample):
-        self.sample_queue.put(SampleQueueEvent(trial_id=self.trial_info.trial_id, sample=sample))
+        self.sample_queue.put(
+            SampleQueueEvent(trial_id=self.trial_info.trial_id, trial_idx=self.trial_idx, sample=sample)
+        )
 
     def all_trial_samples(self):
         return self.datastore.all_samples([self.trial_info])
@@ -93,7 +97,9 @@ async def async_sample_producer_worker(trial_started_queue, sample_queue, impl, 
 
         log.debug(f"[{trial_info.trial_id}] started")
 
-        sample_producer_session = SampleProducerSession(datastore, trial_info, sample_queue, impl)
+        sample_producer_session = SampleProducerSession(
+            datastore, trial_started_queue_event.trial_idx, trial_info, sample_queue, impl
+        )
 
         sample_producer_tasks.append(sample_producer_session.create_task())
 

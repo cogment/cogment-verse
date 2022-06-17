@@ -35,3 +35,9 @@ from .encode_rendered_frame import encode_rendered_frame
 from .ndarray import deserialize_ndarray, serialize_ndarray
 from .sample_space import sample_space
 from .flatten import flattened_dimensions, flatten, unflatten
+from .gym_spaces_adapter import (
+    gym_action_from_action,
+    gym_space_from_space,
+    observation_from_gym_observation,
+    space_from_gym_space,
+)

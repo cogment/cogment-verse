@@ -47,7 +47,7 @@ class SimpleBCModel(Model):
         environment_implementation,
         num_input,
         num_output,
-        policy_network_hidden_size=64,
+        policy_network_num_hidden_nodes=64,
         version_number=0,
     ):
         super().__init__(model_id, version_number)
@@ -56,16 +56,16 @@ class SimpleBCModel(Model):
         self._environment_implementation = environment_implementation
         self._num_input = num_input
         self._num_output = num_output
-        self._policy_network_hidden_size = policy_network_hidden_size
+        self._policy_network_num_hidden_nodes = policy_network_num_hidden_nodes
 
         self.policy_network = torch.nn.Sequential(
-            torch.nn.Linear(num_input, policy_network_hidden_size, dtype=self._dtype),
-            torch.nn.BatchNorm1d(policy_network_hidden_size, dtype=self._dtype),
+            torch.nn.Linear(num_input, policy_network_num_hidden_nodes, dtype=self._dtype),
+            torch.nn.BatchNorm1d(policy_network_num_hidden_nodes, dtype=self._dtype),
             torch.nn.ReLU(),
-            torch.nn.Linear(policy_network_hidden_size, policy_network_hidden_size, dtype=self._dtype),
-            torch.nn.BatchNorm1d(policy_network_hidden_size, dtype=self._dtype),
+            torch.nn.Linear(policy_network_num_hidden_nodes, policy_network_num_hidden_nodes, dtype=self._dtype),
+            torch.nn.BatchNorm1d(policy_network_num_hidden_nodes, dtype=self._dtype),
             torch.nn.ReLU(),
-            torch.nn.Linear(policy_network_hidden_size, num_output, dtype=self._dtype),
+            torch.nn.Linear(policy_network_num_hidden_nodes, num_output, dtype=self._dtype),
         )
 
         self.total_samples = 0
@@ -75,7 +75,7 @@ class SimpleBCModel(Model):
             "environment_implementation": self._environment_implementation,
             "num_input": self._num_input,
             "num_output": self._num_output,
-            "policy_network_hidden_size": self._policy_network_hidden_size,
+            "policy_network_num_hidden_nodes": self._policy_network_num_hidden_nodes,
         }
 
     def save(self, model_data_f):
@@ -92,7 +92,7 @@ class SimpleBCModel(Model):
             environment_implementation=model_user_data["environment_implementation"],
             num_input=int(model_user_data["num_input"]),
             num_output=int(model_user_data["num_output"]),
-            policy_network_hidden_size=int(model_user_data["policy_network_hidden_size"]),
+            policy_network_num_hidden_nodes=int(model_user_data["policy_network_num_hidden_nodes"]),
         )
 
         # Load the saved states
@@ -141,17 +141,15 @@ class SimpleBCActor:
 
 class SimpleBCTraining:
     default_cfg = {
-        "environment_config": {"seed": 12},
-        "training": {
-            "num_trials": 10,
-            ############ TUTORIAL STEP 4 ############
-            "discount_factor": 0.95,
-            "learning_rate": 0.01,
-            "batch_size": 32,
-            "train_only_from_demonstration": False
-            #########################################
-        },
-        "policy_network": {"hidden_size": 64},
+        "seed": 12,
+        "num_trials": 10,
+        ############ TUTORIAL STEP 4 ############
+        "discount_factor": 0.95,
+        "learning_rate": 0.01,
+        "batch_size": 32,
+        "train_only_from_demonstration": False,
+        #########################################
+        "policy_network": {"num_hidden_nodes": 64},
     }
 
     def __init__(self, environment_specs, cfg):
@@ -210,15 +208,14 @@ class SimpleBCTraining:
             environment_implementation=self._environment_specs.implementation,
             num_input=flattened_dimensions(self._environment_specs.observation_space),
             num_output=flattened_dimensions(self._environment_specs.action_space),
-            policy_network_hidden_size=self._cfg.policy_network.hidden_size,
+            policy_network_num_hidden_nodes=self._cfg.policy_network.num_hidden_nodes,
         )
         _model_info, _version_info = await run_session.model_registry.publish_initial_version(model)
 
         run_session.log_params(
-            self._cfg.training,
-            self._cfg.environment_config,
+            self._cfg,
             environment_implementation=self._environment_specs.implementation,
-            policy_network_hidden_size=self._cfg.policy_network.hidden_size,
+            policy_network_num_hidden_nodes=self._cfg.policy_network.num_hidden_nodes,
         )
 
         # Helper function to create a trial configuration
@@ -254,7 +251,7 @@ class SimpleBCTraining:
                 environment_name="env",
                 environment_implementation=self._environment_specs.implementation,
                 environment_config=EnvironmentConfig(
-                    run_id=run_session.run_id, render=True, seed=self._cfg.environment_config.seed + trial_idx
+                    run_id=run_session.run_id, render=True, seed=self._cfg.seed + trial_idx
                 ),
                 actors=[agent_actor_params, teacher_actor_params],
             )
@@ -263,7 +260,7 @@ class SimpleBCTraining:
         # Configure the optimizer
         optimizer = torch.optim.Adam(
             model.policy_network.parameters(),
-            lr=self._cfg.training.learning_rate,
+            lr=self._cfg.learning_rate,
         )
 
         # Keep accumulated observations/actions around
@@ -274,27 +271,27 @@ class SimpleBCTraining:
         ##########################################
 
         # Rollout a bunch of trials
-        for (step_idx, _trial_id, sample,) in run_session.start_and_await_trials(
+        for (step_idx, _trial_id, _trial_idx, sample,) in run_session.start_and_await_trials(
             trials_id_and_params=[
                 (f"{run_session.run_id}_{trial_idx}", create_trial_params(trial_idx))
-                for trial_idx in range(self._cfg.training.num_trials)
+                for trial_idx in range(self._cfg.num_trials)
             ],
             sample_producer_impl=self.sample_producer,
             num_parallel_trials=1,
         ):
             ############ TUTORIAL STEP 4 ############
             (demonstration, observation, action) = sample
-            if self._cfg.training.train_only_from_demonstration and not demonstration:
+            if self._cfg.train_only_from_demonstration and not demonstration:
                 continue
 
             observations.append(observation)
             actions.append(action)
 
-            if len(observations) < self._cfg.training.batch_size:
+            if len(observations) < self._cfg.batch_size:
                 continue
 
             # Sample a batch of observations/actions
-            batch_indices = np.random.default_rng().integers(0, len(observations), self._cfg.training.batch_size)
+            batch_indices = np.random.default_rng().integers(0, len(observations), self._cfg.batch_size)
             batch_obs = torch.vstack([observations[i] for i in batch_indices])
             batch_act = torch.vstack([actions[i] for i in batch_indices])
 

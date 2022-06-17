@@ -18,8 +18,10 @@ from .value import create_space_values
 from .ndarray import serialize_ndarray
 
 
-def sample_space(space, num_samples=1, seed=0):
-    rng = np.random.default_rng(seed)
+def sample_space(space, num_samples=1, seed=0, rng=None):
+    if rng is None:
+        rng = np.random.default_rng(seed)
+
     space_values = create_space_values(space, num_samples)
 
     for prop_idx, prop in enumerate(space.properties):

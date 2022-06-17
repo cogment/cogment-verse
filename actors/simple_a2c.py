@@ -40,8 +40,8 @@ class SimpleA2CModel(Model):
         environment_implementation,
         num_input,
         num_output,
-        actor_network_hidden_size=64,
-        critic_network_hidden_size=64,
+        actor_network_num_hidden_nodes=64,
+        critic_network_num_hidden_nodes=64,
         dtype=torch.float,
         version_number=0,
     ):
@@ -50,23 +50,27 @@ class SimpleA2CModel(Model):
         self._environment_implementation = environment_implementation
         self._num_input = num_input
         self._num_output = num_output
-        self._actor_network_hidden_size = actor_network_hidden_size
-        self._critic_network_hidden_size = critic_network_hidden_size
+        self._actor_network_num_hidden_nodes = actor_network_num_hidden_nodes
+        self._critic_network_num_hidden_nodes = critic_network_num_hidden_nodes
 
         self.actor_network = torch.nn.Sequential(
-            torch.nn.Linear(self._num_input, self._actor_network_hidden_size, dtype=self._dtype),
+            torch.nn.Linear(self._num_input, self._actor_network_num_hidden_nodes, dtype=self._dtype),
             torch.nn.Tanh(),
-            torch.nn.Linear(self._actor_network_hidden_size, self._actor_network_hidden_size, dtype=self._dtype),
+            torch.nn.Linear(
+                self._actor_network_num_hidden_nodes, self._actor_network_num_hidden_nodes, dtype=self._dtype
+            ),
             torch.nn.Tanh(),
-            torch.nn.Linear(self._actor_network_hidden_size, self._num_output, dtype=self._dtype),
+            torch.nn.Linear(self._actor_network_num_hidden_nodes, self._num_output, dtype=self._dtype),
         )
 
         self.critic_network = torch.nn.Sequential(
-            torch.nn.Linear(self._num_input, self._critic_network_hidden_size, dtype=self._dtype),
+            torch.nn.Linear(self._num_input, self._critic_network_num_hidden_nodes, dtype=self._dtype),
             torch.nn.Tanh(),
-            torch.nn.Linear(self._critic_network_hidden_size, self._critic_network_hidden_size, dtype=self._dtype),
+            torch.nn.Linear(
+                self._critic_network_num_hidden_nodes, self._critic_network_num_hidden_nodes, dtype=self._dtype
+            ),
             torch.nn.Tanh(),
-            torch.nn.Linear(self._critic_network_hidden_size, 1, dtype=self._dtype),
+            torch.nn.Linear(self._critic_network_num_hidden_nodes, 1, dtype=self._dtype),
         )
 
         # version user data
@@ -78,8 +82,8 @@ class SimpleA2CModel(Model):
             "environment_implementation": self._environment_implementation,
             "num_input": self._num_input,
             "num_output": self._num_output,
-            "actor_network_hidden_size": self._actor_network_hidden_size,
-            "critic_network_hidden_size": self._critic_network_hidden_size,
+            "actor_network_num_hidden_nodes": self._actor_network_num_hidden_nodes,
+            "critic_network_num_hidden_nodes": self._critic_network_num_hidden_nodes,
         }
 
     def save(self, model_data_f):
@@ -96,8 +100,8 @@ class SimpleA2CModel(Model):
             environment_implementation=model_user_data["environment_implementation"],
             num_input=int(model_user_data["num_input"]),
             num_output=int(model_user_data["num_output"]),
-            actor_network_hidden_size=int(model_user_data["actor_network_hidden_size"]),
-            critic_network_hidden_size=int(model_user_data["critic_network_hidden_size"]),
+            actor_network_num_hidden_nodes=int(model_user_data["actor_network_num_hidden_nodes"]),
+            critic_network_num_hidden_nodes=int(model_user_data["critic_network_num_hidden_nodes"]),
         )
 
         # Load the saved states
@@ -148,19 +152,17 @@ class SimpleA2CActor:
 
 class SimpleA2CTraining:
     default_cfg = {
-        "environment_config": {"seed": 10},
-        "training": {
-            "epoch_count": 500,
-            "epoch_trial_count": 10,
-            "num_parallel_trials": 8,
-            "discount_factor": 0.99,
-            "entropy_loss_coef": 0.05,
-            "value_loss_coef": 0.5,
-            "action_loss_coef": 1.0,
-            "learning_rate": 0.01,
-        },
-        "actor_network": {"hidden_size": 64},
-        "critic_network": {"hidden_size": 64},
+        "seed": 10,
+        "num_epochs": 500,
+        "epoch_num_trials": 10,
+        "num_parallel_trials": 8,
+        "discount_factor": 0.99,
+        "entropy_loss_coef": 0.05,
+        "value_loss_coef": 0.5,
+        "action_loss_coef": 1.0,
+        "learning_rate": 0.01,
+        "actor_network": {"num_hidden_nodes": 64},
+        "critic_network": {"num_hidden_nodes": 64},
     }
 
     def __init__(self, environment_specs, cfg):
@@ -218,34 +220,33 @@ class SimpleA2CTraining:
             environment_implementation=self._environment_specs.implementation,
             num_input=flattened_dimensions(self._environment_specs.observation_space),
             num_output=flattened_dimensions(self._environment_specs.action_space),
-            actor_network_hidden_size=self._cfg.actor_network.hidden_size,
-            critic_network_hidden_size=self._cfg.critic_network.hidden_size,
+            actor_network_num_hidden_nodes=self._cfg.actor_network.num_hidden_nodes,
+            critic_network_num_hidden_nodes=self._cfg.critic_network.num_hidden_nodes,
             dtype=self._dtype,
         )
         _model_info, version_info = await run_session.model_registry.publish_initial_version(model)
 
         run_session.log_params(
-            self._cfg.training,
-            self._cfg.environment_config,
+            self._cfg,
             environment_implementation=self._environment_specs.implementation,
-            actor_network_hidden_size=self._cfg.actor_network.hidden_size,
-            critic_network_hidden_size=self._cfg.critic_network.hidden_size,
+            actor_network_num_hidden_nodes=self._cfg.actor_network.num_hidden_nodes,
+            critic_network_num_hidden_nodes=self._cfg.critic_network.num_hidden_nodes,
         )
 
         # Configure the optimizer over the two models
         optimizer = torch.optim.Adam(
             torch.nn.Sequential(model.actor_network, model.critic_network).parameters(),
-            lr=self._cfg.training.learning_rate,
+            lr=self._cfg.learning_rate,
         )
 
         total_samples = 0
-        for epoch_idx in range(self._cfg.training.epoch_count):
+        for epoch_idx in range(self._cfg.num_epochs):
             # Rollout a bunch of trials
             observation = []
             action = []
             reward = []
             done = []
-            for (_step_idx, _trial_id, sample,) in run_session.start_and_await_trials(
+            for (_step_idx, _trial_id, _trial_idx, sample,) in run_session.start_and_await_trials(
                 trials_id_and_params=[
                     (
                         f"{run_session.run_id}_{epoch_idx}_{trial_idx}",
@@ -256,9 +257,7 @@ class SimpleA2CTraining:
                             environment_config=EnvironmentConfig(
                                 run_id=run_session.run_id,
                                 render=False,
-                                seed=self._cfg.environment_config.seed
-                                + trial_idx
-                                + epoch_idx * self._cfg.training.epoch_trial_count,
+                                seed=self._cfg.seed + trial_idx + epoch_idx * self._cfg.epoch_num_trials,
                             ),
                             actors=[
                                 cogment.ActorParameters(
@@ -276,10 +275,10 @@ class SimpleA2CTraining:
                             ],
                         ),
                     )
-                    for trial_idx in range(self._cfg.training.epoch_trial_count)
+                    for trial_idx in range(self._cfg.epoch_num_trials)
                 ],
                 sample_producer_impl=self.trial_sample_sequences_producer_impl,
-                num_parallel_trials=self._cfg.training.num_parallel_trials,
+                num_parallel_trials=self._cfg.num_parallel_trials,
             ):
                 (trial_observation, trial_action, trial_reward, trial_done) = sample
                 observation.extend(trial_observation)
@@ -291,7 +290,7 @@ class SimpleA2CTraining:
 
             if len(observation) == 0:
                 log.warning(
-                    f"[SimpleA2CTraining/{run_session.run_id}] epoch #{epoch_idx + 1}/{self._cfg.training.epoch_count} finished without generating any sample (every trial ended at the first tick), skipping training."
+                    f"[SimpleA2CTraining/{run_session.run_id}] epoch #{epoch_idx + 1}/{self._cfg.num_epochs} finished without generating any sample (every trial ended at the first tick), skipping training."
                 )
                 continue
 
@@ -309,9 +308,7 @@ class SimpleA2CTraining:
 
             # Compute the estimated advantage over the epoch
             advantage = (
-                reward[1:]
-                + self._cfg.training.discount_factor * critic[1:].detach() * (1.0 - done[1:].float())
-                - critic[:-1]
+                reward[1:] + self._cfg.discount_factor * critic[1:].detach() * (1.0 - done[1:].float()) - critic[:-1]
             )
 
             # Compute critic loss
@@ -326,9 +323,9 @@ class SimpleA2CTraining:
 
             # Compute the complete loss
             loss = (
-                -self._cfg.training.entropy_loss_coef * entropy_loss
-                + self._cfg.training.value_loss_coef * value_loss
-                + self._cfg.training.action_loss_coef * action_loss
+                -self._cfg.entropy_loss_coef * entropy_loss
+                + self._cfg.value_loss_coef * value_loss
+                + self._cfg.action_loss_coef * action_loss
             )
 
             # Backprop!
@@ -337,7 +334,7 @@ class SimpleA2CTraining:
             optimizer.step()
 
             # Publish the newly trained version
-            last_epoch = (epoch_idx + 1) == self._cfg.training.epoch_count
+            last_epoch = (epoch_idx + 1) == self._cfg.num_epochs
 
             model.epoch_idx = epoch_idx
             model.total_samples = total_samples
@@ -353,5 +350,5 @@ class SimpleA2CTraining:
                 total_samples=total_samples,
             )
             log.info(
-                f"[SimpleA2CTraining/{run_session.run_id}] epoch #{epoch_idx + 1}/{self._cfg.training.epoch_count} finished ({total_samples} samples seen)"
+                f"[SimpleA2CTraining/{run_session.run_id}] epoch #{epoch_idx + 1}/{self._cfg.num_epochs} finished ({total_samples} samples seen)"
             )

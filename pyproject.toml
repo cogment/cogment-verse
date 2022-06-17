@@ -36,7 +36,7 @@ jobs=0
 logging-format-style="new"
 
 [tool.pylint.FORMAT]
-good-names=["i","j","k","c","h","w","x","id","f","to"]
+good-names=["i","j","k","c","h","t","w","x","id","f","to"]
 
 [tool.pylint.Typecheck]
 generated-members=["cv2", "torch"]

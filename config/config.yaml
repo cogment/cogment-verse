@@ -1,6 +1,6 @@
 defaults:
   - services: local_base_services
-  - services/environment: mountain_car
+  - services/environment: lunar_lander
   - services/actor: random
   - run: play
   - _self_

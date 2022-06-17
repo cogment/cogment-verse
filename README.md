@@ -73,11 +73,11 @@ Here are a few examples:
 
 - Launch a Simple Behavior Cloning run with the [Mountain Car Gym environment](https://www.gymlibrary.ml/environments/classic_control/mountain_car/) (which is the default environment)
   ```console
-  $ python -m main services/actor=simple_bc run=simple_bc
+  $ python -m main +experiment=simple_bc/mountain_car
   ```
 - Launch a Simple Behavior Cloning run with the [Lunar Lander Gym environment](https://www.gymlibrary.ml/environments/box2d/lunar_lander/)
   ```console
-  $ python -m main services/actor=simple_bc services/environment=lunar_lander run=simple_bc
+  $ python -m main +experiment=simple_bc/mountain_car services/environment=lunar_lander
   ```
 - Launch and play a single trial of the Lunar Lander Gym environment with continuous controls
   ```console

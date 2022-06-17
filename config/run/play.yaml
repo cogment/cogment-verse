@@ -1,5 +1,5 @@
 class_name: runs.play.PlayRun
-trial_count: 1
+num_trials: 1
 players:
   - name: player_1
     implementation: client

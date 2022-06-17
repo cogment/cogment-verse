@@ -16,69 +16,19 @@ import os
 
 import cogment
 import gym
-import numpy as np
 
 from cogment_verse.specs import (
     encode_rendered_frame,
-    deserialize_ndarray,
-    serialize_ndarray,
     EnvironmentSpecs,
     Observation,
-    Space,
-    SpaceValue,
+    space_from_gym_space,
+    gym_action_from_action,
+    observation_from_gym_observation,
 )
 from cogment_verse.constants import PLAYER_ACTOR_CLASS, TEACHER_ACTOR_CLASS
 
 # configure pygame to use a dummy video server to be able to render headlessly
 os.environ["SDL_VIDEODRIVER"] = "dummy"
-
-SPACES_BOUND_MAX = float.fromhex("0x1.fffffep+127")
-SPACES_BOUND_MIN = -SPACES_BOUND_MAX
-
-
-def space_from_gym_space(gym_space):
-    if isinstance(gym_space, gym.spaces.Box):
-        return Space(
-            properties=[
-                Space.Property(
-                    box=Space.Box(
-                        shape=list(gym_space.shape),
-                        low=[
-                            Space.Bound(bound=v) if SPACES_BOUND_MIN < v < SPACES_BOUND_MAX else Space.Bound()
-                            for v in gym_space.low.flat
-                        ],
-                        high=[
-                            Space.Bound(bound=v) if SPACES_BOUND_MIN < v < SPACES_BOUND_MAX else Space.Bound()
-                            for v in gym_space.high.flat
-                        ],
-                    )
-                )
-            ]
-        )
-    if isinstance(gym_space, gym.spaces.Discrete):
-        return Space(properties=[Space.Property(discrete=Space.Discrete(num=gym_space.n))])
-    raise RuntimeError(f"[{type(gym_space)}] is not a supported gym space type")
-
-
-def gym_action_from_action(space, action):
-    if len(action.properties) == 1:
-        prop_value = action.properties[0]
-        value_type = prop_value.WhichOneof("value")
-        if value_type == "discrete":
-            return prop_value.discrete
-        if value_type == "box":
-            return deserialize_ndarray(prop_value.box)
-        # value_type == "simple_box"
-        return np.array(prop_value.simple_box.values).reshape(space.properties[0].box.shape)
-    raise RuntimeError(f"Not supporting spaces not having one property, got {len(action.properties)}")
-
-
-def observation_from_gym_observation(gym_space, gym_observation):
-    if isinstance(gym_space, gym.spaces.Box):
-        return SpaceValue(properties=[SpaceValue.PropertyValue(box=serialize_ndarray(gym_observation))])
-    if isinstance(gym_space, gym.spaces.Discrete):
-        return SpaceValue(properties=[SpaceValue.PropertyValue(discrete=gym_observation.item())])
-    raise RuntimeError(f"[{type(gym_space)}] is not a supported gym space type")
 
 
 class Environment:
@@ -142,8 +92,8 @@ class Environment:
                     overridden_players = [player_actor_name]
 
                 gym_action = gym_action_from_action(
-                    self.env_specs.action_space, action_value
-                )  # pylint: disable=no-member
+                    self.env_specs.action_space, action_value  # pylint: disable=no-member
+                )
 
                 gym_observation, reward, done, _info = gym_env.step(gym_action)
                 observation_value = observation_from_gym_observation(gym_env.observation_space, gym_observation)

@@ -61,7 +61,12 @@ class RunSession:
                 if sample_queue_event.done:
                     break
                 self._step_idx += 1
-                yield (self._step_idx, sample_queue_event.trial_id, sample_queue_event.sample)
+                yield (
+                    self._step_idx,
+                    sample_queue_event.trial_id,
+                    sample_queue_event.trial_idx,
+                    sample_queue_event.sample,
+                )
 
             trial_runner_worker.join()
             sample_producer_worker.join()

@@ -35,7 +35,7 @@ simple_a2c_cartpole:
       num_input: 4
       num_action: 2
     training:
-      epoch_count: 100
+      num_epochs: 100
       epoch_trial_count: 15
       max_parallel_trials: 8
       discount_factor: 0.95
@@ -44,9 +44,9 @@ simple_a2c_cartpole:
       action_loss_coef: 1.0
       learning_rate: 0.01
     actor_network:
-      hidden_size: 64
+      num_hidden_nodes: 64
     critic_network:
-      hidden_size: 64
+      num_hidden_nodes: 64
 ```
 
 This is a plot of the total trial reward against the number of trials with a exponential moving average over 60 trials.
