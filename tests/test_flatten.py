@@ -14,7 +14,7 @@
 
 import numpy as np
 
-from cogment_verse.specs import Space, sample_space, flattened_dimensions, flatten, unflatten
+from cogment_verse.specs import Space, SpaceMask, sample_space, flattened_dimensions, flatten, flatten_mask, unflatten
 
 
 def test_flattened_dimensions_discrete():
@@ -133,3 +133,37 @@ def test_flatten():
     assert len(unflattened_random_value.properties) == 2
     assert unflattened_random_value.properties[0].discrete in [0, 1, 2]
     assert unflattened_random_value.properties[0].box is not None
+
+
+def test_flatten_mask():
+    space = Space(
+        properties=[
+            Space.Property(
+                key="a",
+                box=Space.Box(
+                    shape=[2, 3],
+                    low=[
+                        Space.Bound(),
+                        Space.Bound(),
+                        Space.Bound(),
+                        Space.Bound(),
+                        Space.Bound(),
+                        Space.Bound(),
+                    ],
+                    high=[
+                        Space.Bound(),
+                        Space.Bound(),
+                        Space.Bound(),
+                        Space.Bound(),
+                        Space.Bound(),
+                        Space.Bound(),
+                    ],
+                ),
+            ),
+            Space.Property(key="b", discrete=Space.Discrete(labels=["brake", "accelerate", "do nothing"])),
+        ]
+    )
+    mask = SpaceMask(properties=[SpaceMask.PropertyMask(), SpaceMask.PropertyMask(discrete=[1, 2])])
+    flat_mask = flatten_mask(space, mask)
+    assert flat_mask.shape == (9,)
+    assert np.array_equal(flat_mask, np.array([1, 1, 1, 1, 1, 1, 0, 1, 1]))

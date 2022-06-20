@@ -20,7 +20,7 @@ import { Button } from "../components/Button";
 import { FpsCounter } from "../components/FpsCounter";
 import { KeyboardControlList } from "../components/KeyboardControlList";
 
-export const ObserverControls = ({ sendAction, fps = 30, ...props }) => {
+export const RealTimeObserverControls = ({ sendAction, fps = 30, ...props }) => {
   const [paused, setPaused] = useState(false);
   const togglePause = useCallback(() => setPaused((paused) => !paused), [setPaused]);
   useDocumentKeypressListener("p", togglePause);

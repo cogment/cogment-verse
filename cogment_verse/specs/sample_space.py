@@ -18,14 +18,20 @@ from .value import create_space_values
 from .ndarray import serialize_ndarray
 
 
-def sample_space(space, num_samples=1, seed=0, rng=None):
+def sample_space(space, num_samples=1, rng=None, mask=None):
     if rng is None:
-        rng = np.random.default_rng(seed)
+        rng = np.random.default_rng()
 
     space_values = create_space_values(space, num_samples)
 
     for prop_idx, prop in enumerate(space.properties):
-        if prop.WhichOneof("type_oneof") == "discrete":
+        if prop.WhichOneof("type") == "discrete":
+            if mask is not None and prop_idx < len(mask.properties) and len(mask.properties[prop_idx].discrete) > 0:
+                for space_value, sampled_value in zip(
+                    space_values, rng.choice(a=mask.properties[prop_idx].discrete, size=num_samples)
+                ):
+                    space_value.properties[prop_idx].discrete = sampled_value
+                continue
             num_action = max(len(prop.discrete.labels), prop.discrete.num)
             for space_value, sampled_value in zip(space_values, rng.integers(low=0, high=num_action, size=num_samples)):
                 space_value.properties[prop_idx].discrete = sampled_value

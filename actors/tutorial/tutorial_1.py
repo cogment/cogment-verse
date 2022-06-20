@@ -45,7 +45,7 @@ class SimpleBCActor:
 
         async for event in actor_session.all_events():
             if event.observation and event.type == cogment.EventType.ACTIVE:
-                [action_value] = sample_space(config.environment_specs.action_space, seed=actor_session.get_tick_id())
+                [action_value] = sample_space(config.environment_specs.action_space)
                 actor_session.do_action(PlayerAction(value=action_value))
 
 

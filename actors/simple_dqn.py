@@ -27,6 +27,7 @@ from cogment_verse.specs import (
     EnvironmentConfig,
     flatten,
     flattened_dimensions,
+    flatten_mask,
     PLAYER_ACTOR_CLASS,
     PlayerAction,
     SpaceValue,
@@ -136,7 +137,7 @@ class SimpleDQNActor:
 
         assert config.environment_specs.num_players == 1
         assert len(config.environment_specs.action_space.properties) == 1
-        assert config.environment_specs.action_space.properties[0].WhichOneof("type_oneof") == "discrete"
+        assert config.environment_specs.action_space.properties[0].WhichOneof("type") == "discrete"
 
         observation_space = config.environment_specs.observation_space
         action_space = config.environment_specs.action_space
@@ -150,18 +151,29 @@ class SimpleDQNActor:
 
         async for event in actor_session.all_events():
             if event.observation and event.type == cogment.EventType.ACTIVE:
+                if (
+                    event.observation.observation.HasField("current_player")
+                    and event.observation.observation.current_player != actor_session.name
+                ):
+                    # Not the turn of the agent
+                    actor_session.do_action(PlayerAction())
+                    continue
+
                 if config.model_version == -1 and actor_session.get_tick_id() % config.model_update_frequency == 0:
                     model, _, _ = await actor_session.model_registry.retrieve_version(
                         SimpleDQNModel, config.model_id, config.model_version
                     )
                     model.network.eval()
                 if rng.random() < model.epsilon:
-                    [action_value] = sample_space(action_space, rng=rng)
+                    [action_value] = sample_space(action_space, rng=rng, mask=event.observation.observation.action_mask)
                 else:
                     obs_tensor = torch.tensor(
                         flatten(observation_space, event.observation.observation.value), dtype=self._dtype
                     )
                     action_probs = model.network(obs_tensor)
+                    if event.observation.observation.HasField("action_mask"):
+                        action_mask = flatten_mask(event.observation.observation.action_mask)
+                        action_probs = action_probs * action_mask
                     discrete_action_tensor = torch.argmax(action_probs)
                     action_value = SpaceValue(
                         properties=[SpaceValue.PropertyValue(discrete=discrete_action_tensor.item())]
@@ -248,7 +260,7 @@ class SimpleDQNTraining:
 
         assert self._environment_specs.num_players == 1
         assert len(self._environment_specs.action_space.properties) == 1
-        assert self._environment_specs.action_space.properties[0].WhichOneof("type_oneof") == "discrete"
+        assert self._environment_specs.action_space.properties[0].WhichOneof("type") == "discrete"
 
         epsilon_schedule = create_linear_schedule(
             self._cfg.epsilon_schedule_start,

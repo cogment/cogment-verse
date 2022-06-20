@@ -9,7 +9,7 @@ stages:
   before_script:
     - mkdir -p ${PIP_CACHE_DIR}
     - apt-get update
-    - apt-get install -y python3-opencv
+    - apt-get install -y swig python3-opencv
     - python -m venv .venv
     - source .venv/bin/activate
     - pip install -r requirements.txt

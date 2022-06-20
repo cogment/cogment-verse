@@ -129,7 +129,7 @@ class SimpleA2CActor:
 
         assert config.environment_specs.num_players == 1
         assert len(config.environment_specs.action_space.properties) == 1
-        assert config.environment_specs.action_space.properties[0].WhichOneof("type_oneof") == "discrete"
+        assert config.environment_specs.action_space.properties[0].WhichOneof("type") == "discrete"
 
         observation_space = config.environment_specs.observation_space
 
@@ -213,7 +213,7 @@ class SimpleA2CTraining:
 
         assert self._environment_specs.num_players == 1
         assert len(self._environment_specs.action_space.properties) == 1
-        assert self._environment_specs.action_space.properties[0].WhichOneof("type_oneof") == "discrete"
+        assert self._environment_specs.action_space.properties[0].WhichOneof("type") == "discrete"
 
         model = SimpleA2CModel(
             model_id,

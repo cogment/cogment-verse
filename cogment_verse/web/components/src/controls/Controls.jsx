@@ -13,12 +13,14 @@
 // limitations under the License.
 
 import { useMemo } from "react";
-import { ObserverControls } from "./ObserverControls";
+import { RealTimeObserverControls } from "./RealTimeObserverControls";
+import { TurnBasedObserverControls } from "./TurnBasedObserverControls";
 import { GymLunarLanderControls, GymLunarLanderEnvironments } from "./GymLunarLanderControls";
 import {
   GymLunarLanderContinuousControls,
   GymLunarLanderContinuousEnvironments,
 } from "./GymLunarLanderContinuousControls";
+import { ConnectFourControls, ConnectFourEnvironments } from "./ConnectFourControls";
 import { GymCartPoleEnvironments, GymCartPoleControls } from "./GymCartPoleControls";
 import { GymMountainCarEnvironments, GymMountainCarControls } from "./GymMountainCarControls";
 import { AtariPitfallEnvironments, AtariPitfallControls } from "./AtariPitfallControls";
@@ -32,12 +34,16 @@ const CONTROLS = [
   { environments: GymMountainCarEnvironments, component: GymMountainCarControls },
   { environments: AtariPitfallEnvironments, component: AtariPitfallControls },
   { environments: TetrisEnvironments, component: TetrisControls },
+  { environments: ConnectFourEnvironments, component: ConnectFourControls },
 ];
 
-export const Controls = ({ environment, actorClass, sendAction, fps }) => {
+export const Controls = ({ environment, actorClass, sendAction, fps, turnBased, observation }) => {
   const ControlsComponent = useMemo(() => {
     if (OBSERVER_ACTOR_CLASS === actorClass) {
-      return ObserverControls;
+      if (turnBased) {
+        return TurnBasedObserverControls;
+      }
+      return RealTimeObserverControls;
     }
     if ([PLAYER_ACTOR_CLASS, TEACHER_ACTOR_CLASS].includes(actorClass)) {
       const control = CONTROLS.find(({ environments }) => environments.includes(environment));
@@ -47,7 +53,15 @@ export const Controls = ({ environment, actorClass, sendAction, fps }) => {
       return control.component;
     }
     return () => <div>Unknown actor class "{actorClass}"</div>;
-  }, [environment, actorClass]);
+  }, [environment, actorClass, turnBased]);
 
-  return <ControlsComponent sendAction={sendAction} fps={fps} actorClass={actorClass} environment={environment} />;
+  return (
+    <ControlsComponent
+      sendAction={sendAction}
+      fps={fps}
+      actorClass={actorClass}
+      environment={environment}
+      observation={observation}
+    />
+  );
 };

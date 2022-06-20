@@ -30,13 +30,14 @@ from cogment_verse.specs import (
 log = logging.getLogger(__name__)
 
 
-def extend_actor_config(actor_config_template, run_id, environment_specs):
+def extend_actor_config(actor_config_template, run_id, environment_specs, seed):
     config = AgentConfig()
     if actor_config_template is not None:
         config.CopyFrom(actor_config_template)
     config.run_id = run_id
     # pylint: disable=no-member
     config.environment_specs.CopyFrom(environment_specs)
+    config.seed = seed
     return config
 
 
@@ -74,89 +75,96 @@ class PlayRun:
                 f"Expecting at least {self._environment_specs.num_players} configured actors, got {len(self._cfg.players)}"
             )
 
-        actors_params = []
-        has_human_actor = False
-        for actor_params in self._cfg.players[: self._environment_specs.num_players]:
-            if actor_params.implementation == HUMAN_ACTOR_IMPL:
-                if has_human_actor:
-                    raise RuntimeError("Can't have more than one human involved in the trial")
-                # Human actor
-                actors_params.append(
-                    cogment.ActorParameters(
-                        cog_settings,
-                        name=WEB_ACTOR_NAME,
-                        class_name=PLAYER_ACTOR_CLASS,
-                        implementation=HUMAN_ACTOR_IMPL,
-                        config=extend_actor_config(
-                            actor_config_template=actor_params.get("agent_config", None),
-                            run_id=run_session.run_id,
-                            environment_specs=self._environment_specs,
-                        ),
-                    )
-                )
-                has_human_actor = True
-            else:
-                actors_params.append(
-                    cogment.ActorParameters(
-                        cog_settings,
-                        name=actor_params.name,
-                        class_name=PLAYER_ACTOR_CLASS,
-                        implementation=actor_params.implementation,
-                        config=extend_actor_config(
-                            actor_config_template=actor_params.get("agent_config", None),
-                            run_id=run_session.run_id,
-                            environment_specs=self._environment_specs,
-                        ),
-                    )
-                )
-
-        if self._cfg.observer:
-            if has_human_actor:
-                raise RuntimeError("Can't have more than one human involved in the trial")
-            # Add an observer agent
-            actors_params.append(
-                cogment.ActorParameters(
-                    cog_settings,
-                    name=WEB_ACTOR_NAME,
-                    class_name=OBSERVER_ACTOR_CLASS,
-                    implementation=HUMAN_ACTOR_IMPL,
-                    config=AgentConfig(
-                        run_id=run_session.run_id,
-                        environment_specs=self._environment_specs,
-                    ),
-                )
-            )
-            has_human_actor = True
-
+        players_cfg = self._cfg.players[: self._environment_specs.num_players]
         run_session.log_params(
             **{
                 f"actor_{actor_idx}_implementation": actor_params.implementation
-                for actor_idx, actor_params in enumerate(actors_params)
+                for actor_idx, actor_params in enumerate(players_cfg)
             },
             **{
-                f"actor_{actor_idx}_model_id": actor_params.config.model_id
-                for actor_idx, actor_params in enumerate(actors_params)
+                f"actor_{actor_idx}_model_id": actor_params.get("config", {"model_id": None})["model_id"]
+                for actor_idx, actor_params in enumerate(players_cfg)
             },
             **{
-                f"actor_{actor_idx}_model_version": actor_params.config.model_version
-                for actor_idx, actor_params in enumerate(actors_params)
+                f"actor_{actor_idx}_model_version": actor_params.get("config", {"model_version": None})["model_version"]
+                for actor_idx, actor_params in enumerate(players_cfg)
             },
             environment=self._environment_specs.implementation,
         )
 
-        # Helper function to create a trial configuration
-        trial_params = cogment.TrialParameters(
-            cog_settings,
-            environment_name="env",
-            environment_implementation=self._environment_specs.implementation,
-            environment_config=EnvironmentConfig(run_id=run_session.run_id, render=has_human_actor, seed=50),
-            actors=actors_params,
-        )
+        def create_trial_params(trial_idx):
+            actors_params = []
+            has_human_actor = False
+            for actor_idx, actor_params in enumerate(players_cfg):
+                if actor_params.implementation == HUMAN_ACTOR_IMPL:
+                    if has_human_actor:
+                        raise RuntimeError("Can't have more than one human involved in the trial")
+                    # Human actor
+                    actors_params.append(
+                        cogment.ActorParameters(
+                            cog_settings,
+                            name=WEB_ACTOR_NAME,
+                            class_name=PLAYER_ACTOR_CLASS,
+                            implementation=HUMAN_ACTOR_IMPL,
+                            config=extend_actor_config(
+                                actor_config_template=actor_params.get("agent_config", None),
+                                run_id=run_session.run_id,
+                                environment_specs=self._environment_specs,
+                                seed=(self._cfg.seed + actor_idx) * trial_idx,
+                            ),
+                        )
+                    )
+                    has_human_actor = True
+                else:
+                    actors_params.append(
+                        cogment.ActorParameters(
+                            cog_settings,
+                            name=actor_params.name,
+                            class_name=PLAYER_ACTOR_CLASS,
+                            implementation=actor_params.implementation,
+                            config=extend_actor_config(
+                                actor_config_template=actor_params.get("agent_config", None),
+                                run_id=run_session.run_id,
+                                environment_specs=self._environment_specs,
+                                seed=(self._cfg.seed + actor_idx) * trial_idx,
+                            ),
+                        )
+                    )
+
+            if self._cfg.observer:
+                if has_human_actor:
+                    raise RuntimeError("Can't have more than one human involved in the trial")
+                # Add an observer agent
+                actors_params.append(
+                    cogment.ActorParameters(
+                        cog_settings,
+                        name=WEB_ACTOR_NAME,
+                        class_name=OBSERVER_ACTOR_CLASS,
+                        implementation=HUMAN_ACTOR_IMPL,
+                        config=AgentConfig(
+                            run_id=run_session.run_id,
+                            environment_specs=self._environment_specs,
+                            seed=(self._cfg.seed + 100) * trial_idx,
+                        ),
+                    )
+                )
+                has_human_actor = True
+
+            return cogment.TrialParameters(
+                cog_settings,
+                environment_name="env",
+                environment_implementation=self._environment_specs.implementation,
+                environment_config=EnvironmentConfig(
+                    run_id=run_session.run_id, render=has_human_actor, seed=self._cfg.seed * trial_idx
+                ),
+                actors=actors_params,
+            )
 
         # Rollout a bunch of trials
         for (_step_idx, _trial_id, _trial_idx, sample,) in run_session.start_and_await_trials(
             trials_id_and_params=[
-                (f"{run_session.run_id}_{trial_idx}", trial_params) for trial_idx in range(self._cfg.num_trials)
+                (f"{run_session.run_id}_{trial_idx}", create_trial_params(trial_idx))
+                for trial_idx in range(self._cfg.num_trials)
             ],
             sample_producer_impl=self.total_rewards_producer_impl,
             num_parallel_trials=1,

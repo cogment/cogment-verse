@@ -19,6 +19,7 @@ from data_pb2 import (  # pylint: disable=import-error
     Observation,
     PlayerAction,
     Space,
+    SpaceMask,
     SpaceValue,
 )
 import cog_settings  # pylint: disable=import-error
@@ -34,7 +35,7 @@ from .environment_specs import save_environment_specs, load_environment_specs
 from .encode_rendered_frame import encode_rendered_frame
 from .ndarray import deserialize_ndarray, serialize_ndarray
 from .sample_space import sample_space
-from .flatten import flattened_dimensions, flatten, unflatten
+from .flatten import flattened_dimensions, flatten, unflatten, flatten_mask
 from .gym_spaces_adapter import (
     gym_action_from_action,
     gym_space_from_space,

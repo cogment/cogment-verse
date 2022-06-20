@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import cogment
+import numpy as np
 
 from cogment_verse.specs import (
     PLAYER_ACTOR_CLASS,
@@ -35,9 +36,16 @@ class RandomActor:
 
         action_space = config.environment_specs.action_space
 
-        random_seed = config.seed if config.seed is not None else 0
+        rng = np.random.default_rng(config.seed if config.seed is not None else 0)
 
         async for event in actor_session.all_events():
             if event.observation and event.type == cogment.EventType.ACTIVE:
-                [action_value] = sample_space(action_space, seed=random_seed + actor_session.get_tick_id())
+                if (
+                    event.observation.observation.HasField("current_player")
+                    and event.observation.observation.current_player != actor_session.name
+                ):
+                    # Not the turn of the agent
+                    actor_session.do_action(PlayerAction())
+                    continue
+                [action_value] = sample_space(action_space, rng=rng, mask=event.observation.observation.action_mask)
                 actor_session.do_action(PlayerAction(value=action_value))

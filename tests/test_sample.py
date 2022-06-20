@@ -14,6 +14,7 @@
 
 from cogment_verse.specs import (
     Space,
+    SpaceMask,
     sample_space,
     deserialize_ndarray,
 )
@@ -41,6 +42,18 @@ def test_sample_discrete_named():
         assert value.properties[0].discrete in range(3)
 
 
+def test_sample_discrete_named_masked():
+    space = Space(properties=[Space.Property(discrete=Space.Discrete(labels=["brake", "accelerate", "do nothing"]))])
+    mask = SpaceMask(properties=[SpaceMask.PropertyMask(discrete=[0, 2])])
+
+    values = sample_space(space, 345, mask=mask)
+    assert len(values) == 345
+
+    for value in values:
+        assert len(value.properties) == 1
+        assert value.properties[0].discrete in [0, 2]
+
+
 def test_sample_discrete_named_and_more():
     space = Space(
         properties=[Space.Property(discrete=Space.Discrete(labels=["brake", "accelerate", "do nothing"], num=12))]
@@ -52,6 +65,24 @@ def test_sample_discrete_named_and_more():
     for value in values:
         assert len(value.properties) == 1
         assert value.properties[0].discrete in range(12)
+
+
+def test_sample_multiple_discrete():
+    space = Space(
+        properties=[
+            Space.Property(key="foo", discrete=Space.Discrete(labels=["brake", "accelerate", "do nothing"])),
+            Space.Property(key="bar", discrete=Space.Discrete(num=6)),
+        ]
+    )
+    mask = SpaceMask(properties=[SpaceMask.PropertyMask(), SpaceMask.PropertyMask(discrete=[1, 4, 5])])
+
+    values = sample_space(space, 12, mask=mask)
+    assert len(values) == 12
+
+    for value in values:
+        assert len(value.properties) == 2
+        assert value.properties[0].discrete in range(3)
+        assert value.properties[1].discrete in [1, 4, 5]
 
 
 def test_sample_box():

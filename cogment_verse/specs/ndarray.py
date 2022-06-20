@@ -24,7 +24,7 @@ def serialize_ndarray(nd_array):
     return NDArray(shape=nd_array.shape, dtype=str(nd_array.dtype), data=nd_array.tobytes())
 
 
-def create_one_hot_ndarray(value, size):
+def create_one_hot_ndarray(values, size):
     nd_array = np.zeros(size)
-    nd_array[value] = 1
+    nd_array[values] = 1
     return nd_array

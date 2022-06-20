@@ -38,6 +38,7 @@ class Environment:
         gym_env = gym.make(self.gym_env_name)
         self.env_specs = EnvironmentSpecs(
             num_players=1,
+            turn_based=False,
             observation_space=space_from_gym_space(gym_env.observation_space),
             action_space=space_from_gym_space(gym_env.action_space),
         )
@@ -100,10 +101,7 @@ class Environment:
 
                 rendered_frame = None
                 if session_cfg.render:
-                    if session_cfg.render:
-                        rendered_frame = encode_rendered_frame(
-                            gym_env.render(mode="rgb_array"), session_cfg.render_width
-                        )
+                    rendered_frame = encode_rendered_frame(gym_env.render(mode="rgb_array"), session_cfg.render_width)
 
                 observations = [
                     (

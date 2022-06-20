@@ -26,8 +26,10 @@ export const Button = ({ className, ...props }) => {
         "py-2",
         "px-5",
         "bg-indigo-600",
+        "disabled:bg-gray-400",
         "hover:bg-indigo-900",
         "text-white",
+        "disabled:text-gray-200",
         "text-center",
         "rounded"
       )}

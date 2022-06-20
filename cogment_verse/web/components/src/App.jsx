@@ -25,7 +25,7 @@ function App() {
   const [trialStatus, setTrialStatus] = useState("no trial started");
   const [countdown, setCountdown] = useState(false);
 
-  const [{ trialId, runId, environment }, setTrialInfo] = useState({});
+  const [{ trialId, runId, environment, turnBased }, setTrialInfo] = useState({});
 
   const [event, joinAnyTrial, _sendAction, trialJoined, actorClass, actorConfig] = useActions(
     cogSettings,
@@ -54,6 +54,7 @@ function App() {
     setTrialInfo((trialInfo = {}) => ({
       ...trialInfo,
       environment: actorConfig?.environmentSpecs?.implementation || undefined,
+      turnBased: actorConfig?.environmentSpecs?.turnBased || false,
       runId: actorConfig?.runId || undefined,
     }));
   }, [actorConfig]);
@@ -97,7 +98,15 @@ function App() {
         }
       />
       <div className="p-2 flex flex-col gap-2">
-        {trialJoined ? <Controls actorClass={actorClass} environment={environment} sendAction={sendAction} /> : null}
+        {trialJoined ? (
+          <Controls
+            actorClass={actorClass}
+            environment={environment}
+            sendAction={sendAction}
+            turnBased={turnBased}
+            observation={event.observation}
+          />
+        ) : null}
         <div className="font-mono text-right text-xs lowercase">Status: {trialStatus}</div>
       </div>
     </div>

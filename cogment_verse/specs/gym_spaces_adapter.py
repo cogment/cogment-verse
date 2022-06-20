@@ -26,7 +26,7 @@ SPACES_BOUND_MIN = -SPACES_BOUND_MAX
 def gym_space_from_space(space):
     gym_spaces_dict = {}
     for prop in space.properties:
-        prop_type = prop.WhichOneof("type_oneof")
+        prop_type = prop.WhichOneof("type")
         if prop_type == "discrete":
             num_action = max(len(prop.discrete.labels), prop.discrete.num)
             gym_spaces_dict[prop.key] = gym.spaces.Discrete(num_action)
@@ -41,28 +41,39 @@ def gym_space_from_space(space):
     return gym.spaces.Dict(gym_spaces_dict)
 
 
-def space_from_gym_space(gym_space):
+def space_properties_from_gym_space(gym_space):
     if isinstance(gym_space, gym.spaces.Box):
-        return Space(
-            properties=[
-                Space.Property(
-                    box=Space.Box(
-                        shape=list(gym_space.shape),
-                        low=[
-                            Space.Bound(bound=v) if SPACES_BOUND_MIN < v < SPACES_BOUND_MAX else Space.Bound()
-                            for v in gym_space.low.flat
-                        ],
-                        high=[
-                            Space.Bound(bound=v) if SPACES_BOUND_MIN < v < SPACES_BOUND_MAX else Space.Bound()
-                            for v in gym_space.high.flat
-                        ],
-                    )
+        return [
+            Space.Property(
+                box=Space.Box(
+                    shape=list(gym_space.shape),
+                    low=[
+                        Space.Bound(bound=v) if SPACES_BOUND_MIN < v < SPACES_BOUND_MAX else Space.Bound()
+                        for v in gym_space.low.flat
+                    ],
+                    high=[
+                        Space.Bound(bound=v) if SPACES_BOUND_MIN < v < SPACES_BOUND_MAX else Space.Bound()
+                        for v in gym_space.high.flat
+                    ],
                 )
-            ]
-        )
+            )
+        ]
     if isinstance(gym_space, gym.spaces.Discrete):
-        return Space(properties=[Space.Property(discrete=Space.Discrete(num=gym_space.n))])
+        return [Space.Property(discrete=Space.Discrete(num=gym_space.n))]
+    if isinstance(gym_space, gym.spaces.Dict):
+        properties = []
+        for prop_key, gym_sub_space in gym_space.properties:
+            for sub_prop in space_properties_from_gym_space(gym_sub_space):
+                sub_prop.key = (
+                    f"{prop_key}.{sub_prop.key}" if sub_prop.key is not None else prop_key  # pylint: disable=no-member
+                )
+                properties.append(sub_prop)
+        return properties
     raise RuntimeError(f"[{type(gym_space)}] is not a supported gym space type")
+
+
+def space_from_gym_space(gym_space):
+    return Space(properties=space_properties_from_gym_space(gym_space))
 
 
 def gym_action_from_action(space, action):

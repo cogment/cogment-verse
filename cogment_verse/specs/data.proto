@@ -39,7 +39,7 @@ message Space {
   }
   message Property {
     string key = 1;
-    oneof type_oneof {
+    oneof type {
       Discrete discrete = 2;
       Box box = 3;
     }
@@ -63,11 +63,21 @@ message SpaceValue {
   repeated PropertyValue properties = 1;
 }
 
+// SpaceMask messages are value masks within a space
+// `properties` are sorted in the same way than the value's Space
+message SpaceMask {
+  message PropertyMask {
+    repeated int32 discrete = 1; // The discrete actions that are valid
+  }
+  repeated PropertyMask properties = 1;
+}
+
 message EnvironmentSpecs {
   string implementation = 1;
-  int32 num_players = 2;
-  Space observation_space = 3;
-  Space action_space = 4;
+  bool turn_based = 2;
+  int32 num_players = 3;
+  Space observation_space = 4;
+  Space action_space = 5;
 }
 
 message EnvironmentConfig {
@@ -104,11 +114,11 @@ message TrialConfig {
 
 message Observation {
   SpaceValue value = 1;
-  optional bytes rendered_frame = 2;
-  repeated int32 legal_moves_as_int = 3;
-  int32 current_player = 4; // active player for multi-agent turn-based environments
+  optional string current_player = 2; // active player for multi-agent turn-based environments
+  optional SpaceMask action_mask = 3;
+  optional bytes rendered_frame = 4;
   repeated string overridden_players = 5;  // list of players that provided an action that was overriden during the last tick
-  NDArray segmentation = 6;
+  //NDArray segmentation = 6;
 }
 
 message PlayerAction {
