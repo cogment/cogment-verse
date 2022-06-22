@@ -15,7 +15,7 @@
 import logging
 
 import cogment
-from cogment.api.common_pb2 import TrialState
+from google.protobuf.json_format import ParseDict
 
 from cogment_verse.specs import (
     AgentConfig,
@@ -33,7 +33,7 @@ log = logging.getLogger(__name__)
 def extend_actor_config(actor_config_template, run_id, environment_specs, seed):
     config = AgentConfig()
     if actor_config_template is not None:
-        config.CopyFrom(actor_config_template)
+        ParseDict(actor_config_template, config)
     config.run_id = run_id
     # pylint: disable=no-member
     config.environment_specs.CopyFrom(environment_specs)
@@ -55,9 +55,6 @@ class PlayRun:
         }
         num_ticks = 0
         async for sample in sample_producer_session.all_trial_samples():
-            if sample.trial_state == TrialState.ENDED:
-                break
-
             num_ticks += 1
             for actor_name, actor_sample in sample.actors_data.items():
                 actors_total_rewards[actor_name] += actor_sample.reward if actor_sample.reward is not None else 0.0

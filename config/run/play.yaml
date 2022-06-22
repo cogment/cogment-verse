@@ -1,5 +1,5 @@
 class_name: runs.play.PlayRun
-num_trials: 1
+num_trials: 5
 seed: 12
 players:
   - name: player_1

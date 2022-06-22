@@ -2,17 +2,20 @@
 defaults:
   - override /services/actor:
       - simple_dqn
-  - override /services/environment: cartpole
+      - random
+  - override /services/environment: connect_four
 run:
-  class_name: actors.simple_dqn.SimpleDQNTraining
+  class_name: actors.simple_dqn.SimpleDQNSelfPlayTraining
   seed: 618
-  num_trials: 10000
+  num_epochs: 75
+  epoch_num_training_trials: 200
+  epoch_num_validation_trials: 20
   num_parallel_trials: 10
   learning_starts: ${run.batch_size}
-  learning_rate: 0.000125
-  discount_factor: 0.95
-  target_update_frequency: 2000
-  batch_size: 64
+  learning_rate: 0.0005
+  discount_factor: 0.99
+  target_update_frequency: 4000
+  batch_size: 256
   buffer_size: 10000
   epsilon_schedule_start: 1
   epsilon_schedule_end: 0.05

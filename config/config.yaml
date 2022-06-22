@@ -9,6 +9,7 @@ hydra:
   job:
     name: ${run.class_name}
     id: ${run.run_id}
+    num: 0
 run:
   run_id: ${generate_name:run_id}_${hydra:job.num}
   mlflow_tracking_uri: http://localhost:3000

@@ -91,16 +91,21 @@ Here are a few examples:
 
   This one is completely _headless_ (training doens't involve interaction with a human player). It will take a little while to run, you can monitor the progress using mlflow at <http://localhost:3000>
 
+- Launch an DQN self training run with the [Connect Four Petting Zoo environment](https://www.pettingzoo.ml/classic/connect_four)
+
+  ```console
+  $ python -m main +experiment=simple_dqn/connect_four
+  ```
+
+  The same experiment can be launched with a ratio of human-in-the-loop training trials (that are playable on in the web client)
+
+  ```console
+  $ python -m main +experiment=simple_dqn/connect_four +run.hill_training_trials_ratio=0.05
+  ```
+
 ## List of publications and submissions using Cogment and/or Cogment Verse
 
 - Analyzing and Overcoming Degradation in Warm-Start Off-Policy Reinforcement Learning [code](https://github.com/benwex93/cogment-verse)
 - Multi-Teacher Curriculum Design for Sparse Reward Environments [code](https://github.com/kharyal/cogment-verse/)
 
 (please open a pull request to add missing entries)
-
-## Acknowledgements
-
-The subdirectories `/tf_agents/cogment_verse_tf_agents/third_party` and `/torch_agents/cogment_verse_torch_agents/third_party` contains code from third party sources
-
-- `hive`: Taken from the [Hive library](https://github.com/chandar-lab/RLHive)
-- `td3`: Taken form the [authors' implementation](https://github.com/sfujim/TD3)

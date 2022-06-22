@@ -83,7 +83,7 @@ class App:
             if service_type not in [service_type.value for service_type in ServiceType]:
                 raise RuntimeError(f"Unknown service type [{service_type}]")
             if service_type == ServiceType.ORCHESTRATOR.value:
-                for orchestrator_service_cfg in services_cfg:
+                for orchestrator_service_cfg in services_cfg.values():
                     self.services_process.append(
                         create_orchestrator_service(work_dir, orchestrator_service_cfg, self.services_directory)
                     )
@@ -105,7 +105,7 @@ class App:
                     )
                 )
             elif service_type == ServiceType.ACTOR.value:
-                for actor_service_cfg in services_cfg:
+                for actor_service_cfg in services_cfg.values():
                     self.services_process.append(
                         create_actor_service(
                             work_dir, SPEC_FILEPATH, self.model_registry, actor_service_cfg, self.services_directory

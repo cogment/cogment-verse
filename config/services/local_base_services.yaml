@@ -1,5 +1,6 @@
 orchestrator:
-  - port: ${generate_port:orchestrator}
+  orchestrator_1:
+    port: ${generate_port:orchestrator}
     web_port: ${generate_port:orchestrator_web}
     log_level: warning
 trial_datastore:

@@ -228,6 +228,7 @@ class SimpleA2CTraining:
 
         run_session.log_params(
             self._cfg,
+            model_id=model_id,
             environment_implementation=self._environment_specs.implementation,
             actor_network_num_hidden_nodes=self._cfg.actor_network.num_hidden_nodes,
             critic_network_num_hidden_nodes=self._cfg.critic_network.num_hidden_nodes,

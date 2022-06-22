@@ -122,7 +122,6 @@ class Environment:
             return (current_player_pz_agent, current_player_actor_idx, current_player_actor_name)
 
         current_player_pz_agent, current_player_actor_idx, current_player_actor_name = next_player()
-        actor_last_tick_id = {}
 
         pz_observation, _pz_reward, _pz_done, _pz_info = pz_env.last()
 
@@ -143,9 +142,9 @@ class Environment:
                 (
                     "*",
                     Observation(
-                        value=observation_value,
-                        rendered_frame=rendered_frame,
-                        action_mask=action_mask,
+                        value=observation_value,  # TODO Should only be sent to the current player
+                        rendered_frame=rendered_frame,  # TODO Should only be sent to observers
+                        action_mask=action_mask,  # TODO Should only be sent to the current player
                         current_player=current_player_actor_name,
                     ),
                 )
@@ -202,15 +201,11 @@ class Environment:
                         )
                         if player_pz_agent == rewarded_player_pz_agent
                     )
-                    assert rewarded_player_actor_name in actor_last_tick_id
                     environment_session.add_reward(
                         value=pz_reward,
                         confidence=1.0,
                         to=[rewarded_player_actor_name],
-                        tick_id=actor_last_tick_id[rewarded_player_actor_name],
                     )
-
-                actor_last_tick_id[current_player_actor_name] = environment_session.get_tick_id()
 
                 done = all(pz_env.dones[pz_agent] for pz_agent in pz_env.agents)
 
