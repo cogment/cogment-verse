@@ -3,7 +3,6 @@ defaults:
   - override /services/actor:
       - simple_bc
   - override /services/environment: mountain_car
-  - override /run: simple_dqn
 run:
   class_name: actors.tutorial.tutorial_4.SimpleBCTraining
   seed: 618
