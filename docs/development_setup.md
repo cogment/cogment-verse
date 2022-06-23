@@ -2,7 +2,7 @@
 
 This is a practical guide for developers wanting to develop within cogment verse.
 
-## Dependencies
+## Additional dependencies
 
 To support development, additional dependencies are required.
 

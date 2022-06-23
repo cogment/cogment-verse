@@ -43,23 +43,28 @@ Cogment verse includes environments from:
 
 1. Clone this repository
 2. Install [Python 3.9](https://www.python.org/)
-3. Create and activate a virtual environment by runnning
+3. Depending on your specific machine, you might also need to following dependencies:
+
+   - `swig`, which is required for the Box2d gym environments, it can be installed using `apt-get install swig` on ubuntu or `brew install swig` on macOS
+   - `python3-opencv`, which is required on ubuntu systems, it can be installed using `apt-get install python3-opencv`
+
+4. Create and activate a virtual environment by runnning
    ```console
    $ python -m venv .venv
    $ source .venv/bin/activate
    ```
-4. Install the python dependencies by running
+5. Install the python dependencies by running
    ```console
    $ pip install -r requirements.txt
    ```
-5. In another terminal, launch a mlflow server on port 3000 by running
+6. In another terminal, launch a mlflow server on port 3000 by running
    ```console
    $ source .venv/bin/activate
    $ python -m simple_mlflow
    ```
-6. Start the default Cogment Verse run using `python -m main`
-7. Open Chrome (other web browser might work but haven't tested) and navigate to http://localhost:8080/
-8. Play the game!
+7. Start the default Cogment Verse run using `python -m main`
+8. Open Chrome (other web browser might work but haven't tested) and navigate to http://localhost:8080/
+9. Play the game!
 
 That's the basic setup for Cogment Verse, you are now ready to train AI agents.
 
