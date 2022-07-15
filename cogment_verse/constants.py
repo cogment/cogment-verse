@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-COGMENT_VERSION = "v2.4.0"
+COGMENT_VERSION = "v2.5.0"
 WEB_ACTOR_NAME = "web_actor"  # At the moment the web client can only join the trial using the actor name which means a unique name is required
 HUMAN_ACTOR_IMPL = "client"
 
