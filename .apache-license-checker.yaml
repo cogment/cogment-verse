@@ -1,8 +1,6 @@
 ignore:
-  - "?eggs"
-  - "**/__pycache__"
   - "**/.venv"
-  - "**/cogment_*.yaml"
+  - "**/_old"
   - "**/*_pb2*.py"
   - "**/*.pb.go"
   - "**/*_pb*.js"
@@ -12,12 +10,8 @@ ignore:
   - "**/CogSettings.d.ts"
   - "**/CogSettings.js"
   - "**/CogTypes.d.ts"
-  - "**/third_party"
-  - "*/cogment/api"
-  - "**/htmlcov"
-  - "web_client/node_modules"
-  - "web_client/build"
-  - "**/pybullet_driving_env/*"
+  - "**/node_modules"
+  - "**/build"
 license:
-  CopyrightYear: 2021
+  CopyrightYear: 2022
   Author: "AI Redefined Inc. <dev+cogment@ai-r.com>"

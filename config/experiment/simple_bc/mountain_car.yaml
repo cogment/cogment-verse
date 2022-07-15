@@ -1,0 +1,9 @@
+# @package _global_
+defaults:
+  - override /services/actor:
+      - simple_bc
+  - override /services/environment: mountain_car
+run:
+  class_name: actors.tutorial.tutorial_4.SimpleBCTraining
+  seed: 618
+  num_trials: 15

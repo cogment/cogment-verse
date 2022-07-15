@@ -1,0 +1,15 @@
+# @package _global_
+defaults:
+  - override /services/actor:
+      - simple_dqn
+  - override /services/environment: connect_four
+  - override /run: play
+run:
+  players:
+    - name: player_1
+      implementation: actors.simple_dqn.SimpleDQNActor
+      agent_config:
+        model_id: ???
+        model_version: -1
+    - name: player_2
+      implementation: client

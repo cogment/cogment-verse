@@ -1,3 +1,0 @@
-cogment[generate]==2.1.1
-click~=8.0.1
-PyYAML~=5.4.1

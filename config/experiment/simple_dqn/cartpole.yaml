@@ -1,0 +1,23 @@
+# @package _global_
+defaults:
+  - override /services/actor:
+      - simple_dqn
+  - override /services/environment: cartpole
+run:
+  class_name: actors.simple_dqn.SimpleDQNTraining
+  seed: 618
+  num_trials: 10000
+  num_parallel_trials: 10
+  learning_starts: ${run.batch_size}
+  learning_rate: 0.000125
+  discount_factor: 0.95
+  target_update_frequency: 2000
+  batch_size: 64
+  buffer_size: 10000
+  epsilon_schedule_start: 1
+  epsilon_schedule_end: 0.05
+  epsilon_schedule_duration_ratio: 0.75
+  train_frequency: 10
+  model_update_frequency: 10
+  value_network:
+    num_hidden_nodes: [128, 64]

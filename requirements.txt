@@ -1,5 +1,22 @@
+cogment[generate]==2.1.1
+grpcio==1.43.0
+hydra-core==1.2.0
 mlflow==1.26.1
+names_generator~=0.1.0
+opencv-python~=4.5.5
+PyYAML~=5.4.1
+starlette==0.20.0
+uvicorn==0.17.6
+
+# environments
+gym[atari,box2d,classic_control]>=0.24,<0.25
+PettingZoo[classic]>=1.18,<1.19
+
+# actors
+torch==1.11.0
+numpy>=1.21.5,<1.22
 
 # For testing
-black
-pylint~=2.9.6
+black~=22.3.0
+pylint~=2.14
+pytest~=6.2.5
