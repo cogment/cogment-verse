@@ -27,8 +27,8 @@ disable=[
 ignore-patterns=[".*_pb2.py",".*_pb2_grpc.py","cog_settings.py"]
 ignore-paths=[
   ".*/node_modules/.*",
-  ".*/_old/.*",
-  ".*/.venv/.*"
+  ".*/_old/.*", "_old", # The two variants seems needed depending on the platform
+  ".*/.venv/.*", ".venv",
 ]
 jobs=0
 

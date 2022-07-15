@@ -14,7 +14,6 @@
 
 from threading import Thread
 import logging
-import platform
 import signal
 import subprocess
 
@@ -31,10 +30,6 @@ def main(name, args, cwd, env, on_ready, on_log, on_awaiting_ready):
         args=args, cwd=cwd, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT
     ) as external_process:
 
-        def killing_handler(_signum, _frame):
-            log.warning(f"killing [{name}]")
-            external_process.kill()
-
         def termination_handler(_signum, _frame):
             log.info(f"terminating [{name}]")
             external_process.terminate()
@@ -47,8 +42,6 @@ def main(name, args, cwd, env, on_ready, on_log, on_awaiting_ready):
                 )
                 external_process.kill()
 
-        if platform.system() in ["Linux"]:
-            signal.signal(signal.SIGKILL, killing_handler)
         signal.signal(signal.SIGINT, termination_handler)
         signal.signal(signal.SIGTERM, termination_handler)
 
