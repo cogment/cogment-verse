@@ -18,6 +18,8 @@ import os
 import hydra
 
 import cogment_verse
+import torch.multiprocessing as mp
+mp.set_sharing_strategy('file_system')
 
 log = logging.getLogger(__name__)
 
@@ -32,4 +34,5 @@ def main(cfg):
 
 
 if __name__ == "__main__":
+    mp.set_start_method("spawn")
     main()
