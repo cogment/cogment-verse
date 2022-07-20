@@ -30,9 +30,12 @@ class RunSession:
         self._services_directory = services_directory
         self._step_idx = 0
 
-        self._xp_tracker = MlflowExperimentTracker(
-            experiment_id=run_cfg.class_name, run_id=run_id, mlflow_tracking_uri=run_cfg.mlflow_tracking_uri
-        )
+        self._xp_tracker = None
+        mlflow_tracking_uri = run_cfg.get("mlflow_tracking_uri", None)
+        if mlflow_tracking_uri is not None:
+            self._xp_tracker = MlflowExperimentTracker(
+                experiment_id=run_cfg.class_name, run_id=run_id, mlflow_tracking_uri=run_cfg.mlflow_tracking_uri
+            )
 
         self.model_registry = model_registry
 
@@ -78,13 +81,17 @@ class RunSession:
             raise error
 
     def log_params(self, *args, **kwargs):
-        self._xp_tracker.log_params(*args, **kwargs)
+        if self._xp_tracker is not None:
+            self._xp_tracker.log_params(*args, **kwargs)
 
     def log_metrics(self, *args, **kwargs):
-        self._xp_tracker.log_metrics(step_timestamp=int(time.time() * 1000), step_idx=self._step_idx, *args, **kwargs)
+        if self._xp_tracker is not None:
+            self._xp_tracker.log_metrics(step_timestamp=int(time.time() * 1000), step_idx=self._step_idx, *args, **kwargs)
 
     def terminate_failure(self):
-        self._xp_tracker.terminate_failure()
+        if self._xp_tracker is not None:
+            self._xp_tracker.terminate_failure()
 
     def terminate_success(self):
-        self._xp_tracker.terminate_success()
+        if self._xp_tracker is not None:
+            self._xp_tracker.terminate_success()
