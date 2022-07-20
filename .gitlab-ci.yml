@@ -48,3 +48,10 @@ pytest:
   extends: .base
   script:
     - python -m pytest
+
+smoke:
+  stage: test
+  extends: .base
+  script:
+    - python -m main +tests=smoke
+    
