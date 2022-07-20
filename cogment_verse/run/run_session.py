@@ -86,7 +86,9 @@ class RunSession:
 
     def log_metrics(self, *args, **kwargs):
         if self._xp_tracker is not None:
-            self._xp_tracker.log_metrics(step_timestamp=int(time.time() * 1000), step_idx=self._step_idx, *args, **kwargs)
+            self._xp_tracker.log_metrics(
+                step_timestamp=int(time.time() * 1000), step_idx=self._step_idx, *args, **kwargs
+            )
 
     def terminate_failure(self):
         if self._xp_tracker is not None:

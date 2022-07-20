@@ -19,7 +19,8 @@ import hydra
 
 import cogment_verse
 import torch.multiprocessing as mp
-mp.set_sharing_strategy('file_system')
+
+mp.set_sharing_strategy("file_system")
 
 log = logging.getLogger(__name__)
 
