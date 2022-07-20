@@ -1,5 +1,5 @@
 stages:
-  - lint
+  # - lint
   - test
 
 .base:
@@ -43,15 +43,14 @@ apache_licenses_check:
   script:
     - apache-license-checker
 
-pytest:
-  stage: test
-  extends: .base
-  script:
-    - python -m pytest
+# pytest:
+#   stage: test
+#   extends: .base
+#   script:
+#     - python -m pytest
 
 smoke:
   stage: test
   extends: .base
   script:
     - python -m main +tests=smoke
-    
