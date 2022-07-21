@@ -1,5 +1,5 @@
 stages:
-  # - lint
+  - lint
   - test
 
 .base:
@@ -25,29 +25,29 @@ stages:
       paths:
         - .venv
 
-# black:
-#   stage: lint
-#   extends: .base
-#   script:
-#     - black --check --diff .
+black:
+  stage: lint
+  extends: .base
+  script:
+    - black --check --diff .
 
-# pylint:
-#   stage: lint
-#   extends: .base
-#   script:
-#     - pylint --recursive=y .
+pylint:
+  stage: lint
+  extends: .base
+  script:
+    - pylint --recursive=y .
 
-# apache_licenses_check:
-#   stage: lint
-#   image: registry.gitlab.com/ai-r/apache-license-checker:latest
-#   script:
-#     - apache-license-checker
+apache_licenses_check:
+  stage: lint
+  image: registry.gitlab.com/ai-r/apache-license-checker:latest
+  script:
+    - apache-license-checker
 
-# pytest:
-#   stage: test
-#   extends: .base
-#   script:
-#     - python -m pytest
+pytest:
+  stage: test
+  extends: .base
+  script:
+    - python -m pytest
 
 smoke:
   stage: test
