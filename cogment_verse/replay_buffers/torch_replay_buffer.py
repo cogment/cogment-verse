@@ -15,6 +15,8 @@
 import numpy as np
 import torch
 
+torch.multiprocessing.set_sharing_strategy("file_system")
+
 
 class TorchReplayBufferSample:
     def __init__(self, observation, next_observation, action, reward, done):

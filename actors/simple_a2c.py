@@ -11,7 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 import logging
 
 import cogment
@@ -29,6 +28,7 @@ from cogment_verse.specs import (
 )
 from cogment_verse import Model
 
+torch.multiprocessing.set_sharing_strategy("file_system")
 
 log = logging.getLogger(__name__)
 
