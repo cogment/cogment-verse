@@ -45,10 +45,12 @@ Cogment verse includes environments from:
 
 1. Clone this repository
 2. Install the following dependencies:
-   - [Python 3.9](https://www.python.org/) or above,
-   - [Node.JS v14](https://nodejs.org/) or above,
+   - [Python 3.9](https://www.python.org/),
+   - [Node.JS v14](https://nodejs.org/) or above and npm,
    - `parallel`, on ubuntu it is installable using `apt-get install parallel`, on mac it is available through `brew install parallel`,
-   - `unrar`, on ubuntu it is installable using `apt-get install unrar`, on mac it is available through `brew install unrar`.
+   - `unrar`, on ubuntu it is installable using `apt-get install unrar`, on mac it is available through `brew install unrar`,
+   - `swig`, (required to install box2d-py), on ubuntu it is installable using `apt-get install swig`, on mac it is available through `brew install swig`,
+   - `virtualenv`, installable using `pip install virtualenv`.
 3. `./run.sh build`
 4. `./run.sh services_start`
 5. In a different terminal, start the trials with `./run.sh client start <run-name>`.
