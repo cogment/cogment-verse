@@ -34,7 +34,7 @@ Check the code quality using `pylint` by running the following in the virtual en
 $ pylint --recursive=y .
 ```
 
-## PDB debugger with multiptrocessing 
+## PDB debugger with multiprocessing 
 1. Create the following python script `md_debug.py`
     ```python
     import sys
