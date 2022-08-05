@@ -146,10 +146,10 @@ class Normalization:
         delta = batch_mean - mean
         tot_count = count + batch_count
         new_mean = mean + delta * batch_count / tot_count
-        ma = var * count
-        mb = batch_var * batch_count
-        m2 = ma + mb + (delta**0.5) * count * batch_count / tot_count
-        new_var = m2 / tot_count
+        mean_a = var * count
+        mean_b = batch_var * batch_count
+        mean_2 = mean_a + mean_b + (delta**0.5) * count * batch_count / tot_count
+        new_var = mean_2 / tot_count
         new_count = tot_count
 
         return new_mean, new_var, new_count
@@ -173,13 +173,14 @@ class PPOModel(Model):
         policy_network: Policy network that output an action given a state
         value_network: Value network measure the the quality of action given a state
         policy_optimizer: Optimizer for policy network
-        value_optimizaer: Optimizer for value network
+        value_optimizer: Optimizer for value network
         policy_scheduler: Scheduling the learning rate for the policy network
         value_scheduler: Scheduling the learning rate for the value network
         state_normalization: Normalize state on the fly
         iter_idx: Attach each model to an index
 
     """
+
     state_normalization: Union[Normalization, None] = None
 
     def __init__(
@@ -237,7 +238,6 @@ class PPOModel(Model):
         self.policy_scheduler = torch.optim.lr_scheduler.ExponentialLR(self.policy_optimizer, gamma=0.99)
         self.value_scheduler = torch.optim.lr_scheduler.ExponentialLR(self.value_optimizer, gamma=0.99)
 
-
         # version user data
         self.iter_idx = 0
         self.total_samples = 0
@@ -251,7 +251,6 @@ class PPOModel(Model):
         self._state_norm = value
         if self._state_norm:
             self.state_normalization = Normalization(dtype=self._dtype, nums=self._num_input)
-
 
     def get_model_user_data(self) -> dict:
         """Get user model"""
@@ -327,13 +326,13 @@ class PPOActor:
                     flatten(observation_space, event.observation.observation.value), dtype=self._dtype
                 ).view(1, -1)
 
-                # Normalize the observation 
+                # Normalize the observation
                 if model.state_normalization is not None:
                     obs_tensor = torch.clamp(
-                        (obs_tensor - model.state_normalization.mean) /
-                        (model.state_normalization.var + 1e-8) **0.5,
+                        (obs_tensor - model.state_normalization.mean) / (model.state_normalization.var + 1e-8) ** 0.5,
                         min=-10,
-                        max=10)
+                        max=10,
+                    )
 
                 # Get action from policy network
                 with torch.no_grad():
@@ -372,13 +371,12 @@ class PPOTraining:
         "learning_rate": 3e-4,
         "batch_size": 64,
         "num_steps": 2048,
-        "discount_factor": 0.99,
         "lambda_gae": 0.95,
         "device": "cpu",
         "policy_network": {"num_hidden_nodes": 64},
         "value_network": {"num_hidden_nodes": 64},
         "grad_norm": 0.5,
-        "state_norm": False
+        "state_norm": False,
     }
 
     def __init__(self, environment_specs: EnvironmentSpecs, cfg: EnvironmentConfig) -> None:
@@ -679,8 +677,8 @@ class PPOTraining:
         num_data = len(dataset)
         data_loader = []
         count = 0
-        for i, y in enumerate(dataset):
-            output_batches[count, :] = y
+        for i, y_batch in enumerate(dataset):
+            output_batches[count, :] = y_batch
             # Store data
             if (i + 1) % batch_size == 0:
                 data_loader.append(output_batches)
@@ -698,16 +696,16 @@ class PPOTraining:
     def normalize_rewards(self, rewards: list, model: PPOModel) -> list:
         """Normalize the rewards"""
         normalized_reward = []
-        for r in rewards:
-            normalized_reward.append(r / (model.reward_normalizaiton.var + 1e-8) ** 0.5)
-            self.returns = self.returns * self._cfg.discount_factor + r
+        for rew in rewards:
+            normalized_reward.append(rew / (model.reward_normalizaiton.var + 1e-8) ** 0.5)
+            self.returns = self.returns * self._cfg.discount_factor + rew
             model.reward_normalization.update(self.returns)
 
         return normalized_reward
 
     @staticmethod
     def compute_gae(
-        rewards: torch.Tensor, values: torch.Tensor, dones: torch.Tensor, gamma=0.99, lam=0.95
+        rewards: torch.Tensor, values: torch.Tensor, dones: torch.Tensor, gamma: float = 0.99, lam: float = 0.95
     ) -> torch.Tensor:
         """Compute Generalized Advantage Estimation. See equations 11 & 12 in
         https://arxiv.org/pdf/1707.06347.pdf
@@ -716,9 +714,9 @@ class PPOTraining:
         advs = []
         gae = 0.0
         dones = torch.cat((dones, torch.zeros(1, 1)), dim=0)
-        for s in reversed(range(len(rewards))):
-            delta = rewards[s] + gamma * (values[s + 1]) * (1 - dones[s]) - values[s]
-            gae = delta + gamma * lam * (1 - dones[s]) * gae
+        for i in reversed(range(len(rewards))):
+            delta = rewards[i] + gamma * (values[i + 1]) * (1 - dones[i]) - values[i]
+            gae = delta + gamma * lam * (1 - dones[i]) * gae
             advs.append(gae)
         advs.reverse()
         return torch.vstack(advs)
