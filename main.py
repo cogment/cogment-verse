@@ -16,7 +16,6 @@ import logging
 import os
 
 import hydra
-import torch.multiprocessing as mp
 
 import cogment_verse
 

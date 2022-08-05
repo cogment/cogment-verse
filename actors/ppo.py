@@ -14,7 +14,7 @@
 
 import logging
 from dataclasses import dataclass
-from typing import *
+from typing import Union, Tuple, List
 
 import cogment
 import numpy as np
@@ -30,7 +30,6 @@ from cogment_verse.specs import (
     EnvironmentConfig,
     EnvironmentSpecs,
     PlayerAction,
-    SpaceValue,
     cog_settings,
     flatten,
     flattened_dimensions,
@@ -40,6 +39,7 @@ from cogment_verse.specs import (
 log = logging.getLogger(__name__)
 
 # pylint: disable=E1102
+# pylint: disable=W0212
 class PolicyNetwork(torch.nn.Module):
     """Gaussian policy network"""
 
@@ -557,7 +557,7 @@ class PPOTraining:
         batch_action = self.make_dataloader(actions, self._cfg.batch_size, self.model._num_output)
 
         # Compute values
-        values = self.compute_value(batch_state, dones)
+        values = self.compute_value(batch_state)
 
         # Compute the values for the last state
         with torch.no_grad():
@@ -647,7 +647,7 @@ class PPOTraining:
         last_100_rewards = rewards[np.maximum(0, len(rewards) - 100) : len(rewards)]
         return torch.vstack(last_100_rewards).mean()
 
-    def compute_value(self, observations: torch.Tensor, dones: torch.Tensor) -> torch.Tensor:
+    def compute_value(self, observations: torch.Tensor) -> torch.Tensor:
         """Compute values given the states"""
         values = []
         for obs in observations:
