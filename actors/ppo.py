@@ -39,7 +39,7 @@ from cogment_verse.specs import (
 
 log = logging.getLogger(__name__)
 
-
+# pylint: disable=E1102
 class PolicyNetwork(torch.nn.Module):
     """Gaussian policy network"""
 
