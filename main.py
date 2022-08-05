@@ -16,9 +16,9 @@ import logging
 import os
 
 import hydra
+import torch.multiprocessing as mp
 
 import cogment_verse
-import torch.multiprocessing as mp
 
 log = logging.getLogger(__name__)
 
