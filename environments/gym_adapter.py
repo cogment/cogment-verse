@@ -16,6 +16,7 @@ import os
 
 import cogment
 import gym
+import numpy as np
 
 from cogment_verse.specs import (
     encode_rendered_frame,
@@ -26,6 +27,7 @@ from cogment_verse.specs import (
     observation_from_gym_observation,
 )
 from cogment_verse.constants import PLAYER_ACTOR_CLASS, TEACHER_ACTOR_CLASS
+from debug.mp_pdb import ForkedPdb
 
 # configure pygame to use a dummy video server to be able to render headlessly
 os.environ["SDL_VIDEODRIVER"] = "dummy"
@@ -66,6 +68,7 @@ class Environment:
         ]
         assert len(teacher_actors) <= 1
         has_teacher = len(teacher_actors) == 1
+
         if has_teacher:
             [(teacher_actor_idx, _teacher_actor_name)] = teacher_actors
 
@@ -81,7 +84,6 @@ class Environment:
             rendered_frame = encode_rendered_frame(gym_env.render(mode="rgb_array"), session_cfg.render_width)
 
         environment_session.start([("*", Observation(value=observation_value, rendered_frame=rendered_frame))])
-
         async for event in environment_session.all_events():
             if event.actions:
                 player_action_value = event.actions[player_actor_idx].action.value
@@ -96,7 +98,9 @@ class Environment:
                     self.env_specs.action_space, action_value  # pylint: disable=no-member
                 )
 
-                gym_observation, reward, done, _info = gym_env.step(gym_action)
+                # Clip actions
+                clipped_action = np.clip(gym_action, gym_env.action_space.low, gym_env.action_space.high)
+                gym_observation, reward, done, _info = gym_env.step(clipped_action)
                 observation_value = observation_from_gym_observation(gym_env.observation_space, gym_observation)
 
                 rendered_frame = None

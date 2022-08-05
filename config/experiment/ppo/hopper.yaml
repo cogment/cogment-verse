@@ -1,0 +1,28 @@
+# @package _global_
+defaults:
+  - override /services/actor:
+      - ppo
+  - override /services/environment: hopper
+
+run:
+  class_name: actors.ppo.PPOTraining
+  seed: 0
+  num_epochs: 10
+  num_iter: 5000
+  epoch_num_trials: 1
+  num_parallel_trials: 1
+  learning_rate: 3e-4
+  batch_size: 64
+  num_steps: 2048
+  policy_network:
+    num_hidden_nodes: 64
+  value_network:
+    num_hidden_nodes: 64
+  discount_factor: 0.99
+  lambda_gae: 0.95
+  entropy_loss_coef: 0.05
+  value_loss_coef: 0.5
+  action_loss_coef: 0.1
+  clipping_coef: 0.2
+  grad_norm: 0.5
+  state_norm: False

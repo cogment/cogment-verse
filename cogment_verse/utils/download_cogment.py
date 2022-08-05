@@ -32,12 +32,16 @@ log = logging.getLogger(__name__)
 
 class Arch(Enum):
     AMD64 = "amd64"
+    ARM64 = "arm64"
 
 
 def get_current_arch():
     py_machine = platform.machine()
     if py_machine in ["x86_64", "i686", "AMD64"]:
         return Arch.AMD64
+
+    if py_machine == "arm64":
+        return Arch.ARM64
 
     raise CogmentError(f"Unsupported architecture [{py_machine}]")
 
