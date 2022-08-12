@@ -556,16 +556,12 @@ class PPOTraining:
         batch_state = self.make_dataloader(observations[:-1], self._cfg.batch_size, self.model._num_input)
         batch_action = self.make_dataloader(actions, self._cfg.batch_size, self.model._num_output)
 
-        # Compute values
         values = self.compute_value(batch_state)
-
-        # Compute the values for the last state
         with torch.no_grad():
             next_value = self.model.value_network(observations[-1:])
         next_value = next_value * (1 - dones[-1])
         values = torch.cat((values, next_value), dim=0)
 
-        # Compute log-likelihood
         log_probs = self.compute_log_lik(batch_state, batch_action)
 
         # Compute the generalized advantage estimation
