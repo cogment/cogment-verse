@@ -54,10 +54,6 @@ Cogment verse includes environments from:
    $ source .venv/bin/activate
    ```
 
-5. If you want to use Isaac Gym, download the zip file from [NVIDIA webpage](https://developer.nvidia.com/isaac-gym)
-, unzip and copy the `isaacgym` folder to this repo
-
-
 6. Install the python dependencies by running
    ```console
    $ pip install -r requirements.txt
@@ -112,6 +108,12 @@ Here are a few examples:
   ```console
   $ python -m main +experiment=simple_dqn/connect_four +run.hill_training_trials_ratio=0.05
   ```
+
+## Isaac gym
+
+If you want to use Isaac Gym, download the zip file from [NVIDIA webpage](https://developer.nvidia.com/isaac-gym)
+, unzip and copy the `isaacgym` folder to this repo. run `pip install -r isaac_requirements.txt`.
+Run `python -m main services/environment=ant `
 
 ## List of publications and submissions using Cogment and/or Cogment Verse
 

@@ -20,9 +20,3 @@ numpy>=1.21.5,<1.22
 black~=22.3.0
 pylint~=2.14
 pytest~=6.2.5
-
-# For Isaac gym
-rl-games==1.5.2
-pyvirtualdisplay
--e isaacgym/python
--e isaacgym/IsaacGymEnvs

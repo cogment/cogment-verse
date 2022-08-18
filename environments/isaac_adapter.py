@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import os
-# import gym
+import gym
 import isaacgym
 import isaacgymenvs
 import torch
@@ -35,7 +35,9 @@ os.environ["SDL_VIDEODRIVER"] = "dummy"
 
 class Environment:
     def __init__(self, cfg):
+        print("cfg = ", cfg)
         self.gym_env_name = cfg.env_name
+        print("self.gym_env_name = ",  self.gym_env_name)
 
         # gym_env = gym.make(self.gym_env_name)
         gym_env = isaacgymenvs.make(
