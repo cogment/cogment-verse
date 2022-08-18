@@ -39,6 +39,8 @@ from cogment_verse.specs import (
     WEB_ACTOR_NAME,
 )
 
+torch.multiprocessing.set_sharing_strategy("file_system")
+
 log = logging.getLogger(__name__)
 
 ############ TUTORIAL STEP 3 ############
