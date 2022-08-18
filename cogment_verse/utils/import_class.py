@@ -17,5 +17,6 @@ from importlib import import_module
 
 def import_class(class_name):
     module_path, class_name = class_name.rsplit(".", 1)
+    print("to import calss name  = ", class_name)
     module = import_module(module_path)
     return getattr(module, class_name)

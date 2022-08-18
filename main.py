@@ -14,11 +14,11 @@
 
 import logging
 import os
-import multiprocessing as mp
 
 import hydra
 
 import cogment_verse
+import multiprocessing as mp
 
 log = logging.getLogger(__name__)
 
