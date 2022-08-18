@@ -2,9 +2,9 @@
 
 [![Apache 2 License](https://img.shields.io/badge/license-Apache%202-green?style=flat-square)](./LICENSE) [![Changelog](https://img.shields.io/badge/-Changelog%20-blueviolet?style=flat-square)](./CHANGELOG.md)
 
-> 🚧 A new major version of Cogment Verse is under develelopment in the [`next`](https://github.com/cogment/cogment-verse/tree/next). Not all the algorithms and environments are available yet but it is fully operational. Do not hesitate to test it! 
+> 🚧 A new major version of Cogment Verse is under develelopment in the [`next`](https://github.com/cogment/cogment-verse/tree/next). Not all the algorithms and environments are available yet but it is fully operational. Do not hesitate to test it!
 >
-> Follow and discuss the development in this [Pull Request](https://github.com/cogment/cogment-verse/pull/71). 
+> Follow and discuss the development in this [Pull Request](https://github.com/cogment/cogment-verse/pull/71).
 
 [Cogment](https://cogment.ai) is an innovative open source AI platform designed to leverage the advent of AI to benefit humankind through human-AI collaboration developed by [AI Redefined](https://ai-r.com). Cogment enables AI researchers and engineers to build, train and operate AI agents in simulated or real environments shared with humans. For the full user documentation visit <https://docs.cogment.ai>
 
@@ -53,18 +53,23 @@ Cogment verse includes environments from:
    $ python -m venv .venv
    $ source .venv/bin/activate
    ```
-5. Install the python dependencies by running
+
+5. If you want to use Isaac Gym, download the zip file from [NVIDIA webpage](https://developer.nvidia.com/isaac-gym)
+, unzip and copy the `isaacgym` folder to this repo
+
+
+6. Install the python dependencies by running
    ```console
    $ pip install -r requirements.txt
    ```
-6. In another terminal, launch a mlflow server on port 3000 by running
+7. In another terminal, launch a mlflow server on port 3000 by running
    ```console
    $ source .venv/bin/activate
    $ python -m simple_mlflow
    ```
-7. Start the default Cogment Verse run using `python -m main`
-8. Open Chrome (other web browser might work but haven't tested) and navigate to http://localhost:8080/
-9. Play the game!
+8. Start the default Cogment Verse run using `python -m main`
+9. Open Chrome (other web browser might work but haven't tested) and navigate to http://localhost:8080/
+10. Play the game!
 
 That's the basic setup for Cogment Verse, you are now ready to train AI agents.
 
