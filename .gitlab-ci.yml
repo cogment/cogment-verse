@@ -54,3 +54,4 @@ smoke:
   extends: .base
   script:
     - python -m main +tests=smoke
+  timeout: 30m
