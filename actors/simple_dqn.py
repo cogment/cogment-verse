@@ -17,10 +17,11 @@ import copy
 import time
 import json
 import math
+import numpy as np
 
 import cogment
 import torch
-import numpy as np
+
 
 from cogment_verse.specs import (
     AgentConfig,
@@ -39,6 +40,7 @@ from cogment_verse.specs import (
 
 from cogment_verse import Model, TorchReplayBuffer
 
+torch.multiprocessing.set_sharing_strategy("file_system")
 
 log = logging.getLogger(__name__)
 
