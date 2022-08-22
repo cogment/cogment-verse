@@ -19,12 +19,13 @@ import time
 from ..mlflow_experiment_tracker import MlflowExperimentTracker
 from .sample_producer_worker import start_sample_producer_worker
 from .trial_runner_worker import start_trial_runner_worker
+from cogment_verse.model_registry import ModelRegistry
 
 log = logging.getLogger(__name__)
 
 
 class RunSession:
-    def __init__(self, run_cfg, run_id, services_directory, model_registry):
+    def __init__(self, run_cfg, run_id, services_directory, model_registry: ModelRegistry):
         self.run_id = run_id
 
         self._services_directory = services_directory

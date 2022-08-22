@@ -170,7 +170,7 @@ class PPOModel(Model):
         n_iter: Number of iterations
         dtype: Data type objects
         version_number: Version number of model
-        policy_network: Policy network that output an action given a state
+        policy_network: Policy network that outputs an action given a state
         value_network: Value network measure the the quality of action given a state
         policy_optimizer: Optimizer for policy network
         value_optimizer: Optimizer for value network
