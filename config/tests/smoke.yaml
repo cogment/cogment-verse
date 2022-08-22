@@ -9,7 +9,7 @@ run:
   mlflow_tracking_uri: 
   class_name: actors.simple_a2c.SimpleA2CTraining
   seed: 618
-  num_epochs: 200
+  num_epochs: 2
   epoch_num_trials: 10
   num_parallel_trials: 8
   learning_rate: 0.01
