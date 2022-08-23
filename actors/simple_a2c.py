@@ -41,7 +41,7 @@ class SimpleA2CModel(Model):
         environment_implementation,
         num_input,
         num_output,
-        actor_network_num_hidden_nodes=64,
+        actor_network_num_hidden_nodes=64,  # ToDo: should be an array
         critic_network_num_hidden_nodes=64,
         dtype=torch.float,
         version_number=0,
@@ -56,7 +56,7 @@ class SimpleA2CModel(Model):
 
         self.actor_network = torch.nn.Sequential(
             torch.nn.Linear(self._num_input, self._actor_network_num_hidden_nodes, dtype=self._dtype),
-            torch.nn.Tanh(),
+            torch.nn.Tanh(),  # ReLU
             torch.nn.Linear(
                 self._actor_network_num_hidden_nodes, self._actor_network_num_hidden_nodes, dtype=self._dtype
             ),
@@ -89,7 +89,6 @@ class SimpleA2CModel(Model):
 
     def save(self, model_data_f):
         torch.save((self.actor_network.state_dict(), self.critic_network.state_dict()), model_data_f)
-
         return {"epoch_idx": self.epoch_idx, "total_samples": self.total_samples}
 
     @classmethod
