@@ -129,6 +129,8 @@ class App:
         else:
             self.run_process = None
 
+        self.exitcode = None
+
     def start(self):
         log.info("Start services...")
         for service_process in self.services_process:
@@ -145,6 +147,7 @@ class App:
     def terminate(self):
         if self.run_process:
             self.run_process.terminate()
+            self.exitcode = self.run_process.exitcode
         # TODO terminated signal ?
 
         log.info("Terminating services...")
@@ -155,8 +158,8 @@ class App:
         try:
             if self.run_process:
                 self.run_process.join()
-                log.info("Run ended")
-
+                log.info(f"Run ended with exit code {self.run_process.exitcode}")
+                self.exitcode = self.run_process.exitcode
                 # Run ended, terminate the services
                 log.info("Terminating services...")
                 for service_process in reversed(self.services_process):
@@ -165,5 +168,9 @@ class App:
             for service_process in self.services_process:
                 service_process.join()
             log.info("Services ended")
+            if self.exitcode is None:
+                self.exitcode = 0
         except KeyboardInterrupt:
             log.warning("interrupted by user")
+            if self.exitcode is None or self.exitcode == 0:
+                self.exitcode = -1

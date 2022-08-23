@@ -14,6 +14,7 @@
 
 import logging
 import os
+import sys
 import multiprocessing as mp
 
 import hydra
@@ -31,7 +32,10 @@ def main(cfg):
     app.start()
     app.join()
 
+    return app.exitcode
+
 
 if __name__ == "__main__":
-    mp.set_start_method("spawn")
-    main()
+    mp.set_start_method("fork")
+    exitcode = main()
+    sys.exit(exitcode)
