@@ -35,6 +35,7 @@ from cogment_verse.specs import (
     flattened_dimensions,
     unflatten,
 )
+from debug.mp_pdb import ForkedPdb
 
 log = logging.getLogger(__name__)
 
@@ -467,6 +468,19 @@ class PPOTraining:
                 ),
             )
 
+            agent_actor_params_2 = cogment.ActorParameters(
+                cog_settings,
+                name="player_2",
+                class_name=PLAYER_ACTOR_CLASS,
+                implementation="actors.ppo.PPOActor",
+                config=AgentConfig(
+                    run_id=run_session.run_id,
+                    environment_specs=self._environment_specs,
+                    model_id=model_id,
+                    model_version=version_info["version_number"],
+                ),
+            )
+
             return cogment.TrialParameters(
                 cog_settings,
                 environment_name="env",
@@ -486,7 +500,7 @@ class PPOTraining:
         dones = []
         episode_rewards = []
         for iter_idx in range(self._cfg.num_iter):
-            for (_, _, _, sample) in run_session.start_and_await_trials(
+            for (_step_idx, _trial_id, _trial_idx, sample) in run_session.start_and_await_trials(
                 trials_id_and_params=[
                     (f"{run_session.run_id}_{iter_idx}_{trial_idx}", create_trial_params(trial_idx, iter_idx))
                     for trial_idx in range(self._cfg.epoch_num_trials)
@@ -504,7 +518,8 @@ class PPOTraining:
                 episode_rewards.append(torch.vstack(trial_reward).sum())
 
             # Publish the newly trained version every 100 steps
-            if len(actions) >= self._cfg.num_steps + 1:
+            print(f"Iter #{iter_idx}: step: {len(actions)}")
+            if len(actions) >= self._cfg.num_steps * self._cfg.epoch_num_trials + 1:
                 # Update model parameters
                 policy_loss, value_loss = await self.train_step(
                     observations=observations, rewards=rewards, actions=actions, dones=dones
@@ -543,10 +558,10 @@ class PPOTraining:
         """Train the model after collecting the data from the trial"""
 
         # Take n steps from the rollout
-        observations = torch.vstack(observations)[: self._cfg.num_steps + 1]
-        actions = torch.vstack(actions)[: self._cfg.num_steps]
-        rewards = torch.vstack(rewards)[: self._cfg.num_steps]
-        dones = torch.vstack(dones)[: self._cfg.num_steps]
+        observations = torch.vstack(observations)[: self._cfg.num_steps * self._cfg.epoch_num_trials + 1]
+        actions = torch.vstack(actions)[: self._cfg.num_steps * self._cfg.epoch_num_trials]
+        rewards = torch.vstack(rewards)[: self._cfg.num_steps * self._cfg.epoch_num_trials]
+        dones = torch.vstack(dones)[: self._cfg.num_steps * self._cfg.epoch_num_trials]
 
         # Normalize the observations
         if self.model.state_normalization is not None:

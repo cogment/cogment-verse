@@ -55,4 +55,4 @@ def run_profile():
 
 if __name__ == "__main__":
     mp.set_sharing_strategy("file_system")
-    run_profile()
+    main()

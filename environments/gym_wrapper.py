@@ -29,6 +29,7 @@ from cogment_verse.specs import (
 )
 
 from cogment_verse.constants import PLAYER_ACTOR_CLASS
+from debug.mp_pdb import ForkedPdb
 
 # configure pygame to use a dummy video server to be able to render headlessly
 os.environ["SDL_VIDEODRIVER"] = "dummy"
@@ -63,7 +64,7 @@ class Environment:
             for (actor_idx, actor) in enumerate(actors)
             if actor.actor_class_name == PLAYER_ACTOR_CLASS
         ]
-        assert len(player_actors) == 1
+        # assert len(player_actors) == 1
         [(player_actor_idx, player_actor_name)] = player_actors
 
         # Reset environment
