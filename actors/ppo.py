@@ -35,7 +35,6 @@ from cogment_verse.specs import (
     flattened_dimensions,
     unflatten,
 )
-from debug.mp_pdb import ForkedPdb
 
 log = logging.getLogger(__name__)
 
