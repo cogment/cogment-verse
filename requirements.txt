@@ -9,7 +9,7 @@ starlette==0.20.0
 uvicorn==0.17.6
 
 # environments
-gym[atari,box2d,classic_control]>=0.24,<0.25
+gym[atari,box2d,classic_control]>=0.25,<0.26
 PettingZoo[classic]>=1.18,<1.19
 
 # actors
