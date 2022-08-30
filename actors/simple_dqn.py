@@ -364,7 +364,7 @@ class SimpleDQNTraining:
             trial_done = done.item() == 1
 
             if trial_done:
-                run_session.log_metrics(trial_idx, total_reward=total_reward)
+                run_session.log_metrics(trial_idx=trial_idx, total_reward=total_reward)
                 total_reward_cum += total_reward
                 if (trial_idx + 1) % 100 == 0:
                     total_reward_avg = total_reward_cum / 100
