@@ -5,3 +5,6 @@ defaults:
       - dagger_learner
   - override /run: dagger
   - override /services/environment: cartpole
+run:
+  teacher_model: SimpleA2CModel
+  teacher_model_id: naughty_wiles_0_model
