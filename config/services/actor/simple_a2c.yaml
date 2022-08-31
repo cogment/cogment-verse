@@ -1,3 +1,4 @@
 simple_a2c:
   class_name: actors.simple_a2c.SimpleA2CActor
   port: ${generate_port:actors.simple_a2c.SimpleA2CActor}
+  prometheus_port: ${generate_port:actors.simple_a2c.SimpleA2CActor.prometheus}

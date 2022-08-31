@@ -1,3 +1,4 @@
 class_name: environments.pettingzoo_adapter.Environment
 env_class_name: pettingzoo.classic.tictactoe_v3
 port: ${generate_port:environments.pettingzoo_adapter.Environment}
+prometheus_port: ${generate_port:environments.pettingzoo_adapter.Environment.prometheus}

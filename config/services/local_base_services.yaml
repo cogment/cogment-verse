@@ -2,6 +2,7 @@ orchestrator:
   orchestrator_1:
     port: ${generate_port:orchestrator}
     web_port: ${generate_port:orchestrator_web}
+    prometheus_port: ${generate_port:orchestrator_prometheus}
     log_level: warning
 trial_datastore:
   port: ${generate_port:trial_datastore}

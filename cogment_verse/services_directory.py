@@ -24,6 +24,7 @@ class ServiceType(Enum):
     TRIAL_DATASTORE = "trial_datastore"
     MODEL_REGISTRY = "model_registry"
     WEB = "web"
+    PROMETHEUS = "prometheus"
 
 
 class ServiceDirectory:

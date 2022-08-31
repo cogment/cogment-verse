@@ -17,7 +17,7 @@ import logging
 import os
 
 from starlette.applications import Starlette
-from starlette.responses import HTMLResponse
+from starlette.responses import JSONResponse, HTMLResponse
 from starlette.routing import Mount, Route
 from starlette.staticfiles import StaticFiles
 import uvicorn
@@ -41,9 +41,13 @@ def create_app():
     async def homepage(_request):
         return HTMLResponse(homepage_content)
 
+    async def prometheus_sd(_request):
+        return JSONResponse(web_app_cfg["prometheus_http_sd"])
+
     return Starlette(
         routes=[
             Route("/", endpoint=homepage),
+            Route("/prometheus_sd", endpoint=prometheus_sd),
             Mount("/", app=StaticFiles(directory=web_app_cfg["served_dir"], html=True)),
         ]
     )
@@ -55,9 +59,14 @@ def server_main(
     orchestrator_web_endpoint,
     port,
     served_dir,
+    prometheus_http_sd,
 ):
     # Writing the configuration for the web app in an environment variable
-    web_app_cfg = {"orchestrator_web_endpoint": orchestrator_web_endpoint, "served_dir": served_dir}
+    web_app_cfg = {
+        "orchestrator_web_endpoint": orchestrator_web_endpoint,
+        "served_dir": served_dir,
+        "prometheus_http_sd": prometheus_http_sd,
+    }
     os.environ[WEB_CFG_ENV_VAR] = json.dumps(web_app_cfg)
 
     on_ready()

@@ -1,3 +1,4 @@
 simple_bc:
   class_name: actors.tutorial.tutorial_4.SimpleBCActor
-  port: ${generate_port:actor_2}
+  port: ${generate_port:actors.tutorial.tutorial_4.SimpleBCActor}
+  prometheus_port: ${generate_port:actors.tutorial.tutorial_4.SimpleBCActor.prometheus}

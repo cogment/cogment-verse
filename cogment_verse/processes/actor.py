@@ -83,11 +83,22 @@ def create_actor_service(work_dir, specs_filename, model_registry, actor_cfg, se
     actor_cls = import_class(actor_cfg.class_name)
     actor = actor_cls(actor_cfg)
 
+    actor_implementation_name = get_implementation_name(actor)
+
     # Register the actor implementation
     services_directory.add(
         service_type=ServiceType.ACTOR,
-        service_name=get_implementation_name(actor),
+        service_name=actor_implementation_name,
         service_endpoint=f"grpc://localhost:{actor_cfg.port}",
     )
+
+    # Register the prometheus metrics target
+    prometheus_port = actor_cfg.get("prometheus_port", 0)
+    if prometheus_port != 0:
+        services_directory.add(
+            service_type=ServiceType.PROMETHEUS,
+            service_name=f"actor/{actor_implementation_name}",
+            service_endpoint=f"http://localhost:{prometheus_port}",
+        )
 
     return process

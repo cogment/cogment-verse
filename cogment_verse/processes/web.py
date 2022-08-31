@@ -20,6 +20,7 @@ from ..web import server_main, generate, npm_command, create_dev_server_popen_kw
 from .cogment_verse_process import CogmentVerseProcess
 from .popen_process import PopenProcess
 from ..services_directory import ServiceType
+from ..utils.build_prometheus_http_sd import build_prometheus_http_sd
 
 log = logging.getLogger(__name__)
 
@@ -71,6 +72,7 @@ class WebProcess(CogmentVerseProcess):
             port=web_cfg.port,
             orchestrator_web_endpoint=services_directory.get(ServiceType.ORCHESTRATOR_WEB_ENDPOINT),
             served_dir=served_dir,
+            prometheus_http_sd=build_prometheus_http_sd(services_directory),
         )
 
 

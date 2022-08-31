@@ -91,11 +91,22 @@ def create_environment_service(work_dir, specs_filename, environment_cfg, servic
     environment_cls = import_class(environment_cfg.class_name)
     env = environment_cls(environment_cfg)
 
+    environment_implementation_name = get_implementation_name(env)
+
     # Register the environment
     services_directory.add(
         service_type=ServiceType.ENVIRONMENT,
-        service_name=get_implementation_name(env),
+        service_name=environment_implementation_name,
         service_endpoint=f"grpc://localhost:{environment_cfg.port}",
     )
+
+    # Register the prometheus metrics target
+    prometheus_port = environment_cfg.get("prometheus_port", 0)
+    if prometheus_port != 0:
+        services_directory.add(
+            service_type=ServiceType.PROMETHEUS,
+            service_name=f"environment/{environment_implementation_name}",
+            service_endpoint=f"http://localhost:{prometheus_port}",
+        )
 
     return process

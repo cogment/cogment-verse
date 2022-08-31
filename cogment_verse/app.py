@@ -79,47 +79,78 @@ class App:
         self.model_registry = ModelRegistry(self.services_directory)
         self.services_process = []
 
-        for service_type, services_cfg in cfg.services.items():
-            if service_type not in [service_type.value for service_type in ServiceType]:
-                raise RuntimeError(f"Unknown service type [{service_type}]")
-            if service_type == ServiceType.ORCHESTRATOR.value:
-                for orchestrator_service_cfg in services_cfg.values():
-                    self.services_process.append(
-                        create_orchestrator_service(work_dir, orchestrator_service_cfg, self.services_directory)
-                    )
-            elif service_type == ServiceType.TRIAL_DATASTORE.value:
-                trial_datastore_service_cfg = services_cfg
+        for service_type in cfg.services.keys():
+            if service_type not in [
+                ServiceType.ORCHESTRATOR.value,
+                ServiceType.TRIAL_DATASTORE.value,
+                ServiceType.MODEL_REGISTRY.value,
+                ServiceType.ENVIRONMENT.value,
+                ServiceType.ACTOR.value,
+                ServiceType.WEB.value,
+            ]:
+                raise RuntimeError(f"Unknown or uninstanciable service type [{service_type}]")
+
+        for services_cfg in [
+            service_cfg
+            for service_type, service_cfg in cfg.services.items()
+            if service_type == ServiceType.ORCHESTRATOR.value
+        ]:
+            for orchestrator_service_name, orchestrator_service_cfg in services_cfg.items():
                 self.services_process.append(
-                    create_trial_datastore_service(work_dir, trial_datastore_service_cfg, self.services_directory)
-                )
-            elif service_type == ServiceType.MODEL_REGISTRY.value:
-                model_registry_service_cfg = services_cfg
-                self.services_process.append(
-                    create_model_registry_service(work_dir, model_registry_service_cfg, self.services_directory)
-                )
-            elif service_type == ServiceType.ENVIRONMENT.value:
-                environment_service_cfg = services_cfg
-                self.services_process.append(
-                    create_environment_service(
-                        work_dir, SPEC_FILEPATH, environment_service_cfg, self.services_directory
+                    create_orchestrator_service(
+                        work_dir, orchestrator_service_name, orchestrator_service_cfg, self.services_directory
                     )
                 )
-            elif service_type == ServiceType.ACTOR.value:
-                for actor_service_cfg in services_cfg.values():
-                    self.services_process.append(
-                        create_actor_service(
-                            work_dir, SPEC_FILEPATH, self.model_registry, actor_service_cfg, self.services_directory
-                        )
+
+        for services_cfg in [
+            service_cfg
+            for service_type, service_cfg in cfg.services.items()
+            if service_type == ServiceType.TRIAL_DATASTORE.value
+        ]:
+            trial_datastore_service_cfg = services_cfg
+            self.services_process.append(
+                create_trial_datastore_service(work_dir, trial_datastore_service_cfg, self.services_directory)
+            )
+
+        for services_cfg in [
+            service_cfg
+            for service_type, service_cfg in cfg.services.items()
+            if service_type == ServiceType.MODEL_REGISTRY.value
+        ]:
+            model_registry_service_cfg = services_cfg
+            self.services_process.append(
+                create_model_registry_service(work_dir, model_registry_service_cfg, self.services_directory)
+            )
+
+        for services_cfg in [
+            service_cfg
+            for service_type, service_cfg in cfg.services.items()
+            if service_type == ServiceType.ENVIRONMENT.value
+        ]:
+            environment_service_cfg = services_cfg
+            self.services_process.append(
+                create_environment_service(work_dir, SPEC_FILEPATH, environment_service_cfg, self.services_directory)
+            )
+
+        for services_cfg in [
+            service_cfg for service_type, service_cfg in cfg.services.items() if service_type == ServiceType.ACTOR.value
+        ]:
+            for actor_service_cfg in services_cfg.values():
+                self.services_process.append(
+                    create_actor_service(
+                        work_dir, SPEC_FILEPATH, self.model_registry, actor_service_cfg, self.services_directory
                     )
-            elif service_type == ServiceType.WEB.value:
-                self.services_process.append(create_web_service(SPEC_FILEPATH, self.services_directory, services_cfg))
-                self.services_directory.add(
-                    service_type=ServiceType.ACTOR,
-                    service_name=HUMAN_ACTOR_IMPL,
-                    service_endpoint="cogment://client",
                 )
-            else:
-                raise NotImplementedError()
+
+        for services_cfg in [
+            service_cfg for service_type, service_cfg in cfg.services.items() if service_type == ServiceType.WEB.value
+        ]:
+            self.services_process.append(create_web_service(SPEC_FILEPATH, self.services_directory, services_cfg))
+            self.services_directory.add(
+                service_type=ServiceType.ACTOR,
+                service_name=HUMAN_ACTOR_IMPL,
+                service_endpoint="cogment://client",
+            )
 
         run_cfg = cfg.get("run", None)
         if run_cfg is not None:

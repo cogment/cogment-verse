@@ -1,0 +1,8 @@
+global:
+  scrape_interval: 15s # Scrape targets every 15 seconds.
+
+scrape_configs:
+  - job_name: "cogment_verse"
+    http_sd_configs:
+      # The port here needs to be updated when services.web.port is changed
+      - url: http://localhost:8080/prometheus_sd

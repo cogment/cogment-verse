@@ -1,3 +1,4 @@
 class_name: environments.gym_adapter.Environment
 env_name: MountainCar-v0
 port: ${generate_port:environments.gym_adapter.Environment}
+prometheus_port: ${generate_port:environments.gym_adapter.Environment.prometheus}
