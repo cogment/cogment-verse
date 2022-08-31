@@ -31,6 +31,7 @@ from cogment_verse.specs import (
     SpaceValue,
     TEACHER_ACTOR_CLASS,
 )
+from actors.simple_a2c import SimpleA2CModel
 
 torch.multiprocessing.set_sharing_strategy("file_system")
 
@@ -46,10 +47,21 @@ class DaggerTeacher:
 
     async def impl(self, actor_session):
         actor_session.start()
+        config = actor_session.config
+        observation_space = config.environment_specs.observation_space
+        model, _, _ = await actor_session.model_registry.retrieve_version(
+            SimpleA2CModel, config.model_id, -1
+        )
 
         async for event in actor_session.all_events():
             if event.observation and event.type == cogment.EventType.ACTIVE:
-                actor_session.do_action(PlayerAction())
+                obs_tensor = torch.tensor(
+                    flatten(observation_space, event.observation.observation.value), dtype=self._dtype
+                )
+                probs = torch.softmax(model.actor_network(obs_tensor), dim=-1)
+                discrete_action_tensor = torch.distributions.Categorical(probs).sample()
+                action_value = SpaceValue(properties=[SpaceValue.PropertyValue(discrete=discrete_action_tensor.item())])
+                actor_session.do_action(PlayerAction(value=action_value))
 
 
 class DaggerLearner:
@@ -61,6 +73,8 @@ class DaggerLearner:
 
     async def impl(self, actor_session):
         actor_session.start()
+        config = actor_session.config
+        observation_space = config.environment_specs.observation_space
 
         async for event in actor_session.all_events():
             if event.observation and event.type == cogment.EventType.ACTIVE:
@@ -85,6 +99,7 @@ class DaggerTraining:
 
     async def sample_producer(self, sample_producer_session):
         assert len(sample_producer_session.trial_info.parameters.actors) == 2
+        assert self._cfg.teacher_model == "SimpleA2CModel"
 
         teachers_params = [
             actor_params
@@ -136,6 +151,7 @@ class DaggerTraining:
                 config=AgentConfig(
                     run_id=run_session.run_id,
                     environment_specs=self._environment_specs,
+                    model_id=self._cfg.teacher_model_id,
                 ),
             )
 
