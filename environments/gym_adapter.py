@@ -71,14 +71,14 @@ class Environment:
 
         session_cfg = environment_session.config
 
-        gym_env = gym.make(self.gym_env_name)
+        gym_env = gym.make(self.gym_env_name, render_mode="single_rgb_array" if session_cfg.render else None)
 
         gym_observation, _info = gym_env.reset(seed=session_cfg.seed, return_info=True)
         observation_value = observation_from_gym_observation(gym_env.observation_space, gym_observation)
 
         rendered_frame = None
         if session_cfg.render:
-            rendered_frame = encode_rendered_frame(gym_env.render(mode="rgb_array"), session_cfg.render_width)
+            rendered_frame = encode_rendered_frame(gym_env.render(), session_cfg.render_width)
 
         environment_session.start([("*", Observation(value=observation_value, rendered_frame=rendered_frame))])
 
@@ -101,7 +101,7 @@ class Environment:
 
                 rendered_frame = None
                 if session_cfg.render:
-                    rendered_frame = encode_rendered_frame(gym_env.render(mode="rgb_array"), session_cfg.render_width)
+                    rendered_frame = encode_rendered_frame(gym_env.render(), session_cfg.render_width)
 
                 observations = [
                     (
