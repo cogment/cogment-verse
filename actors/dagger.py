@@ -37,6 +37,68 @@ torch.multiprocessing.set_sharing_strategy("file_system")
 
 log = logging.getLogger(__name__)
 
+class LearnerModel(Model):
+    def __init__(
+        self,
+        model_id,
+        environment_implementation,
+        num_input,
+        num_output,
+        policy_network_num_hidden_nodes=64,
+        version_number=0,
+    ):
+        super().__init__(model_id, version_number)
+
+        self._dtype = torch.float
+        self._environment_implementation = environment_implementation
+        self._num_input = num_input
+        self._num_output = num_output
+        self._policy_network_num_hidden_nodes = policy_network_num_hidden_nodes
+
+        self.policy_network = torch.nn.Sequential(
+            torch.nn.Linear(num_input, policy_network_num_hidden_nodes, dtype=self._dtype),
+            torch.nn.BatchNorm1d(policy_network_num_hidden_nodes, dtype=self._dtype),
+            torch.nn.ReLU(),
+            torch.nn.Linear(policy_network_num_hidden_nodes, policy_network_num_hidden_nodes, dtype=self._dtype),
+            torch.nn.BatchNorm1d(policy_network_num_hidden_nodes, dtype=self._dtype),
+            torch.nn.ReLU(),
+            torch.nn.Linear(policy_network_num_hidden_nodes, num_output, dtype=self._dtype),
+        )
+
+        self.total_samples = 0
+
+    def get_model_user_data(self):
+        return {
+            "environment_implementation": self._environment_implementation,
+            "num_input": self._num_input,
+            "num_output": self._num_output,
+            "policy_network_num_hidden_nodes": self._policy_network_num_hidden_nodes,
+        }
+
+    def save(self, model_data_f):
+        torch.save(self.policy_network.state_dict(), model_data_f)
+
+        return {"total_samples": self.total_samples}
+
+    @classmethod
+    def load(cls, model_id, version_number, model_user_data, version_user_data, model_data_f):
+        # Create the model instance
+        model = LearnerModel(
+            model_id=model_id,
+            version_number=version_number,
+            environment_implementation=model_user_data["environment_implementation"],
+            num_input=int(model_user_data["num_input"]),
+            num_output=int(model_user_data["num_output"]),
+            policy_network_num_hidden_nodes=int(model_user_data["policy_network_num_hidden_nodes"]),
+        )
+
+        # Load the saved states
+        policy_network_state_dict = torch.load(model_data_f)
+        model.policy_network.load_state_dict(policy_network_state_dict)
+
+        # Load version data
+        model.total_samples = version_user_data["total_samples"]
+        return model
 
 class DaggerTeacher:
     def __init__(self, _cfg):
@@ -80,7 +142,6 @@ class DaggerLearner:
             if event.observation and event.type == cogment.EventType.ACTIVE:
                 actor_session.do_action(PlayerAction())
 
-
 class DaggerTraining:
     default_cfg = {
         "seed": 12,
@@ -100,6 +161,7 @@ class DaggerTraining:
     async def sample_producer(self, sample_producer_session):
         assert len(sample_producer_session.trial_info.parameters.actors) == 2
         assert self._cfg.teacher_model == "SimpleA2CModel"
+        assert self._environment_specs.action_space.properties[0].WhichOneof("type") == "discrete"
 
         teachers_params = [
             actor_params
