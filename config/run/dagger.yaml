@@ -1,0 +1,8 @@
+class_name: actors.dagger.DaggerTraining
+seed: 618
+num_epochs: 100
+players:
+  - name: learner
+    implementation: actors.dagger.DaggerLearner
+  - name: teacher
+    implementation: actors.dagger.DaggerTeacher

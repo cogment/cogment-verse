@@ -1,0 +1,3 @@
+dagger_teacher:
+  class_name: actors.dagger.DaggerTeacher
+  port: ${generate_port:actors.dagger_teacher.DaggerTeacher}
