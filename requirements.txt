@@ -1,15 +1,15 @@
-cogment[generate]==2.1.1
+cogment[generate]==2.2.2
 grpcio==1.43.0
 hydra-core==1.2.0
 mlflow==1.26.1
 names_generator~=0.1.0
 opencv-python~=4.5.5
-PyYAML~=5.4.1
+PyYAML~=5.3.1
 starlette==0.20.0
 uvicorn==0.17.6
 
 # environments
-gym[atari,box2d,classic_control]>=0.24,<0.25
+gym[atari,box2d,classic_control]>=0.25,<0.26
 PettingZoo[classic]>=1.18,<1.19
 
 # actors
