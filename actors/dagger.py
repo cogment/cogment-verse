@@ -18,11 +18,10 @@ import cogment
 import numpy as np
 import torch
 
-from actors.simple_a2c import SimpleA2CModel, SimpleA2CActor
+from actors.simple_a2c import SimpleA2CModel
 from cogment_verse import Model
 from cogment_verse.specs import (
     PLAYER_ACTOR_CLASS,
-    TEACHER_ACTOR_CLASS,
     AgentConfig,
     EnvironmentConfig,
     PlayerAction,
@@ -100,6 +99,7 @@ class StudentModel(Model):
         model.total_samples = version_user_data["total_samples"]
         return model
 
+
 class DaggerStudent:
     def __init__(self, _cfg):
         self._dtype = torch.float
@@ -169,18 +169,14 @@ class DaggerTraining:
                 dtype=self._dtype,
             )
 
-            reward = torch.tensor(
-                player_sample.reward if player_sample.reward is not None else 0, dtype=self._dtype
-            )
+            reward = torch.tensor(player_sample.reward if player_sample.reward is not None else 0, dtype=self._dtype)
 
             if sample.trial_state == cogment.TrialState.ENDED:
                 done = torch.ones(1, dtype=self._dtype)
             else:
                 done = torch.zeros(1, dtype=self._dtype)
 
-            sample_producer_session.produce_sample(
-                (observation, action, reward, done)
-            )
+            sample_producer_session.produce_sample((observation, action, reward, done))
 
     async def impl(self, run_session):
         assert self._cfg.teacher_model == "SimpleA2CModel"
@@ -278,7 +274,6 @@ class DaggerTraining:
             actions.append(teacher_action)
             observations.append(teacher_observation)
 
-
         # Configure the optimizer and loss function for the student model
         optimizer = torch.optim.Adam(
             student_model.policy_network.parameters(),
@@ -344,6 +339,6 @@ class DaggerTraining:
                     total_samples=len(observations),
                     total_student_reward=total_student_reward,
                 )
-        
+
         # Publish the final learnt model
         version_info = await run_session.model_registry.publish_version(student_model, archived=True)
