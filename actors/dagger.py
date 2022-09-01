@@ -37,7 +37,7 @@ torch.multiprocessing.set_sharing_strategy("file_system")
 log = logging.getLogger(__name__)
 
 
-class LearnerModel(Model):
+class StudentModel(Model):
     def __init__(
         self,
         model_id,
@@ -83,7 +83,7 @@ class LearnerModel(Model):
     @classmethod
     def load(cls, model_id, version_number, model_user_data, version_user_data, model_data_f):
         # Create the model instance
-        model = LearnerModel(
+        model = StudentModel(
             model_id=model_id,
             version_number=version_number,
             environment_implementation=model_user_data["environment_implementation"],
@@ -125,7 +125,7 @@ class DaggerTeacher:
                 actor_session.do_action(PlayerAction(value=action_value))
 
 
-class DaggerLearner:
+class DaggerStudent:
     def __init__(self, _cfg):
         self._dtype = torch.float
 
@@ -137,7 +137,7 @@ class DaggerLearner:
         config = actor_session.config
         observation_space = config.environment_specs.observation_space
         model, _, _ = await actor_session.model_registry.retrieve_version(
-            LearnerModel, config.model_id, config.model_version
+            StudentModel, config.model_id, config.model_version
         )
         model.policy_network.eval()
 
@@ -172,31 +172,29 @@ class DaggerTraining:
 
     async def sample_producer(self, sample_producer_session):
         assert len(sample_producer_session.trial_info.parameters.actors) == 2
-        assert self._cfg.teacher_model == "SimpleA2CModel"
-        assert self._environment_specs.action_space.properties[0].WhichOneof("type") == "discrete"
 
         teachers_params = [
             actor_params
             for actor_params in sample_producer_session.trial_info.parameters.actors
             if actor_params.class_name == TEACHER_ACTOR_CLASS
         ]
-        learner_params = [
+        student_params = [
             actor_params
             for actor_params in sample_producer_session.trial_info.parameters.actors
             if actor_params.class_name == PLAYER_ACTOR_CLASS
         ]
 
-        assert len(learner_params) == 1
+        assert len(student_params) == 1
         assert len(teachers_params) == 1
 
         teacher_params = teachers_params[0]
-        learner_params = learner_params[0]
+        student_params = student_params[0]
 
         environment_specs = teacher_params.config.environment_specs
 
         async for sample in sample_producer_session.all_trial_samples():
             teacher_sample = sample.actors_data[teacher_params.name]
-            learner_sample = sample.actors_data[learner_params.name]
+            student_sample = sample.actors_data[student_params.name]
 
             teacher_action = torch.tensor(
                 flatten(environment_specs.action_space, teacher_sample.action.value), dtype=self._dtype
@@ -207,8 +205,8 @@ class DaggerTraining:
                 dtype=self._dtype,
             )
 
-            learner_observation = torch.tensor(
-                flatten(environment_specs.observation_space, sample.actors_data[learner_params.name].observation.value),
+            student_observation = torch.tensor(
+                flatten(environment_specs.observation_space, sample.actors_data[student_params.name].observation.value),
                 dtype=self._dtype,
             )
 
@@ -216,8 +214,8 @@ class DaggerTraining:
                 teacher_sample.reward if teacher_sample.reward is not None else 0, dtype=self._dtype
             )
 
-            learner_reward = torch.tensor(
-                learner_sample.reward if learner_sample.reward is not None else 0, dtype=self._dtype
+            student_reward = torch.tensor(
+                student_sample.reward if student_sample.reward is not None else 0, dtype=self._dtype
             )
 
             if sample.trial_state == cogment.TrialState.ENDED:
@@ -226,21 +224,24 @@ class DaggerTraining:
                 done = torch.zeros(1, dtype=self._dtype)
 
             sample_producer_session.produce_sample(
-                (teacher_observation, learner_observation, teacher_action, teacher_reward, learner_reward, done)
+                (teacher_observation, student_observation, teacher_action, teacher_reward, student_reward, done)
             )
 
     async def impl(self, run_session):
+        assert self._cfg.teacher_model == "SimpleA2CModel"
+        assert self._environment_specs.action_space.properties[0].WhichOneof("type") == "discrete"
+
         model_id = f"{run_session.run_id}_model"
 
         # Initializing a model
-        learner_model = LearnerModel(
+        student_model = StudentModel(
             model_id,
             environment_implementation=self._environment_specs.implementation,
             num_input=flattened_dimensions(self._environment_specs.observation_space),
             num_output=flattened_dimensions(self._environment_specs.action_space),
             policy_network_num_hidden_nodes=self._cfg.policy_network.num_hidden_nodes,
         )
-        _model_info, _version_info = await run_session.model_registry.publish_initial_version(learner_model)
+        _model_info, _version_info = await run_session.model_registry.publish_initial_version(student_model)
 
         run_session.log_params(
             self._cfg,
@@ -255,7 +256,7 @@ class DaggerTraining:
                 cog_settings,
                 name="player",
                 class_name=PLAYER_ACTOR_CLASS,
-                implementation="actors.dagger.DaggerLearner",
+                implementation="actors.dagger.DaggerStudent",
                 config=AgentConfig(
                     run_id=run_session.run_id,
                     environment_specs=self._environment_specs,
@@ -288,7 +289,7 @@ class DaggerTraining:
 
         # Configure the optimizer and loss function
         optimizer = torch.optim.Adam(
-            learner_model.policy_network.parameters(),
+            student_model.policy_network.parameters(),
             lr=self._cfg.learning_rate,
         )
         loss_fn = torch.nn.CrossEntropyLoss()
@@ -297,7 +298,7 @@ class DaggerTraining:
         observations = []
         actions = []
         total_teacher_reward = 0
-        total_learner_reward = 0
+        total_student_reward = 0
 
         teacher_model, _, _ = await run_session.model_registry.retrieve_version(
             SimpleA2CModel, self._cfg.teacher_model_id, -1
@@ -312,22 +313,22 @@ class DaggerTraining:
             sample_producer_impl=self.sample_producer,
             num_parallel_trials=1,
         ):
-            (teacher_observation, learner_observation, teacher_action, teacher_reward, learner_reward, done) = sample
+            (teacher_observation, student_observation, teacher_action, teacher_reward, student_reward, done) = sample
 
             if done and _trial_idx % 10 == 0:
                 log.info(f"Processing trial {_trial_idx}/{self._cfg.num_trials}")
 
             actions.append(teacher_action)
             total_teacher_reward += teacher_reward.item()
-            total_learner_reward += learner_reward.item()
+            total_student_reward += student_reward.item()
             if _trial_idx < self._cfg.start_learning_trial:
                 observations.append(teacher_observation)
             else:
-                observations.append(learner_observation)
+                observations.append(student_observation)
 
             if _trial_idx >= self._cfg.start_learning_trial:
-                # Feed the learner's observation to the teacher model to find the correct action
-                probs = torch.softmax(teacher_model.actor_network(learner_observation), dim=-1)
+                # Feed the student's observation to the teacher model to find the correct action
+                probs = torch.softmax(teacher_model.actor_network(student_observation), dim=-1)
                 discrete_action_tensor = torch.distributions.Categorical(probs).sample()
                 action_value = SpaceValue(properties=[SpaceValue.PropertyValue(discrete=discrete_action_tensor.item())])
                 correct_action = torch.tensor(
@@ -343,8 +344,8 @@ class DaggerTraining:
             batch_observation = torch.vstack([observations[i] for i in batch_indices])
             batch_action = torch.vstack([actions[i] for i in batch_indices])
 
-            learner_model.policy_network.train()
-            pred_policy = learner_model.policy_network(batch_observation)
+            student_model.policy_network.train()
+            pred_policy = student_model.policy_network(batch_observation)
             loss = loss_fn(pred_policy, batch_action)
 
             # Backprop!
@@ -354,12 +355,15 @@ class DaggerTraining:
 
             # Publish the newly trained version every 100 steps
             if step_idx % 100 == 0:
-                version_info = await run_session.model_registry.publish_version(learner_model)
+                version_info = await run_session.model_registry.publish_version(student_model)
 
                 run_session.log_metrics(
                     model_version_number=version_info["version_number"],
                     loss=loss.item(),
                     total_samples=len(observations),
                     total_teacher_reward=total_teacher_reward,
-                    total_learner_reward=total_learner_reward,
+                    total_student_reward=total_student_reward,
                 )
+        
+        # Publish the final learnt model
+        version_info = await run_session.model_registry.publish_version(student_model, archived=True)
