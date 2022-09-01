@@ -196,20 +196,26 @@ class DaggerTraining:
 
         async for sample in sample_producer_session.all_trial_samples():
             teacher_sample = sample.actors_data[teacher_params.name]
-            teacher_action_tensor = torch.tensor(
+            learner_sample = sample.actors_data[learner_params.name]
+
+            teacher_action = torch.tensor(
                 flatten(environment_specs.action_space, teacher_sample.action.value), dtype=self._dtype
             )
-            learner_sample = sample.actors_data[learner_params.name]
-            learner_action_tensor = torch.tensor(
-                flatten(environment_specs.action_space, learner_sample.action.value), dtype=self._dtype
+
+            teacher_observation = torch.tensor(
+                flatten(environment_specs.observation_space, sample.actors_data[teacher_params.name].observation.value),
+                dtype=self._dtype,
             )
-            observation = torch.tensor(
+
+            learner_observation = torch.tensor(
                 flatten(environment_specs.observation_space, sample.actors_data[learner_params.name].observation.value),
                 dtype=self._dtype,
             )
+
             teacher_reward = torch.tensor(
                 teacher_sample.reward if teacher_sample.reward is not None else 0, dtype=self._dtype
             )
+
             learner_reward = torch.tensor(
                 learner_sample.reward if learner_sample.reward is not None else 0, dtype=self._dtype
             )
@@ -220,7 +226,7 @@ class DaggerTraining:
                 done = torch.zeros(1, dtype=self._dtype)
 
             sample_producer_session.produce_sample(
-                (observation, teacher_action_tensor, learner_action_tensor, teacher_reward, learner_reward, done)
+                (teacher_observation, learner_observation, teacher_action, teacher_reward, learner_reward, done)
             )
 
     async def impl(self, run_session):
@@ -289,10 +295,9 @@ class DaggerTraining:
 
         # Store the accumulated observations/actions
         observations = []
-        teacher_actions = []
-        learner_actions = []
-        teacher_rewards = []
-        learner_rewards = []
+        actions = []
+        total_teacher_reward = 0
+        total_learner_reward = 0
 
         teacher_model, _, _ = await run_session.model_registry.retrieve_version(
             SimpleA2CModel, self._cfg.teacher_model_id, -1
@@ -307,39 +312,36 @@ class DaggerTraining:
             sample_producer_impl=self.sample_producer,
             num_parallel_trials=1,
         ):
-            (observation, teacher_action, learner_action, teacher_reward, learner_reward, done) = sample
+            (teacher_observation, learner_observation, teacher_action, teacher_reward, learner_reward, done) = sample
 
             if done and _trial_idx % 10 == 0:
-                log.info(f"Finished trial {_trial_idx}/{self._cfg.num_trials}")
+                log.info(f"Processing trial {_trial_idx}/{self._cfg.num_trials}")
 
-            observations.append(observation)
-            teacher_actions.append(teacher_action)
-            learner_actions.append(learner_action)
-            teacher_rewards.append(teacher_reward)
-            learner_rewards.append(learner_reward)
-
-            run_session.log_metrics(
-                total_teacher_reward=sum(r.item() for r in teacher_rewards),
-                total_learner_reward=sum(r.item() for r in learner_rewards),
-            )
-
-            if len(observations) < self._cfg.batch_size:
-                continue
+            actions.append(teacher_action)
+            total_teacher_reward += teacher_reward.item()
+            total_learner_reward += learner_reward.item()
+            if _trial_idx < self._cfg.start_learning_trial:
+                observations.append(teacher_observation)
+            else:
+                observations.append(learner_observation)
 
             if _trial_idx >= self._cfg.start_learning_trial:
                 # Feed the learner's observation to the teacher model to find the correct action
-                probs = torch.softmax(teacher_model.actor_network(observation), dim=-1)
+                probs = torch.softmax(teacher_model.actor_network(learner_observation), dim=-1)
                 discrete_action_tensor = torch.distributions.Categorical(probs).sample()
                 action_value = SpaceValue(properties=[SpaceValue.PropertyValue(discrete=discrete_action_tensor.item())])
                 correct_action = torch.tensor(
                     flatten(self._environment_specs.action_space, action_value), dtype=self._dtype
                 )
-                teacher_actions[-1] = correct_action
+                actions[-1] = correct_action
+
+            if len(observations) < self._cfg.batch_size:
+                continue
 
             # Sample a batch of observations/actions
             batch_indices = np.random.default_rng().integers(0, len(observations), self._cfg.batch_size)
             batch_observation = torch.vstack([observations[i] for i in batch_indices])
-            batch_action = torch.vstack([teacher_actions[i] for i in batch_indices])
+            batch_action = torch.vstack([actions[i] for i in batch_indices])
 
             learner_model.policy_network.train()
             pred_policy = learner_model.policy_network(batch_observation)
@@ -358,4 +360,6 @@ class DaggerTraining:
                     model_version_number=version_info["version_number"],
                     loss=loss.item(),
                     total_samples=len(observations),
+                    total_teacher_reward=total_teacher_reward,
+                    total_learner_reward=total_learner_reward,
                 )
