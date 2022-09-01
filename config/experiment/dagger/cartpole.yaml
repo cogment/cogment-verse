@@ -2,7 +2,7 @@
 defaults:
   - override /services/actor:
       - dagger_teacher
-      - dagger_learner
+      - dagger_student
   - override /run: dagger
   - override /services/environment: cartpole
 run:
