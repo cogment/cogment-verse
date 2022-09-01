@@ -274,6 +274,7 @@ class DaggerTraining:
                     run_id=run_session.run_id,
                     environment_specs=self._environment_specs,
                     model_id=self._cfg.teacher_model_id,
+                    model_version=-1,
                 ),
             )
 

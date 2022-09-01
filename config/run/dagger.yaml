@@ -1,7 +1,7 @@
 class_name: actors.dagger.DaggerTraining
 seed: 618
 players:
-  - name: learner
+  - name: student
     implementation: actors.dagger.DaggerStudent
   - name: teacher
     implementation: actors.dagger.DaggerTeacher
