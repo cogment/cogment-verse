@@ -156,8 +156,8 @@ class DaggerLearner:
 class DaggerTraining:
     default_cfg = {
         "seed": 12,
-        "num_trials": 4,
-        "start_learning_trial": 2,
+        "num_trials": 40,
+        "start_learning_trial": 20,
         "discount_factor": 0.95,
         "learning_rate": 0.01,
         "batch_size": 32,
@@ -195,19 +195,27 @@ class DaggerTraining:
         environment_specs = teacher_params.config.environment_specs
 
         async for sample in sample_producer_session.all_trial_samples():
-            teacher_action = sample.actors_data[teacher_params.name].action
+            teacher_sample = sample.actors_data[teacher_params.name]
             teacher_action_tensor = torch.tensor(
-                flatten(environment_specs.action_space, teacher_action.value), dtype=self._dtype
+                flatten(environment_specs.action_space, teacher_sample.action.value), dtype=self._dtype
             )
-            learner_action = sample.actors_data[learner_params.name].action
+            learner_sample = sample.actors_data[learner_params.name]
             learner_action_tensor = torch.tensor(
-                flatten(environment_specs.action_space, learner_action.value), dtype=self._dtype
+                flatten(environment_specs.action_space, learner_sample.action.value), dtype=self._dtype
             )
-            observation_tensor = torch.tensor(
+            observation = torch.tensor(
                 flatten(environment_specs.observation_space, sample.actors_data[learner_params.name].observation.value),
                 dtype=self._dtype,
             )
-            sample_producer_session.produce_sample((observation_tensor, teacher_action_tensor, learner_action_tensor))
+            teacher_reward = torch.tensor(teacher_sample.reward if teacher_sample.reward is not None else 0, dtype=self._dtype)
+            learner_reward = torch.tensor(learner_sample.reward if learner_sample.reward is not None else 0, dtype=self._dtype)
+            
+            if sample.trial_state == cogment.TrialState.ENDED:
+                done = torch.ones(1, dtype=self._dtype)
+            else:
+                done = torch.zeros(1, dtype=self._dtype)
+
+            sample_producer_session.produce_sample((observation, teacher_action_tensor, learner_action_tensor, teacher_reward, learner_reward, done))
 
     async def impl(self, run_session):
         model_id = f"{run_session.run_id}_model"
@@ -277,6 +285,8 @@ class DaggerTraining:
         observations = []
         teacher_actions = []
         learner_actions = []
+        teacher_rewards = []
+        learner_rewards = []
 
         teacher_model, _, _ = await run_session.model_registry.retrieve_version(
             SimpleA2CModel, self._cfg.teacher_model_id, -1
@@ -291,10 +301,21 @@ class DaggerTraining:
             sample_producer_impl=self.sample_producer,
             num_parallel_trials=1,
         ):
-            (observation, teacher_action, learner_action) = sample
+            (observation, teacher_action, learner_action, teacher_reward, learner_reward, done) = sample
+            
+            if done and _trial_idx % 10 == 0:
+                log.info(f"Finished trial {_trial_idx}/{self._cfg.num_trials}")
+
             observations.append(observation)
             teacher_actions.append(teacher_action)
             learner_actions.append(learner_action)
+            teacher_rewards.append(teacher_reward)
+            learner_rewards.append(learner_reward)
+
+            run_session.log_metrics(
+                total_teacher_reward=sum(r.item() for r in teacher_rewards),
+                total_learner_reward=sum(r.item() for r in learner_rewards),
+            )
 
             if len(observations) < self._cfg.batch_size:
                 continue
