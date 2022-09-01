@@ -15,27 +15,27 @@
 import logging
 
 import cogment
+import numpy as np
 import torch
 
-import numpy as np
-
+from actors.simple_a2c import SimpleA2CModel
 from cogment_verse import Model
 from cogment_verse.specs import (
-    AgentConfig,
-    cog_settings,
-    EnvironmentConfig,
-    flatten,
-    flattened_dimensions,
     PLAYER_ACTOR_CLASS,
+    TEACHER_ACTOR_CLASS,
+    AgentConfig,
+    EnvironmentConfig,
     PlayerAction,
     SpaceValue,
-    TEACHER_ACTOR_CLASS,
+    cog_settings,
+    flatten,
+    flattened_dimensions,
 )
-from actors.simple_a2c import SimpleA2CModel
 
 torch.multiprocessing.set_sharing_strategy("file_system")
 
 log = logging.getLogger(__name__)
+
 
 class LearnerModel(Model):
     def __init__(
@@ -100,6 +100,7 @@ class LearnerModel(Model):
         model.total_samples = version_user_data["total_samples"]
         return model
 
+
 class DaggerTeacher:
     def __init__(self, _cfg):
         self._dtype = torch.float
@@ -111,9 +112,7 @@ class DaggerTeacher:
         actor_session.start()
         config = actor_session.config
         observation_space = config.environment_specs.observation_space
-        model, _, _ = await actor_session.model_registry.retrieve_version(
-            SimpleA2CModel, config.model_id, -1
-        )
+        model, _, _ = await actor_session.model_registry.retrieve_version(SimpleA2CModel, config.model_id, -1)
 
         async for event in actor_session.all_events():
             if event.observation and event.type == cogment.EventType.ACTIVE:
@@ -137,7 +136,7 @@ class DaggerLearner:
         actor_session.start()
         config = actor_session.config
         observation_space = config.environment_specs.observation_space
-        model, _model_info, version_info = await actor_session.model_registry.retrieve_version(
+        model, _, _ = await actor_session.model_registry.retrieve_version(
             LearnerModel, config.model_id, config.model_version
         )
         model.policy_network.eval()
@@ -152,6 +151,7 @@ class DaggerLearner:
                 discrete_action_tensor = torch.distributions.Categorical(probs).sample()
                 action_value = SpaceValue(properties=[SpaceValue.PropertyValue(discrete=discrete_action_tensor.item())])
                 actor_session.do_action(PlayerAction(value=action_value))
+
 
 class DaggerTraining:
     default_cfg = {
@@ -185,10 +185,10 @@ class DaggerTraining:
             for actor_params in sample_producer_session.trial_info.parameters.actors
             if actor_params.class_name == PLAYER_ACTOR_CLASS
         ]
-        
+
         assert len(learner_params) == 1
         assert len(teachers_params) == 1
-        
+
         teacher_params = teachers_params[0]
         learner_params = learner_params[0]
 
@@ -207,15 +207,21 @@ class DaggerTraining:
                 flatten(environment_specs.observation_space, sample.actors_data[learner_params.name].observation.value),
                 dtype=self._dtype,
             )
-            teacher_reward = torch.tensor(teacher_sample.reward if teacher_sample.reward is not None else 0, dtype=self._dtype)
-            learner_reward = torch.tensor(learner_sample.reward if learner_sample.reward is not None else 0, dtype=self._dtype)
-            
+            teacher_reward = torch.tensor(
+                teacher_sample.reward if teacher_sample.reward is not None else 0, dtype=self._dtype
+            )
+            learner_reward = torch.tensor(
+                learner_sample.reward if learner_sample.reward is not None else 0, dtype=self._dtype
+            )
+
             if sample.trial_state == cogment.TrialState.ENDED:
                 done = torch.ones(1, dtype=self._dtype)
             else:
                 done = torch.zeros(1, dtype=self._dtype)
 
-            sample_producer_session.produce_sample((observation, teacher_action_tensor, learner_action_tensor, teacher_reward, learner_reward, done))
+            sample_producer_session.produce_sample(
+                (observation, teacher_action_tensor, learner_action_tensor, teacher_reward, learner_reward, done)
+            )
 
     async def impl(self, run_session):
         model_id = f"{run_session.run_id}_model"
@@ -238,7 +244,7 @@ class DaggerTraining:
 
         # Helper function to create a trial configuration
         def create_trial_params(trial_idx):
-            
+
             player_actor_params = cogment.ActorParameters(
                 cog_settings,
                 name="player",
@@ -251,7 +257,7 @@ class DaggerTraining:
                     model_version=-1,
                 ),
             )
-            
+
             teacher_actor_params = cogment.ActorParameters(
                 cog_settings,
                 name="teacher",
@@ -291,7 +297,7 @@ class DaggerTraining:
         teacher_model, _, _ = await run_session.model_registry.retrieve_version(
             SimpleA2CModel, self._cfg.teacher_model_id, -1
         )
-        
+
         # Rollout a bunch of trials
         for (step_idx, _trial_id, _trial_idx, sample,) in run_session.start_and_await_trials(
             trials_id_and_params=[
@@ -302,7 +308,7 @@ class DaggerTraining:
             num_parallel_trials=1,
         ):
             (observation, teacher_action, learner_action, teacher_reward, learner_reward, done) = sample
-            
+
             if done and _trial_idx % 10 == 0:
                 log.info(f"Finished trial {_trial_idx}/{self._cfg.num_trials}")
 
@@ -330,8 +336,7 @@ class DaggerTraining:
                     flatten(self._environment_specs.action_space, correct_action.value), dtype=self._dtype
                 )
                 teacher_actions[-1] = correct_action_tensor
-            
-            
+
             # Sample a batch of observations/actions
             batch_indices = np.random.default_rng().integers(0, len(observations), self._cfg.batch_size)
             batch_observation = torch.vstack([observations[i] for i in batch_indices])
@@ -355,11 +360,3 @@ class DaggerTraining:
                     loss=loss.item(),
                     total_samples=len(observations),
                 )
-                
-                
-                
-           
-            
-            
-            
-            
