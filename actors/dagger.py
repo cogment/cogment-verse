@@ -100,11 +100,6 @@ class StudentModel(Model):
         model.total_samples = version_user_data["total_samples"]
         return model
 
-
-class DaggerTeacher(SimpleA2CActor):
-    def __init__(self, _cfg):
-        super().__init__(_cfg)
-
 class DaggerStudent:
     def __init__(self, _cfg):
         self._dtype = torch.float
@@ -216,7 +211,7 @@ class DaggerTraining:
                 cog_settings,
                 name="teacher",
                 class_name=PLAYER_ACTOR_CLASS,
-                implementation="actors.dagger.DaggerTeacher",
+                implementation="actors.simple_a2c.SimpleA2CActor",
                 config=AgentConfig(
                     run_id=run_session.run_id,
                     environment_specs=self._environment_specs,

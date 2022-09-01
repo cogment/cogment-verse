@@ -4,4 +4,4 @@ players:
   - name: student
     implementation: actors.dagger.DaggerStudent
   - name: teacher
-    implementation: actors.dagger.DaggerTeacher
+    implementation: actors.simple_a2c.SimpleA2CActor
