@@ -105,9 +105,6 @@ class DaggerTeacher(SimpleA2CActor):
     def __init__(self, _cfg):
         super().__init__(_cfg)
 
-    def get_actor_classes(self):
-        return [TEACHER_ACTOR_CLASS]
-
 class DaggerStudent:
     def __init__(self, _cfg):
         self._dtype = torch.float
@@ -139,8 +136,8 @@ class DaggerStudent:
 class DaggerTraining:
     default_cfg = {
         "seed": 12,
-        "num_trials": 200,
-        "start_learning_trial": 100,
+        "num_imitation_trials": 200,
+        "num_data_gather_trials": 100,
         "discount_factor": 0.95,
         "learning_rate": 0.01,
         "batch_size": 32,
@@ -154,51 +151,31 @@ class DaggerTraining:
         self._cfg = cfg
 
     async def sample_producer(self, sample_producer_session):
-        assert len(sample_producer_session.trial_info.parameters.actors) == 2
-
-        teachers_params = [
-            actor_params
-            for actor_params in sample_producer_session.trial_info.parameters.actors
-            if actor_params.class_name == TEACHER_ACTOR_CLASS
-        ]
-        student_params = [
+        player_params = [
             actor_params
             for actor_params in sample_producer_session.trial_info.parameters.actors
             if actor_params.class_name == PLAYER_ACTOR_CLASS
         ]
+        assert len(player_params) == 1
 
-        assert len(student_params) == 1
-        assert len(teachers_params) == 1
+        player_params = player_params[0]
 
-        teacher_params = teachers_params[0]
-        student_params = student_params[0]
-
-        environment_specs = teacher_params.config.environment_specs
+        environment_specs = player_params.config.environment_specs
 
         async for sample in sample_producer_session.all_trial_samples():
-            teacher_sample = sample.actors_data[teacher_params.name]
-            student_sample = sample.actors_data[student_params.name]
+            player_sample = sample.actors_data[player_params.name]
 
-            teacher_action = torch.tensor(
-                flatten(environment_specs.action_space, teacher_sample.action.value), dtype=self._dtype
+            action = torch.tensor(
+                flatten(environment_specs.action_space, player_sample.action.value), dtype=self._dtype
             )
 
-            teacher_observation = torch.tensor(
-                flatten(environment_specs.observation_space, sample.actors_data[teacher_params.name].observation.value),
+            observation = torch.tensor(
+                flatten(environment_specs.observation_space, sample.actors_data[player_params.name].observation.value),
                 dtype=self._dtype,
             )
 
-            student_observation = torch.tensor(
-                flatten(environment_specs.observation_space, sample.actors_data[student_params.name].observation.value),
-                dtype=self._dtype,
-            )
-
-            teacher_reward = torch.tensor(
-                teacher_sample.reward if teacher_sample.reward is not None else 0, dtype=self._dtype
-            )
-
-            student_reward = torch.tensor(
-                student_sample.reward if student_sample.reward is not None else 0, dtype=self._dtype
+            reward = torch.tensor(
+                player_sample.reward if player_sample.reward is not None else 0, dtype=self._dtype
             )
 
             if sample.trial_state == cogment.TrialState.ENDED:
@@ -207,7 +184,7 @@ class DaggerTraining:
                 done = torch.zeros(1, dtype=self._dtype)
 
             sample_producer_session.produce_sample(
-                (teacher_observation, student_observation, teacher_action, teacher_reward, student_reward, done)
+                (observation, action, reward, done)
             )
 
     async def impl(self, run_session):
@@ -232,26 +209,13 @@ class DaggerTraining:
             policy_network_num_hidden_nodes=self._cfg.policy_network.num_hidden_nodes,
         )
 
-        # Helper function to create a trial configuration
-        def create_trial_params(trial_idx):
-
-            player_actor_params = cogment.ActorParameters(
-                cog_settings,
-                name="player",
-                class_name=PLAYER_ACTOR_CLASS,
-                implementation="actors.dagger.DaggerStudent",
-                config=AgentConfig(
-                    run_id=run_session.run_id,
-                    environment_specs=self._environment_specs,
-                    model_id=model_id,
-                    model_version=-1,
-                ),
-            )
+        # Helper function to create a trial configuration for the data generation phase
+        def create_trial_params_gather_expert_data(trial_idx):
 
             teacher_actor_params = cogment.ActorParameters(
                 cog_settings,
                 name="teacher",
-                class_name=TEACHER_ACTOR_CLASS,
+                class_name=PLAYER_ACTOR_CLASS,
                 implementation="actors.dagger.DaggerTeacher",
                 config=AgentConfig(
                     run_id=run_session.run_id,
@@ -268,57 +232,95 @@ class DaggerTraining:
                 environment_config=EnvironmentConfig(
                     run_id=run_session.run_id, render=False, seed=self._cfg.seed + trial_idx
                 ),
-                actors=[teacher_actor_params, player_actor_params],
+                actors=[teacher_actor_params],
             )
 
-        # Configure the optimizer and loss function
+        # Helper function to create a trial configuration for the imitation learning phase
+        def create_trial_params_imitatation(trial_idx):
+
+            player_actor_params = cogment.ActorParameters(
+                cog_settings,
+                name="player",
+                class_name=PLAYER_ACTOR_CLASS,
+                implementation="actors.dagger.DaggerStudent",
+                config=AgentConfig(
+                    run_id=run_session.run_id,
+                    environment_specs=self._environment_specs,
+                    model_id=model_id,
+                    model_version=-1,
+                ),
+            )
+
+            return cogment.TrialParameters(
+                cog_settings,
+                environment_name="env",
+                environment_implementation=self._environment_specs.implementation,
+                environment_config=EnvironmentConfig(
+                    run_id=run_session.run_id, render=False, seed=self._cfg.seed + trial_idx
+                ),
+                actors=[player_actor_params],
+            )
+
+        # Store the accumulated observations/actions
+        observations = []
+        actions = []
+        total_student_reward = 0
+
+        # Rollout a bunch of trials to gather expert data
+        for (step_idx, _trial_id, _trial_idx, sample,) in run_session.start_and_await_trials(
+            trials_id_and_params=[
+                (f"{run_session.run_id}_{trial_idx}", create_trial_params_gather_expert_data(trial_idx))
+                for trial_idx in range(self._cfg.num_data_gather_trials)
+            ],
+            sample_producer_impl=self.sample_producer,
+            num_parallel_trials=1,
+        ):
+            (teacher_observation, teacher_action, _, done) = sample
+
+            if done and _trial_idx % 10 == 0:
+                log.info(f"Gathering expert data, trial {_trial_idx}/{self._cfg.num_data_gather_trials}")
+
+            actions.append(teacher_action)
+            observations.append(teacher_observation)
+
+
+        # Configure the optimizer and loss function for the student model
         optimizer = torch.optim.Adam(
             student_model.policy_network.parameters(),
             lr=self._cfg.learning_rate,
         )
         loss_fn = torch.nn.CrossEntropyLoss()
 
-        # Store the accumulated observations/actions
-        observations = []
-        actions = []
-        total_teacher_reward = 0
-        total_student_reward = 0
-
+        # Load the teacher model
         teacher_model, _, _ = await run_session.model_registry.retrieve_version(
             SimpleA2CModel, self._cfg.teacher_model_id, -1
         )
 
-        # Rollout a bunch of trials
+        # Rollout a bunch of trials to train the student model
         for (step_idx, _trial_id, _trial_idx, sample,) in run_session.start_and_await_trials(
             trials_id_and_params=[
-                (f"{run_session.run_id}_{trial_idx}", create_trial_params(trial_idx))
-                for trial_idx in range(self._cfg.num_trials)
+                (f"{run_session.run_id}_{trial_idx}", create_trial_params_imitatation(trial_idx))
+                for trial_idx in range(self._cfg.num_imitation_trials)
             ],
             sample_producer_impl=self.sample_producer,
             num_parallel_trials=1,
         ):
-            (teacher_observation, student_observation, teacher_action, teacher_reward, student_reward, done) = sample
+            (student_observation, _, student_reward, done) = sample
 
             if done and _trial_idx % 10 == 0:
-                log.info(f"Processing trial {_trial_idx}/{self._cfg.num_trials}")
+                log.info(f"Training the student, trial {_trial_idx}/{self._cfg.num_imitation_trials}")
 
-            actions.append(teacher_action)
-            total_teacher_reward += teacher_reward.item()
+            # Feed the student's observation to the teacher model to find the correct action
+            probs = torch.softmax(teacher_model.actor_network(student_observation), dim=-1)
+            discrete_action_tensor = torch.distributions.Categorical(probs).sample()
+            action_value = SpaceValue(properties=[SpaceValue.PropertyValue(discrete=discrete_action_tensor.item())])
+            correct_action = torch.tensor(
+                flatten(self._environment_specs.action_space, action_value), dtype=self._dtype
+            )
+
+            actions.append(correct_action)
             total_student_reward += student_reward.item()
-            if _trial_idx < self._cfg.start_learning_trial:
-                observations.append(teacher_observation)
-            else:
-                observations.append(student_observation)
-
-            if _trial_idx >= self._cfg.start_learning_trial:
-                # Feed the student's observation to the teacher model to find the correct action
-                probs = torch.softmax(teacher_model.actor_network(student_observation), dim=-1)
-                discrete_action_tensor = torch.distributions.Categorical(probs).sample()
-                action_value = SpaceValue(properties=[SpaceValue.PropertyValue(discrete=discrete_action_tensor.item())])
-                correct_action = torch.tensor(
-                    flatten(self._environment_specs.action_space, action_value), dtype=self._dtype
-                )
-                actions[-1] = correct_action
+            observations.append(student_observation)
 
             if len(observations) < self._cfg.batch_size:
                 continue
@@ -345,7 +347,6 @@ class DaggerTraining:
                     model_version_number=version_info["version_number"],
                     loss=loss.item(),
                     total_samples=len(observations),
-                    total_teacher_reward=total_teacher_reward,
                     total_student_reward=total_student_reward,
                 )
         
