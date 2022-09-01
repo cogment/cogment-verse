@@ -18,7 +18,7 @@ import cogment
 import numpy as np
 import torch
 
-from actors.simple_a2c import SimpleA2CModel
+from actors.simple_a2c import SimpleA2CModel, SimpleA2CActor
 from cogment_verse import Model
 from cogment_verse.specs import (
     PLAYER_ACTOR_CLASS,
@@ -101,29 +101,12 @@ class StudentModel(Model):
         return model
 
 
-class DaggerTeacher:
+class DaggerTeacher(SimpleA2CActor):
     def __init__(self, _cfg):
-        self._dtype = torch.float
+        super().__init__(_cfg)
 
     def get_actor_classes(self):
         return [TEACHER_ACTOR_CLASS]
-
-    async def impl(self, actor_session):
-        actor_session.start()
-        config = actor_session.config
-        observation_space = config.environment_specs.observation_space
-        model, _, _ = await actor_session.model_registry.retrieve_version(SimpleA2CModel, config.model_id, -1)
-
-        async for event in actor_session.all_events():
-            if event.observation and event.type == cogment.EventType.ACTIVE:
-                observation_tensor = torch.tensor(
-                    flatten(observation_space, event.observation.observation.value), dtype=self._dtype
-                )
-                probs = torch.softmax(model.actor_network(observation_tensor), dim=-1)
-                discrete_action_tensor = torch.distributions.Categorical(probs).sample()
-                action_value = SpaceValue(properties=[SpaceValue.PropertyValue(discrete=discrete_action_tensor.item())])
-                actor_session.do_action(PlayerAction(value=action_value))
-
 
 class DaggerStudent:
     def __init__(self, _cfg):
