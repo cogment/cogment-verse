@@ -156,8 +156,8 @@ class DaggerLearner:
 class DaggerTraining:
     default_cfg = {
         "seed": 12,
-        "num_trials": 40,
-        "start_learning_trial": 20,
+        "num_trials": 200,
+        "start_learning_trial": 100,
         "discount_factor": 0.95,
         "learning_rate": 0.01,
         "batch_size": 32,
@@ -331,11 +331,10 @@ class DaggerTraining:
                 probs = torch.softmax(teacher_model.actor_network(observation), dim=-1)
                 discrete_action_tensor = torch.distributions.Categorical(probs).sample()
                 action_value = SpaceValue(properties=[SpaceValue.PropertyValue(discrete=discrete_action_tensor.item())])
-                correct_action = PlayerAction(value=action_value)
-                correct_action_tensor = torch.tensor(
-                    flatten(self._environment_specs.action_space, correct_action.value), dtype=self._dtype
+                correct_action = torch.tensor(
+                    flatten(self._environment_specs.action_space, action_value), dtype=self._dtype
                 )
-                teacher_actions[-1] = correct_action_tensor
+                teacher_actions[-1] = correct_action
 
             # Sample a batch of observations/actions
             batch_indices = np.random.default_rng().integers(0, len(observations), self._cfg.batch_size)
