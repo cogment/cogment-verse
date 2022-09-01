@@ -1,3 +1,3 @@
 dagger_learner:
-  class_name: actors.dagger.DaggerLearner
-  port: ${generate_port:actors.dagger_learner.DaggerLearner}
+  class_name: actors.dagger.DaggerStudent
+  port: ${generate_port:actors.dagger_learner.DaggerStudent}
