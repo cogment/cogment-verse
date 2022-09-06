@@ -132,7 +132,7 @@ class DaggerTraining:
     default_cfg = {
         "seed": 12,
         "num_data_gather_trials": 100,
-        "num_imitation_trials": 100,
+        "num_imitation_trials": 500,
         "num_mlp_steps": 10,
         "discount_factor": 0.95,
         "learning_rate": 0.01,
@@ -155,29 +155,35 @@ class DaggerTraining:
         assert len(player_params) == 1
 
         player_params = player_params[0]
-
         environment_specs = player_params.config.environment_specs
+        action = []
+        observation = []
+        reward = []
+        done = []
 
         async for sample in sample_producer_session.all_trial_samples():
             player_sample = sample.actors_data[player_params.name]
 
-            action = torch.tensor(
-                flatten(environment_specs.action_space, player_sample.action.value), dtype=self._dtype
+            action.append(
+                torch.tensor(flatten(environment_specs.action_space, player_sample.action.value), dtype=self._dtype)
             )
-
-            observation = torch.tensor(
-                flatten(environment_specs.observation_space, sample.actors_data[player_params.name].observation.value),
-                dtype=self._dtype,
+            observation.append(
+                torch.tensor(
+                    flatten(
+                        environment_specs.observation_space, sample.actors_data[player_params.name].observation.value
+                    ),
+                    dtype=self._dtype,
+                )
             )
-
-            reward = torch.tensor(player_sample.reward if player_sample.reward is not None else 0, dtype=self._dtype)
-
+            reward.append(
+                torch.tensor(player_sample.reward if player_sample.reward is not None else 0, dtype=self._dtype)
+            )
             if sample.trial_state == cogment.TrialState.ENDED:
-                done = torch.ones(1, dtype=self._dtype)
+                done.append(torch.ones(1, dtype=self._dtype))
             else:
-                done = torch.zeros(1, dtype=self._dtype)
+                done.append(torch.zeros(1, dtype=self._dtype))
 
-            sample_producer_session.produce_sample((observation, action, reward, done))
+        sample_producer_session.produce_sample((observation, action, reward, done))
 
     async def impl(self, run_session):
         assert self._cfg.teacher_model == "SimpleA2CModel"
@@ -256,7 +262,6 @@ class DaggerTraining:
         # Step 1: Generate the expert data
         observations = []
         actions = []
-        total_student_reward = 0
 
         # Rollout a bunch of trials to gather expert data
         for (step_idx, _trial_id, _trial_idx, sample,) in run_session.start_and_await_trials(
@@ -267,13 +272,13 @@ class DaggerTraining:
             sample_producer_impl=self.sample_producer,
             num_parallel_trials=1,
         ):
-            (teacher_observation, teacher_action, _, done) = sample
+            (teacher_observation, teacher_action, _, _) = sample
 
-            if done and (_trial_idx + 1) % 10 == 0:
+            if (_trial_idx + 1) % 10 == 0:
                 log.info(f"Gathering expert data, trial {_trial_idx + 1}/{self._cfg.num_data_gather_trials}")
 
-            actions.append(teacher_action)
-            observations.append(teacher_observation)
+            actions.extend(teacher_action)
+            observations.extend(teacher_observation)
 
         # Step 2: Teach the student algorithm using DAGGER
         optimizer = torch.optim.Adam(
@@ -287,7 +292,6 @@ class DaggerTraining:
             SimpleA2CModel, self._cfg.teacher_model_id, -1
         )
 
-
         # Rollout a bunch of trials to train the student model
         for (step_idx, _trial_id, _trial_idx, sample,) in run_session.start_and_await_trials(
             trials_id_and_params=[
@@ -297,22 +301,23 @@ class DaggerTraining:
             sample_producer_impl=self.sample_producer,
             num_parallel_trials=1,
         ):
-            (student_observation, _, student_reward, done) = sample
+            (student_observations, _, student_rewards, _) = sample
 
-            if done and (_trial_idx + 1) % 10 == 0:
+            if (_trial_idx + 1) % 10 == 0:
                 log.info(f"Training the student, trial {_trial_idx + 1}/{self._cfg.num_imitation_trials}")
 
-            # Feed the student's observation to the teacher model to find the correct action
-            probs = torch.softmax(teacher_model.actor_network(student_observation), dim=-1)
-            discrete_action_tensor = torch.distributions.Categorical(probs).sample()
-            action_value = SpaceValue(properties=[SpaceValue.PropertyValue(discrete=discrete_action_tensor.item())])
-            correct_action = torch.tensor(
-                flatten(self._environment_specs.action_space, action_value), dtype=self._dtype
-            )
+            for student_observation in student_observations:
+                # Feed the student's observation to the teacher model to find the correct action
+                probs = torch.softmax(teacher_model.actor_network(student_observation), dim=-1)
+                discrete_action_tensor = torch.distributions.Categorical(probs).sample()
+                action_value = SpaceValue(properties=[SpaceValue.PropertyValue(discrete=discrete_action_tensor.item())])
+                correct_action = torch.tensor(
+                    flatten(self._environment_specs.action_space, action_value), dtype=self._dtype
+                )
+                actions.append(correct_action)
 
-            actions.append(correct_action)
-            total_student_reward += student_reward.item()
-            observations.append(student_observation)
+            run_session.log_metrics(total_reward=sum(r.item() for r in student_rewards))
+            observations.extend(student_observations)
 
             if len(observations) < self._cfg.batch_size:
                 continue
@@ -340,7 +345,6 @@ class DaggerTraining:
                     model_version_number=version_info["version_number"],
                     loss=loss.item(),
                     total_samples=len(observations),
-                    total_student_reward=total_student_reward,
                 )
 
         # Publish the final learnt model
