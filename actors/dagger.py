@@ -131,8 +131,9 @@ class DaggerStudent:
 class DaggerTraining:
     default_cfg = {
         "seed": 12,
-        "num_imitation_trials": 200,
         "num_data_gather_trials": 100,
+        "num_imitation_trials": 100,
+        "num_mlp_steps": 10,
         "discount_factor": 0.95,
         "learning_rate": 0.01,
         "batch_size": 32,
@@ -252,7 +253,7 @@ class DaggerTraining:
                 actors=[player_actor_params],
             )
 
-        # Store the accumulated observations/actions
+        # Step 1: Generate the expert data
         observations = []
         actions = []
         total_student_reward = 0
@@ -268,13 +269,13 @@ class DaggerTraining:
         ):
             (teacher_observation, teacher_action, _, done) = sample
 
-            if done and _trial_idx % 10 == 0:
-                log.info(f"Gathering expert data, trial {_trial_idx}/{self._cfg.num_data_gather_trials}")
+            if done and (_trial_idx + 1) % 10 == 0:
+                log.info(f"Gathering expert data, trial {_trial_idx + 1}/{self._cfg.num_data_gather_trials}")
 
             actions.append(teacher_action)
             observations.append(teacher_observation)
 
-        # Configure the optimizer and loss function for the student model
+        # Step 2: Teach the student algorithm using DAGGER
         optimizer = torch.optim.Adam(
             student_model.policy_network.parameters(),
             lr=self._cfg.learning_rate,
@@ -285,6 +286,7 @@ class DaggerTraining:
         teacher_model, _, _ = await run_session.model_registry.retrieve_version(
             SimpleA2CModel, self._cfg.teacher_model_id, -1
         )
+
 
         # Rollout a bunch of trials to train the student model
         for (step_idx, _trial_id, _trial_idx, sample,) in run_session.start_and_await_trials(
@@ -297,8 +299,8 @@ class DaggerTraining:
         ):
             (student_observation, _, student_reward, done) = sample
 
-            if done and _trial_idx % 10 == 0:
-                log.info(f"Training the student, trial {_trial_idx}/{self._cfg.num_imitation_trials}")
+            if done and (_trial_idx + 1) % 10 == 0:
+                log.info(f"Training the student, trial {_trial_idx + 1}/{self._cfg.num_imitation_trials}")
 
             # Feed the student's observation to the teacher model to find the correct action
             probs = torch.softmax(teacher_model.actor_network(student_observation), dim=-1)
@@ -315,19 +317,20 @@ class DaggerTraining:
             if len(observations) < self._cfg.batch_size:
                 continue
 
-            # Sample a batch of observations/actions
-            batch_indices = np.random.default_rng().integers(0, len(observations), self._cfg.batch_size)
-            batch_observation = torch.vstack([observations[i] for i in batch_indices])
-            batch_action = torch.vstack([actions[i] for i in batch_indices])
+            for _ in range(self._cfg.num_mlp_steps):
+                # Sample a batch of observations/actions
+                batch_indices = np.random.default_rng().integers(0, len(observations), self._cfg.batch_size)
+                batch_observation = torch.vstack([observations[i] for i in batch_indices])
+                batch_action = torch.vstack([actions[i] for i in batch_indices])
 
-            student_model.policy_network.train()
-            pred_policy = student_model.policy_network(batch_observation)
-            loss = loss_fn(pred_policy, batch_action)
+                student_model.policy_network.train()
+                pred_policy = student_model.policy_network(batch_observation)
+                loss = loss_fn(pred_policy, batch_action)
 
-            # Backprop!
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
+                # Backprop!
+                optimizer.zero_grad()
+                loss.backward()
+                optimizer.step()
 
             # Publish the newly trained version every 100 steps
             if step_idx % 100 == 0:
