@@ -131,9 +131,10 @@ class DaggerStudent:
 class DaggerTraining:
     default_cfg = {
         "seed": 12,
-        "num_data_gather_trials": 100,
-        "num_imitation_trials": 100,
+        "num_data_gather_trials": 50,
+        "num_imitation_trials": 50,
         "num_mlp_steps": 10,
+        "num_epochs": 10,
         "discount_factor": 0.95,
         "learning_rate": 0.01,
         "batch_size": 32,
@@ -254,93 +255,96 @@ class DaggerTraining:
                 actors=[player_actor_params],
             )
 
-        # Step 1: Generate the expert data
-        observations = []
-        actions = []
+        for _ in range(self._cfg.num_epochs):
+            # Step 1: Generate the expert data
+            observations = []
+            actions = []
 
-        # Rollout a bunch of trials to gather expert data
-        for (step_idx, _trial_id, _trial_idx, sample,) in run_session.start_and_await_trials(
-            trials_id_and_params=[
-                (f"{run_session.run_id}_{trial_idx}", create_trial_params_gather_expert_data(trial_idx))
-                for trial_idx in range(self._cfg.num_data_gather_trials)
-            ],
-            sample_producer_impl=self.sample_producer,
-            num_parallel_trials=1,
-        ):
-            (teacher_observation, teacher_action, _) = sample
+            # Rollout a bunch of trials to gather expert data
+            for (step_idx, _trial_id, _trial_idx, sample,) in run_session.start_and_await_trials(
+                trials_id_and_params=[
+                    (f"{run_session.run_id}_{trial_idx}", create_trial_params_gather_expert_data(trial_idx))
+                    for trial_idx in range(self._cfg.num_data_gather_trials)
+                ],
+                sample_producer_impl=self.sample_producer,
+                num_parallel_trials=1,
+            ):
+                (teacher_observation, teacher_action, _) = sample
 
-            if (_trial_idx + 1) % 10 == 0:
-                log.info(f"Gathering expert data, trial {_trial_idx + 1}/{self._cfg.num_data_gather_trials}")
+                if (_trial_idx + 1) % 10 == 0:
+                    log.info(f"Gathering expert data, trial {_trial_idx + 1}/{self._cfg.num_data_gather_trials}")
 
-            actions.extend(teacher_action)
-            observations.extend(teacher_observation)
+                actions.extend(teacher_action)
+                observations.extend(teacher_observation)
 
-        # Step 2: Teach the student algorithm using DAGGER
-        optimizer = torch.optim.Adam(
-            student_model.policy_network.parameters(),
-            lr=self._cfg.learning_rate,
-        )
-        loss_fn = torch.nn.CrossEntropyLoss()
+            # Step 2: Teach the student algorithm using DAGGER
+            optimizer = torch.optim.Adam(
+                student_model.policy_network.parameters(),
+                lr=self._cfg.learning_rate,
+            )
+            loss_fn = torch.nn.CrossEntropyLoss()
 
-        # Load the teacher model
-        teacher_model, _, _ = await run_session.model_registry.retrieve_version(
-            SimpleA2CModel, self._cfg.teacher_model_id, -1
-        )
+            # Load the teacher model
+            teacher_model, _, _ = await run_session.model_registry.retrieve_version(
+                SimpleA2CModel, self._cfg.teacher_model_id, -1
+            )
 
-        # Rollout a bunch of trials to train the student model
-        for (step_idx, _trial_id, _trial_idx, sample,) in run_session.start_and_await_trials(
-            trials_id_and_params=[
-                (f"{run_session.run_id}_{trial_idx}", create_trial_params_imitatation(trial_idx))
-                for trial_idx in range(self._cfg.num_imitation_trials)
-            ],
-            sample_producer_impl=self.sample_producer,
-            num_parallel_trials=1,
-        ):
-            (student_observations, _, student_rewards) = sample
+            # Rollout a bunch of trials to train the student model
+            for (step_idx, _trial_id, _trial_idx, sample,) in run_session.start_and_await_trials(
+                trials_id_and_params=[
+                    (f"{run_session.run_id}_{trial_idx}", create_trial_params_imitatation(trial_idx))
+                    for trial_idx in range(self._cfg.num_imitation_trials)
+                ],
+                sample_producer_impl=self.sample_producer,
+                num_parallel_trials=1,
+            ):
+                (student_observations, _, student_rewards) = sample
 
-            if (_trial_idx + 1) % 10 == 0:
-                log.info(f"Training the student, trial {_trial_idx + 1}/{self._cfg.num_imitation_trials}")
+                if (_trial_idx + 1) % 10 == 0:
+                    log.info(f"Training the student, trial {_trial_idx + 1}/{self._cfg.num_imitation_trials}")
 
-            for student_observation in student_observations:
-                # Feed the student's observation to the teacher model to find the correct action
-                probs = torch.softmax(teacher_model.actor_network(student_observation), dim=-1)
-                discrete_action_tensor = torch.distributions.Categorical(probs).sample()
-                action_value = SpaceValue(properties=[SpaceValue.PropertyValue(discrete=discrete_action_tensor.item())])
-                correct_action = torch.tensor(
-                    flatten(self._environment_specs.action_space, action_value), dtype=self._dtype
-                )
-                actions.append(correct_action)
+                for student_observation in student_observations:
+                    # Feed the student's observation to the teacher model to find the correct action
+                    probs = torch.softmax(teacher_model.actor_network(student_observation), dim=-1)
+                    discrete_action_tensor = torch.distributions.Categorical(probs).sample()
+                    action_value = SpaceValue(
+                        properties=[SpaceValue.PropertyValue(discrete=discrete_action_tensor.item())]
+                    )
+                    correct_action = torch.tensor(
+                        flatten(self._environment_specs.action_space, action_value), dtype=self._dtype
+                    )
+                    actions.append(correct_action)
 
-            run_session.log_metrics(total_reward=sum(r.item() for r in student_rewards))
-            observations.extend(student_observations)
+                run_session.log_metrics(total_reward=sum(r.item() for r in student_rewards))
+                observations.extend(student_observations)
 
-            if len(observations) < self._cfg.batch_size:
-                continue
+                if len(observations) < self._cfg.batch_size:
+                    continue
 
-            for _ in range(self._cfg.num_mlp_steps):
-                # Sample a batch of observations/actions
-                batch_indices = np.random.default_rng().integers(0, len(observations), self._cfg.batch_size)
-                batch_observation = torch.vstack([observations[i] for i in batch_indices])
-                batch_action = torch.vstack([actions[i] for i in batch_indices])
+                for _ in range(self._cfg.num_mlp_steps):
+                    # Sample a batch of observations/actions
+                    batch_indices = np.random.default_rng().integers(0, len(observations), self._cfg.batch_size)
+                    batch_observation = torch.vstack([observations[i] for i in batch_indices])
+                    batch_action = torch.vstack([actions[i] for i in batch_indices])
 
-                student_model.policy_network.train()
-                pred_policy = student_model.policy_network(batch_observation)
-                loss = loss_fn(pred_policy, batch_action)
+                    student_model.policy_network.train()
+                    pred_policy = student_model.policy_network(batch_observation)
+                    loss = loss_fn(pred_policy, batch_action)
 
-                # Backprop!
-                optimizer.zero_grad()
-                loss.backward()
-                optimizer.step()
+                    # Backprop!
+                    optimizer.zero_grad()
+                    loss.backward()
+                    optimizer.step()
 
-            # Publish the newly trained version every 100 steps
-            if step_idx % 100 == 0:
-                version_info = await run_session.model_registry.publish_version(student_model)
+                # Publish the newly trained version every 100 steps
+                if step_idx % 100 == 0:
+                    version_info = await run_session.model_registry.publish_version(student_model)
 
-                run_session.log_metrics(
-                    model_version_number=version_info["version_number"],
-                    loss=loss.item(),
-                    total_samples=len(observations),
-                )
+                    run_session.log_metrics(
+                        model_version_number=version_info["version_number"],
+                        loss=loss.item(),
+                        total_samples=len(observations),
+                    )
 
         # Publish the final learnt model
         version_info = await run_session.model_registry.publish_version(student_model, archived=True)
