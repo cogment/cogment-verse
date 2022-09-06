@@ -132,7 +132,7 @@ class DaggerTraining:
     default_cfg = {
         "seed": 12,
         "num_data_gather_trials": 100,
-        "num_imitation_trials": 500,
+        "num_imitation_trials": 100,
         "num_mlp_steps": 10,
         "discount_factor": 0.95,
         "learning_rate": 0.01,
@@ -159,7 +159,6 @@ class DaggerTraining:
         action = []
         observation = []
         reward = []
-        done = []
 
         async for sample in sample_producer_session.all_trial_samples():
             player_sample = sample.actors_data[player_params.name]
@@ -178,12 +177,8 @@ class DaggerTraining:
             reward.append(
                 torch.tensor(player_sample.reward if player_sample.reward is not None else 0, dtype=self._dtype)
             )
-            if sample.trial_state == cogment.TrialState.ENDED:
-                done.append(torch.ones(1, dtype=self._dtype))
-            else:
-                done.append(torch.zeros(1, dtype=self._dtype))
 
-        sample_producer_session.produce_sample((observation, action, reward, done))
+        sample_producer_session.produce_sample((observation, action, reward))
 
     async def impl(self, run_session):
         assert self._cfg.teacher_model == "SimpleA2CModel"
@@ -199,7 +194,7 @@ class DaggerTraining:
             num_output=flattened_dimensions(self._environment_specs.action_space),
             policy_network_num_hidden_nodes=self._cfg.policy_network.num_hidden_nodes,
         )
-        _model_info, _version_info = await run_session.model_registry.publish_initial_version(student_model)
+        _, _ = await run_session.model_registry.publish_initial_version(student_model)
 
         run_session.log_params(
             self._cfg,
@@ -272,7 +267,7 @@ class DaggerTraining:
             sample_producer_impl=self.sample_producer,
             num_parallel_trials=1,
         ):
-            (teacher_observation, teacher_action, _, _) = sample
+            (teacher_observation, teacher_action, _) = sample
 
             if (_trial_idx + 1) % 10 == 0:
                 log.info(f"Gathering expert data, trial {_trial_idx + 1}/{self._cfg.num_data_gather_trials}")
@@ -301,7 +296,7 @@ class DaggerTraining:
             sample_producer_impl=self.sample_producer,
             num_parallel_trials=1,
         ):
-            (student_observations, _, student_rewards, _) = sample
+            (student_observations, _, student_rewards) = sample
 
             if (_trial_idx + 1) % 10 == 0:
                 log.info(f"Training the student, trial {_trial_idx + 1}/{self._cfg.num_imitation_trials}")
