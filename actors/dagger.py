@@ -58,12 +58,10 @@ class StudentModel(Model):
             torch.nn.Linear(num_input, policy_network_num_hidden_nodes, dtype=self._dtype),
             torch.nn.BatchNorm1d(policy_network_num_hidden_nodes, dtype=self._dtype),
             torch.nn.ReLU(),
-            torch.nn.Linear(policy_network_num_hidden_nodes, policy_network_num_hidden_nodes, dtype=self._dtype),
-            torch.nn.BatchNorm1d(policy_network_num_hidden_nodes, dtype=self._dtype),
-            torch.nn.ReLU(),
             torch.nn.Linear(policy_network_num_hidden_nodes, num_output, dtype=self._dtype),
         )
 
+        self.epoch_idx = 0
         self.total_samples = 0
 
     def get_model_user_data(self):
@@ -76,8 +74,7 @@ class StudentModel(Model):
 
     def save(self, model_data_f):
         torch.save(self.policy_network.state_dict(), model_data_f)
-
-        return {"total_samples": self.total_samples}
+        return {"epoch_idx": self.epoch_idx, "total_samples": self.total_samples}
 
     @classmethod
     def load(cls, model_id, version_number, model_user_data, version_user_data, model_data_f):
@@ -96,6 +93,7 @@ class StudentModel(Model):
         model.policy_network.load_state_dict(policy_network_state_dict)
 
         # Load version data
+        model.epoch_idx = version_user_data["epoch_idx"]
         model.total_samples = version_user_data["total_samples"]
         return model
 
@@ -134,7 +132,7 @@ class DaggerTraining:
         "num_data_gather_trials": 50,
         "num_imitation_trials": 50,
         "num_mlp_steps": 10,
-        "num_epochs": 5,
+        "num_epochs": 4,
         "num_parallel_trials": 1,
         "discount_factor": 0.95,
         "learning_rate": 0.01,
@@ -256,6 +254,7 @@ class DaggerTraining:
                 actors=[player_actor_params],
             )
 
+        total_samples = 0
         for epoch_idx in range(self._cfg.num_epochs):
             log.info(f"Starting iteration {epoch_idx + 1}/{self._cfg.num_epochs}")
 
@@ -342,11 +341,15 @@ class DaggerTraining:
                 # Publish the newly trained version every 100 steps
                 if step_idx % 100 == 0:
                     version_info = await run_session.model_registry.publish_version(student_model)
+                    total_samples += len(observations)
+                    student_model.epoch_idx = epoch_idx
+                    student_model.total_samples = total_samples
 
                     run_session.log_metrics(
                         model_version_number=version_info["version_number"],
+                        epoch_idx=epoch_idx,
                         loss=loss.item(),
-                        total_samples=len(observations),
+                        total_samples=total_samples,
                     )
 
         # Publish the final learnt model
