@@ -134,7 +134,8 @@ class DaggerTraining:
         "num_data_gather_trials": 50,
         "num_imitation_trials": 50,
         "num_mlp_steps": 10,
-        "num_epochs": 10,
+        "num_epochs": 5,
+        "num_parallel_trials": 1,
         "discount_factor": 0.95,
         "learning_rate": 0.01,
         "batch_size": 32,
@@ -255,7 +256,9 @@ class DaggerTraining:
                 actors=[player_actor_params],
             )
 
-        for _ in range(self._cfg.num_epochs):
+        for epoch_idx in range(self._cfg.num_epochs):
+            log.info(f"Starting iteration {epoch_idx + 1}/{self._cfg.num_epochs}")
+
             # Step 1: Generate the expert data
             observations = []
             actions = []
@@ -267,7 +270,7 @@ class DaggerTraining:
                     for trial_idx in range(self._cfg.num_data_gather_trials)
                 ],
                 sample_producer_impl=self.sample_producer,
-                num_parallel_trials=1,
+                num_parallel_trials=self._cfg.num_parallel_trials,
             ):
                 (teacher_observation, teacher_action, _) = sample
 
@@ -296,7 +299,7 @@ class DaggerTraining:
                     for trial_idx in range(self._cfg.num_imitation_trials)
                 ],
                 sample_producer_impl=self.sample_producer,
-                num_parallel_trials=1,
+                num_parallel_trials=self._cfg.num_parallel_trials,
             ):
                 (student_observations, _, student_rewards) = sample
 
