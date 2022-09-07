@@ -108,6 +108,18 @@ Here are a few examples:
   $ python -m main +experiment=simple_dqn/connect_four +run.hill_training_trials_ratio=0.05
   ```
 
+- Launch a [DAGGER](https://arxiv.org/abs/1011.0686) imitation learning algorithm by first training the expert using the simple_a2c method
+
+  ```console
+  $ python -m main +experiment=simple_a2c/cartpole
+  ```
+
+  Then modify the teacher_model_id field of the config/experiment/cartpole.yaml file with the model_id of the trained simple_a2c method. Next, run the DAGGER algorithm using
+
+  ```console
+  $ python -m main +experiment=dagger/cartpole
+  ```
+
 ## List of publications and submissions using Cogment and/or Cogment Verse
 
 - Analyzing and Overcoming Degradation in Warm-Start Off-Policy Reinforcement Learning [code](https://github.com/benwex93/cogment-verse)
