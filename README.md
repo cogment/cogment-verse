@@ -114,6 +114,7 @@ Here are a few examples:
 If you want to use Isaac Gym, download the zip file from [NVIDIA webpage](https://developer.nvidia.com/isaac-gym)
 , unzip and copy the `isaacgym` folder to this repo. run `pip install -r isaac_requirements.txt`.
 Run `python -m main services/environment=ant `
+comment out line-32 in `isaacgym/IsaacGymEnvs/isaacgymenvs/__init__.py`
 
 ## List of publications and submissions using Cogment and/or Cogment Verse
 
