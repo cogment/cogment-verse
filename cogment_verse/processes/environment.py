@@ -90,8 +90,6 @@ def create_environment_service(work_dir, specs_filename, environment_cfg, servic
     )
 
     environment_cls = import_class(environment_cfg.class_name)
-    print(" **********G FDGDSFH SGBUDF GD ********")
-    print(HydraConfig.get().runtime)
     env = environment_cls(environment_cfg)
 
     # Register the environment
