@@ -261,7 +261,7 @@ class DaggerTraining:
 
             # Step 1: Generate the expert data
             observations = []
-            actions = []
+            teacher_actions = []
 
             # Rollout a bunch of trials to gather expert data
             for (step_idx, _trial_id, _trial_idx, sample,) in run_session.start_and_await_trials(
@@ -273,12 +273,11 @@ class DaggerTraining:
                 num_parallel_trials=self._cfg.num_parallel_trials,
             ):
                 (teacher_observation, teacher_action, _) = sample
+                observations.extend(teacher_observation)
+                teacher_actions.extend(teacher_action)
 
                 if (_trial_idx + 1) % 10 == 0:
                     log.info(f"Gathering expert data, trial {_trial_idx + 1}/{self._cfg.num_data_gather_trials}")
-
-                actions.extend(teacher_action)
-                observations.extend(teacher_observation)
 
             # Step 2: Teach the student algorithm using DAGGER
             optimizer = torch.optim.Adam(
@@ -292,6 +291,8 @@ class DaggerTraining:
                 SimpleA2CModel, self._cfg.teacher_model_id, -1
             )
 
+            student_actions = []
+
             # Rollout a bunch of trials to train the student model
             for (step_idx, _trial_id, _trial_idx, sample,) in run_session.start_and_await_trials(
                 trials_id_and_params=[
@@ -301,25 +302,25 @@ class DaggerTraining:
                 sample_producer_impl=self.sample_producer,
                 num_parallel_trials=self._cfg.num_parallel_trials,
             ):
-                (student_observations, _, student_rewards) = sample
+                (student_observation, student_action, student_reward) = sample
+                observations.extend(student_observation)
+                student_actions.extend(student_action)
+                run_session.log_metrics(total_reward=sum(r.item() for r in student_reward))
 
                 if (_trial_idx + 1) % 10 == 0:
                     log.info(f"Training the student, trial {_trial_idx + 1}/{self._cfg.num_imitation_trials}")
 
-                for student_observation in student_observations:
-                    # Feed the student's observation to the teacher model to find the correct action
-                    probs = torch.softmax(teacher_model.actor_network(student_observation), dim=-1)
+                for obs in student_observation:
+                    # Feed the student's observation to the teacher model to find the action it would take
+                    probs = torch.softmax(teacher_model.actor_network(obs), dim=-1)
                     discrete_action_tensor = torch.distributions.Categorical(probs).sample()
                     action_value = SpaceValue(
                         properties=[SpaceValue.PropertyValue(discrete=discrete_action_tensor.item())]
                     )
-                    correct_action = torch.tensor(
+                    teacher_action = torch.tensor(
                         flatten(self._environment_specs.action_space, action_value), dtype=self._dtype
                     )
-                    actions.append(correct_action)
-
-                run_session.log_metrics(total_reward=sum(r.item() for r in student_rewards))
-                observations.extend(student_observations)
+                    teacher_actions.append(teacher_action)
 
                 if len(observations) < self._cfg.batch_size:
                     continue
@@ -328,7 +329,7 @@ class DaggerTraining:
                     # Sample a batch of observations/actions
                     batch_indices = rng.integers(0, len(observations), self._cfg.batch_size)
                     batch_observation = torch.vstack([observations[i] for i in batch_indices])
-                    batch_action = torch.vstack([actions[i] for i in batch_indices])
+                    batch_action = torch.vstack([teacher_actions[i] for i in batch_indices])
 
                     student_model.policy_network.train()
                     pred_policy = student_model.policy_network(batch_observation)
