@@ -19,6 +19,7 @@ import numpy as np
 import torch
 
 from actors.simple_a2c import SimpleA2CModel
+from actors.simple_dqn import create_linear_schedule
 from cogment_verse import Model
 from cogment_verse.specs import (
     PLAYER_ACTOR_CLASS,
@@ -131,6 +132,9 @@ class DaggerTraining:
         "seed": 12,
         "num_data_gather_trials": 50,
         "num_imitation_trials": 50,
+        "teacher_action_start_ratio": 1.0,
+        "teacher_action_end_ratio": 0.05,
+        "teacher_action_duration_ratio": 0.75,
         "num_mlp_steps": 10,
         "num_epochs": 4,
         "num_parallel_trials": 2,
@@ -186,6 +190,12 @@ class DaggerTraining:
 
         model_id = f"{run_session.run_id}_model"
         rng = np.random.default_rng(self._cfg.seed if self._cfg.seed is not None else 0)
+        teacher_action_schedule = create_linear_schedule(
+            self._cfg.teacher_action_start_ratio,
+            self._cfg.teacher_action_end_ratio,
+            self._cfg.teacher_action_duration_ratio * self._cfg.num_imitation_trials,
+        )
+        teacher_action_ratio = teacher_action_schedule(0)
 
         # Initializing a model
         student_model = StudentModel(
@@ -292,6 +302,7 @@ class DaggerTraining:
             )
 
             student_actions = []
+            expert_data_size = len(observations)
 
             # Rollout a bunch of trials to train the student model
             for (step_idx, _trial_id, _trial_idx, sample,) in run_session.start_and_await_trials(
@@ -306,6 +317,7 @@ class DaggerTraining:
                 observations.extend(student_observation)
                 student_actions.extend(student_action)
                 run_session.log_metrics(total_reward=sum(r.item() for r in student_reward))
+                teacher_action_ratio = teacher_action_schedule(epoch_idx + _trial_idx)
 
                 if (_trial_idx + 1) % 10 == 0:
                     log.info(f"Training the student, trial {_trial_idx + 1}/{self._cfg.num_imitation_trials}")
@@ -329,7 +341,17 @@ class DaggerTraining:
                     # Sample a batch of observations/actions
                     batch_indices = rng.integers(0, len(observations), self._cfg.batch_size)
                     batch_observation = torch.vstack([observations[i] for i in batch_indices])
-                    batch_action = torch.vstack([teacher_actions[i] for i in batch_indices])
+                    if rng.random() < teacher_action_ratio:
+                        # Sample from student actions if available
+                        batch_action = torch.vstack(
+                            [
+                                teacher_actions[i] if i <= expert_data_size else student_actions[i - expert_data_size]
+                                for i in batch_indices
+                            ]
+                        )
+                    else:
+                        # Sample only from teacher actions
+                        batch_action = torch.vstack([teacher_actions[i] for i in batch_indices])
 
                     student_model.policy_network.train()
                     pred_policy = student_model.policy_network(batch_observation)
