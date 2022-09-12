@@ -7,4 +7,4 @@ defaults:
   - override /services/environment: cartpole
 run:
   teacher_model: SimpleA2CModel
-  teacher_model_id: tender_nash_0_model
+  teacher_model_id: tender_merkle_0_model

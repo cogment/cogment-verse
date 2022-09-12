@@ -98,7 +98,7 @@ class StudentModel(Model):
         return model
 
 
-class DaggerStudent:
+class DaggerStudentActor:
     def __init__(self, _cfg):
         self._dtype = torch.float
 
@@ -133,7 +133,7 @@ class DaggerTraining:
         "num_imitation_trials": 50,
         "num_mlp_steps": 10,
         "num_epochs": 4,
-        "num_parallel_trials": 1,
+        "num_parallel_trials": 2,
         "discount_factor": 0.95,
         "learning_rate": 0.01,
         "batch_size": 32,
@@ -185,6 +185,7 @@ class DaggerTraining:
         assert self._environment_specs.action_space.properties[0].WhichOneof("type") == "discrete"
 
         model_id = f"{run_session.run_id}_model"
+        rng = np.random.default_rng(self._cfg.seed if self._cfg.seed is not None else 0)
 
         # Initializing a model
         student_model = StudentModel(
@@ -235,7 +236,7 @@ class DaggerTraining:
                 cog_settings,
                 name="player",
                 class_name=PLAYER_ACTOR_CLASS,
-                implementation="actors.dagger.DaggerStudent",
+                implementation="actors.dagger.DaggerStudentActor",
                 config=AgentConfig(
                     run_id=run_session.run_id,
                     environment_specs=self._environment_specs,
@@ -325,7 +326,7 @@ class DaggerTraining:
 
                 for _ in range(self._cfg.num_mlp_steps):
                     # Sample a batch of observations/actions
-                    batch_indices = np.random.default_rng().integers(0, len(observations), self._cfg.batch_size)
+                    batch_indices = rng.integers(0, len(observations), self._cfg.batch_size)
                     batch_observation = torch.vstack([observations[i] for i in batch_indices])
                     batch_action = torch.vstack([actions[i] for i in batch_indices])
 
