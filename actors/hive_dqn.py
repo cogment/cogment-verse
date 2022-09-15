@@ -131,7 +131,7 @@ class HiveDQNModel(Model):
         return model
 
 
-class SimpleDQNActor:
+class HiveDQNActor:
     def __init__(self, _cfg):
         self._dtype = torch.float
 
