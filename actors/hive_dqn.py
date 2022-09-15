@@ -73,25 +73,20 @@ class HiveDQNModel(Model):
     def __init__(
         self,
         model_id,
-        environment_implementation,
+        version_number,
         num_input,
         num_output,
-        version_number=0,
-        representation_net: FunctionApproximator,
-        epsilon_schedule: Schedule = None,
+        init_fn: InitializationFn = None,
+        representation_net: FunctionApproximator = None,
     ):
         super().__init__(model_id, version_number)
-        self._environment_implementation = environment_implementation
         self._num_input = num_input
         self._num_output = num_output
         self._init_fn = create_init_weights_fn(init_fn)
-        self.network = self.create_q_networks(representation_net)
+        self._representation_net = representation_net
+        self.create_q_networks(representation_net)
         self.device = "cpu"
 
-        if epsilon_schedule is None:
-            self._epsilon_schedule = LinearSchedule(1, 0.1, 100000)
-        else:
-            self._epsilon_schedule = epsilon_schedule()
         # version user data
         self.num_samples_seen = 0
 
@@ -106,13 +101,14 @@ class HiveDQNModel(Model):
 
     def get_model_user_data(self):
         return {
-            "environment_implementation": self._environment_implementation,
             "num_input": self._num_input,
             "num_output": self._num_output,
+            "init_fn": self._init_fn,
+            "representation_net": self._representation_net
         }
 
     def save(self, model_data_f):
-        torch.save((self.network.state_dict(), self._epsilon_schedule), model_data_f)
+        torch.save((self.network.state_dict()), model_data_f)
         return {"num_samples_seen": self.num_samples_seen}
 
     @classmethod
@@ -121,17 +117,15 @@ class HiveDQNModel(Model):
         model = HiveDQNModel(
             model_id=model_id,
             version_number=version_number,
-            environment_implementation=model_user_data["environment_implementation"],
             num_input=int(model_user_data["num_input"]),
             num_output=int(model_user_data["num_output"]),
+            init_fn=model_user_data["init_fn"],
+            representation_net=model_user_data["representation_net"],
         )
 
         # Load the saved states
-        (network_state_dict, epsilon) = torch.load(model_data_f)
+        network_state_dict = torch.load(model_data_f)
         model.network.load_state_dict(network_state_dict)
-        model.epsilon = epsilon
-
-        # Load version data
         model.num_samples_seen = int(version_user_data["num_samples_seen"])
 
         return model
