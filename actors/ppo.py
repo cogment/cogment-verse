@@ -467,19 +467,6 @@ class PPOTraining:
                 ),
             )
 
-            agent_actor_params_2 = cogment.ActorParameters(
-                cog_settings,
-                name="player_2",
-                class_name=PLAYER_ACTOR_CLASS,
-                implementation="actors.ppo.PPOActor",
-                config=AgentConfig(
-                    run_id=run_session.run_id,
-                    environment_specs=self._environment_specs,
-                    model_id=model_id,
-                    model_version=version_info["version_number"],
-                ),
-            )
-
             return cogment.TrialParameters(
                 cog_settings,
                 environment_name="env",
@@ -517,35 +504,36 @@ class PPOTraining:
                 episode_rewards.append(torch.vstack(trial_reward).sum())
 
             # Publish the newly trained version every 100 steps
+            # print(f"Iter #{iter_idx}: step: {len(actions)}")
+                if len(actions) >= self._cfg.num_steps * self._cfg.epoch_num_trials + 1:
+                    # Update model parameters
+                    policy_loss, value_loss = await self.train_step(
+                        observations=observations, rewards=rewards, actions=actions, dones=dones
+                    )
+
+                    # Reset the data storage
+                    observations = []
+                    actions = []
+                    rewards = []
+                    dones = []
+                    if iter_idx % 1 == 0:
+                        # Compute average rewards for last 100 episodes
+                        avg_rewards = await self.compute_average_reward(episode_rewards)
+                        log.warning(
+                            f"epoch #{iter_idx + 1}/{self._cfg.num_iter}: [policy loss: {policy_loss:0.2f}, value loss: {value_loss:0.2f}, avg. rewards: {avg_rewards:0.2f}]"
+                        )
+
+                        run_session.log_metrics(
+                            model_version_number=version_info["version_number"],
+                            policy_loss=policy_loss.item(),
+                            value_loss=value_loss.item(),
+                            rewards=avg_rewards.item(),
+                        )
+
+                    # Publish the newly updated model
+                    self.model.iter_idx = iter_idx
+                    version_info = await run_session.model_registry.publish_version(self.model)
             print(f"Iter #{iter_idx}: step: {len(actions)}")
-            if len(actions) >= self._cfg.num_steps * self._cfg.epoch_num_trials + 1:
-                # Update model parameters
-                policy_loss, value_loss = await self.train_step(
-                    observations=observations, rewards=rewards, actions=actions, dones=dones
-                )
-
-                # Reset the data storage
-                observations = []
-                actions = []
-                rewards = []
-                dones = []
-                if iter_idx % 1 == 0:
-                    # Compute average rewards for last 100 episodes
-                    avg_rewards = await self.compute_average_reward(episode_rewards)
-                    log.warning(
-                        f"epoch #{iter_idx + 1}/{self._cfg.num_iter}: [policy loss: {policy_loss:0.2f}, value loss: {value_loss:0.2f}, avg. rewards: {avg_rewards:0.2f}]"
-                    )
-
-                    run_session.log_metrics(
-                        model_version_number=version_info["version_number"],
-                        policy_loss=policy_loss.item(),
-                        value_loss=value_loss.item(),
-                        rewards=avg_rewards.item(),
-                    )
-
-                # Publish the newly updated model
-                self.model.iter_idx = iter_idx
-                version_info = await run_session.model_registry.publish_version(self.model)
 
     async def train_step(
         self,

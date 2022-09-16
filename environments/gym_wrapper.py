@@ -73,8 +73,8 @@ class Environment:
         observation_value = observation_from_gym_observation(self.gym_env.observation_space, gym_observation)
 
         rendered_frame = None
-        if session_cfg:
-            rendered_frame = encode_rendered_frame(self.gym_env.render(mode="rgb_array"), session_cfg.render_width)
+        # if session_cfg:
+        #     rendered_frame = encode_rendered_frame(self.gym_env.render(mode="rgb_array"), session_cfg.render_width)
 
         environment_session.start([("*", Observation(value=observation_value, rendered_frame=rendered_frame))])
         async for event in environment_session.all_events():
@@ -92,10 +92,10 @@ class Environment:
                 observation_value = observation_from_gym_observation(self.gym_env.observation_space, gym_observation)
 
                 rendered_frame = None
-                if session_cfg.render:
-                    rendered_frame = encode_rendered_frame(
-                        self.gym_env.render(mode="rgb_array"), session_cfg.render_width
-                    )
+                # if session_cfg.render:
+                #     rendered_frame = encode_rendered_frame(
+                #         self.gym_env.render(mode="rgb_array"), session_cfg.render_width
+                #     )
 
                 # Encode observation grpc format
                 observations = [
