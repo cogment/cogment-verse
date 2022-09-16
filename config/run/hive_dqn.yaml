@@ -1,4 +1,4 @@
-class_name: actors.simple_a2c.SimpleA2CTraining
+class_name: actors.hive_dqn.HiveDQNTraining
 seed: 618
 num_epochs: 500
 epoch_num_trials: 10

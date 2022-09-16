@@ -2,7 +2,7 @@ defaults:
   - services: local_base_services
   - services/environment: lunar_lander
   - services/actor: hive_dqn
-  - run: play
+  - run: hive_dqn
   - _self_
 
 hydra:
