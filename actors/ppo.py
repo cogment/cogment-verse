@@ -503,8 +503,8 @@ class PPOTraining:
                 dones.extend(trial_done)
                 episode_rewards.append(torch.vstack(trial_reward).sum())
 
-            # Publish the newly trained version every 100 steps
-            # print(f"Iter #{iter_idx}: step: {len(actions)}")
+                # Publish the newly trained version every 100 steps
+                # print(f"Iter #{iter_idx}: step: {len(actions)}")
                 if len(actions) >= self._cfg.num_steps * self._cfg.epoch_num_trials + 1:
                     # Update model parameters
                     policy_loss, value_loss = await self.train_step(

@@ -22,14 +22,12 @@ import numpy as np
 from cogment_verse.specs import (
     EnvironmentSpecs,
     Observation,
-    encode_rendered_frame,
     gym_action_from_action,
     observation_from_gym_observation,
     space_from_gym_space,
 )
 
 from cogment_verse.constants import PLAYER_ACTOR_CLASS
-from debug.mp_pdb import ForkedPdb
 
 # configure pygame to use a dummy video server to be able to render headlessly
 os.environ["SDL_VIDEODRIVER"] = "dummy"
