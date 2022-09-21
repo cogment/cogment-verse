@@ -1,0 +1,6 @@
+# @package _global_
+defaults:
+  - override /services/actor:
+      - simple_a2c
+  - override /run: headless_play
+  - override /services/environment: robosuite
