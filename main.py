@@ -12,8 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import profile
-import pstats
 import logging
 import os
 
@@ -32,25 +30,6 @@ def main(cfg):
 
     app.start()
     app.join()
-
-
-def run_profile():
-    filename = []
-    for i in range(1):
-        filename = "profile_stats_%d.stats" % i
-        profile.run("main()", filename)
-    # Read all 5 stats files into a single object
-    stats = pstats.Stats("profile_stats_0.stats")
-    for i in range(1):
-        stats.add("profile_stats_%d.stats" % i)
-
-    # Clean up filenames for the report
-    stats.strip_dirs()
-
-    # Sort the statistics by the cumulative time spent in the function
-    stats.sort_stats("tottime")
-
-    stats.print_stats(50)
 
 
 if __name__ == "__main__":
