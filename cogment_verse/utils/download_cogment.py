@@ -40,7 +40,7 @@ def get_current_arch():
     if py_machine in ["x86_64", "i686", "AMD64"]:
         return Arch.AMD64
 
-    if py_machine == "arm64":
+    if py_machine in ["arm64"]:
         return Arch.ARM64
 
     raise CogmentError(f"Unsupported architecture [{py_machine}]")

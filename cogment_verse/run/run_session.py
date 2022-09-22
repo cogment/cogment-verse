@@ -82,8 +82,8 @@ class RunSession:
     def log_params(self, *args, **kwargs):
         self._xp_tracker.log_params(*args, **kwargs)
 
-    def log_metrics(self, *args, **kwargs):
-        self._xp_tracker.log_metrics(step_timestamp=int(time.time() * 1000), step_idx=self._step_idx, *args, **kwargs)
+    def log_metrics(self, **kwargs):
+        self._xp_tracker.log_metrics(step_timestamp=int(time.time() * 1000), step_idx=self._step_idx, **kwargs)
 
     def terminate_failure(self):
         self._xp_tracker.terminate_failure()

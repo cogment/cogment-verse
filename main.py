@@ -14,6 +14,7 @@
 
 import logging
 import os
+import multiprocessing as mp
 
 import hydra
 import torch.multiprocessing as mp
@@ -33,5 +34,5 @@ def main(cfg):
 
 
 if __name__ == "__main__":
-    mp.set_sharing_strategy("file_system")
+    mp.set_start_method("spawn")
     main()

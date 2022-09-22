@@ -133,10 +133,10 @@ class MlflowExperimentTracker:
             params=[Param(key, str(value)) for key, value in make_dict(False, *args, **kwargs).items()],
         )
 
-    def log_metrics(self, step_timestamp, step_idx, *args, **kwargs):
+    def log_metrics(self, step_timestamp, step_idx, **kwargs):
         EXPERIMENT_TRACKER_METRICS_LOGGED_COUNTER.inc(len(kwargs))
         self._metrics_buffer.extend(
-            [Metric(key, value, step_timestamp, step_idx) for key, value in make_dict(True, *args, **kwargs).items()]
+            [Metric(key, value, step_timestamp, step_idx) for key, value in make_dict(True, **kwargs).items()]
         )
         self._start_flush_metrics_worker()
 

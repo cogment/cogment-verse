@@ -32,7 +32,6 @@ class SimpleSignal:
 
     def await_trigger(self):
         self._q.get()
-        self._q.close()
 
 
 class CogmentVerseProcess(Process):
