@@ -13,10 +13,17 @@
 # limitations under the License.
 
 import os
+import shutil
+import hydra
+from omegaconf import OmegaConf
+from omegaconf import DictConfig
+from hydra.core.hydra_config import HydraConfig
 
 import cogment
 import gym
 
+import robosuite
+from robosuite.wrappers.gym_wrapper import GymWrapper
 from robosuite.controllers import load_controller_config
 from robosuite.utils.input_utils import *
 
@@ -33,20 +40,9 @@ from cogment_verse.constants import PLAYER_ACTOR_CLASS, TEACHER_ACTOR_CLASS
 # configure pygame to use a dummy video server to be able to render headlessly
 os.environ["SDL_VIDEODRIVER"] = "dummy"
 
-import os
-import shutil
-
-import hydra
-from omegaconf import OmegaConf
-from omegaconf import DictConfig
-from hydra.core.hydra_config import HydraConfig
-
 
 def build_feature_obs_robosuite_env(cfg):
     # Acknowledgement: https://github.com/melfm/simrealjaco
-    import robosuite
-    from robosuite.wrappers.gym_wrapper import GymWrapper
-
     robo_cfg = cfg.robosuite.params
 
     if "controller_config_file" in robo_cfg.keys():
