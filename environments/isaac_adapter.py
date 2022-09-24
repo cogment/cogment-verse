@@ -13,10 +13,7 @@
 # limitations under the License.
 
 import os
-import gym
-import isaacgym
 import isaacgymenvs
-import torch
 import cogment
 
 from cogment_verse.specs import (
