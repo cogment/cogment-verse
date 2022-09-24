@@ -23,3 +23,4 @@ pytest~=6.2.5
 
 # robosuite
 robosuite
+h5py
