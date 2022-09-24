@@ -4,12 +4,10 @@ port: ${generate_port:environments.robosuite_adapter.Environment}
 robosuite:
     class: robo
     params:
-#      env_name: PickPlaceSubtask #PickPlaceBread #Where is this environment?
-      env_name: PickPlaceBread
+      env_name: PickPlaceBread #PickPlaceSubtask
       robots: Jaco
       horizon: 200
       reward_shaping: true
       control_freq: 5
       controller_name: OSC_POSE
-#      controller_config_file: 'jaco_osc_pose_5hz.json' #Where is this file installed?
-      controller_config_file: 'osc_pose.json'
+      controller_config_file: 'osc_pose.json' #jaco_osc_pose_5hz.json

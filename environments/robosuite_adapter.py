@@ -129,68 +129,7 @@ class EnvSampler():
 class Environment:
     def __init__(self, cfg):
         self.gym_env_name = cfg.env_name
-        print("cfg = ", cfg)
-        # print("aftrer config")
-        # print()
-        # self.work_dir = os.getcwd()
-        # print(f'workspace: {self.work_dir}')
-        # hydra_cfg = HydraConfig.get()
-        # config_file = self.work_dir.split('runs')[0] + 'config/' \
-        #               + hydra_cfg.job.config_name + '.yaml'
-        # shutil.copy(config_file, self.work_dir)
-        #
-        # self.cfg = cfg
         self.env = EnvSampler(cfg).sample_env()
-        print(" wohooo ")
-        # options = {}
-        # options["env_name"] = choose_environment() #ToDo: replace with gym_env_name
-        # if "TwoArm" in options["env_name"]:
-        #     # Choose env config and add it to options
-        #     options["env_configuration"] = choose_multi_arm_config()
-        #
-        #     # If chosen configuration was bimanual, the corresponding robot must be Baxter. Else, have user choose robots
-        #     if options["env_configuration"] == "bimanual":
-        #         options["robots"] = "Baxter"
-        #     else:
-        #         options["robots"] = []
-        #
-        #         # Have user choose two robots
-        #         print("A multiple single-arm configuration was chosen.\n")
-        #
-        #         for i in range(2):
-        #             print("Please choose Robot {}...\n".format(i))
-        #             options["robots"].append(choose_robots(exclude_bimanual=True))
-        #
-        #     # Else, we simply choose a single (single-armed) robot to instantiate in the environment
-        # else:
-        #     options["robots"] = choose_robots(exclude_bimanual=True)
-        #
-        #     # Choose controller
-        # controller_name = choose_controller()
-        #
-        # # Load the desired controller
-        # options["controller_configs"] = load_controller_config(default_controller=controller_name)
-        #
-        # # Help message to user
-        # print()
-        # print('Press "H" to show the viewer control panel.')
-        #
-        # # initialize the task
-        # env = suite.make(
-        #     **options,
-        #     has_renderer=True,
-        #     has_offscreen_renderer=False,
-        #     ignore_done=True,
-        #     use_camera_obs=False,
-        #     control_freq=20,
-        # )
-        # env.reset()
-        # env.viewer.set_camera(camera_id=0)
-        # print(" ****** env ****** ")
-        # print(env)
-        # print(" ****** env ****** ")
-
-        # gym_env = gym.make(self.gym_env_name)
         self.env_specs = EnvironmentSpecs(
             num_players=1,
             turn_based=False,
