@@ -2,5 +2,5 @@
 defaults:
   - override /services/actor:
       - simple_a2c
-  - override /run: headless_play
-  - override /services/environment: robosuite
+  - override /run: simple_a2c
+  - override /services/environment: cartpole

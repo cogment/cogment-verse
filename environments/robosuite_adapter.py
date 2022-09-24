@@ -46,38 +46,37 @@ def build_feature_obs_robosuite_env(cfg):
     # Acknowledgement: https://github.com/melfm/simrealjaco
     import robosuite
     from robosuite.wrappers.gym_wrapper import GymWrapper
+
     robo_cfg = cfg.robosuite.params
 
-    if 'controller_config_file' in robo_cfg.keys():
-        control_cfg_file = robo_cfg['controller_config_file']
-        assert control_cfg_file.endswith('.json')
-        print('json file required')
+    if "controller_config_file" in robo_cfg.keys():
+        control_cfg_file = robo_cfg["controller_config_file"]
+        assert control_cfg_file.endswith(".json")
+        print("json file required")
         control_cfg_filepath = os.path.join(
-            os.path.split(robosuite.__file__)[0], 'controllers', 'config',
-            control_cfg_file)
-        print('loading controller from', control_cfg_filepath)
-        controller_configs = robosuite.load_controller_config(
-            custom_fpath=control_cfg_filepath)
+            os.path.split(robosuite.__file__)[0], "controllers", "config", control_cfg_file
+        )
+        print("loading controller from", control_cfg_filepath)
+        controller_configs = robosuite.load_controller_config(custom_fpath=control_cfg_filepath)
     else:
-        controller_configs = robosuite.load_controller_config(
-            default_controller=robo_cfg['controller_name'])
+        controller_configs = robosuite.load_controller_config(default_controller=robo_cfg["controller_name"])
     options = {}
 
     # Keep a copy of the controller config
     robo_path = os.path.dirname(robosuite.__file__)
-    config_path = robo_path + '/controllers/config/'
+    config_path = robo_path + "/controllers/config/"
     config_file = config_path + robo_cfg.controller_config_file
     shutil.copy(config_file, os.getcwd())
 
     # not all configs are meant to go to robosuite
     for key in robo_cfg.keys():
-        if key not in ['controller_name', 'controller_config_file']:
+        if key not in ["controller_name", "controller_config_file"]:
             options[key] = robo_cfg[key]
 
     # Sanity check to make sure controller_name and controller_config_file
     # are a match.
-    if robo_cfg['controller_name'] != controller_configs['type']:
-        raise ValueError('Controller spec mismatch!')
+    if robo_cfg["controller_name"] != controller_configs["type"]:
+        raise ValueError("Controller spec mismatch!")
 
     env = robosuite.make(
         controller_configs=controller_configs,
@@ -88,19 +87,17 @@ def build_feature_obs_robosuite_env(cfg):
         has_offscreen_renderer=True,
         has_renderer=False,
         reward_scale=1.0,
-        camera_names='frontview',
+        camera_names="frontview",
         **options,
     )
 
     class CustomRobosuiteWrapper(GymWrapper):
-
-        def render(self, mode=''):
-            """ make robosuite compatible with sac video render code """
+        def render(self, mode=""):
+            """make robosuite compatible with sac video render code"""
             # camera_widths is 256
             return self.env.sim.render(
-                camera_name=self.env.camera_names[0],
-                width=self.env.camera_widths[0],
-                height=self.env.camera_heights[0])[::-1, :]
+                camera_name=self.env.camera_names[0], width=self.env.camera_widths[0], height=self.env.camera_heights[0]
+            )[::-1, :]
 
     env = CustomRobosuiteWrapper(env)
     env.max_path_length = robo_cfg.horizon
@@ -108,10 +105,10 @@ def build_feature_obs_robosuite_env(cfg):
     return env
 
 
-class EnvSampler():
+class EnvSampler:
     # Acknowledgement: https://github.com/melfm/simrealjaco
     """Env Class used for sampling environments with different
-        simulation parameters.
+    simulation parameters.
     """
 
     def __init__(self, cfg):
