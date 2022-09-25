@@ -32,6 +32,7 @@ from cogment_verse.specs import (
     PLAYER_ACTOR_CLASS,
     PlayerAction,
     SpaceValue,
+    sample_space,
     NDArray,
 )
 from cogment_verse import Model, TorchReplayBuffer
@@ -40,13 +41,16 @@ torch.multiprocessing.set_sharing_strategy("file_system")
 
 log = logging.getLogger(__name__)
 
+
 def proto_array_from_np_array(arr):
     return NDArray(shape=arr.shape, dtype=str(arr.dtype), data=arr.tobytes())
+
 
 def np_array_from_proto_array(arr):
     # print("arr = ", arr)
     dtype = arr.dtype or "int8"  # default type for empty array
     return np.frombuffer(arr.data, dtype=dtype).reshape(*arr.shape)
+
 
 class Actor(nn.Module):
     def __init__(self, state_dim, action_dim, max_action):
@@ -79,8 +83,6 @@ class Critic(nn.Module):
         self.l6 = nn.Linear(256, 1)
 
     def forward(self, state, action):
-        print("state = ", state)
-        print("action = ", action)
         sa = torch.cat([state, action], 1)
 
         q1 = F.relu(self.l1(sa))
@@ -100,6 +102,7 @@ class Critic(nn.Module):
         q1 = self.l3(q1)
         return q1
 
+
 class TD3Model(Model):
     def __init__(
         self,
@@ -108,6 +111,7 @@ class TD3Model(Model):
         num_input,
         num_output,
         max_action,
+        time_steps,
         dtype=torch.float,
         version_number=0,
     ):
@@ -117,6 +121,7 @@ class TD3Model(Model):
         self._num_input = num_input
         self._num_output = num_output
         self._max_action = max_action
+        self.time_steps = time_steps
 
         self.actor = Actor(state_dim=num_input, action_dim=num_output, max_action=max_action)
         self.actor_target = copy.deepcopy(self.actor)
@@ -133,12 +138,20 @@ class TD3Model(Model):
             "environment_implementation": self._environment_implementation,
             "num_input": self._num_input,
             "num_output": self._num_output,
-            "max_action": self._max_action
+            "max_action": self._max_action,
         }
 
     def save(self, model_data_f):
-        torch.save((self.actor.state_dict(), self.actor_target.state_dict(), self.critic.state_dict(),
-                    self.critic_target.state_dict()), model_data_f)
+        torch.save(
+            (
+                self.actor.state_dict(),
+                self.actor_target.state_dict(),
+                self.critic.state_dict(),
+                self.critic_target.state_dict(),
+                self.time_steps,
+            ),
+            model_data_f,
+        )
         return {"epoch_idx": self.epoch_idx, "total_samples": self.total_samples}
 
     @classmethod
@@ -151,14 +164,22 @@ class TD3Model(Model):
             num_input=int(model_user_data["num_input"]),
             num_output=int(model_user_data["num_output"]),
             max_action=float(model_user_data["max_action"]),
+            time_steps=0,
         )
 
         # Load the saved states
-        (actor_state_dict, actor_target_state_dict,  critic_state_dict, critic_target_state_dict) = torch.load(model_data_f)
+        (
+            actor_state_dict,
+            actor_target_state_dict,
+            critic_state_dict,
+            critic_target_state_dict,
+            time_steps,
+        ) = torch.load(model_data_f)
         model.actor.load_state_dict(actor_state_dict)
         model.actor_target.load_state_dict(actor_target_state_dict)
         model.critic.load_state_dict(critic_state_dict)
         model.critic_target.load_state_dict(critic_target_state_dict)
+        model.time_steps = time_steps
 
         # Load version data
         model.epoch_idx = version_user_data["epoch_idx"]
@@ -184,6 +205,7 @@ class TD3Actor:
         assert config.environment_specs.action_space.properties[0].WhichOneof("type") == "box"
 
         observation_space = config.environment_specs.observation_space
+        action_space = config.environment_specs.action_space
 
         model, _, _ = await actor_session.model_registry.retrieve_version(
             TD3Model, config.model_id, config.model_version
@@ -191,13 +213,21 @@ class TD3Actor:
 
         async for event in actor_session.all_events():
             if event.observation and event.type == cogment.EventType.ACTIVE:
+                # if model.time_steps < 25000:
+                #     action_value = sample_space(action_space)
+                #     print("action_value = ", action_value)
+                # else:
                 obs_tensor = torch.tensor(
                     flatten(observation_space, event.observation.observation.value), dtype=self._dtype
                 )
                 action_value = model.actor(obs_tensor)
                 action_value = action_value.cpu().detach().numpy()
+                action_value = action_value + np.random.normal(
+                    0, model._max_action * 0.1, size=2
+                )  # adding exploration noise
                 action_value = proto_array_from_np_array(action_value)
                 action_value = SpaceValue(properties=[SpaceValue.PropertyValue(box=action_value)])
+
                 actor_session.do_action(PlayerAction(value=action_value))
 
 
@@ -211,7 +241,7 @@ class TD3Training:
         "policy_noise": 0.2,
         "noise_clip": 0.5,
         "policy_freq": 2,
-        "expl_noise": 0.1
+        "expl_noise": 0.1,
     }
 
     def __init__(self, environment_specs, cfg):
@@ -265,7 +295,6 @@ class TD3Training:
             reward = torch.tensor(actor_sample.reward if actor_sample.reward is not None else 0, dtype=self._dtype)
             total_reward += reward.item()
 
-
     async def impl(self, run_session):
         # Initializing a model
         model_id = f"{run_session.run_id}_model"
@@ -279,6 +308,7 @@ class TD3Training:
             num_input=flattened_dimensions(self._environment_specs.observation_space),
             num_output=flattened_dimensions(self._environment_specs.action_space),
             max_action=float(self._environment_specs.action_space.properties[0].box.high[0].bound),
+            time_steps=0,
             dtype=self._dtype,
         )
         _model_info, version_info = await run_session.model_registry.publish_initial_version(model)
@@ -298,7 +328,7 @@ class TD3Training:
             observation_shape=(flattened_dimensions(self._environment_specs.observation_space),),
             observation_dtype=self._dtype,
             action_shape=(flattened_dimensions(self._environment_specs.action_space),),
-            action_dtype=self._dtype, #check
+            action_dtype=self._dtype,  # check
             reward_dtype=self._dtype,
             seed=self._cfg.seed,
         )
@@ -346,8 +376,10 @@ class TD3Training:
                 observation=observation, next_observation=next_observation, action=action, reward=reward, done=done
             )
 
+            model.time_steps += 1
+
             trial_done = done.item() == 1
-            print("step_idx = ", step_idx)
+            # print("step_idx = ", step_idx)
             if trial_done:
                 run_session.log_metrics(trial_idx=trial_idx, total_reward=total_reward)
                 total_reward_cum += total_reward
@@ -367,13 +399,13 @@ class TD3Training:
                 data = replay_buffer.sample(self._cfg.batch_size)
                 with torch.no_grad():
                     # Select action according to policy and add clipped noise
-                    noise = (
-                        torch.randn_like(data.action) * self._cfg.policy_noise
-                    ).clamp(-self._cfg.noise_clip, self._cfg.noise_clip)
+                    noise = (torch.randn_like(data.action) * self._cfg.policy_noise).clamp(
+                        -self._cfg.noise_clip, self._cfg.noise_clip
+                    )
 
-                    next_action = (
-                        model.actor_target(data.next_observation) + noise
-                    ).clamp(-model._max_action, model._max_action)
+                    next_action = (model.actor_target(data.next_observation) + noise).clamp(
+                        -model._max_action, model._max_action
+                    )
 
                     # Compute the target Q value
                     target_Q1, target_Q2 = model.critic_target(data.next_observation, next_action)
@@ -422,9 +454,7 @@ class TD3Training:
                         # q_values=action_values.mean().item(),
                         batch_avg_reward=data.reward.mean().item(),
                         steps_per_seconds=steps_per_seconds,
+                        time_steps=model.time_steps,
                     )
 
         version_info = await run_session.model_registry.publish_version(model, archived=True)
-
-
-

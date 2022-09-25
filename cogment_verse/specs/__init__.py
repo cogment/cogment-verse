@@ -21,7 +21,7 @@ from data_pb2 import (  # pylint: disable=import-error
     Space,
     SpaceMask,
     SpaceValue,
-    NDArray
+    NDArray,
 )
 import cog_settings  # pylint: disable=import-error
 from cogment_verse.constants import (
