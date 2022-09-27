@@ -121,6 +121,47 @@ def test_sample_box():
         ndarray = deserialize_ndarray(value.properties[0].box)
         assert ndarray.shape == (2, 3)
 
+
+def test_new2_sample_box():
+    space = Space(
+        properties=[
+            Space.Property(
+                box=Space.Box(
+                    shape=[2,2,2],
+                    low=[
+                        Space.Bound(bound=-1),
+                        Space.Bound(bound=-1),
+                        Space.Bound(bound=-1),
+                        Space.Bound(bound=-1),
+                        Space.Bound(bound=-1),
+                        Space.Bound(bound=-1),
+                        Space.Bound(bound=-1),
+                        Space.Bound(bound=-1),
+                    ],
+                    high=[
+                        Space.Bound(bound=1),
+                        Space.Bound(bound=1),
+                        Space.Bound(bound=1),
+                        Space.Bound(bound=1),
+                        Space.Bound(bound=1),
+                        Space.Bound(bound=1),
+                        Space.Bound(bound=1),
+                        Space.Bound(bound=1),
+                    ],
+                )
+            )
+        ]
+    )
+
+    values = sample_space(space)
+    assert len(values) == 1
+
+    for value in values:
+        assert len(value.properties) == 1
+        assert value.properties[0].box.shape == [2,2,2]
+        ndarray = deserialize_ndarray(value.properties[0].box)
+        assert ndarray.shape == (2,2,2)
+
 def test_new_sample_box():
     space = Space(
         properties=[
@@ -130,6 +171,7 @@ def test_new_sample_box():
                     low=[
                         Space.Bound(bound=-1),
                         Space.Bound(bound=-1),
+
                     ],
                     high=[
                         Space.Bound(bound=1),
@@ -147,4 +189,4 @@ def test_new_sample_box():
         assert len(value.properties) == 1
         assert value.properties[0].box.shape == [2]
         ndarray = deserialize_ndarray(value.properties[0].box)
-        assert ndarray.shape == (2)
+        assert ndarray.shape == (2,)

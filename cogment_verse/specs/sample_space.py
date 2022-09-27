@@ -37,6 +37,8 @@ def sample_space(space, num_samples=1, rng=None, mask=None):
                 space_value.properties[prop_idx].discrete = sampled_value
         else:
             shape = prop.box.shape
+
+
             high = np.array([bound.bound if bound.HasField("bound") else np.inf for bound in prop.box.high]).reshape(
                 shape
             )
@@ -45,8 +47,13 @@ def sample_space(space, num_samples=1, rng=None, mask=None):
             )
 
             sampled_values = np.zeros((num_samples, *shape))
-            high = np.repeat(high[np.newaxis, :, :], num_samples, axis=0)
-            low = np.repeat(low[np.newaxis, :, :], num_samples, axis=0)
+
+            if len(shape) == 1:
+                high = np.repeat(high[np.newaxis, :], num_samples, axis=0)
+                low = np.repeat(low[np.newaxis, :], num_samples, axis=0)
+            else:
+                high = np.repeat(high[np.newaxis, :, :], num_samples, axis=0)
+                low = np.repeat(low[np.newaxis, :, :], num_samples, axis=0)
 
             unbounded_mask = (high == np.inf) & (low == -np.inf)
             sampled_values[unbounded_mask] = rng.normal(size=unbounded_mask[unbounded_mask].shape)
