@@ -14,7 +14,7 @@
 
 import logging
 from dataclasses import dataclass
-from typing import Union, Tuple, List
+from typing import List, Tuple, Union
 
 import cogment
 import numpy as np
@@ -35,6 +35,8 @@ from cogment_verse.specs import (
     flattened_dimensions,
     unflatten,
 )
+
+torch.multiprocessing.set_sharing_strategy("file_system")
 
 log = logging.getLogger(__name__)
 
@@ -161,7 +163,7 @@ class PPOModel(Model):
 
     Attributes:
         model_id: Model identity
-        environment_implementation: Environment specs (not sure what it is)
+        environment_implementation: Environment type e.g., gym
         num_input: Number of states
         num_output: Number of actions
         policy_network_hidden_nodes: Number of hidden states for policy network
@@ -384,7 +386,6 @@ class PPOTraining:
         self._dtype = torch.float
         self._environment_specs = environment_specs
         self._cfg = cfg
-        self.mse_loss = torch.nn.MSELoss()
         self._device = torch.device(self._cfg.device)
         self.returns = 0
 
@@ -486,7 +487,7 @@ class PPOTraining:
         dones = []
         episode_rewards = []
         for iter_idx in range(self._cfg.num_iter):
-            for (_step_idx, _trial_id, _trial_idx, sample) in run_session.start_and_await_trials(
+            for (_, _, _, sample) in run_session.start_and_await_trials(
                 trials_id_and_params=[
                     (f"{run_session.run_id}_{iter_idx}_{trial_idx}", create_trial_params(trial_idx, iter_idx))
                     for trial_idx in range(self._cfg.epoch_num_trials)
@@ -519,7 +520,7 @@ class PPOTraining:
                     if iter_idx % 1 == 0:
                         # Compute average rewards for last 100 episodes
                         avg_rewards = await self.compute_average_reward(episode_rewards)
-                        log.warning(
+                        log.info(
                             f"epoch #{iter_idx + 1}/{self._cfg.num_iter}: [policy loss: {policy_loss:0.2f}, value loss: {value_loss:0.2f}, avg. rewards: {avg_rewards:0.2f}]"
                         )
 
@@ -533,7 +534,6 @@ class PPOTraining:
                     # Publish the newly updated model
                     self.model.iter_idx = iter_idx
                     version_info = await run_session.model_registry.publish_version(self.model)
-            print(f"Iter #{iter_idx}: step: {len(actions)}")
 
     async def train_step(
         self,
@@ -604,7 +604,6 @@ class PPOTraining:
                 action = actions[idx].to(self._device)
                 return_ = returns[idx].to(self._device)
                 adv = advs[idx].to(self._device)
-                # old_value = values[idx].to(self._device)
                 old_log_prob = log_probs[idx].to(self._device)
 
                 # Compute the value and values loss

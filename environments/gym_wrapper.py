@@ -25,7 +25,7 @@ from cogment_verse.specs import (
     gym_action_from_action,
     observation_from_gym_observation,
     space_from_gym_space,
-    encode_rendered_frame
+    encode_rendered_frame,
 )
 
 from cogment_verse.constants import PLAYER_ACTOR_CLASS

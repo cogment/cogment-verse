@@ -14,10 +14,8 @@
 
 import logging
 import os
-import multiprocessing as mp
 
 import hydra
-import torch.multiprocessing as mp
 
 import cogment_verse
 
@@ -34,5 +32,4 @@ def main(cfg):
 
 
 if __name__ == "__main__":
-    mp.set_start_method("spawn")
     main()

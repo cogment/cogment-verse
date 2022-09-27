@@ -9,8 +9,8 @@ run:
   seed: 0
   num_epochs: 10
   num_iter: 5000
-  epoch_num_trials: 1
-  num_parallel_trials: 1
+  epoch_num_trials: 4
+  num_parallel_trials: 3
   learning_rate: 3e-4
   batch_size: 64
   num_steps: 1024
