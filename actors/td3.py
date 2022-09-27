@@ -137,6 +137,7 @@ class TD3Model(Model):
             "num_input": self._num_input,
             "num_output": self._num_output,
             "max_action": self._max_action,
+            # "time_steps": self.time_steps,
         }
 
     def save(self, model_data_f):
@@ -216,6 +217,7 @@ class TD3Actor:
                     # print("action space = ", action_space)
                     [action_value] = sample_space(action_space)
                     action_value = SpaceValue(properties=[action_value.properties[0]])
+                    model.time_steps += 1
                     # action_value = np.asarray(action_value)
                     # print("action_value = ", action_value)
                 else:
@@ -379,7 +381,7 @@ class TD3Training:
                 observation=observation, next_observation=next_observation, action=action, reward=reward, done=done
             )
 
-            model.time_steps += 1
+            # model.time_steps += 1
 
             trial_done = done.item() == 1
             # print("step_idx = ", step_idx)
