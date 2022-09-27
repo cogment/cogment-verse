@@ -110,6 +110,8 @@ class TD3Model(Model):
         num_output,
         max_action,
         time_steps,
+        expl_noise,
+        random_steps,
         dtype=torch.float,
         version_number=0,
     ):
@@ -120,6 +122,8 @@ class TD3Model(Model):
         self._num_output = num_output
         self._max_action = max_action
         self.time_steps = time_steps
+        self.expl_noise = expl_noise
+        self.random_steps = random_steps
 
         self.actor = Actor(state_dim=num_input, action_dim=num_output, max_action=max_action)
         self.actor_target = copy.deepcopy(self.actor)
@@ -137,6 +141,8 @@ class TD3Model(Model):
             "num_input": self._num_input,
             "num_output": self._num_output,
             "max_action": self._max_action,
+            "expl_noise": self.expl_noise,
+            "random_steps": self.random_steps,
             # "time_steps": self.time_steps,
         }
 
@@ -163,6 +169,8 @@ class TD3Model(Model):
             num_input=int(model_user_data["num_input"]),
             num_output=int(model_user_data["num_output"]),
             max_action=float(model_user_data["max_action"]),
+            expl_noise=float(model_user_data["expl_noise"]),
+            random_steps=int(model_user_data["random_steps"]),
             time_steps=0,
         )
 
@@ -212,14 +220,11 @@ class TD3Actor:
 
         async for event in actor_session.all_events():
             if event.observation and event.type == cogment.EventType.ACTIVE:
-                if model.time_steps < 25000:
-                    print("model.time_steps = ", model.time_steps)
-                    # print("action space = ", action_space)
+                if model.time_steps < model.random_steps:
+                    # print("model.time_steps = ", model.time_steps)
                     [action_value] = sample_space(action_space)
                     action_value = SpaceValue(properties=[action_value.properties[0]])
-                    model.time_steps += 1
-                    # action_value = np.asarray(action_value)
-                    # print("action_value = ", action_value)
+
                 else:
                     obs_tensor = torch.tensor(
                         flatten(observation_space, event.observation.observation.value), dtype=self._dtype
@@ -227,7 +232,7 @@ class TD3Actor:
                     action_value = model.actor(obs_tensor)
                     action_value = action_value.cpu().detach().numpy()
                     action_value = action_value + np.random.normal(
-                        0, model._max_action * 0.1, size=2
+                        0, model._max_action * model.expl_noise, size=2
                     )  # adding exploration noise
 
                     action_value = proto_array_from_np_array(action_value)
@@ -247,6 +252,7 @@ class TD3Training:
         "noise_clip": 0.5,
         "policy_freq": 2,
         "expl_noise": 0.1,
+        "random_steps": 25000,
     }
 
     def __init__(self, environment_specs, cfg):
@@ -313,6 +319,8 @@ class TD3Training:
             num_input=flattened_dimensions(self._environment_specs.observation_space),
             num_output=flattened_dimensions(self._environment_specs.action_space),
             max_action=float(self._environment_specs.action_space.properties[0].box.high[0].bound),
+            expl_noise=float(self._cfg.expl_noise),
+            random_steps=int(self._cfg.random_steps),
             time_steps=0,
             dtype=self._dtype,
         )
@@ -381,7 +389,6 @@ class TD3Training:
                 observation=observation, next_observation=next_observation, action=action, reward=reward, done=done
             )
 
-            # model.time_steps += 1
 
             trial_done = done.item() == 1
             # print("step_idx = ", step_idx)
@@ -397,7 +404,7 @@ class TD3Training:
                     )
 
             if (
-                step_idx > self._cfg.learning_starts
+                step_idx > model.random_steps
                 and replay_buffer.size() > self._cfg.batch_size
                 and step_idx % self._cfg.policy_freq == 0
             ):
@@ -407,15 +414,26 @@ class TD3Training:
                     noise = (torch.randn_like(data.action) * self._cfg.policy_noise).clamp(
                         -self._cfg.noise_clip, self._cfg.noise_clip
                     )
-
+                    # print("action shape = ", data.action.shape)
+                    # print("policy noise shape = ", self._cfg.policy_noise.shape)
+                    # print("noise shape = ", noise.shape)
                     next_action = (model.actor_target(data.next_observation) + noise).clamp(
                         -model._max_action, model._max_action
                     )
+                    # print("next action shape = ", next_action.shape)
 
                     # Compute the target Q value
                     target_Q1, target_Q2 = model.critic_target(data.next_observation, next_action)
+                    # print("target q1 shape = ", target_Q1.shape)
+                    # print("target q2 shape = ", target_Q2.shape)
+                    # print("reward shape = ", data.reward.shape)
+                    # print("new reward shape = ", torch.unsqueeze(data.reward, dim=1).shape)
+                    # print("done shape = ", data.done.shape)
+                    # print("flatten done shape = ", (1 - data.done.flatten()).shape)
                     target_Q = torch.min(target_Q1, target_Q2)
-                    target_Q = reward + (1 - data.done.flatten()) * self._cfg.discount * target_Q
+                    # print("target Q shape = ", target_Q.shape)
+                    target_Q = torch.unsqueeze(data.reward, dim=1) + torch.unsqueeze((1 - data.done.flatten()), dim=1) * self._cfg.discount * target_Q
+                    # print("target Q shape = ", target_Q.shape)
 
                     # Get current Q estimates
                 current_Q1, current_Q2 = model.critic(data.observation, data.action)
@@ -447,19 +465,19 @@ class TD3Training:
                 # Update the version info
                 model.total_samples += data.size()
 
-                version_info = await run_session.model_registry.publish_version(model)
+            model.time_steps += 1
+            # print("model time steps in main after +1 = ", model.time_steps)
+            version_info = await run_session.model_registry.publish_version(model)
 
-                if step_idx % 100 == 0:
-                    end_time = time.time()
-                    steps_per_seconds = 100 / (end_time - start_time)
-                    start_time = end_time
-                    run_session.log_metrics(
-                        model_version_number=version_info["version_number"],
-                        loss=actor_loss.item(),
-                        # q_values=action_values.mean().item(),
-                        batch_avg_reward=data.reward.mean().item(),
-                        steps_per_seconds=steps_per_seconds,
-                        time_steps=model.time_steps,
-                    )
+            # if step_idx % 100 == 0:
+            #     end_time = time.time()
+            #     steps_per_seconds = 100 / (end_time - start_time)
+            #     start_time = end_time
+            #     run_session.log_metrics(
+            #         model_version_number=version_info["version_number"],
+            #         loss=actor_loss.item(),
+            #         batch_avg_reward=data.reward.mean().item(),
+            #         steps_per_seconds=steps_per_seconds,
+            #     )
 
         version_info = await run_session.model_registry.publish_version(model, archived=True)
