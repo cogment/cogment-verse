@@ -211,20 +211,25 @@ class TD3Actor:
 
         async for event in actor_session.all_events():
             if event.observation and event.type == cogment.EventType.ACTIVE:
-                # if model.time_steps < 25000:
-                #     action_value = sample_space(action_space)
-                #     print("action_value = ", action_value)
-                # else:
-                obs_tensor = torch.tensor(
-                    flatten(observation_space, event.observation.observation.value), dtype=self._dtype
-                )
-                action_value = model.actor(obs_tensor)
-                action_value = action_value.cpu().detach().numpy()
-                action_value = action_value + np.random.normal(
-                    0, model._max_action * 0.1, size=2
-                )  # adding exploration noise
-                action_value = proto_array_from_np_array(action_value)
-                action_value = SpaceValue(properties=[SpaceValue.PropertyValue(box=action_value)])
+                if model.time_steps < 25000:
+                    print("model.time_steps = ", model.time_steps)
+                    # print("action space = ", action_space)
+                    [action_value] = sample_space(action_space)
+                    action_value = SpaceValue(properties=[action_value.properties[0]])
+                    # action_value = np.asarray(action_value)
+                    # print("action_value = ", action_value)
+                else:
+                    obs_tensor = torch.tensor(
+                        flatten(observation_space, event.observation.observation.value), dtype=self._dtype
+                    )
+                    action_value = model.actor(obs_tensor)
+                    action_value = action_value.cpu().detach().numpy()
+                    action_value = action_value + np.random.normal(
+                        0, model._max_action * 0.1, size=2
+                    )  # adding exploration noise
+
+                    action_value = proto_array_from_np_array(action_value)
+                    action_value = SpaceValue(properties=[SpaceValue.PropertyValue(box=action_value)])
 
                 actor_session.do_action(PlayerAction(value=action_value))
 
