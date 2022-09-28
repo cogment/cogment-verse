@@ -11,6 +11,7 @@ run:
   discount: 0.99
   tau: 0.005
   expl_noise: 0.1
+  random_steps: 25000
   policy_noise: 0.2
   noise_clip: 0.5
   policy_freq: 2
