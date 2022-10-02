@@ -19,7 +19,7 @@
 # pylint: disable=W0622
 
 import os
-import isaacgymenvs
+import isaacgymenvs # pylint: disable=abstract-class-instantiated
 import cogment
 
 from cogment_verse.specs import (
