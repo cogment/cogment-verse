@@ -52,7 +52,7 @@ def np_array_from_proto_array(arr):
 
 class Actor(nn.Module):
     def __init__(self, state_dim, action_dim, max_action):
-        super(Actor, self).__init__()
+        super().__init__()
 
         self.l1 = nn.Linear(state_dim, 256)
         self.l2 = nn.Linear(256, 256)
@@ -68,7 +68,7 @@ class Actor(nn.Module):
 
 class Critic(nn.Module):
     def __init__(self, state_dim, action_dim):
-        super(Critic, self).__init__()
+        super().__init__()
 
         # Q1 architecture
         self.l1 = nn.Linear(state_dim + action_dim, 256)
@@ -322,7 +322,7 @@ class TD3Training:
             time_steps=0,
             dtype=self._dtype,
         )
-        _model_info, version_info = await run_session.model_registry.publish_initial_version(model)
+        _model_info, _ = await run_session.model_registry.publish_initial_version(model)
 
         run_session.log_params(
             self._cfg,
@@ -343,7 +343,7 @@ class TD3Training:
             reward_dtype=self._dtype,
             seed=self._cfg.seed,
         )
-        start_time = time.time()
+        # start_time = time.time()
         total_reward_cum = 0
 
         for (step_idx, _trial_id, trial_idx, sample,) in run_session.start_and_await_trials(
