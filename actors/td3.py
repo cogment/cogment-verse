@@ -12,6 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# pylint: disable=C0103
+# pylint: disable=W0613
+# pylint: disable=W0221
+# pylint: disable=W0212
+# pylint: disable=W0622
+
 import logging
 import copy
 import time
