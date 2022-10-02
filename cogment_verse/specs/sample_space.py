@@ -38,7 +38,6 @@ def sample_space(space, num_samples=1, rng=None, mask=None):
         else:
             shape = prop.box.shape
 
-
             high = np.array([bound.bound if bound.HasField("bound") else np.inf for bound in prop.box.high]).reshape(
                 shape
             )

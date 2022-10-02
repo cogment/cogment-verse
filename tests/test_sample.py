@@ -127,7 +127,7 @@ def test_new2_sample_box():
         properties=[
             Space.Property(
                 box=Space.Box(
-                    shape=[2,2,2],
+                    shape=[2, 2, 2],
                     low=[
                         Space.Bound(bound=-1),
                         Space.Bound(bound=-1),
@@ -158,9 +158,10 @@ def test_new2_sample_box():
 
     for value in values:
         assert len(value.properties) == 1
-        assert value.properties[0].box.shape == [2,2,2]
+        assert value.properties[0].box.shape == [2, 2, 2]
         ndarray = deserialize_ndarray(value.properties[0].box)
-        assert ndarray.shape == (2,2,2)
+        assert ndarray.shape == (2, 2, 2)
+
 
 def test_new_sample_box():
     space = Space(
@@ -171,7 +172,6 @@ def test_new_sample_box():
                     low=[
                         Space.Bound(bound=-1),
                         Space.Bound(bound=-1),
-
                     ],
                     high=[
                         Space.Bound(bound=1),

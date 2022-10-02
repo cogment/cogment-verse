@@ -387,7 +387,6 @@ class TD3Training:
                 observation=observation, next_observation=next_observation, action=action, reward=reward, done=done
             )
 
-
             trial_done = done.item() == 1
             if trial_done:
                 run_session.log_metrics(trial_idx=trial_idx, total_reward=total_reward)
@@ -400,10 +399,7 @@ class TD3Training:
                         f"[TD3/{run_session.run_id}] trial #{trial_idx + 1}/{self._cfg.num_trials} done (average total reward = {total_reward_avg})."
                     )
 
-            if (
-                step_idx > model.random_steps
-                and replay_buffer.size() > self._cfg.batch_size
-            ):
+            if step_idx > model.random_steps and replay_buffer.size() > self._cfg.batch_size:
                 data = replay_buffer.sample(self._cfg.batch_size)
                 with torch.no_grad():
                     # Select action according to policy and add clipped noise
@@ -417,7 +413,10 @@ class TD3Training:
                     # Compute the target Q value
                     target_Q1, target_Q2 = model.critic_target(data.next_observation, next_action)
                     target_Q = torch.min(target_Q1, target_Q2)
-                    target_Q = torch.unsqueeze(data.reward, dim=1) + torch.unsqueeze((1 - data.done.flatten()), dim=1) * self._cfg.discount * target_Q
+                    target_Q = (
+                        torch.unsqueeze(data.reward, dim=1)
+                        + torch.unsqueeze((1 - data.done.flatten()), dim=1) * self._cfg.discount * target_Q
+                    )
 
                     # Get current Q estimates
                 current_Q1, current_Q2 = model.critic(data.observation, data.action)
