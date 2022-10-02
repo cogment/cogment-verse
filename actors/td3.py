@@ -143,7 +143,6 @@ class TD3Model(Model):
             "max_action": self._max_action,
             "expl_noise": self.expl_noise,
             "random_steps": self.random_steps,
-            # "time_steps": self.time_steps,
         }
 
     def save(self, model_data_f):
@@ -221,7 +220,6 @@ class TD3Actor:
         async for event in actor_session.all_events():
             if event.observation and event.type == cogment.EventType.ACTIVE:
                 if model.time_steps < model.random_steps:
-                    # print("model.time_steps = ", model.time_steps)
                     [action_value] = sample_space(action_space)
                     action_value = SpaceValue(properties=[action_value.properties[0]])
 
@@ -391,7 +389,6 @@ class TD3Training:
 
 
             trial_done = done.item() == 1
-            # print("step_idx = ", step_idx)
             if trial_done:
                 run_session.log_metrics(trial_idx=trial_idx, total_reward=total_reward)
                 total_reward_cum += total_reward
@@ -406,7 +403,6 @@ class TD3Training:
             if (
                 step_idx > model.random_steps
                 and replay_buffer.size() > self._cfg.batch_size
-                and step_idx % self._cfg.policy_freq == 0
             ):
                 data = replay_buffer.sample(self._cfg.batch_size)
                 with torch.no_grad():
@@ -414,26 +410,14 @@ class TD3Training:
                     noise = (torch.randn_like(data.action) * self._cfg.policy_noise).clamp(
                         -self._cfg.noise_clip, self._cfg.noise_clip
                     )
-                    # print("action shape = ", data.action.shape)
-                    # print("policy noise shape = ", self._cfg.policy_noise.shape)
-                    # print("noise shape = ", noise.shape)
                     next_action = (model.actor_target(data.next_observation) + noise).clamp(
                         -model._max_action, model._max_action
                     )
-                    # print("next action shape = ", next_action.shape)
 
                     # Compute the target Q value
                     target_Q1, target_Q2 = model.critic_target(data.next_observation, next_action)
-                    # print("target q1 shape = ", target_Q1.shape)
-                    # print("target q2 shape = ", target_Q2.shape)
-                    # print("reward shape = ", data.reward.shape)
-                    # print("new reward shape = ", torch.unsqueeze(data.reward, dim=1).shape)
-                    # print("done shape = ", data.done.shape)
-                    # print("flatten done shape = ", (1 - data.done.flatten()).shape)
                     target_Q = torch.min(target_Q1, target_Q2)
-                    # print("target Q shape = ", target_Q.shape)
                     target_Q = torch.unsqueeze(data.reward, dim=1) + torch.unsqueeze((1 - data.done.flatten()), dim=1) * self._cfg.discount * target_Q
-                    # print("target Q shape = ", target_Q.shape)
 
                     # Get current Q estimates
                 current_Q1, current_Q2 = model.critic(data.observation, data.action)
@@ -466,7 +450,6 @@ class TD3Training:
                 model.total_samples += data.size()
 
             model.time_steps += 1
-            # print("model time steps in main after +1 = ", model.time_steps)
             version_info = await run_session.model_registry.publish_version(model)
 
             # if step_idx % 100 == 0:
