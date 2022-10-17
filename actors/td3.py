@@ -17,6 +17,9 @@
 # pylint: disable=W0221
 # pylint: disable=W0212
 # pylint: disable=W0622
+# pylint: disable=R0402
+# pylint: disable=W0612
+# pylint: disable=W0611
 
 import logging
 import copy
