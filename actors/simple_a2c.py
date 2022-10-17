@@ -26,8 +26,11 @@ from cogment_verse.specs import (
     PLAYER_ACTOR_CLASS,
     PlayerAction,
     SpaceValue,
+    unflatten
+    
 )
 from cogment_verse import Model
+
 
 torch.multiprocessing.set_sharing_strategy("file_system")
 
@@ -129,9 +132,10 @@ class SimpleA2CActor:
 
         assert config.environment_specs.num_players == 1
         assert len(config.environment_specs.action_space.properties) == 1
-        assert config.environment_specs.action_space.properties[0].WhichOneof("type") == "discrete"
+        # assert config.environment_specs.action_space.properties[0].WhichOneof("type") == "discrete"
 
         observation_space = config.environment_specs.observation_space
+        action_space = config.environment_specs.action_space
 
         model, _, _ = await actor_session.model_registry.retrieve_version(
             SimpleA2CModel, config.model_id, config.model_version
@@ -147,6 +151,11 @@ class SimpleA2CActor:
                 probs = torch.softmax(model.actor_network(obs_tensor), dim=-1)
                 discrete_action_tensor = torch.distributions.Categorical(probs).sample()
                 action_value = SpaceValue(properties=[SpaceValue.PropertyValue(discrete=discrete_action_tensor.item())])
+
+                # action = torch.rand((1,)+(8,), device="cuda:0")
+                # action = action.cpu().numpy()[0]
+                
+                # action_value = unflatten(action_space, action)
                 actor_session.do_action(PlayerAction(value=action_value))
 
 

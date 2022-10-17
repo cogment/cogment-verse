@@ -12,15 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# pylint: disable=C0103
-# pylint: disable=W0613
-# pylint: disable=W0221
-# pylint: disable=W0212
-# pylint: disable=W0622
-
 import os
-import isaacgymenvs # pylint: disable=abstract-class-instantiated
+import gym
+import isaacgym
+import isaacgymenvs
+import torch
 import cogment
+import numpy as np
 
 from cogment_verse.specs import (
     encode_rendered_frame,
@@ -43,7 +41,7 @@ class Environment:
         print("self.gym_env_name = ", self.gym_env_name)
 
         # gym_env = gym.make(self.gym_env_name)
-        gym_env = isaacgymenvs.make(
+        self.gym_env = isaacgymenvs.make(
             seed=0,
             task=self.gym_env_name,
             num_envs=1,
@@ -53,8 +51,8 @@ class Environment:
         self.env_specs = EnvironmentSpecs(
             num_players=1,
             turn_based=False,
-            observation_space=space_from_gym_space(gym_env.observation_space),
-            action_space=space_from_gym_space(gym_env.action_space),
+            observation_space=space_from_gym_space(self.gym_env.observation_space),
+            action_space=space_from_gym_space(self.gym_env.action_space),
         )
 
     def get_implementation_name(self):
@@ -86,16 +84,17 @@ class Environment:
         session_cfg = environment_session.config
 
         # gym_env = gym.make(self.gym_env_name)
-        gym_env = isaacgymenvs.make(
-            seed=0,
-            task=self.gym_env_name,
-            num_envs=1,
-            sim_device="cuda:0",
-            rl_device="cuda:0",
-        )
-
-        gym_observation, _info = gym_env.reset(seed=session_cfg.seed, return_info=True)
-        observation_value = observation_from_gym_observation(gym_env.observation_space, gym_observation)
+        # gym_env = isaacgymenvs.make(
+        #     seed=0,
+        #     task=self.gym_env_name,
+        #     num_envs=1,
+        #     sim_device="cuda:0",
+        #     rl_device="cuda:0",
+        # )
+        gym_observation = self.gym_env.reset()
+        obs = np.asarray(gym_observation["obs"].cpu())
+        observation_value = observation_from_gym_observation(self.gym_env.observation_space, obs)
+        
 
         rendered_frame = None
         if session_cfg.render:
@@ -116,13 +115,14 @@ class Environment:
                 gym_action = gym_action_from_action(
                     self.env_specs.action_space, action_value  # pylint: disable=no-member
                 )
-
-                gym_observation, reward, done, _info = gym_env.step(gym_action)
-                observation_value = observation_from_gym_observation(gym_env.observation_space, gym_observation)
+                gym_action_tensor = torch.tensor(gym_action, device="cuda:0").view(-1, 8)
+                gym_observation, reward, done, _info = self.gym_env.step(gym_action_tensor)
+                obs = np.asarray(gym_observation["obs"].cpu())
+                observation_value = observation_from_gym_observation(self.gym_env.observation_space, obs)
 
                 rendered_frame = None
                 if session_cfg.render:
-                    rendered_frame = encode_rendered_frame(gym_env.render(mode="rgb_array"), session_cfg.render_width)
+                    rendered_frame = encode_rendered_frame(self.gym_env.render(mode="rgb_array"), session_cfg.render_width)
 
                 observations = [
                     (
@@ -152,4 +152,4 @@ class Environment:
                     # The trial is active
                     environment_session.produce_observations(observations)
 
-        gym_env.close()
+        self.gym_env.close()
