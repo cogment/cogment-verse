@@ -18,6 +18,11 @@
 # pylint: disable=W0212
 # pylint: disable=W0622
 
+# pylint: disable=W0201
+# pylint: disable=W0401
+# pylint: disable=W0611
+# pylint: disable=W0614
+
 import os
 import shutil
 import hydra
