@@ -101,6 +101,7 @@ class Environment:
                     clipped_action = np.clip(gym_action, gym_env.action_space.low, gym_env.action_space.high)
                 else:
                     clipped_action = gym_action
+                    
                 gym_observation, reward, done, _ = gym_env.step(clipped_action)
                 observation_value = observation_from_gym_observation(gym_env.observation_space, gym_observation)
                 rendered_frame = None
