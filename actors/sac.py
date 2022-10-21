@@ -177,3 +177,158 @@ class SACModel(Model):
         # version user data
         self.iter_idx = 0
         self.total_samples = 0
+
+    def get_model_user_data(self) -> dict:
+        """Get user model"""
+        return {
+            "environment_implementation": self.environment_implementation,
+            "num_inputs": self.num_inputs,
+            "num_outputs": self.num_outputs,
+            "policy_network_hidden_nodes": self.policy_network_hidden_nodes,
+            "value_network_hidden_nodes": self.value_network_hidden_nodes,
+        }
+
+    def save(self, model_data_f: str) -> dict:
+        """Save the model"""
+        torch.save((self.policy_network.state_dict(), self.value_network.state_dict()), model_data_f)
+        return {"iter_idx": self.iter_idx, "total_samples": self.total_samples}
+
+    @classmethod
+    def load(
+        cls, model_id: int, version_number: int, model_user_data: dict, version_user_data: dict, model_data_f: str
+    ) -> Model:
+        """Load the model"""
+        model = SACModel(
+            model_id=model_id,
+            version_number=version_number,
+            environment_implementation=model_user_data["environment_implementation"],
+            num_inputs=int(model_user_data["num_inputs"]),
+            num_outputs=int(model_user_data["num_outputs"]),
+            policy_network_hidden_nodes=int(model_user_data["policy_network_hidden_nodes"]),
+            value_network_hidden_nodes=int(model_user_data["value_network_hidden_nodes"]),
+        )
+
+        # Load the model parameters
+        (policy_network_state_dict, value_network_state_dict) = torch.load(model_data_f)
+        model.policy_network.load_state_dict(policy_network_state_dict)
+        model.value_network.load_state_dict(value_network_state_dict)
+
+        # Load version data
+        model.iter_idx = version_user_data["iter_idx"]
+        model.total_samples = version_user_data["total_samples"]
+        return model
+
+
+class SACActor:
+    """Soft actor critic actor"""
+
+    def __init__(self):
+        self._dtype = torch.float
+
+    def get_actor_classes(self):
+        """Get actor"""
+        return [PLAYER_ACTOR_CLASS]
+
+    async def impl(self, actor_session):
+        # Start a session
+        actor_session.start()
+        config = actor_session.config
+        assert config.environment_specs.num_players == 1
+        assert len(config.environment_specs.action_space.properties) == 1
+        assert config.environment_specs.action_space.properties[0].WhichOneof("type") == "box"
+
+        # Get observation and action space
+        observation_space = config.environment_specs.observation_space
+        action_space = config.environment_specs.action_space
+
+        # Get model
+        model, _, _ = await actor_session.model_registry.retrieve_version(
+            SACModel, config.model_id, config.model_version
+        )
+
+        async for event in actor_session.all_events():
+            if event.observation and event.type == cogment.EventType.ACTIVE:
+                obs_tensor = torch.tensor(
+                    flatten(observation_space, event.observation.observation.value), dtype=self._dtype
+                ).view(1, -1)
+
+                # Normalize the observation
+                if model.state_normalization is not None:
+                    obs_tensor = torch.clamp(
+                        (obs_tensor - model.state_normalization.mean) / (model.state_normalization.var + 1e-8) ** 0.5,
+                        min=-10,
+                        max=10,
+                    )
+
+                # Get action from policy network
+                with torch.no_grad():
+                    dist, _ = model.policy_network(obs_tensor)
+                    action = dist.sample().cpu().numpy()[0]
+
+                # Send action to environment
+                action_value = unflatten(action_space, action)
+                actor_session.do_action(PlayerAction(value=action_value))
+
+
+class SACTraining:
+    """Train SAC agent"""
+
+    default_cfg = {
+        "seed": 10,
+        "num_epochs": 10,
+        "num_iter": 500,
+        "epoch_num_trials": 1,
+        "num_parallel_trials": 1,
+        "discount_factor": 0.99,
+        "entropy_loss_coef": 0.05,
+        "value_loss_coef": 0.5,
+        "action_loss_coef": 1.0,
+        "clipping_coef": 0.1,
+        "learning_rate": 3e-4,
+        "batch_size": 64,
+        "num_steps": 2048,
+        "lambda_gae": 0.95,
+        "device": "cpu",
+        "policy_network": {"num_hidden_nodes": 64},
+        "value_network": {"num_hidden_nodes": 64},
+    }
+
+    def __init__(self, environment_specs: EnvironmentSpecs, cfg: EnvironmentConfig) -> None:
+        super().__init__()
+        self._dtype = torch.float
+        self._environment_specs = environment_specs
+        self._cfg = cfg
+        self._device = torch.device(self._cfg.device)
+        self.returns = 0
+
+        self.model = SACModel(
+            model_id="",
+            environment_implementation=self._environment_specs.implementation,
+            num_inputs=flattened_dimensions(self._environment_specs.observation_space),
+            num_outputs=flattened_dimensions(self._environment_specs.action_space),
+            learning_rate=self._cfg.learning_rate,
+            policy_network_hidden_nodes=self._cfg.policy_network.num_hidden_nodes,
+            value_network_hidden_nodes=self._cfg.value_network.num_hidden_nodes,
+            dtype=self._dtype,
+        )
+
+    async def trial_sample_sequences_producer_impl(self, sample_producer_session: SampleProducerSession):
+        """Collect sample from the trial"""
+        observation = []
+        action = []
+        reward = []
+        done = []
+
+        player_actor_params = sample_producer_session.trial_info.parameters.actors[0]
+        player_actor_name = player_actor_params.name
+        player_observation_space = player_actor_params.config.environment_specs.observation_space
+        player_action_space = player_actor_params.config.environment_specs.action_space
+
+        async for sample in sample_producer_session.all_trial_samples():
+            if sample.trial_state == cogment.TrialState.ENDED:
+                # This sample includes the last observation and no action
+                # The last sample was the last useful one
+                done[-1] = torch.ones(1, dtype=self._dtype)
+                break
+
+            # TODO: collect data in buffer
