@@ -435,7 +435,7 @@ class PPOTraining:
         sample_producer_session.produce_sample((observation, action, reward, done))
 
     async def impl(self, run_session: RunSession) -> dict:
-        """Train and publish model the model"""
+        """Train and publish the model"""
 
         model_id = f"{run_session.run_id}_model"
         assert self._environment_specs.num_players == 1
