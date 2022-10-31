@@ -1,0 +1,10 @@
+# @package _global_
+defaults:
+  - override /services/actor:
+      - simple_a2c
+      - dagger_student
+  - override /run: dagger
+  - override /services/environment: cartpole
+run:
+  teacher_model: SimpleA2CModel
+  teacher_model_id: tender_merkle_0_model

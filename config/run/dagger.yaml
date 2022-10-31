@@ -1,0 +1,7 @@
+class_name: actors.dagger.DaggerTraining
+seed: 618
+players:
+  - name: student
+    implementation: actors.dagger.DaggerStudentActor
+  - name: teacher
+    implementation: actors.simple_a2c.SimpleA2CActor
