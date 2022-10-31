@@ -38,7 +38,7 @@ from cogment_verse.specs import (
     HUMAN_ACTOR_IMPL,
 )
 
-from cogment_verse import Model, TorchReplayBuffer # pylint: disable=abstract-class-instantiated
+from cogment_verse import Model, TorchReplayBuffer  # pylint: disable=abstract-class-instantiated
 
 torch.multiprocessing.set_sharing_strategy("file_system")
 

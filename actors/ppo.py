@@ -150,7 +150,7 @@ class Normalization:
         new_mean = mean + delta * batch_count / tot_count
         mean_a = var * count
         mean_b = batch_var * batch_count
-        mean_2 = mean_a + mean_b + (delta**0.5) * count * batch_count / tot_count
+        mean_2 = mean_a + mean_b + (delta ** 0.5) * count * batch_count / tot_count
         new_var = mean_2 / tot_count
         new_count = tot_count
 

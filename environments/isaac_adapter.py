@@ -94,7 +94,6 @@ class Environment:
         gym_observation = self.gym_env.reset()
         obs = np.asarray(gym_observation["obs"].cpu())
         observation_value = observation_from_gym_observation(self.gym_env.observation_space, obs)
-        
 
         rendered_frame = None
         if session_cfg.render:
@@ -122,7 +121,9 @@ class Environment:
 
                 rendered_frame = None
                 if session_cfg.render:
-                    rendered_frame = encode_rendered_frame(self.gym_env.render(mode="rgb_array"), session_cfg.render_width)
+                    rendered_frame = encode_rendered_frame(
+                        self.gym_env.render(mode="rgb_array"), session_cfg.render_width
+                    )
 
                 observations = [
                     (

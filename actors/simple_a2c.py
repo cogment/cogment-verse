@@ -26,8 +26,7 @@ from cogment_verse.specs import (
     PLAYER_ACTOR_CLASS,
     PlayerAction,
     SpaceValue,
-    unflatten
-    
+    unflatten,
 )
 from cogment_verse import Model
 
@@ -154,7 +153,7 @@ class SimpleA2CActor:
 
                 # action = torch.rand((1,)+(8,), device="cuda:0")
                 # action = action.cpu().numpy()[0]
-                
+
                 # action_value = unflatten(action_space, action)
                 actor_session.do_action(PlayerAction(value=action_value))
 

@@ -13,7 +13,7 @@
 # limitations under the License.
 
 # pylint: disable=missing-function-docstring
-from cogment_verse import TorchReplayBuffer # pylint: disable=abstract-class-instantiated
+from cogment_verse import TorchReplayBuffer  # pylint: disable=abstract-class-instantiated
 
 
 def test_torch_replay_buffer():
