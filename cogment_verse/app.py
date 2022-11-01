@@ -15,7 +15,7 @@
 import logging
 import os
 
-from omegaconf import OmegaConf
+from omegaconf import DictConfig, OmegaConf
 from names_generator import generate_name
 
 from .processes import (
@@ -32,7 +32,9 @@ from .model_registry import ModelRegistry
 from .constants import HUMAN_ACTOR_IMPL
 from .utils.find_free_port import find_free_port
 
+LOGLEVEL = os.environ.get("COGVERSE_LOG_LEVEL", "INFO").upper()
 log = logging.getLogger(__name__)
+log.setLevel(LOGLEVEL)
 
 SPEC_FILEPATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "specs", "cogment.yaml"))
 
@@ -70,7 +72,9 @@ register_generate_name_resolver()
 
 
 class App:
-    def __init__(self, cfg, work_dir=".cogment_verse"):
+    def __init__(self, cfg : DictConfig, work_dir=".cogment_verse"):
+        log.info(f"Configuration:\n{OmegaConf.to_yaml(cfg)}")
+
         self.cfg = OmegaConf.create(cfg)
         OmegaConf.resolve(
             cfg

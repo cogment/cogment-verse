@@ -1,0 +1,8 @@
+model_id: tender_merkle_0_model
+version_number: 501
+creation_timestamp: 2022-09-09T16:24:38.429991484-04:00
+data_hash: CBdiVQ8xNkvhC1Yzs5IvYjmmMBZKbK3xcf482XZzPQY=
+data_size: 13441
+user_data:
+  epoch_idx: "499"
+  total_samples: "319421"

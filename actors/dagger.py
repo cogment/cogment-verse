@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import logging
+import os
 
 import cogment
 import numpy as np
@@ -34,7 +35,9 @@ from cogment_verse.specs import (
 
 torch.multiprocessing.set_sharing_strategy("file_system")
 
+LOGLEVEL = os.environ.get("COGVERSE_LOG_LEVEL", "INFO").upper()
 log = logging.getLogger(__name__)
+log.setLevel(LOGLEVEL)
 
 
 class StudentModel(Model):
@@ -182,6 +185,7 @@ class DaggerTraining:
                 torch.tensor(player_sample.reward if player_sample.reward is not None else 0, dtype=self._dtype)
             )
 
+        log.debug(f"Producing sample [{sample_producer_session.trial_idx}]")
         sample_producer_session.produce_sample((observation, action, reward))
 
     async def impl(self, run_session):
@@ -274,7 +278,7 @@ class DaggerTraining:
             teacher_actions = []
 
             # Rollout a bunch of trials to gather expert data
-            for (step_idx, _trial_id, _trial_idx, sample,) in run_session.start_and_await_trials(
+            for (step_idx, _, trial_idx, sample,) in run_session.start_and_await_trials(
                 trials_id_and_params=[
                     (f"{run_session.run_id}_{trial_idx}", create_trial_params_gather_expert_data(trial_idx))
                     for trial_idx in range(self._cfg.num_data_gather_trials)
@@ -286,8 +290,10 @@ class DaggerTraining:
                 observations.extend(teacher_observation)
                 teacher_actions.extend(teacher_action)
 
-                if (_trial_idx + 1) % 10 == 0:
-                    log.info(f"Gathering expert data, trial {_trial_idx + 1}/{self._cfg.num_data_gather_trials}")
+                if (trial_idx + 1) % 10 == 0:
+                    log.info(f"Gathering expert data, trial {trial_idx + 1}/{self._cfg.num_data_gather_trials}")
+                else:
+                    log.debug(f"Gathering expert data, trial {trial_idx + 1}/{self._cfg.num_data_gather_trials}")
 
             # Step 2: Teach the student algorithm using DAGGER
             optimizer = torch.optim.Adam(
@@ -305,7 +311,8 @@ class DaggerTraining:
             expert_data_size = len(observations)
 
             # Rollout a bunch of trials to train the student model
-            for (step_idx, _trial_id, _trial_idx, sample,) in run_session.start_and_await_trials(
+            log.info(f"Training students for iteration [{epoch_idx + 1}/{self._cfg.num_epochs}]")
+            for (step_idx, _, trial_idx, sample,) in run_session.start_and_await_trials(
                 trials_id_and_params=[
                     (f"{run_session.run_id}_{trial_idx}", create_trial_params_imitatation(trial_idx))
                     for trial_idx in range(self._cfg.num_imitation_trials)
@@ -313,14 +320,17 @@ class DaggerTraining:
                 sample_producer_impl=self.sample_producer,
                 num_parallel_trials=self._cfg.num_parallel_trials,
             ):
+                log.debug(f"Start of training iteration [{step_idx}]")
                 (student_observation, student_action, student_reward) = sample
                 observations.extend(student_observation)
                 student_actions.extend(student_action)
                 run_session.log_metrics(total_reward=sum(r.item() for r in student_reward))
-                teacher_action_ratio = teacher_action_schedule(epoch_idx + _trial_idx)
+                teacher_action_ratio = teacher_action_schedule(epoch_idx + trial_idx)
 
-                if (_trial_idx + 1) % 10 == 0:
-                    log.info(f"Training the student, trial {_trial_idx + 1}/{self._cfg.num_imitation_trials}")
+                if (trial_idx + 1) % 10 == 0:
+                    log.info(f"Training the student, trial {trial_idx + 1}/{self._cfg.num_imitation_trials}")
+                else:
+                    log.debug(f"Training the student, trial {trial_idx + 1}/{self._cfg.num_imitation_trials}")
 
                 for obs in student_observation:
                     # Feed the student's observation to the teacher model to find the action it would take
@@ -335,6 +345,7 @@ class DaggerTraining:
                     teacher_actions.append(teacher_action)
 
                 if len(observations) < self._cfg.batch_size:
+                    log.debug(f"Shortcut end of training iteration [{step_idx}] on batch size [{len(observations)}] vs [{self._cfg.batch_size}]")
                     continue
 
                 for _ in range(self._cfg.num_mlp_steps):
@@ -375,6 +386,8 @@ class DaggerTraining:
                         loss=loss.item(),
                         total_samples=total_samples,
                     )
+                
+                log.debug(f"End of training iteration [{step_idx}]")
 
         # Publish the final learnt model
         version_info = await run_session.model_registry.publish_version(student_model, archived=True)

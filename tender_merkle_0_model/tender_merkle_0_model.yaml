@@ -1,0 +1,7 @@
+model_id: tender_merkle_0_model
+user_data:
+  actor_network_num_hidden_nodes: "32"
+  critic_network_num_hidden_nodes: "32"
+  environment_implementation: environments.gym_adapter.Environment/CartPole-v1
+  num_input: "4"
+  num_output: "2"

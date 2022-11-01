@@ -37,11 +37,11 @@ class SampleProducerSession:
         self.trial_idx = trial_idx
         self.datastore = datastore
         self.trial_info = trial_info
-        self.sample_queue = sample_queue
-        self.impl = impl
+        self._sample_queue = sample_queue
+        self._impl = impl
 
     def produce_sample(self, sample):
-        self.sample_queue.put(
+        self._sample_queue.put(
             SampleQueueEvent(trial_id=self.trial_info.trial_id, trial_idx=self.trial_idx, sample=sample)
         )
 
@@ -51,7 +51,7 @@ class SampleProducerSession:
     def create_task(self):
         async def wrapped_impl():
             try:
-                await self.impl(self)
+                await self._impl(self)
             except KeyboardInterrupt:
                 # This one is ignored, it's logged at a bunch of different places
                 pass

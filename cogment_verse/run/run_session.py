@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import logging
+import os
 import time
 from multiprocessing import Queue
 
@@ -22,7 +23,9 @@ from ..mlflow_experiment_tracker import MlflowExperimentTracker
 from .sample_producer_worker import start_sample_producer_worker
 from .trial_runner_worker import start_trial_runner_worker
 
+LOGLEVEL = os.environ.get("COGVERSE_LOG_LEVEL", "INFO").upper()
 log = logging.getLogger(__name__)
+log.setLevel(LOGLEVEL)
 
 
 class RunSession:
@@ -70,8 +73,11 @@ class RunSession:
                     sample_queue_event.sample,
                 )
 
+            log.debug(f"Sample production is done at step [{self._step_idx}]")
             trial_runner_worker.join()
             sample_producer_worker.join()
+            log.debug(f"All processes joined")
+
         except RuntimeError as error:
             trial_runner_worker.terminate()
             sample_producer_worker.terminate()
