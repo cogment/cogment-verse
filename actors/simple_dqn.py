@@ -320,7 +320,7 @@ class SimpleDQNTraining:
         start_time = time.time()
         total_reward_cum = 0
 
-        for (step_idx, _trial_id, trial_idx, sample,) in run_session.start_and_await_trials(
+        async for (step_idx, _trial_id, trial_idx, sample,) in run_session.start_and_await_trials(
             trials_id_and_params=[
                 (
                     f"{run_session.run_id}_{trial_idx}",
@@ -622,7 +622,7 @@ class SimpleDQNSelfPlayTraining:
             start_time = time.time()
 
             # Self training trials
-            for (step_idx, _trial_id, trial_idx, sample,) in run_session.start_and_await_trials(
+            async for (step_idx, _trial_id, trial_idx, sample,) in run_session.start_and_await_trials(
                 trials_id_and_params=[
                     (
                         f"{run_session.run_id}_{epoch_idx}_t_{trial_idx}",
@@ -709,7 +709,7 @@ class SimpleDQNSelfPlayTraining:
             # Validation trials
             cum_total_reward = 0
             num_ties = 0
-            for (step_idx, _trial_id, trial_idx, sample,) in run_session.start_and_await_trials(
+            async for (step_idx, _trial_id, trial_idx, sample,) in run_session.start_and_await_trials(
                 trials_id_and_params=[
                     (
                         f"{run_session.run_id}_{epoch_idx}_v_{trial_idx}",

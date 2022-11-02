@@ -273,7 +273,7 @@ class SimpleBCTraining:
         ##########################################
 
         # Rollout a bunch of trials
-        for (step_idx, _trial_id, _trial_idx, sample,) in run_session.start_and_await_trials(
+        async for (step_idx, _trial_id, _trial_idx, sample,) in run_session.start_and_await_trials(
             trials_id_and_params=[
                 (f"{run_session.run_id}_{trial_idx}", create_trial_params(trial_idx))
                 for trial_idx in range(self._cfg.num_trials)

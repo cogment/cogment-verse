@@ -487,7 +487,7 @@ class PPOTraining:
         dones = []
         episode_rewards = []
         for iter_idx in range(self._cfg.num_iter):
-            for (_, _, _, sample) in run_session.start_and_await_trials(
+            async for (_, _, _, sample) in run_session.start_and_await_trials(
                 trials_id_and_params=[
                     (f"{run_session.run_id}_{iter_idx}_{trial_idx}", create_trial_params(trial_idx, iter_idx))
                     for trial_idx in range(self._cfg.epoch_num_trials)

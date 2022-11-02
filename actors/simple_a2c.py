@@ -247,7 +247,7 @@ class SimpleA2CTraining:
             action = []
             reward = []
             done = []
-            for (_step_idx, _trial_id, _trial_idx, sample,) in run_session.start_and_await_trials(
+            async for (_step_idx, _trial_id, _trial_idx, sample,) in run_session.start_and_await_trials(
                 trials_id_and_params=[
                     (
                         f"{run_session.run_id}_{epoch_idx}_{trial_idx}",

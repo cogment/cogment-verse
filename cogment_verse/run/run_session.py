@@ -15,6 +15,7 @@
 import logging
 import os
 import time
+import asyncio
 from multiprocessing import Queue
 
 from cogment_verse.model_registry import ModelRegistry
@@ -41,7 +42,7 @@ class RunSession:
 
         self.model_registry = model_registry
 
-    def start_and_await_trials(self, trials_id_and_params, sample_producer_impl, num_parallel_trials=10):
+    async def start_and_await_trials(self, trials_id_and_params, sample_producer_impl, num_parallel_trials=10):
         trial_started_queue = Queue()
         sample_queue = Queue()
 
@@ -61,8 +62,9 @@ class RunSession:
         )
 
         try:
+            log.debug(f"Starting sample reading")
             while True:
-                sample_queue_event = sample_queue.get()
+                sample_queue_event = await asyncio.get_running_loop().run_in_executor(None, sample_queue.get)
                 if sample_queue_event.done:
                     break
                 self._step_idx += 1
@@ -73,9 +75,9 @@ class RunSession:
                     sample_queue_event.sample,
                 )
 
-            log.debug(f"Sample production is done at step [{self._step_idx}]")
-            trial_runner_worker.join()
-            sample_producer_worker.join()
+            log.debug(f"Sample reading is done at step [{self._step_idx}]")
+            await asyncio.get_running_loop().run_in_executor(None, trial_runner_worker.join)
+            await asyncio.get_running_loop().run_in_executor(None, sample_producer_worker.join)
             log.debug(f"All processes joined")
 
         except RuntimeError as error:

@@ -167,6 +167,7 @@ class DaggerTraining:
         observation = []
         reward = []
 
+        log.debug(f"Creating sample [{sample_producer_session.trial_idx}]")
         async for sample in sample_producer_session.all_trial_samples():
             player_sample = sample.actors_data[player_params.name]
 
@@ -278,7 +279,7 @@ class DaggerTraining:
             teacher_actions = []
 
             # Rollout a bunch of trials to gather expert data
-            for (step_idx, _, trial_idx, sample,) in run_session.start_and_await_trials(
+            async for (step_idx, _, trial_idx, sample,) in run_session.start_and_await_trials(
                 trials_id_and_params=[
                     (f"{run_session.run_id}_{trial_idx}", create_trial_params_gather_expert_data(trial_idx))
                     for trial_idx in range(self._cfg.num_data_gather_trials)
@@ -312,7 +313,7 @@ class DaggerTraining:
 
             # Rollout a bunch of trials to train the student model
             log.info(f"Training students for iteration [{epoch_idx + 1}/{self._cfg.num_epochs}]")
-            for (step_idx, _, trial_idx, sample,) in run_session.start_and_await_trials(
+            async for (step_idx, _, trial_idx, sample,) in run_session.start_and_await_trials(
                 trials_id_and_params=[
                     (f"{run_session.run_id}_{trial_idx}", create_trial_params_imitatation(trial_idx))
                     for trial_idx in range(self._cfg.num_imitation_trials)
