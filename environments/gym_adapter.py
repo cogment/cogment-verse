@@ -16,7 +16,6 @@ import os
 
 import cogment
 import gym
-import numpy as np
 
 from cogment_verse.specs import (
     encode_rendered_frame,
@@ -67,7 +66,6 @@ class Environment:
         ]
         assert len(teacher_actors) <= 1
         has_teacher = len(teacher_actors) == 1
-
         if has_teacher:
             [(teacher_actor_idx, _teacher_actor_name)] = teacher_actors
 
@@ -83,6 +81,7 @@ class Environment:
             rendered_frame = encode_rendered_frame(gym_env.render(), session_cfg.render_width)
 
         environment_session.start([("*", Observation(value=observation_value, rendered_frame=rendered_frame))])
+
         async for event in environment_session.all_events():
             if event.actions:
                 player_action_value = event.actions[player_actor_idx].action.value
@@ -96,14 +95,10 @@ class Environment:
                 gym_action = gym_action_from_action(
                     self.env_specs.action_space, action_value  # pylint: disable=no-member
                 )
-                # Clipped action and send to gym environment
-                if isinstance(self.env_specs.action_space, gym.spaces.Box):
-                    clipped_action = np.clip(gym_action, gym_env.action_space.low, gym_env.action_space.high)
-                else:
-                    clipped_action = gym_action
 
-                gym_observation, reward, done, _ = gym_env.step(clipped_action)
+                gym_observation, reward, done, _info = gym_env.step(gym_action)
                 observation_value = observation_from_gym_observation(gym_env.observation_space, gym_observation)
+
                 rendered_frame = None
                 if session_cfg.render:
                     rendered_frame = encode_rendered_frame(gym_env.render(), session_cfg.render_width)

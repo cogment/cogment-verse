@@ -151,3 +151,5 @@ class Environment:
                 else:
                     # The trial is active
                     environment_session.produce_observations(observations)
+
+        # self.gym_env.close()
