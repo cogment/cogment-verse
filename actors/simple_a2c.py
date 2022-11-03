@@ -12,9 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# pylint disable=C0303
-# pylint disable=W0611
-# pylint disable=W0612
+# pylint: disable=C0303
+# pylint: disable=W0611
+# pylint: disable=W0612
 
 import logging
 
