@@ -12,9 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# pylint: disable=C0303
+# pylint: disable=E0401
+
 import os
-import gym
-import isaacgym
 import isaacgymenvs
 import torch
 import cogment
@@ -83,21 +84,13 @@ class Environment:
 
         session_cfg = environment_session.config
 
-        # gym_env = gym.make(self.gym_env_name)
-        # gym_env = isaacgymenvs.make(
-        #     seed=0,
-        #     task=self.gym_env_name,
-        #     num_envs=1,
-        #     sim_device="cuda:0",
-        #     rl_device="cuda:0",
-        # )
         gym_observation = self.gym_env.reset()
         obs = np.asarray(gym_observation["obs"].cpu())
         observation_value = observation_from_gym_observation(self.gym_env.observation_space, obs)
 
         rendered_frame = None
         if session_cfg.render:
-            rendered_frame = encode_rendered_frame(gym_env.render(mode="rgb_array"), session_cfg.render_width)
+            rendered_frame = encode_rendered_frame(self.gym_env.render(mode="rgb_array"), session_cfg.render_width)
 
         environment_session.start([("*", Observation(value=observation_value, rendered_frame=rendered_frame))])
 

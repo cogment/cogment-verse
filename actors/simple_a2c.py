@@ -12,6 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# pylint disable=C0303
+# pylint disable=W0611
+# pylint disable=W0612
+
 import logging
 
 import cogment
@@ -147,7 +151,7 @@ class SimpleA2CActor:
                 obs_tensor = torch.tensor(
                     flatten(observation_space, event.observation.observation.value), dtype=self._dtype
                 )
-                probs = torch.softmax(model.actor_network(obs_tensor), dim=-1)
+                # probs = torch.softmax(model.actor_network(obs_tensor), dim=-1)
                 # discrete_action_tensor = torch.distributions.Categorical(probs).sample()
                 # action_value = SpaceValue(properties=[SpaceValue.PropertyValue(discrete=discrete_action_tensor.item())])
 
