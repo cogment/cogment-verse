@@ -15,7 +15,7 @@
 import asyncio
 import logging
 import sys
-from hydra.core.hydra_config import HydraConfig  # pylint: disable=abstract-class-instantiated
+from hydra.core.hydra_config import HydraConfig
 
 import cogment
 

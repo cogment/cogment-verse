@@ -102,8 +102,9 @@ class Environment:
                 else:
                     clipped_action = gym_action
 
-                gym_observation, reward, done, _ = gym_env.step(clipped_action)
+                gym_observation, reward, done, _info = gym_env.step(clipped_action)
                 observation_value = observation_from_gym_observation(gym_env.observation_space, gym_observation)
+
                 rendered_frame = None
                 if session_cfg.render:
                     rendered_frame = encode_rendered_frame(gym_env.render(), session_cfg.render_width)
