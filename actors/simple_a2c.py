@@ -26,8 +26,7 @@ from cogment_verse.specs import (
     PLAYER_ACTOR_CLASS,
     PlayerAction,
     SpaceValue,
-    unflatten
-    
+    unflatten,
 )
 from cogment_verse import Model
 
@@ -152,9 +151,9 @@ class SimpleA2CActor:
                 # discrete_action_tensor = torch.distributions.Categorical(probs).sample()
                 # action_value = SpaceValue(properties=[SpaceValue.PropertyValue(discrete=discrete_action_tensor.item())])
 
-                action = torch.rand((1,)+(8,), device="cuda:0")
+                action = torch.rand((1,) + (8,), device="cuda:0")
                 action = action.cpu().numpy()[0]
-                
+
                 action_value = unflatten(action_space, action)
                 actor_session.do_action(PlayerAction(value=action_value))
 
@@ -222,7 +221,7 @@ class SimpleA2CTraining:
 
         assert self._environment_specs.num_players == 1
         assert len(self._environment_specs.action_space.properties) == 1
-        #assert self._environment_specs.action_space.properties[0].WhichOneof("type") == "discrete"
+        # assert self._environment_specs.action_space.properties[0].WhichOneof("type") == "discrete"
 
         model = SimpleA2CModel(
             model_id,
