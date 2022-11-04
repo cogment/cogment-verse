@@ -14,12 +14,10 @@
 
 import logging
 import time
-from dataclasses import dataclass
-from typing import List, Tuple, Union
+from typing import Tuple
 
 import cogment
 import numpy as np
-from tomlkit import value
 import torch
 from torch.distributions.normal import Normal
 
@@ -36,7 +34,9 @@ from cogment_verse.specs import (
     flatten,
     flattened_dimensions,
     unflatten,
+    get_action_bounds,
 )
+from debug.mp_pdb import ForkedPdb
 
 torch.multiprocessing.set_sharing_strategy("file_system")
 
@@ -112,18 +112,18 @@ class ValueNetwork(torch.nn.Module):
 
     def forward(self, action_state: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         # Value network
-        x_v = self.input(action_state)
+        x_v = self.input_v(action_state)
         x_v = torch.tanh(x_v)
-        x_v = self.fully_connected(x_v)
+        x_v = self.fully_connected_v(x_v)
         x_v = torch.tanh(x_v)
-        value = self.output(x_v)
+        value = self.output_v(x_v)
 
-        # Tarbet net
-        x_t = self.input(action_state)
+        # Target net
+        x_t = self.input_t(action_state)
         x_t = torch.tanh(x_t)
-        x_t = self.fully_connected(x_t)
+        x_t = self.fully_connected_t(x_t)
         x_t = torch.tanh(x_t)
-        target = self.output(x_t)
+        target = self.output_t(x_t)
 
         return value, target
 
@@ -141,7 +141,7 @@ class SACModel(Model):
 
     target_entropy: torch.Tensor
     log_alpha: torch.Tensor
-    alpha_optimizer: torch.optim.Optimizer
+    # alpha_optimizer: torch.optim.Optimizer
 
     def __init__(
         self,
@@ -164,7 +164,7 @@ class SACModel(Model):
         self.num_outputs = num_outputs
         self.policy_network_hidden_nodes = policy_network_hidden_nodes
         self.value_network_hidden_nodes = value_network_hidden_nodes
-        self.alpha = torch.tensor(alpha, dtype=dtype)
+        self.alpha = alpha
         self.learning_rate = learning_rate
         self.dtype = dtype
         self.version_number = version_number
@@ -173,12 +173,12 @@ class SACModel(Model):
         self.policy_network = PolicyNetwork(
             num_input=self.num_inputs, num_hidden=self.policy_network_hidden_nodes, num_output=self.num_outputs
         ).to(self.device)
-        self.value_network = ValueNetwork(num_input=num_inputs, num_hidden=self.value_network_hidden_nodes).to(
-            self.device
-        )
-        self.target_network = ValueNetwork(num_input=num_inputs, num_hidden=self.value_network_hidden_nodes).to(
-            self.device
-        )
+        self.value_network = ValueNetwork(
+            num_input=self.num_inputs + self.num_outputs, num_hidden=self.value_network_hidden_nodes
+        ).to(self.device)
+        self.target_network = ValueNetwork(
+            num_input=self.num_inputs + self.num_outputs, num_hidden=self.value_network_hidden_nodes
+        ).to(self.device)
 
         # Intialize networks's parameters
         self.policy_network.apply(initialize_weight)
@@ -190,11 +190,11 @@ class SACModel(Model):
 
         # Learnable alpha
         if is_alpha_learnable:
-            self.target_entropy = -torch.float(self.num_outputs, dtype=self.dtype)
+            self.target_entropy = -float(self.num_outputs)
             self.log_alpha = (torch.ones(1, dtype=self.dtype, device=self.device) * (-1.0)).requires_grad_(True)
-            self.alpha_optimzer = torch.optim.Adam([self.log_alpha], lr=learning_rate)
+            self.alpha_optimizer = torch.optim.Adam([self.log_alpha], lr=learning_rate)
         else:
-            self.log_alpha = torch.log(self.alpha)
+            self.log_alpha = torch.log((torch.ones(1, dtype=self.dtype, device=self.device)) * self.alpha)
 
         # Learning schedule
         self.policy_scheduler = torch.optim.lr_scheduler.ExponentialLR(self.policy_optimizer, gamma=0.99)
@@ -259,11 +259,38 @@ class SACModel(Model):
         model.total_samples = version_user_data["total_samples"]
         return model
 
+    def policy_sampler(
+        self, observation: torch.Tensor, scale: torch.Tensor, bias: torch.Tensor, reparam: bool = False
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        """Get action and log-likelihood"""
+        dist, mean, std = self.policy_network(observation)
+
+        # Reparametrization trick
+        if reparam:
+            action = dist.rsample()
+        else:
+            action = dist.sample()
+
+        # Transform to tanh space
+        action_transform = torch.tanh(action)
+        mean_transform = torch.tanh(mean) * scale + bias
+
+        # Rescale
+        action = action_transform * scale + bias
+
+        # Log-likelihood in transform space
+        log_prob = dist.log_prob(action)
+        log_prob_transform = torch.log(scale * (1 - action_transform**2) + 1e-6)
+        log_prob -= log_prob_transform
+        log_prob = log_prob.sum(1, keepdim=True)
+
+        return action, log_prob, mean_transform
+
 
 class SACActor:
     """Soft actor critic actor"""
 
-    def __init__(self):
+    def __init__(self, _cfg):
         self._dtype = torch.float
 
     def get_actor_classes(self):
@@ -277,6 +304,9 @@ class SACActor:
         assert config.environment_specs.num_players == 1
         assert len(config.environment_specs.action_space.properties) == 1
         assert config.environment_specs.action_space.properties[0].WhichOneof("type") == "box"
+        action_min, action_max = get_action_bounds(config.environment_specs.action_space)
+        scale = torch.tensor((action_max - action_min) / 2.0, dtype=self._dtype)
+        bias = torch.tensor((action_max + action_min) / 2.0, dtype=self._dtype)
 
         # Get observation and action space
         observation_space = config.environment_specs.observation_space
@@ -293,18 +323,10 @@ class SACActor:
                     flatten(observation_space, event.observation.observation.value), dtype=self._dtype
                 ).view(1, -1)
 
-                # Normalize the observation
-                if model.state_normalization is not None:
-                    obs_tensor = torch.clamp(
-                        (obs_tensor - model.state_normalization.mean) / (model.state_normalization.var + 1e-8) ** 0.5,
-                        min=-10,
-                        max=10,
-                    )
-
                 # Get action from policy network
                 with torch.no_grad():
-                    dist, _ = model.policy_network(obs_tensor)
-                    action = dist.sample().cpu().numpy()[0]
+                    action, _, _ = model.policy_sampler(observation=obs_tensor, scale=scale, bias=bias)
+                    action = action.cpu().numpy()[0]
 
                 # Send action to environment
                 action_value = unflatten(action_space, action)
@@ -323,16 +345,19 @@ class SACTraining:
         "discount_factor": 0.99,
         "entropy_loss_coef": 0.05,
         "value_loss_coef": 0.5,
-        "action_loss_coef": 1.0,
-        "clipping_coef": 0.1,
         "learning_rate": 3e-4,
         "batch_size": 64,
-        "num_steps": 2048,
-        "lambda_gae": 0.95,
+        "grad_norm": 0.5,
+        "is_alpha_learnable": False,
+        "alpha": 0.1,
+        "buffer_size": 100_000,
+        "learning_starts": 64,
         "device": "cpu",
         "policy_network": {"num_hidden_nodes": 64},
         "value_network": {"num_hidden_nodes": 64},
     }
+    action_scale: torch.Tensor
+    action_bias: torch.Tensor
 
     def __init__(self, environment_specs: EnvironmentSpecs, cfg: EnvironmentConfig) -> None:
         super().__init__()
@@ -342,6 +367,9 @@ class SACTraining:
         self._device = torch.device(self._cfg.device)
         self._rng = np.random.default_rng(self._cfg.seed)
         self.returns = 0
+        action_min, action_max = get_action_bounds(self._environment_specs.action_space)
+        self.action_scale = torch.tensor((action_max - action_min) / 2.0, dtype=self._dtype)
+        self.action_bias = torch.tensor((action_max + action_min) / 2.0, dtype=self._dtype)
 
         self.model = SACModel(
             model_id="",
@@ -351,6 +379,8 @@ class SACTraining:
             learning_rate=self._cfg.learning_rate,
             policy_network_hidden_nodes=self._cfg.policy_network.num_hidden_nodes,
             value_network_hidden_nodes=self._cfg.value_network.num_hidden_nodes,
+            alpha=self._cfg.alpha,
+            is_alpha_learnable=self._cfg.is_alpha_learnable,
             dtype=self._dtype,
         )
 
@@ -396,7 +426,7 @@ class SACTraining:
 
             observation = next_observation
             action = torch.tensor(flatten(player_action_space, actor_sample.action.value), dtype=self._dtype)
-            reward = torch.tensor(actor_sample.reward if actor_sample.reward is not None else 0, dtype=self._dtype)
+            reward = torch.tensor([actor_sample.reward] if actor_sample.reward is not None else 0, dtype=self._dtype)
             total_reward += reward.item()
 
     async def impl(self, run_session: RunSession) -> dict:
@@ -419,22 +449,22 @@ class SACTraining:
             capacity=self._cfg.buffer_size,
             observation_shape=(flattened_dimensions(self._environment_specs.observation_space),),
             observation_dtype=self._dtype,
-            action_shape=(1,),
+            action_shape=(flattened_dimensions(self._environment_specs.action_space),),
             action_dtype=torch.int64,
             reward_dtype=self._dtype,
             seed=self._cfg.seed,
         )
 
         start_time = time.time()
-        total_reward_cum = 0
+        total_reward_acc = 0
 
         # Helper function to create a trial configuration
-        def create_trial_params(trial_idx: int, iter_idx: int):
+        def create_trial_params(trial_idx: int):
             agent_actor_params = cogment.ActorParameters(
                 cog_settings,
                 name="player",
                 class_name=PLAYER_ACTOR_CLASS,
-                implementation="actors.ppo.SACActor",
+                implementation="actors.sac.SACActor",
                 config=AgentConfig(
                     run_id=run_session.run_id,
                     environment_specs=self._environment_specs,
@@ -450,78 +480,97 @@ class SACTraining:
                 environment_config=EnvironmentConfig(
                     run_id=run_session.run_id,
                     render=False,
-                    seed=self._cfg.seed + trial_idx + iter_idx * self._cfg.epoch_num_trials,
+                    seed=self._cfg.seed + trial_idx,
                 ),
                 actors=[agent_actor_params],
             )
 
         # Run environment
-        for iter_idx in range(self._cfg.num_iter):
-            for (_, _, trial_idx, sample) in run_session.start_and_await_trials(
-                trials_id_and_params=[
-                    (f"{run_session.run_id}_{iter_idx}_{trial_idx}", create_trial_params(trial_idx, iter_idx))
-                    for trial_idx in range(self._cfg.epoch_num_trials)
-                ],
-                sample_producer_impl=self.trial_sample_sequences_producer_impl,
-                num_parallel_trials=self._cfg.num_parallel_trials,
-            ):
-                # Collect the rollout
-                (observation, next_observation, action, reward, done, total_reward) = sample
-                replay_buffer.add(
-                    observation=observation, next_observation=next_observation, action=action, reward=reward, done=done
-                )
+        for (step_idx, _, trial_idx, sample) in run_session.start_and_await_trials(
+            trials_id_and_params=[
+                (f"{run_session.run_id}_{trial_idx}", create_trial_params(trial_idx))
+                for trial_idx in range(self._cfg.epoch_num_trials)
+            ],
+            sample_producer_impl=self.trial_sample_sequences_producer_impl,
+            num_parallel_trials=self._cfg.num_parallel_trials,
+        ):
+            # Collect the rollout
+            (observation, next_observation, action, reward, done, total_reward) = sample
+            replay_buffer.add(
+                observation=observation, next_observation=next_observation, action=action, reward=reward, done=done
+            )
 
-                trial_done = done.item() == 1
+            trial_done = done.item() == 1
 
-                if trial_done:
-                    run_session.log_metrics(trial_idx=trial_idx, total_reward=total_reward)
-                    total_reward_cum += total_reward
-                    if (trial_idx + 1) % 100 == 0:
-                        total_reward_avg = total_reward_cum / 100
-                        run_session.log_metrics(total_reward_avg=total_reward_avg)
-                        total_reward_cum = 0
-                        log.info(
-                            f"[SAC/{run_session.run_id}] trial #{trial_idx + 1}/{self._cfg.num_trials} done (average total reward = {total_reward_avg})."
-                        )
+            if trial_done:
+                run_session.log_metrics(trial_idx=trial_idx, total_reward=total_reward)
+                total_reward_acc += total_reward
+                if (trial_idx + 1) % 100 == 0:
+                    total_reward_avg = total_reward_acc / 100
+                    run_session.log_metrics(total_reward_avg=total_reward_avg)
+                    total_reward_acc = 0
+                    log.info(f"[SAC/{run_session.run_id}] | average total reward: {total_reward_avg: .3f}")
 
-                # TODO: Training steps
+            # Training steps
+            if step_idx > self._cfg.learning_starts and replay_buffer.size() > self._cfg.batch_size:
+                data = replay_buffer.sample(self._cfg.batch_size)
+                policy_loss, value_loss, log_alpha = await self.train_step(data=data)
+                # log.info(
+                #     f"[SAC/{run_session.run_id}] policy loss: {policy_loss: .3f} | value loss: {value_loss: .3f}"
+                # )
 
-    async def train_step(self, data: TorchReplayBufferSample) -> None:
+                # Publish model
+                version_info = await run_session.model_registry.publish_version(self.model)
+
+                if step_idx % 100 == 0:
+                    end_time = time.time()
+                    steps_per_seconds = 100 / (end_time - start_time)
+                    start_time = end_time
+                    run_session.log_metrics(
+                        model_version_number=version_info["version_number"],
+                        value_loss=value_loss,
+                        log_alpha=log_alpha,
+                        policy_loss=policy_loss,
+                        steps_per_seconds=steps_per_seconds,
+                    )
+        version_info = await run_session.model_registry.publish_version(self.model, archived=True)
+
+    async def train_step(self, data: TorchReplayBufferSample) -> Tuple[float, float]:
         """Train the model after collecting the data from the trial"""
 
         # Current action
-        action_reparam, action_log_prob_reparam, _ = self.policy_sampler(data.observation, reparam=True)
+        action_reparam, action_log_prob_reparam, _ = self.model.policy_sampler(
+            observation=data.observation, scale=self.action_scale, bias=self.action_bias, reparam=True
+        )
         alpha = torch.exp(self.model.log_alpha).detach()
-
-        if self._cfg.is_alpha_learnable:
-            alpha_loss = -(self.model.log_alpha * (action_log_prob_reparam + self.model.target_entropy)).detach().mean()
-            self.model.alpha_optimizer(alpha_loss)
-            alpha_clone = self.model.alpha.clone()
-        else:
-            alpha_loss = torch.tensor(0.0).to(self.model.device)
-            alpha_clone = torch.tensor(self.model.alpha)
-
         with torch.no_grad():
             # TODO: To be completed
-            next_action, next_action_log_prob, _ = self.policy_sampler(data.next_observation)
-            action_state = torch.cat([next_action, data.next_observation], 1)
-            next_value, next_target = self.target(action_state)
+            next_action, next_action_log_prob, _ = self.model.policy_sampler(
+                observation=data.next_observation,
+                scale=self.action_scale,
+                bias=self.action_bias,
+            )
+            action_observation = torch.cat((next_action, data.next_observation), 1)
+            next_value, next_target = self.model.target_network(action_observation)
             min_value = torch.min(next_value, next_target) - alpha * next_action_log_prob
-            return_ = data.reward + (1 - data.done) * self._cfg.gamma * min_value
+            return_ = (
+                data.reward.reshape(-1, self._cfg.batch_size).T
+                + (1 - data.done.reshape(-1, self._cfg.batch_size).T) * self._cfg.discount_factor * min_value
+            )
 
         # Optimize value network
-        value_1, value_2 = self.model.value(torch.cat(data.action, data.next_observation), 1)
+        value_1, value_2 = self.model.value_network(torch.cat((data.action, data.next_observation), 1))
         value_loss_1 = torch.nn.functional.mse_loss(value_1, return_)
         value_loss_2 = torch.nn.functional.mse_loss(value_2, return_)
-        value_loss = (value_loss_1 + value_loss_2) * self._cfg.value_loss_coef
+        value_loss = (value_loss_1 + value_loss_2) 
         self.model.value_optimizer.zero_grad()
         value_loss.backward()
         torch.nn.utils.clip_grad_norm_(self.model.value_network.parameters(), self._cfg.grad_norm)
         self.model.value_optimizer.step()
 
         # Optimize policy network
-        value_reparam_1, value_reparam_2 = self.model.value_network(torch.cat(action_reparam, data.observation, 1))
-        min_value_reparam = torch.min(value_reparam_1, value_reparam_2) * self._cfg.value_loss_coef
+        value_reparam_1, value_reparam_2 = self.model.value_network(torch.cat((action_reparam, data.observation), 1))
+        min_value_reparam = torch.min(value_reparam_1, value_reparam_2)
         policy_loss = (alpha * action_log_prob_reparam - min_value_reparam).mean()
         self.model.policy_optimizer.zero_grad()
         policy_loss.backward()
@@ -531,32 +580,17 @@ class SACTraining:
         # Update target network using soft update
         self.soft_update(target=self.model.target_network, value=self.model.value_network, tau=self._cfg.tau)
 
-    def policy_sampler(
-        self, state: torch.Tensor, scale: float, bias: float, reparam: bool = False
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
-        """Get action and log-likelihood"""
-        dist, mean, std = self.model.policy_network(state)
-
-        # Reparametrization trick
-        if reparam:
-            action = dist.rsample()
+        if self._cfg.is_alpha_learnable:
+            alpha_loss = -(self.model.log_alpha * (action_log_prob_reparam + self.model.target_entropy).detach()).mean()
+            self.model.alpha_optimizer.zero_grad()
+            alpha_loss.backward()
+            self.model.alpha_optimizer.step()
+            log_alpha_clone = self.model.log_alpha.clone()
         else:
-            action = dist.sample()
+            alpha_loss = torch.tensor(0.0).to(self.model.device)
+            log_alpha_clone = self.model.log_alpha.clone()
 
-        # Transform to tanh space
-        action_transform = torch.tanh(action)
-        mean_transform = torch.tanh(mean) * scale + bias
-
-        # Rescale
-        action = action_transform * scale + bias
-
-        # Log-likelihood in transform space
-        log_prob = dist.log_prob(action)
-        log_prob_transform = torch.log(scale * (1 - action_transform**2) + 1e-6)
-        log_prob -= log_prob_transform
-        log_prob = log_prob.sum(1, keepdim=True)
-
-        return action, log_prob, mean_transform
+        return value_loss.item(), policy_loss.item(), log_alpha_clone.item()
 
     @staticmethod
     def hard_update(target: torch.nn.Module, value: torch.nn.Module):

@@ -11,13 +11,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from typing import Tuple
 
 import numpy as np
-
 from data_pb2 import Space, SpaceMask, SpaceValue  # pylint: disable=import-error
 
+from .ndarray import create_one_hot_ndarray, deserialize_ndarray, serialize_ndarray
 from .value import create_space_values
-from .ndarray import deserialize_ndarray, serialize_ndarray, create_one_hot_ndarray
 
 
 def space_prop_flattened_dimensions(prop):
@@ -119,3 +119,16 @@ def flatten_mask(space, mask):
     assert isinstance(mask, SpaceMask)
 
     return np.concatenate([flatten_mask_prop(space, mask, prop_idx) for prop_idx in range(len(space.properties))])
+
+
+def get_action_bounds(action_space: Space) -> Tuple[np.ndarray, np.ndarray]:
+    """Get max and min values for gym action"""
+    action_min = []
+    action_max = []
+    for prop in action_space.properties:
+        min_value = [low.bound for low in prop.box.low]
+        max_value = [high.bound for high in prop.box.high]
+        action_min.append(min_value)
+        action_max.append(max_value)
+
+    return (np.hstack(action_min), np.hstack(action_max))
