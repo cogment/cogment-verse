@@ -1,0 +1,3 @@
+sac:
+  class_name: actors.sac.SACActor
+  port: ${generate_port:actors.sac.SACActor}

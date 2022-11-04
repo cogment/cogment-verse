@@ -36,7 +36,7 @@ from .environment_specs import save_environment_specs, load_environment_specs
 from .encode_rendered_frame import encode_rendered_frame
 from .ndarray import deserialize_ndarray, serialize_ndarray
 from .sample_space import sample_space
-from .flatten import flattened_dimensions, flatten, unflatten, flatten_mask
+from .flatten import flattened_dimensions, flatten, unflatten, flatten_mask, get_action_bounds
 from .gym_spaces_adapter import (
     gym_action_from_action,
     gym_space_from_space,
