@@ -151,14 +151,18 @@ class SimpleA2CActor:
                 obs_tensor = torch.tensor(
                     flatten(observation_space, event.observation.observation.value), dtype=self._dtype
                 )
-                # probs = torch.softmax(model.actor_network(obs_tensor), dim=-1)
-                # discrete_action_tensor = torch.distributions.Categorical(probs).sample()
-                # action_value = SpaceValue(properties=[SpaceValue.PropertyValue(discrete=discrete_action_tensor.item())])
+                if self._environment_specs.action_space.properties[0].WhichOneof("type") == "discrete":
+                    probs = torch.softmax(model.actor_network(obs_tensor), dim=-1)
+                    discrete_action_tensor = torch.distributions.Categorical(probs).sample()
+                    action_value = SpaceValue(
+                        properties=[SpaceValue.PropertyValue(discrete=discrete_action_tensor.item())]
+                    )
 
-                action = torch.rand((1,) + (8,), device="cuda:0")
-                action = action.cpu().numpy()[0]
+                else:
+                    action = torch.rand((1,) + (8,), device="cuda:0")
+                    action = action.cpu().numpy()[0]
+                    action_value = unflatten(action_space, action)
 
-                action_value = unflatten(action_space, action)
                 actor_session.do_action(PlayerAction(value=action_value))
 
 
