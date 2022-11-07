@@ -1,0 +1,22 @@
+# @package _global_
+defaults:
+  - override /services/actor:
+      - simple_a2c
+  - override /run: headless_play
+  - override /services/environment: ant
+
+run:
+  class_name: actors.simple_a2c.SimpleA2CTraining
+  seed: 618
+  num_epochs: 500
+  epoch_num_trials: 10
+  num_parallel_trials: 1
+  learning_rate: 0.01
+  actor_network:
+    num_hidden_nodes: 32
+  critic_network:
+    num_hidden_nodes: 32
+  discount_factor: 0.95
+  entropy_loss_coef: 0.05
+  value_loss_coef: 1.0
+  action_loss_coef: 0.1

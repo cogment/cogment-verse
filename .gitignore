@@ -25,6 +25,7 @@ node_modules/
 # Runtime data
 /data
 /debug
+/isaacgym
 
 # Cogment
 /.cogment_verse
