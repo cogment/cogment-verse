@@ -19,7 +19,7 @@ from subprocess import check_call
 
 def main():
     parser = argparse.ArgumentParser(description="Start a simple mlflow server")
-    parser.add_argument("port", type=int, default=6969, nargs="?", help="TCP port (optional, default is 3000)")
+    parser.add_argument("port", type=int, default=3000, nargs="?", help="TCP port (optional, default is 3000)")
     args = parser.parse_args()
 
     mlflow_data_dir = os.path.join(os.path.dirname(__file__), ".cogment_verse/mlflow")

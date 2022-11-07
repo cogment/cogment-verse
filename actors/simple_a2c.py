@@ -21,19 +21,18 @@ import logging
 import cogment
 import torch
 
+from cogment_verse import Model
 from cogment_verse.specs import (
-    AgentConfig,
-    cog_settings,
-    EnvironmentConfig,
-    flatten,
-    flattened_dimensions,
     PLAYER_ACTOR_CLASS,
+    AgentConfig,
+    EnvironmentConfig,
     PlayerAction,
     SpaceValue,
+    cog_settings,
+    flatten,
+    flattened_dimensions,
     unflatten,
 )
-from cogment_verse import Model
-
 
 torch.multiprocessing.set_sharing_strategy("file_system")
 
@@ -159,7 +158,7 @@ class SimpleA2CActor:
                     )
 
                 else:
-                    action = torch.rand((1,) + (8,))
+                    action = torch.rand((1,) + (action_space.properties[0].box.shape[0],))
                     action = action.cpu().numpy()[0]
                     action_value = unflatten(action_space, action)
 
