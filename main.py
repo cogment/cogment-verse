@@ -14,14 +14,14 @@
 
 import logging
 import os
-
+import multiprocessing as mp
 import hydra
 
 import cogment_verse
 
 log = logging.getLogger(__name__)
 
-# pylint: disable=C0209
+
 @hydra.main(version_base=None, config_path="config", config_name="config")
 def main(cfg):
     work_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".cogment_verse"))
@@ -32,4 +32,5 @@ def main(cfg):
 
 
 if __name__ == "__main__":
+    mp.set_start_method("spawn")
     main()
