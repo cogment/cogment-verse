@@ -151,7 +151,7 @@ class SimpleA2CActor:
                 obs_tensor = torch.tensor(
                     flatten(observation_space, event.observation.observation.value), dtype=self._dtype
                 )
-                if self._environment_specs.action_space.properties[0].WhichOneof("type") == "discrete":
+                if config.environment_specs.action_space.properties[0].WhichOneof("type") == "discrete":
                     probs = torch.softmax(model.actor_network(obs_tensor), dim=-1)
                     discrete_action_tensor = torch.distributions.Categorical(probs).sample()
                     action_value = SpaceValue(
