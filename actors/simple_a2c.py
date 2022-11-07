@@ -159,7 +159,7 @@ class SimpleA2CActor:
                     )
 
                 else:
-                    action = torch.rand((1,) + (8,), device="cuda:0")
+                    action = torch.rand((1,) + (8,))
                     action = action.cpu().numpy()[0]
                     action_value = unflatten(action_space, action)
 
