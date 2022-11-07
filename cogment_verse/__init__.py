@@ -14,3 +14,4 @@
 
 from .app import App
 from .model_registry import Model
+from .replay_buffers import TorchReplayBuffer
