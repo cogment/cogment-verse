@@ -20,6 +20,7 @@
 # pylint: disable=R0402
 # pylint: disable=W0612
 # pylint: disable=W0611
+# pylint: disable=E0611
 
 import logging
 import copy
