@@ -12,10 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
+# pylint: disable=C0303
+# pylint: disable=E0401
 
+import os
+import isaacgymenvs
+import torch
 import cogment
-import gym
 import numpy as np
 
 from cogment_verse.specs import (
@@ -34,14 +37,23 @@ os.environ["SDL_VIDEODRIVER"] = "dummy"
 
 class Environment:
     def __init__(self, cfg):
+        print("cfg = ", cfg)
         self.gym_env_name = cfg.env_name
+        print("self.gym_env_name = ", self.gym_env_name)
 
-        gym_env = gym.make(self.gym_env_name)
+        # gym_env = gym.make(self.gym_env_name)
+        self.gym_env = isaacgymenvs.make(
+            seed=0,
+            task=self.gym_env_name,
+            num_envs=1,
+            sim_device="cuda:0",
+            rl_device="cuda:0",
+        )
         self.env_specs = EnvironmentSpecs(
             num_players=1,
             turn_based=False,
-            observation_space=space_from_gym_space(gym_env.observation_space),
-            action_space=space_from_gym_space(gym_env.action_space),
+            observation_space=space_from_gym_space(self.gym_env.observation_space),
+            action_space=space_from_gym_space(self.gym_env.action_space),
         )
 
     def get_implementation_name(self):
@@ -67,22 +79,21 @@ class Environment:
         ]
         assert len(teacher_actors) <= 1
         has_teacher = len(teacher_actors) == 1
-
         if has_teacher:
             [(teacher_actor_idx, _teacher_actor_name)] = teacher_actors
 
         session_cfg = environment_session.config
 
-        gym_env = gym.make(self.gym_env_name, render_mode="single_rgb_array" if session_cfg.render else None)
-
-        gym_observation, _info = gym_env.reset(seed=session_cfg.seed, return_info=True)
-        observation_value = observation_from_gym_observation(gym_env.observation_space, gym_observation)
+        gym_observation = self.gym_env.reset()
+        obs = np.asarray(gym_observation["obs"].cpu())
+        observation_value = observation_from_gym_observation(self.gym_env.observation_space, obs)
 
         rendered_frame = None
         if session_cfg.render:
-            rendered_frame = encode_rendered_frame(gym_env.render(), session_cfg.render_width)
+            rendered_frame = encode_rendered_frame(self.gym_env.render(mode="rgb_array"), session_cfg.render_width)
 
         environment_session.start([("*", Observation(value=observation_value, rendered_frame=rendered_frame))])
+
         async for event in environment_session.all_events():
             if event.actions:
                 player_action_value = event.actions[player_actor_idx].action.value
@@ -96,18 +107,16 @@ class Environment:
                 gym_action = gym_action_from_action(
                     self.env_specs.action_space, action_value  # pylint: disable=no-member
                 )
-                # Clipped action and send to gym environment
-                if isinstance(self.env_specs.action_space, gym.spaces.Box):
-                    clipped_action = np.clip(gym_action, gym_env.action_space.low, gym_env.action_space.high)
-                else:
-                    clipped_action = gym_action
-
-                gym_observation, reward, done, _info = gym_env.step(clipped_action)
-                observation_value = observation_from_gym_observation(gym_env.observation_space, gym_observation)
+                gym_action_tensor = torch.tensor(gym_action, device="cuda:0").view(-1, 8)
+                gym_observation, reward, done, _info = self.gym_env.step(gym_action_tensor)
+                obs = np.asarray(gym_observation["obs"].cpu())
+                observation_value = observation_from_gym_observation(self.gym_env.observation_space, obs)
 
                 rendered_frame = None
                 if session_cfg.render:
-                    rendered_frame = encode_rendered_frame(gym_env.render(), session_cfg.render_width)
+                    rendered_frame = encode_rendered_frame(
+                        self.gym_env.render(mode="rgb_array"), session_cfg.render_width
+                    )
 
                 observations = [
                     (
@@ -137,4 +146,4 @@ class Environment:
                     # The trial is active
                     environment_session.produce_observations(observations)
 
-        gym_env.close()
+        # self.gym_env.close()

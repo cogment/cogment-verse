@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# pylint: disable=E0611
+
 import logging
 import copy
 import time
@@ -38,7 +40,7 @@ from cogment_verse.specs import (
     HUMAN_ACTOR_IMPL,
 )
 
-from cogment_verse import Model, TorchReplayBuffer
+from cogment_verse import Model, TorchReplayBuffer  # pylint: disable=abstract-class-instantiated
 
 torch.multiprocessing.set_sharing_strategy("file_system")
 
@@ -66,7 +68,7 @@ class SimpleDQNModel(Model):
         dtype=torch.float,
         version_number=0,
     ):
-        super().__init__(model_id, version_number)
+        super().__init__()
         self._dtype = dtype
         self._environment_implementation = environment_implementation
         self._num_input = num_input

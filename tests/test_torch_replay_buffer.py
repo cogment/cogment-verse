@@ -12,7 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from cogment_verse import TorchReplayBuffer
+# pylint: disable=missing-function-docstring
+# pylint: disable=E0611
+from cogment_verse import TorchReplayBuffer  # pylint: disable=abstract-class-instantiated
 
 
 def test_torch_replay_buffer():
