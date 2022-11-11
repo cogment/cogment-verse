@@ -18,6 +18,7 @@ import cogment
 from cogment.environment import EnvironmentSession
 import gym
 import numpy as np
+from debug.mp_pdb import ForkedPdb
 
 from cogment_verse.specs import (
     EnvironmentSpecs,
