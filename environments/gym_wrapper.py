@@ -15,21 +15,19 @@
 import os
 
 import cogment
-from cogment.environment import EnvironmentSession
 import gym
 import numpy as np
-from debug.mp_pdb import ForkedPdb
+from cogment.environment import EnvironmentSession
 
+from cogment_verse.constants import PLAYER_ACTOR_CLASS
 from cogment_verse.specs import (
     EnvironmentSpecs,
     Observation,
+    encode_rendered_frame,
     gym_action_from_action,
     observation_from_gym_observation,
     space_from_gym_space,
-    encode_rendered_frame,
 )
-
-from cogment_verse.constants import PLAYER_ACTOR_CLASS
 
 # configure pygame to use a dummy video server to be able to render headlessly
 os.environ["SDL_VIDEODRIVER"] = "dummy"
@@ -69,7 +67,7 @@ class Environment:
 
         # Reset environment
         session_cfg = environment_session.config
-        gym_observation, _ = self.gym_env.reset(seed=session_cfg.seed, return_info=True)
+        gym_observation = self.gym_env.reset(seed=session_cfg.seed)
         observation_value = observation_from_gym_observation(self.gym_env.observation_space, gym_observation)
 
         rendered_frame = None
@@ -77,6 +75,7 @@ class Environment:
             rendered_frame = encode_rendered_frame(self.gym_env.render(mode="rgb_array"), session_cfg.render_width)
 
         environment_session.start([("*", Observation(value=observation_value, rendered_frame=rendered_frame))])
+        count = 1
         async for event in environment_session.all_events():
             if event.actions:
                 # Get action from actor through orchestrator
@@ -109,6 +108,7 @@ class Environment:
                 if reward is not None:
                     environment_session.add_reward(value=reward, confidence=1.0, to=[player_actor_name])
 
+                count += 1
                 if done:
                     environment_session.end(observations)
                 elif event.type != cogment.EventType.ACTIVE:

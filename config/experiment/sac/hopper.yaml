@@ -6,24 +6,22 @@ defaults:
 
 run:
   class_name: actors.sac.SACTraining
-  seed: 10
-  num_trials: 10_000
-  num_epochs: 10
-  num_iter: 5000
-  epoch_num_trials: 1000
+  seed: 1
+  num_trials: 100_000
   num_parallel_trials: 1
   discount_factor: 0.99
   entropy_loss_coef: 0.05
   value_loss_coef: 0.5
-  learning_rate: 3e-4
-  batch_size: 64
+  learning_rate: 4e-4
+  batch_size: 128
   grad_norm: 0.5
-  is_alpha_learnable: False
-  alpha: 0.2
-  tau: 0.005
-  buffer_size: 100_000
-  learning_starts: 1000
+  is_alpha_learnable: True
+  alpha: 0.3
+  tau: 0.01
+  buffer_size: 1_000_000
+  learning_starts: 5000
   device: cpu
+  delay_steps: 2
   policy_network:
     num_hidden_nodes: 256
   value_network:
