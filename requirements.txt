@@ -1,7 +1,7 @@
 cogment[generate]==2.2.2
 grpcio==1.43.0
 hydra-core==1.2.0
-mlflow==1.26.1
+mlflow~=1.30.0
 names_generator~=0.1.0
 opencv-python~=4.5.5
 PyYAML~=5.3.1

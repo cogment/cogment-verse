@@ -35,7 +35,6 @@ from cogment_verse.specs import (
     flattened_dimensions,
     unflatten,
 )
-import time
 
 torch.multiprocessing.set_sharing_strategy("file_system")
 
