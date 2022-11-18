@@ -12,11 +12,12 @@ run:
   discount_factor: 0.99
   entropy_loss_coef: 0.05
   value_loss_coef: 0.5
-  learning_rate: 4e-4
+  policy_learning_rate: 3e-4
+  value_learning_rate: 8e-4
   batch_size: 128
   grad_norm: 0.5
-  is_alpha_learnable: True
-  alpha: 0.3
+  is_alpha_learnable: False
+  alpha: 0.2
   tau: 0.01
   buffer_size: 1_000_000
   learning_starts: 5000

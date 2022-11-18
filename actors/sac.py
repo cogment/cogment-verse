@@ -115,7 +115,8 @@ class SACModel(Model):
         policy_network_hidden_nodes: int,
         value_network_hidden_nodes: int,
         alpha: float,
-        learning_rate: float = 0.01,
+        policy_learning_rate: float = 0.01,
+        value_learning_rate: float = 0.01,
         dtype: torch.FloatTensor = torch.float32,
         version_number: int = 0,
         is_alpha_learnable: bool = True,
@@ -129,7 +130,8 @@ class SACModel(Model):
         self.policy_network_hidden_nodes = policy_network_hidden_nodes
         self.value_network_hidden_nodes = value_network_hidden_nodes
         self.alpha = alpha
-        self.learning_rate = learning_rate
+        self.policy_learning_rate = policy_learning_rate
+        self.value_learning_rate = value_learning_rate
         self.dtype = dtype
         self.version_number = version_number
         self.device = device
@@ -159,15 +161,15 @@ class SACModel(Model):
         self.target_network_2.load_state_dict(self.value_network_2.state_dict())
 
         # Get optimizer for two models
-        self.policy_optimizer = torch.optim.Adam(self.policy_network.parameters(), lr=learning_rate)
-        self.value_optimizer_1 = torch.optim.Adam(self.value_network_1.parameters(), lr=learning_rate)
-        self.value_optimizer_2 = torch.optim.Adam(self.value_network_2.parameters(), lr=learning_rate)
+        self.policy_optimizer = torch.optim.Adam(self.policy_network.parameters(), lr=self.policy_learning_rate)
+        self.value_optimizer_1 = torch.optim.Adam(self.value_network_1.parameters(), lr=self.value_learning_rate)
+        self.value_optimizer_2 = torch.optim.Adam(self.value_network_2.parameters(), lr=self.value_learning_rate)
 
         # Learnable alpha
         if is_alpha_learnable:
             self.target_entropy = -torch.tensor(float(self.num_outputs)).to(self.device).item()
             self.log_alpha = (torch.zeros(1, dtype=self.dtype, device=self.device)).requires_grad_(True)
-            self.alpha_optimizer = torch.optim.Adam([self.log_alpha], lr=learning_rate)
+            self.alpha_optimizer = torch.optim.Adam([self.log_alpha], lr=self.value_learning_rate)
         else:
             self.log_alpha = torch.log(torch.ones(1, dtype=self.dtype, device=self.device) * self.alpha)
 
@@ -325,7 +327,8 @@ class SACTraining:
         "discount_factor": 0.99,
         "entropy_loss_coef": 0.05,
         "value_loss_coef": 0.5,
-        "learning_rate": 3e-4,
+        "policy_learning_rate": 3e-4,
+        "value_learning_rate": 7e-4,
         "batch_size": 64,
         "grad_norm": 0.5,
         "is_alpha_learnable": False,
@@ -358,7 +361,8 @@ class SACTraining:
             environment_implementation=self._environment_specs.implementation,
             num_inputs=flattened_dimensions(self._environment_specs.observation_space),
             num_outputs=flattened_dimensions(self._environment_specs.action_space),
-            learning_rate=self._cfg.learning_rate,
+            policy_learning_rate=self._cfg.policy_learning_rate,
+            value_learning_rate=self._cfg.value_learning_rate,
             policy_network_hidden_nodes=self._cfg.policy_network.num_hidden_nodes,
             value_network_hidden_nodes=self._cfg.value_network.num_hidden_nodes,
             alpha=self._cfg.alpha,
