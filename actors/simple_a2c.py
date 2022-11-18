@@ -12,22 +12,27 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# pylint: disable=C0303
+# pylint: disable=W0611
+# pylint: disable=W0612
+
 import logging
 
 import cogment
 import torch
 
+from cogment_verse import Model
 from cogment_verse.specs import (
-    AgentConfig,
-    cog_settings,
-    EnvironmentConfig,
-    flatten,
-    flattened_dimensions,
     PLAYER_ACTOR_CLASS,
+    AgentConfig,
+    EnvironmentConfig,
     PlayerAction,
     SpaceValue,
+    cog_settings,
+    flatten,
+    flattened_dimensions,
+    unflatten,
 )
-from cogment_verse import Model
 
 torch.multiprocessing.set_sharing_strategy("file_system")
 
@@ -129,9 +134,10 @@ class SimpleA2CActor:
 
         assert config.environment_specs.num_players == 1
         assert len(config.environment_specs.action_space.properties) == 1
-        assert config.environment_specs.action_space.properties[0].WhichOneof("type") == "discrete"
+        # assert config.environment_specs.action_space.properties[0].WhichOneof("type") == "discrete"
 
         observation_space = config.environment_specs.observation_space
+        action_space = config.environment_specs.action_space
 
         model, _, _ = await actor_session.model_registry.retrieve_version(
             SimpleA2CModel, config.model_id, config.model_version
@@ -144,9 +150,18 @@ class SimpleA2CActor:
                 obs_tensor = torch.tensor(
                     flatten(observation_space, event.observation.observation.value), dtype=self._dtype
                 )
-                probs = torch.softmax(model.actor_network(obs_tensor), dim=-1)
-                discrete_action_tensor = torch.distributions.Categorical(probs).sample()
-                action_value = SpaceValue(properties=[SpaceValue.PropertyValue(discrete=discrete_action_tensor.item())])
+                if config.environment_specs.action_space.properties[0].WhichOneof("type") == "discrete":
+                    probs = torch.softmax(model.actor_network(obs_tensor), dim=-1)
+                    discrete_action_tensor = torch.distributions.Categorical(probs).sample()
+                    action_value = SpaceValue(
+                        properties=[SpaceValue.PropertyValue(discrete=discrete_action_tensor.item())]
+                    )
+
+                else:
+                    action = torch.rand((1,) + (action_space.properties[0].box.shape[0],))
+                    action = action.cpu().numpy()[0]
+                    action_value = unflatten(action_space, action)
+
                 actor_session.do_action(PlayerAction(value=action_value))
 
 
@@ -213,7 +228,7 @@ class SimpleA2CTraining:
 
         assert self._environment_specs.num_players == 1
         assert len(self._environment_specs.action_space.properties) == 1
-        assert self._environment_specs.action_space.properties[0].WhichOneof("type") == "discrete"
+        # assert self._environment_specs.action_space.properties[0].WhichOneof("type") == "discrete"
 
         model = SimpleA2CModel(
             model_id,
