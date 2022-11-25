@@ -36,13 +36,14 @@ from cogment_verse.specs import (
     get_action_bounds,
     unflatten,
 )
+from debug.mp_pdb import ForkedPdb
 
 # torch.multiprocessing.set_sharing_strategy("file_system")
 torch.set_num_threads(1)
 
 log = logging.getLogger(__name__)
 LOG_STD_MAX = 2
-LOG_STD_MIN = -5
+LOG_STD_MIN = -20
 
 # pylint: disable=E1102
 # pylint: disable=W0212
@@ -154,7 +155,7 @@ class SACModel(Model):
         ).to(self.device)
 
         # Intialize networks's parameters
-        self.policy_network.apply(initialize_weight)
+        # self.policy_network.apply(initialize_weight)
         self.value_network_1.apply(initialize_weight)
         self.value_network_2.apply(initialize_weight)
         self.target_network_1.load_state_dict(self.value_network_1.state_dict())
@@ -162,8 +163,10 @@ class SACModel(Model):
 
         # Get optimizer for two models
         self.policy_optimizer = torch.optim.Adam(self.policy_network.parameters(), lr=self.policy_learning_rate)
-        self.value_optimizer_1 = torch.optim.Adam(self.value_network_1.parameters(), lr=self.value_learning_rate)
-        self.value_optimizer_2 = torch.optim.Adam(self.value_network_2.parameters(), lr=self.value_learning_rate)
+        self.value_optimizer = torch.optim.Adam(
+            list(self.value_network_1.parameters()) + list(self.value_network_2.parameters()),
+            lr=self.value_learning_rate,
+        )
 
         # Learnable alpha
         if is_alpha_learnable:
@@ -175,7 +178,7 @@ class SACModel(Model):
 
         # Learning schedule
         self.policy_scheduler = torch.optim.lr_scheduler.ExponentialLR(self.policy_optimizer, gamma=0.99)
-        self.value_scheduler = torch.optim.lr_scheduler.ExponentialLR(self.value_optimizer_1, gamma=0.99)
+        self.value_scheduler = torch.optim.lr_scheduler.ExponentialLR(self.value_optimizer, gamma=0.99)
 
         # version user data
         self.iter_idx = 0
@@ -208,7 +211,13 @@ class SACModel(Model):
     def save(self, model_data_f: str) -> dict:
         """Save the model"""
         torch.save(
-            (self.policy_network.state_dict(), self.value_network_1.state_dict(), self.value_network_2.state_dict()),
+            (
+                self.policy_network.state_dict(),
+                self.value_network_1.state_dict(),
+                self.value_network_2.state_dict(),
+                self.target_network_1.state_dict(),
+                self.target_network_2.state_dict(),
+            ),
             model_data_f,
         )
         return {"iter_idx": self.iter_idx, "total_samples": self.total_samples}
@@ -230,10 +239,18 @@ class SACModel(Model):
         )
 
         # Load the model parameters
-        (policy_network_state_dict, value_network_1_state_dict, value_network_2_state_dict) = torch.load(model_data_f)
+        (
+            policy_network_state_dict,
+            value_network_1_state_dict,
+            value_network_2_state_dict,
+            target_network_1_state_dict,
+            target_network_2_state_dict,
+        ) = torch.load(model_data_f)
         model.policy_network.load_state_dict(policy_network_state_dict)
         model.value_network_1.load_state_dict(value_network_1_state_dict)
         model.value_network_2.load_state_dict(value_network_2_state_dict)
+        model.target_network_1.load_state_dict(target_network_1_state_dict)
+        model.target_network_2.load_state_dict(target_network_2_state_dict)
 
         # Load version data
         model.iter_idx = version_user_data["iter_idx"]
@@ -523,34 +540,30 @@ class SACTraining:
         alpha = torch.exp(self.model.log_alpha).item()
         with torch.no_grad():
             next_action, next_action_log_prob, _ = self.model.policy_sampler(
-                observation=data.next_observation, scale=self.action_scale, bias=self.action_bias, reparam=True
+                observation=data.next_observation, scale=self.action_scale, bias=self.action_bias
             )
             observation_action = torch.cat([data.next_observation, next_action], 1)
             next_target_1 = self.model.target_network_1(observation_action)
             next_target_2 = self.model.target_network_2(observation_action)
             min_value = torch.min(next_target_1, next_target_2) - alpha * next_action_log_prob
             return_ = (
-                data.reward.reshape(-1, self._cfg.batch_size).T
-                + (1 - data.done.reshape(-1, self._cfg.batch_size).T) * self._cfg.discount_factor * min_value
+                data.reward
+                + (1 - data.done)* self._cfg.discount_factor * min_value.flatten()
             )
 
         # Compute loss for value network
         value_1 = self.model.value_network_1(torch.cat([data.observation, data.action], 1))
         value_2 = self.model.value_network_2(torch.cat([data.observation, data.action], 1))
-        value_loss_1 = torch.nn.functional.mse_loss(value_1, return_) * self._cfg.value_loss_coef
-        value_loss_2 = torch.nn.functional.mse_loss(value_2, return_) * self._cfg.value_loss_coef
-        value_loss = value_loss_1 + value_loss_2
+        value_loss_1 = torch.nn.functional.mse_loss(value_1.flatten(), return_)
+        value_loss_2 = torch.nn.functional.mse_loss(value_2.flatten(), return_)
+        value_loss = (value_loss_1 + value_loss_2) * self._cfg.value_loss_coef
 
         # Update value network
-        self.model.value_optimizer_1.zero_grad()
-        value_loss_1.backward()
-        # torch.nn.utils.clip_grad_norm_(self.model.value_network_1.parameters(), self._cfg.grad_norm)
-        self.model.value_optimizer_1.step()
-
-        self.model.value_optimizer_2.zero_grad()
-        value_loss_2.backward()
-        # torch.nn.utils.clip_grad_norm_(self.model.value_network_2.parameters(), self._cfg.grad_norm)
-        self.model.value_optimizer_2.step()
+        self.model.value_optimizer.zero_grad()
+        value_loss.backward()
+        torch.nn.utils.clip_grad_norm_(self.model.value_network_1.parameters(), self._cfg.grad_norm)
+        torch.nn.utils.clip_grad_norm_(self.model.value_network_2.parameters(), self._cfg.grad_norm)
+        self.model.value_optimizer.step()
 
         # Compute loss for policy network
         policy_loss = value_loss_1 * 0
@@ -563,12 +576,12 @@ class SACTraining:
                 value_reparam_1 = self.model.value_network_1(torch.cat([data.observation, action_reparam], 1))
                 value_reparam_2 = self.model.value_network_2(torch.cat([data.observation, action_reparam], 1))
                 min_value_reparam = torch.min(value_reparam_1, value_reparam_2)
-                policy_loss = ((action_log_prob_reparam * alpha) - min_value_reparam).mean()
+                policy_loss = ((action_log_prob_reparam.flatten() * alpha) - self._cfg.value_loss_coef * min_value_reparam.flatten()).mean()
 
                 # Update policy network
                 self.model.policy_optimizer.zero_grad()
                 policy_loss.backward()
-                # torch.nn.utils.clip_grad_norm_(self.model.policy_network.parameters(), self._cfg.grad_norm)
+                torch.nn.utils.clip_grad_norm_(self.model.policy_network.parameters(), self._cfg.grad_norm)
                 self.model.policy_optimizer.step()
 
             # Update alpha
@@ -584,9 +597,9 @@ class SACTraining:
                 alpha_loss = torch.tensor(0.0).to(self.model.device)
                 log_alpha_clone = self.model.log_alpha.clone()
 
-            self.soft_update()
+        self.soft_update()
 
-        return value_loss.item(), policy_loss.item(), log_alpha_clone.item()
+        return policy_loss.item(), value_loss.item(), log_alpha_clone.item()
 
     def hard_update(self) -> None:
         """Perform a hard update for the target networks where their parameters

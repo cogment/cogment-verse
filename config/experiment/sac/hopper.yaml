@@ -11,18 +11,18 @@ run:
   num_parallel_trials: 1
   discount_factor: 0.99
   entropy_loss_coef: 0.05
-  value_loss_coef: 0.5
-  policy_learning_rate: 3e-4
-  value_learning_rate: 8e-4
-  batch_size: 128
+  value_loss_coef: 0.05
+  policy_learning_rate: 5e-4
+  value_learning_rate: 3e-4
+  batch_size: 256
   grad_norm: 0.5
-  is_alpha_learnable: False
-  alpha: 0.2
-  tau: 0.01
+  is_alpha_learnable: True
+  alpha: 0.1
+  tau: 0.005
   buffer_size: 1_000_000
-  learning_starts: 5000
+  learning_starts: 10000
   device: cpu
-  delay_steps: 2
+  delay_steps: 1
   policy_network:
     num_hidden_nodes: 256
   value_network:
