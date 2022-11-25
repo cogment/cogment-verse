@@ -12,14 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { CountdownCircleTimer } from "react-countdown-circle-timer";
+import { Outlet } from "react-router-dom";
 
-export const Countdown = ({ onAfterCountdown }) => {
-  setTimeout(onAfterCountdown, 1000);
+const Root = () => (
+  <div className="max-w-screen-md mx-auto min-h-screen">
+    <Outlet />
+  </div>
+);
 
-  return (
-    <CountdownCircleTimer isPlaying duration={1} colors={["#85a2d1", "#85a2d1"]} colorsTime={[1, 0]}>
-      {() => <></>}
-    </CountdownCircleTimer>
-  );
-};
+export default Root;

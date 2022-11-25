@@ -23,7 +23,7 @@ from ..services_directory import ServiceType
 
 log = logging.getLogger(__name__)
 
-WEB_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../web/components"))
+WEB_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../web/web_app"))
 
 
 def on_cra_log(_name, log_line):
@@ -57,12 +57,12 @@ class WebProcess(CogmentVerseProcess):
         served_dir = os.path.abspath(os.path.join(WEB_DIR, "build"))
         # TODO find a better way to detect a rebuild is needed
         if not os.path.isdir(served_dir) or web_cfg.get("build", False):
-            log.info("Installing web components dependencies using `npm install`...")
+            log.info("Installing web app dependencies using `npm install`...")
             npm_command(["install", "--no-audit"], WEB_DIR)
 
             generate(specs_filename, WEB_DIR, True)
 
-            log.info("Building the web components `npm run build`...")
+            log.info("Building the web app `npm run build`...")
             npm_command(["run", "build"], WEB_DIR)
 
         super().__init__(

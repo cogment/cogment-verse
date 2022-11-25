@@ -12,28 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import classNames from "classnames";
+import { redirect } from "react-router-dom";
+import { retrievePendingTrials } from "../utils/retrievePendingTrials";
 
-export const Button = ({ className, ...props }) => {
-  return (
-    <button
-      className={classNames(
-        className,
-        "text-sm",
-        "font-semibold",
-        "block",
-        "w-full",
-        "py-2",
-        "px-5",
-        "bg-indigo-600",
-        "disabled:bg-gray-400",
-        "hover:bg-indigo-900",
-        "text-white",
-        "disabled:text-gray-200",
-        "text-center",
-        "rounded"
-      )}
-      {...props}
-    />
-  );
+import { cogSettings } from "../CogSettings";
+import { ORCHESTRATOR_WEB_ENDPOINT } from "../utils/constants";
+
+export const loader = async () => {
+  const pendingTrials = await retrievePendingTrials(cogSettings, ORCHESTRATOR_WEB_ENDPOINT, 500);
+  if (pendingTrials.length === 0) {
+    return redirect("/");
+  }
+  return redirect(pendingTrials[0]);
 };

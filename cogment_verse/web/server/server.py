@@ -43,8 +43,9 @@ def create_app():
 
     return Starlette(
         routes=[
-            Route("/", endpoint=homepage),
-            Mount("/", app=StaticFiles(directory=web_app_cfg["served_dir"], html=True)),
+            Mount("/static", app=StaticFiles(directory=os.path.join(web_app_cfg["served_dir"], "static"), html=True)),
+            Mount("/assets", app=StaticFiles(directory=os.path.join(web_app_cfg["served_dir"], "assets"), html=True)),
+            Route("/{rest_of_path:path}", endpoint=homepage),
         ]
     )
 
