@@ -15,17 +15,17 @@ We train the agent online as trials are running and each trial uses the latest s
 
 ## Step-by-step implementation guide
 
-> We don't provide (yet) a true step by step implementation guide but more a description of existing four implementation steps. To select which version of the simple behavior cloning agent adapter is selected, please edit the default export in [`/torch_agents/cogment_verse_torch_agents/simple_bc/__init__.py`](/torch_agents/cogment_verse_torch_agents/simple_bc/__init__.py)
+> We don't provide (yet) a true step by step implementation guide but more a description of existing four implementation steps.
 
 ### Step 1 - Create a basic agent adapter
 
-> Implementation for this step is available at [`/torch_agents/cogment_verse_torch_agents/simple_bc/tutorial_1.py`](/torch_agents/cogment_verse_torch_agents/simple_bc/tutorial_1.py)
+> Implementation for this step is available at [`/actors/tutorial/tutorial_1.py`](/actors/tutorial/tutorial_1.py)
 
-In this step we create a dedicated **agent adapter** to implement behavior cloning. **Agent adapters** are a lightweight formalism to help implement agents and training algorithms together. 
+In this step we create a dedicated **agent adapter** to implement behavior cloning. **Agent adapters** are a lightweight formalism to help implement agents and training algorithms together.
 
 In this case, it defines two Cogment implementations: an actor called `simple_bc` that is using the trained model, in this case a simple policy network, to take actions and a run called `simple_bc_training` that is orchestrating the training of the model.
 
-- The agent adapter itself is defined in `/torch_agents/cogment_verse_torch_agents/simple_bc/tutorial_1.py`. Because we intend on using **PyTorch** to define and train the policy network, we define the adapter inside the `torch_agents` folder (and as a consequence - as a part of the `torch_agents` service). That way it already has access to the needed dependencies. More details about the initial implementation will be found below.
+- The agent adapter itself is defined in `/actors/tutorial/tutorial_1.py`.
 - The adapter is registered with the service in `/torch_agents/main.py`
 - The actor implementations `simple_bc` is added to the list of actor endpoints `COGMENT_VERSE_ACTOR_ENDPOINTS` in `/.env`. This enables Cogment to access the service(s) providing this implementation.
 - Similarly, the run implementtion `simple_bc_training` is added to the list of run endpoints `COGMENT_VERSE_RUN_ENDPOINTS` in `/.env`.
@@ -38,8 +38,8 @@ The `AgentAdapter` base class provides a simple way to implement new agents toge
 
 - `_create`: This instantiates the PyTorch model to be used by the actor implementation during trials and trained by the run implementation.
 - `_save` and `_load`: These are used by Cogment Verse to serialize and deserialize models to and from the model registry to enable the distribution and storage of trained models.
-- `_create_actor_implementations`: Returns the list of actor implementations to be registered, in our case only one named `simple_bc`. 
-- `_create_run_implementations`: Returns the list of run implementations (e.g. training/evaluation regimens) to be registered, in our case only one named `simple_bc_training`. 
+- `_create_actor_implementations`: Returns the list of actor implementations to be registered, in our case only one named `simple_bc`.
+- `_create_run_implementations`: Returns the list of run implementations (e.g. training/evaluation regimens) to be registered, in our case only one named `simple_bc_training`.
 
 In this step, `_create`, `_save` and `_load` remains unimplemented.
 
@@ -87,11 +87,11 @@ and open the web client to start interacting with the agent. At this step the ag
 
 ### Step 2 - Producing samples
 
-> Implementation for this step is available at [`/torch_agents/cogment_verse_torch_agents/simple_bc/tutorial_2.py`](/torch_agents/cogment_verse_torch_agents/simple_bc/tutorial_2.py)
+> Implementation for this step is available at [`/actors/tutorial/tutorial_2.py`](/actors/tutorial/tutorial_2.py)
 >
 > Changes from the previous step are surrounded by `############ TUTORIAL STEP 2 ############` comments
 
-In this second step, we properly define the **sample producer implementation**. 
+In this second step, we properly define the **sample producer implementation**.
 
 At the top of the file, a few helpers are imported in order to convert actions and observations between the cogment verse format and PyTorch tensors.
 
@@ -105,7 +105,7 @@ Nothing should change in the web browser but received samples should be logged. 
 
 ### Step 3 - Defining a policy model
 
-> Implementation for this step is available at [`/torch_agents/cogment_verse_torch_agents/simple_bc/tutorial_3.py`](/torch_agents/cogment_verse_torch_agents/simple_bc/tutorial_3.py)
+> Implementation for this step is available at [`/actors/tutorial/tutorial_3.py`](/actors/tutorial/tutorial_3.py)
 >
 > Changes from the previous step are surrounded by `############ TUTORIAL STEP 3 ############` comments
 
@@ -113,11 +113,11 @@ In this third step, we introduce an actual model: it is initialized in the **run
 
 At the top of the file, we include the configuration structure for multi-layer perceptrons (MLPs) and we define a named tuple structure for the model.
 
-`_save` and `_load` are implemented using PyTorch's load and save function. 
+`_save` and `_load` are implemented using PyTorch's load and save function.
 
 Notice that we added named arguments to the `_create` functions. They are forwarded from the call to `self.create_and_publish_initial_version` that is added at the top of the run implementation.
 
-The agent implementation uses `self.retrieve_version` to retrieve the model having the configured name and version. These are now specified as a part of the actor params in the run implementation. The version number is defined as `-1`, which means the latest available version. Also in the agent implementation, we use the action conversion helpers to build an `ActorAction` from the output of the policy network. 
+The agent implementation uses `self.retrieve_version` to retrieve the model having the configured name and version. These are now specified as a part of the actor params in the run implementation. The version number is defined as `-1`, which means the latest available version. Also in the agent implementation, we use the action conversion helpers to build an `ActorAction` from the output of the policy network.
 
 Make sure you are using step 3 version of the adapter by editing the "default" export in `/torch_agents/cogment_verse_torch_agents/simple_bc/__init__.py` and then launch a run as described in the previous step.
 
@@ -125,7 +125,7 @@ Nothing should change in the web browser the agent is still doing random actions
 
 ### Step 4 - Training
 
-> Implementation for this step is available at [`/torch_agents/cogment_verse_torch_agents/simple_bc/tutorial_4.py`](/torch_agents/cogment_verse_torch_agents/simple_bc/tutorial_4.py)
+> Implementation for this step is available at [`/actors/tutorial/tutorial_4.py`](/actors/tutorial/tutorial_4.py)
 >
 > Changes from the previous step are surrounded by `############ TUTORIAL STEP 4 ############` comments
 
