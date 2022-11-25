@@ -36,7 +36,6 @@ from cogment_verse.specs import (
     get_action_bounds,
     unflatten,
 )
-from debug.mp_pdb import ForkedPdb
 
 # torch.multiprocessing.set_sharing_strategy("file_system")
 torch.set_num_threads(1)
@@ -546,10 +545,7 @@ class SACTraining:
             next_target_1 = self.model.target_network_1(observation_action)
             next_target_2 = self.model.target_network_2(observation_action)
             min_value = torch.min(next_target_1, next_target_2) - alpha * next_action_log_prob
-            return_ = (
-                data.reward
-                + (1 - data.done)* self._cfg.discount_factor * min_value.flatten()
-            )
+            return_ = data.reward + (1 - data.done) * self._cfg.discount_factor * min_value.flatten()
 
         # Compute loss for value network
         value_1 = self.model.value_network_1(torch.cat([data.observation, data.action], 1))
@@ -576,7 +572,10 @@ class SACTraining:
                 value_reparam_1 = self.model.value_network_1(torch.cat([data.observation, action_reparam], 1))
                 value_reparam_2 = self.model.value_network_2(torch.cat([data.observation, action_reparam], 1))
                 min_value_reparam = torch.min(value_reparam_1, value_reparam_2)
-                policy_loss = ((action_log_prob_reparam.flatten() * alpha) - self._cfg.value_loss_coef * min_value_reparam.flatten()).mean()
+                policy_loss = (
+                    (action_log_prob_reparam.flatten() * alpha)
+                    - self._cfg.value_loss_coef * min_value_reparam.flatten()
+                ).mean()
 
                 # Update policy network
                 self.model.policy_optimizer.zero_grad()
