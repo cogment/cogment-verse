@@ -1,8 +1,8 @@
 orchestrator:
-  orchestrator_1:
-    port: ${generate_port:orchestrator}
-    web_port: ${generate_port:orchestrator_web}
-    log_level: warning
+  port: ${generate_port:orchestrator}
+  web_port: ${generate_port:orchestrator_web}
+  web_endpoint: http://localhost:${generate_port:orchestrator_web}
+  log_level: warning
 trial_datastore:
   port: ${generate_port:trial_datastore}
   log_level: warning
