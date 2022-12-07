@@ -83,10 +83,10 @@ class App:
             if service_type not in [service_type.value for service_type in ServiceType]:
                 raise RuntimeError(f"Unknown service type [{service_type}]")
             if service_type == ServiceType.ORCHESTRATOR.value:
-                for orchestrator_service_cfg in services_cfg.values():
-                    self.services_process.append(
-                        create_orchestrator_service(work_dir, orchestrator_service_cfg, self.services_directory)
-                    )
+                orchestrator_service_cfg = services_cfg
+                self.services_process.append(
+                    create_orchestrator_service(work_dir, orchestrator_service_cfg, self.services_directory)
+                )
             elif service_type == ServiceType.TRIAL_DATASTORE.value:
                 trial_datastore_service_cfg = services_cfg
                 self.services_process.append(
