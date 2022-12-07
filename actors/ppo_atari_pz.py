@@ -35,6 +35,8 @@ from cogment_verse.specs import (
     flattened_dimensions,
     unflatten,
 )
+import matplotlib.pyplot as plt
+from debug.mp_pdb import ForkedPdb
 
 torch.multiprocessing.set_sharing_strategy("file_system")
 
@@ -42,34 +44,6 @@ log = logging.getLogger(__name__)
 
 # pylint: disable=E1102
 # pylint: disable=W0212
-class PolicyValueNetwork(torch.nn.module):
-    """Policy and Value networks for Atari games"""
-
-    def __init__(self, num_actions: int) -> None:
-        super().__init__()
-        self.shared_network = torch.nn.Sequential(
-            torch.nn.Conv2d(6, 32, 8, stride=4),
-            torch.nn.ReLU(),
-            torch.nn.Conv2d(32, 64, 3, stride=2),
-            torch.nn.ReLU(),
-            torch.nn.Conv2d(64, 64, 3, stride=1),
-            torch.nn.ReLU(),
-        )
-        self.actor = torch.nn.Linear((512, num_actions))
-        self.value = torch.nn.Linear((512, 1))
-
-    def get_value(self, observation: torch.Tensor) -> torch.Tensor:
-        """Compute the value of being in a state"""
-        return self.value(self.shared_network(observation))
-
-    def get_action(self, observation: torch.Tensor) -> Distribution:
-        """Actions given observations"""
-        action_logits = self.actor(observation)
-        dist = torch.distributions.categorical.Categorical(logits=action_logits)
-
-        return dist
-
-
 def initialize_weight(param) -> None:
     """Orthogonal initialization of the weight's values of a network"""
 
@@ -77,6 +51,43 @@ def initialize_weight(param) -> None:
         torch.nn.init.orthogonal_(param.weight.data)
         torch.nn.init.constant_(param.bias.data, 0)
 
+def initalize_layer(layer: torch.nn.Module, std: float=np.sqrt(2), bias_const:float=0.0):
+    """Layer initialization"""
+    torch.nn.init.orthogonal_(layer.weight, std)
+    torch.nn.init.constant_(layer.bias, bias_const)
+    return layer
+
+class PolicyValueNetwork(torch.nn.Module):
+    """Policy and Value networks for Atari games"""
+
+    def __init__(self, num_actions: int) -> None:
+        super().__init__()
+        self.shared_network = torch.nn.Sequential(
+            initalize_layer(torch.nn.Conv2d(6, 32, 8, stride=4)),
+            torch.nn.ReLU(),
+            initalize_layer(torch.nn.Conv2d(32, 64, 3, stride=2)),
+            torch.nn.ReLU(),
+            initalize_layer(torch.nn.Conv2d(64, 64, 3, stride=1)),
+            torch.nn.ReLU(),
+            torch.nn.Flatten(),
+            initalize_layer(torch.nn.Linear(64 * 7 * 7, 512)),
+            torch.nn.ReLU(),
+        )
+        self.actor = initalize_layer(torch.nn.Linear(512, num_actions), 0.01)
+        self.value = initalize_layer(torch.nn.Linear(512, 1), 1)
+
+    def get_value(self, observation: torch.Tensor) -> torch.Tensor:
+        """Compute the value of being in a state"""
+        observation = observation / 255.0
+        return self.value(self.shared_network(observation))
+
+    def get_action(self, observation: torch.Tensor) -> Distribution:
+        """Actions given observations"""
+        observation = observation / 255.0
+        action_logits = self.actor(self.shared_network(observation))
+        dist = torch.distributions.categorical.Categorical(logits=action_logits)
+
+        return dist
 
 class PPOModel(Model):
     """Proximal Policy Optimization (PPO) is an on-policy algorithm.
@@ -91,21 +102,25 @@ class PPOModel(Model):
         model_id: int,
         environment_implementation: str,
         num_actions: int,
+        input_shape: tuple,
+        num_policy_outputs: int,
         learning_rate: float = 0.01,
         n_iter: int = 1000,
-        dtype=torch.float,
+        dtype=torch.float32,
+        device: str = "cpu",
         version_number: int = 0,
     ) -> None:
 
         super().__init__(model_id, version_number)
         self._environment_implementation = environment_implementation
         self._num_actions = num_actions
+        self.input_shape = input_shape
+        self.num_policy_outputs = num_policy_outputs
+        self.device = device
         self._dtype = dtype
         self._n_iter = n_iter
         self.network = PolicyValueNetwork(num_actions=self._num_actions).to(self._dtype)
-
-        # Intialize networks's parameters
-        self.network.apply(initialize_weight)
+        self.network.to(torch.device(self.device))
 
         # Get optimizer for two models
         self.network_optimizer = torch.optim.Adam(self.network.parameters(), lr=learning_rate)
@@ -116,10 +131,17 @@ class PPOModel(Model):
 
     def get_model_user_data(self) -> dict:
         """Get user model"""
-        return {"environment_implementation": self._environment_implementation, "num_actions": self._num_actions}
+        return {
+            "environment_implementation": self._environment_implementation,
+            "num_actions": self._num_actions,
+            "input_shape": self.input_shape,
+            "num_policy_outputs": self.num_policy_outputs,
+            "device": self.device,
+        }
 
     def save(self, model_data_f: str) -> dict:
         """Save the model"""
+        self.network.to(torch.device("cpu"))
         torch.save(self.network.state_dict(), model_data_f)
         return {"iter_idx": self.iter_idx, "total_samples": self.total_samples}
 
@@ -133,6 +155,9 @@ class PPOModel(Model):
             version_number=version_number,
             environment_implementation=model_user_data["environment_implementation"],
             num_actions=int(model_user_data["num_actions"]),
+            input_shape=eval(model_user_data["input_shape"]),
+            num_policy_outputs=int(model_user_data["num_policy_outputs"]),
+            device=model_user_data["device"],
         )
 
         # Load the model parameters
@@ -159,9 +184,7 @@ class PPOActor:
         # Start a session
         actor_session.start()
         config = actor_session.config
-        assert config.environment_specs.num_players == 1
         assert len(config.environment_specs.action_space.properties) == 1
-        assert config.environment_specs.action_space.properties[0].WhichOneof("type") == "box"
 
         # Get observation and action space
         observation_space = config.environment_specs.observation_space
@@ -171,21 +194,24 @@ class PPOActor:
         model, _, _ = await actor_session.model_registry.retrieve_version(
             PPOModel, config.model_id, config.model_version
         )
+        obs_shape = model.input_shape[::-1]
+
         async for event in actor_session.all_events():
             if event.observation and event.type == cogment.EventType.ACTIVE:
                 obs_tensor = torch.tensor(
                     flatten(observation_space, event.observation.observation.value), dtype=self._dtype
-                ).view(1, -1)
+                ).reshape(obs_shape)
+                obs_tensor = torch.unsqueeze(obs_tensor.permute((2, 0, 1)), dim=0).to(torch.device(model.device))
 
                 # Get action from policy network
                 with torch.no_grad():
-                    dist = model.model.network.get_action(obs_tensor)
+                    dist = model.network.get_action(obs_tensor)
                     action = dist.sample().cpu().numpy()[0]
 
                 # Send action to environment
                 if config.environment_specs.action_space.properties[0].WhichOneof("type") == "discrete":
                     action_value = SpaceValue(properties=[SpaceValue.PropertyValue(discrete=action)])
-
+                    actor_session.do_action(PlayerAction(value=action_value))
                 else:
                     action_value = unflatten(action_space, action)
                     actor_session.do_action(PlayerAction(value=action_value))
@@ -214,22 +240,25 @@ class PPOTraining:
         "lambda_gae": 0.95,
         "device": "cpu",
         "grad_norm": 0.5,
+        "image_size": [6, 84, 84],
     }
 
     def __init__(self, environment_specs: EnvironmentSpecs, cfg: EnvironmentConfig) -> None:
         super().__init__()
-        self._dtype = torch.float
+        self._dtype = torch.float32
         self._environment_specs = environment_specs
         self._cfg = cfg
         self._device = torch.device(self._cfg.device)
         self.returns = 0
-
         self.model = PPOModel(
             model_id="",
             environment_implementation=self._environment_specs.implementation,
             num_actions=flattened_dimensions(self._environment_specs.action_space),
+            input_shape=tuple(self._cfg.image_size),
+            num_policy_outputs=1,
             learning_rate=self._cfg.learning_rate,
             n_iter=self._cfg.num_epochs,
+            device=self._cfg.device,
             dtype=self._dtype,
         )
 
@@ -240,10 +269,16 @@ class PPOTraining:
         reward = []
         done = []
 
+        players_params = {
+            actor_params.name: actor_params
+            for actor_params in sample_producer_session.trial_info.parameters.actors
+            if actor_params.class_name == PLAYER_ACTOR_CLASS
+        }
+
         player_actor_params = sample_producer_session.trial_info.parameters.actors[0]
         player_actor_name = player_actor_params.name
         player_observation_space = player_actor_params.config.environment_specs.observation_space
-        player_action_space = player_actor_params.config.environment_specs.action_space
+        obs_shape = tuple(self._cfg.image_size)[::-1]
 
         async for sample in sample_producer_session.all_trial_samples():
             if sample.trial_state == cogment.TrialState.ENDED:
@@ -252,13 +287,22 @@ class PPOTraining:
                 done[-1] = torch.ones(1, dtype=self._dtype)
                 break
             actor_sample = sample.actors_data[player_actor_name]
-            observation.append(
-                torch.tensor(flatten(player_observation_space, actor_sample.observation.value), dtype=self._dtype)
+            obs_flat = flatten(player_observation_space, actor_sample.observation.value)
+            observation_value = torch.unsqueeze(
+                torch.permute(torch.tensor(obs_flat, dtype=self._dtype).reshape(obs_shape), (2, 0, 1)), dim=0
             )
-            action.append(torch.tensor(flatten(player_action_space, actor_sample.action.value), dtype=self._dtype))
-            reward.append(
-                torch.tensor(actor_sample.reward if actor_sample.reward is not None else 0, dtype=self._dtype)
+            action_value = torch.tensor(
+                actor_sample.action.value.properties[0].discrete
+                if len(actor_sample.action.value.properties) > 0
+                else 0,
+                dtype=torch.int64,
             )
+            reward_value = torch.tensor(
+                actor_sample.reward if actor_sample.reward is not None else 0, dtype=self._dtype
+            )
+            observation.append(observation_value)
+            action.append(action_value)
+            reward.append(reward_value)
             done.append(torch.zeros(1, dtype=self._dtype))
 
         # Keeping the samples grouped by trial by emitting only one grouped sample at the end of the trial
@@ -268,12 +312,12 @@ class PPOTraining:
         """Train and publish the model"""
 
         model_id = f"{run_session.run_id}_model"
-        assert self._environment_specs.num_players == 1
         assert len(self._environment_specs.action_space.properties) == 1
 
         # Initalize model
         self.model.model_id = model_id
         _, version_info = await run_session.model_registry.publish_initial_version(self.model)
+        self.model.network.to(self._device)
 
         run_session.log_params(
             self._cfg, model_id=model_id, environment_implementation=self._environment_specs.implementation
@@ -285,7 +329,7 @@ class PPOTraining:
                 cog_settings,
                 name="player",
                 class_name=PLAYER_ACTOR_CLASS,
-                implementation="actors.ppo.PPOActor",
+                implementation="actors.ppo_atari_pz.PPOActor",
                 config=AgentConfig(
                     run_id=run_session.run_id,
                     environment_specs=self._environment_specs,
@@ -328,7 +372,8 @@ class PPOTraining:
                 actions.extend(trial_action)
                 rewards.extend(trial_reward)
                 dones.extend(trial_done)
-                episode_rewards.append(torch.vstack(trial_reward).sum())
+
+                episode_rewards.append(torch.tensor(len(trial_action), dtype=torch.float32))
 
                 # Publish the newly trained version every 100 steps
                 if len(actions) >= self._cfg.num_steps * self._cfg.epoch_num_trials + 1:
@@ -359,6 +404,7 @@ class PPOTraining:
                     # Publish the newly updated model
                     self.model.iter_idx = iter_idx
                     version_info = await run_session.model_registry.publish_version(self.model)
+                    self.model.network.to(self._device)
 
     async def train_step(
         self,
@@ -370,26 +416,23 @@ class PPOTraining:
         """Train the model after collecting the data from the trial"""
 
         # Take n steps from the rollout
-        observations = torch.vstack(observations)[: self._cfg.num_steps * self._cfg.epoch_num_trials + 1]
-        actions = torch.vstack(actions)[: self._cfg.num_steps * self._cfg.epoch_num_trials]
-        rewards = torch.vstack(rewards)[: self._cfg.num_steps * self._cfg.epoch_num_trials]
-        dones = torch.vstack(dones)[: self._cfg.num_steps * self._cfg.epoch_num_trials]
-
-        # Normalize the observations
-        if self.model.state_normalization is not None:
-            self.model.state_normalization.update(observations)
+        observations = torch.vstack(observations)[: self._cfg.num_steps * self._cfg.epoch_num_trials + 1].to(
+            self._device
+        )
+        actions = torch.vstack(actions)[: self._cfg.num_steps * self._cfg.epoch_num_trials].to(self._device)
+        rewards = torch.vstack(rewards)[: self._cfg.num_steps * self._cfg.epoch_num_trials].to(self._device)
+        dones = torch.vstack(dones)[: self._cfg.num_steps * self._cfg.epoch_num_trials].to(self._device)
 
         # Make a dataloader in order to process data in batch
-        batch_state = self.make_dataloader(observations[:-1], self._cfg.batch_size, self.model._num_input)
-        batch_action = self.make_dataloader(actions, self._cfg.batch_size, self.model._num_output)
+        batch_state = self.make_dataloader(observations[:-1], self._cfg.batch_size, self.model.input_shape)
+        batch_action = self.make_dataloader(actions, self._cfg.batch_size, (self.model.num_policy_outputs,))
 
         values = self.compute_value(batch_state)
         with torch.no_grad():
             next_value = self.model.network.get_value(observations[-1:])
         next_value = next_value * (1 - dones[-1])
         values = torch.cat((values, next_value), dim=0)
-
-        log_probs = self.compute_log_lik(batch_state, batch_action)
+        log_probs = self.compute_batch_log_lik(batch_state, batch_action)
 
         # Compute the generalized advantage estimation
         advs = self.compute_gae(
@@ -398,7 +441,7 @@ class PPOTraining:
 
         # Update parameters for policy and value networks
         policy_loss, value_loss = self.update_parameters(
-            states=observations[:-1],
+            observations=observations[:-1],
             actions=actions,
             advs=advs,
             values=values[:-1],
@@ -410,7 +453,7 @@ class PPOTraining:
 
     def update_parameters(
         self,
-        states: torch.Tensor,
+        observations: torch.Tensor,
         actions: torch.Tensor,
         advs: torch.Tensor,
         values: torch.Tensor,
@@ -420,24 +463,24 @@ class PPOTraining:
         """Update policy & value networks"""
 
         returns = advs + values
-        num_states = len(returns)
+        num_obs = len(returns)
+        advs = (advs - advs.mean()) / (advs.std() + 1e-8)
         for _ in range(num_epochs):
-            for _ in range(num_states // self._cfg.batch_size):
+            for _ in range(num_obs // self._cfg.batch_size):
                 # Get data in batch. TODO: Send data to device (need to test with cuda)
-                idx = np.random.randint(0, num_states, self._cfg.batch_size)
-                state = states[idx].to(self._device)
-                action = actions[idx].to(self._device)
-                return_ = returns[idx].to(self._device)
-                adv = advs[idx].to(self._device)
-                old_log_prob = log_probs[idx].to(self._device)
+                idx = np.random.randint(0, num_obs, self._cfg.batch_size)
+                observation = observations[idx]
+                action = actions[idx]
+                return_ = returns[idx]
+                adv = advs[idx]
+                old_log_prob = log_probs[idx]
 
                 # Compute the value and values loss
-                value = self.model.network.get_value(state)
+                value = self.model.network.get_value(observation)
                 value_loss = torch.nn.functional.mse_loss(return_, value) * self._cfg.value_loss_coef
 
                 # Get action distribution & the log-likelihood
-                action_dist = self.model.network.get_action(state)
-                new_log_prob = action_dist.log_prob(action)
+                new_log_prob = self.compute_log_lik(observation=observation, action=action)
                 ratio = torch.exp(new_log_prob - old_log_prob)
 
                 # Compute policy loss
@@ -453,7 +496,6 @@ class PPOTraining:
                 loss.backward()
                 torch.nn.utils.clip_grad_norm_(self.model.network.parameters(), self._cfg.grad_norm)
                 self.model.network_optimizer.step()
-
 
         # # Decaying learning rate after each update
         # self.model.network_scheduler.step()
@@ -471,44 +513,51 @@ class PPOTraining:
         values = []
         for obs in observations:
             with torch.no_grad():
-                values.append(self.model.value_network(obs))
+                values.append(self.model.network.get_value(obs))
 
         return torch.vstack(values)
 
-    def compute_log_lik(self, observations: torch.Tensor, actions: torch.Tensor) -> torch.Tensor:
+    def compute_batch_log_lik(self, observations: torch.Tensor, actions: torch.Tensor) -> torch.Tensor:
         """Compute the log likelihood for each actions"""
         log_probs = []
         for obs, action in zip(observations, actions):
-            with torch.no_grad():
-                dist = self.model.network.get_action(obs)
-            log_probs.append(dist.log_prob(action))
+            log_prob = self.compute_log_lik(observation=obs, action=action)
+            log_probs.append(log_prob)
+    
         return torch.vstack(log_probs)
-
+    
+    def compute_log_lik(self, observation: torch.Tensor, action: torch.Tensor) -> torch.Tensor:
+        """Compute the log likelihood for each actions"""
+        with torch.no_grad():
+            dist = self.model.network.get_action(observation)
+        log_prob = dist.log_prob(action.flatten()).view(-1, 1)
+    
+        return log_prob
     @staticmethod
     async def get_n_steps_data(dataset: torch.Tensor, num_steps: int) -> torch.tensor:
         """Get the data up to nth steps"""
         return dataset[:num_steps]
 
-    def make_dataloader(self, dataset: torch.Tensor, batch_size: int, num_obs: int) -> List[torch.Tensor]:
+    def make_dataloader(self, dataset: torch.Tensor, batch_size: int, obs_shape: int) -> List[torch.Tensor]:
         """Create a dataloader in batches"""
         # Initialization
-        output_batches = torch.zeros((batch_size, num_obs), dtype=self._dtype)
+        output_batches = torch.zeros((batch_size, *obs_shape), dtype=self._dtype).to(self._device)
         num_data = len(dataset)
         data_loader = []
         count = 0
         for i, y_batch in enumerate(dataset):
-            output_batches[count, :] = y_batch
+            output_batches[count] = y_batch
             # Store data
             if (i + 1) % batch_size == 0:
                 data_loader.append(output_batches)
 
                 # Reset
                 count = 0
-                output_batches = torch.zeros((batch_size, num_obs), dtype=self._dtype)
+                output_batches = torch.zeros((batch_size, *obs_shape), dtype=self._dtype).to(self._device)
             else:
                 count += 1
                 if i == num_data - 1:
-                    data_loader.append(output_batches[:count, :])
+                    data_loader.append(output_batches[:count])
 
         return data_loader
 
@@ -522,9 +571,8 @@ class PPOTraining:
 
         return normalized_reward
 
-    @staticmethod
     def compute_gae(
-        rewards: torch.Tensor, values: torch.Tensor, dones: torch.Tensor, gamma: float = 0.99, lam: float = 0.95
+        self, rewards: torch.Tensor, values: torch.Tensor, dones: torch.Tensor, gamma: float = 0.99, lam: float = 0.95
     ) -> torch.Tensor:
         """Compute Generalized Advantage Estimation. See equations 11 & 12 in
         https://arxiv.org/pdf/1707.06347.pdf
@@ -532,7 +580,7 @@ class PPOTraining:
 
         advs = []
         gae = 0.0
-        dones = torch.cat((dones, torch.zeros(1, 1)), dim=0)
+        dones = torch.cat((dones, torch.zeros(1, 1).to(self._device)), dim=0)
         for i in reversed(range(len(rewards))):
             delta = rewards[i] + gamma * (values[i + 1]) * (1 - dones[i]) - values[i]
             gae = delta + gamma * lam * (1 - dones[i]) * gae

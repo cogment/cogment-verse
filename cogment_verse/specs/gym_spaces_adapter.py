@@ -14,6 +14,7 @@
 
 import gym
 import numpy as np
+import gymnasium as gymna
 
 from data_pb2 import Space, SpaceValue  # pylint: disable=import-error
 
@@ -42,7 +43,7 @@ def gym_space_from_space(space):
 
 
 def space_properties_from_gym_space(gym_space):
-    if isinstance(gym_space, gym.spaces.Box):
+    if isinstance(gym_space, gym.spaces.Box) or isinstance(gym_space, gymna.spaces.Box):
         return [
             Space.Property(
                 box=Space.Box(
@@ -58,9 +59,10 @@ def space_properties_from_gym_space(gym_space):
                 )
             )
         ]
-    if isinstance(gym_space, gym.spaces.Discrete):
+    if isinstance(gym_space, gym.spaces.Discrete) or isinstance(gym_space, gymna.spaces.Discrete):
         return [Space.Property(discrete=Space.Discrete(num=gym_space.n))]
-    if isinstance(gym_space, gym.spaces.Dict):
+
+    if isinstance(gym_space, gym.spaces.Dict) or isinstance(gym_space, gymna.spaces.Dict):
         properties = []
         for prop_key, gym_sub_space in gym_space.properties:
             for sub_prop in space_properties_from_gym_space(gym_sub_space):
@@ -90,8 +92,8 @@ def gym_action_from_action(space, action):
 
 
 def observation_from_gym_observation(gym_space, gym_observation):
-    if isinstance(gym_space, gym.spaces.Box):
+    if isinstance(gym_space, gym.spaces.Box) or isinstance(gym_space, gymna.spaces.Box):
         return SpaceValue(properties=[SpaceValue.PropertyValue(box=serialize_ndarray(gym_observation))])
-    if isinstance(gym_space, gym.spaces.Discrete):
+    if isinstance(gym_space, gym.spaces.Discrete) or isinstance(gym_space, gymna.spaces.Discrete):
         return SpaceValue(properties=[SpaceValue.PropertyValue(discrete=gym_observation.item())])
     raise RuntimeError(f"[{type(gym_space)}] is not a supported gym space type")
