@@ -34,6 +34,8 @@ Cogment verse includes environments from:
   - [Development Setup](/docs/development_setup.md)
   - [Debug](#debug)
   - [Environment development](/docs/environment.md)
+- Deploy 🚧
+  - [Tunnel unsing ngrok](/docs/deployment/tunnel_using_ngrok.md)
 - [Changelog](/CHANGELOG.md)
 - [Contributors guide](/CONTRIBUTING.md)
 - [Community code of conduct](/CODE_OF_CONDUCT.md)
@@ -49,23 +51,24 @@ Cogment verse includes environments from:
    - `python3-opencv`, which is required on ubuntu systems, it can be installed using `apt-get install python3-opencv`
 
 4. Create and activate a virtual environment by runnning
+
    ```console
    $ python -m venv .venv
    $ source .venv/bin/activate
    ```
 
-6. Install the python dependencies by running
+5. Install the python dependencies by running
    ```console
    $ pip install -r requirements.txt
    ```
-7. In another terminal, launch a mlflow server on port 3000 by running
+6. In another terminal, launch a mlflow server on port 3000 by running
    ```console
    $ source .venv/bin/activate
    $ python -m simple_mlflow
    ```
-8. Start the default Cogment Verse run using `python -m main`
-9. Open Chrome (other web browser might work but haven't tested) and navigate to http://localhost:8080/
-10. Play the game!
+7. Start the default Cogment Verse run using `python -m main`
+8. Open Chrome (other web browser might work but haven't tested) and navigate to http://localhost:8080/
+9. Play the game!
 
 That's the basic setup for Cogment Verse, you are now ready to train AI agents.
 
@@ -112,15 +115,15 @@ Here are a few examples:
 ## Isaac gym
 
 If you want to use Isaac Gym, use python3.8 (not python3.9)
+
 1. download the zip file from [NVIDIA webpage](https://developer.nvidia.com/isaac-gym)
-, unzip and copy the `isaacgym` folder to this repo.
+   , unzip and copy the `isaacgym` folder to this repo.
 2. clone [IsaacGymEnvs](https://github.com/NVIDIA-Omniverse/IsaacGymEnvs) and copy the
-folder inside the `isaacgym` folder
+   folder inside the `isaacgym` folder
 3. comment out line-32 in `isaacgym/IsaacGymEnvs/isaacgymenvs/__init__.py`
 4. (Assuming you already installed requirements.txt), run `pip install -r isaac_requirements.txt`.
 5. nvidia-smi` to check that you have NVIDIA drivers and proper cuda installations.
 6. (Assuming you already have mlflow running in a different terminal), Run `python -m main services/environment=ant`
-
 
 ## List of publications and submissions using Cogment and/or Cogment Verse
 

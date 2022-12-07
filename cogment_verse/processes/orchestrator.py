@@ -19,13 +19,14 @@ from ..services_directory import ServiceType
 def create_orchestrator_service(work_dir, orchestrator_cfg, services_directory):
     port = orchestrator_cfg.port
     web_port = orchestrator_cfg.web_port
+    web_endpoint = orchestrator_cfg.web_endpoint
     services_directory.add(
         service_type=ServiceType.ORCHESTRATOR,
         service_endpoint=f"grpc://localhost:{port}",
     )
     services_directory.add(
         service_type=ServiceType.ORCHESTRATOR_WEB_ENDPOINT,
-        service_endpoint=f"http://localhost:{web_port}",
+        service_endpoint=web_endpoint,
     )
     return CogmentCliProcess(
         name="orchestrator",
