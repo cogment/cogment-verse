@@ -2,11 +2,11 @@
 
 ## About
 
-This is a interactive implementation of behavioral cloning (BC) that can be thought of as a simplified version of the DAGGER algorithm, intended to demonstrate the human-in-the-loop learning within Cogment Verse.
+This is an interactive implementation of behavioral cloning (BC) that can be thought of as a simplified version of the DAGGER algorithm, intended to demonstrate the human-in-the-loop learning within Cogment Verse.
 
 The overall architecture involves two actors
 
-1. An AI agent uing a simple policy network whose action space is determined by the environment.
+1. An AI agent using a simple policy network whose action space is determined by the environment.
 2. A human _teacher_ having the same action space extended by a single "take-no-action" `NO-OP` action.
 
 The two actors cooperate during training by the following rule: if the teacher takes the `NO-OP` action, then we sample an action from the AI agent's policy, otherwise we use the action specified by the human. In this way, the human provides feedback to the agent in the form of implicit approval (by taking `NO-OP`) or by demonstration by overriding the agent's actions. By running trials in this way, we generate a sequence of pairs `(observation, perfomed_action)`. We train the AI agent by using the performed actions as target labels with a categorical cross-entropy loss.
@@ -37,7 +37,7 @@ In this case, it defines two Cogment implementations: an actor called `simple_bc
 The `AgentAdapter` base class provides a simple way to implement new agents together with their corresponding training algorithms. A few methods must be implemented.
 
 - `_create`: This instantiates the PyTorch model to be used by the actor implementation during trials and trained by the run implementation.
-- `_save` and `_load`: These are used by Cogment Verse to serialize and deserialize models to and from the model registry to enable the distribution and storage of trained models.
+- `_save` and `_load`: These are used by Cogment Verse to serialize and deserialize models to and fro t tfrom the model registry to enable the distribution and storage of trained models.
 - `_create_actor_implementations`: Returns the list of actor implementations to be registered, in our case only one named `simple_bc`.
 - `_create_run_implementations`: Returns the list of run implementations (e.g. training/evaluation regimens) to be registered, in our case only one named `simple_bc_training`.
 
@@ -135,6 +135,6 @@ One thing to notice is the way we deal with publishing new version of the model.
 
 Make sure you are using step 4 version of the adapter by editing the "default" export in `/torch_agents/cogment_verse_torch_agents/simple_bc/__init__.py` and then launch a run as described in the previous step.
 
-The agent is now learning, with a few demonstration it should start to clone the behavior of the human player.
+The agent is now learning, with a few demonstrations it should start to clone the behavior of the human player.
 
 You can view the logged metrics (e.g. training loss) by opening `localhost:3000`.
