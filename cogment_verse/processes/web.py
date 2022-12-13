@@ -23,7 +23,9 @@ from ..services_directory import ServiceType
 
 log = logging.getLogger(__name__)
 
-WEB_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../web/components"))
+WEB_SOURCES_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../web/web_app"))
+
+WEB_BUILD_DIR = os.path.abspath(os.path.join(WEB_SOURCES_DIR, "build"))
 
 
 def on_cra_log(_name, log_line):
@@ -37,9 +39,9 @@ def on_awaiting_cra_ready():
 class NpmProcess(PopenProcess):
     def __init__(self, name, specs_filename, services_directory, web_cfg):
         log.info("Installing web components dependencies using `npm install`...")
-        npm_command(["install", "--no-audit"], WEB_DIR)
+        npm_command(["install", "--no-audit"], WEB_SOURCES_DIR)
 
-        generate(specs_filename, WEB_DIR, web_cfg.get("force_rebuild", False))
+        generate(specs_filename, WEB_SOURCES_DIR, web_cfg.get("force_rebuild", False))
 
         super().__init__(
             name=name,
@@ -54,23 +56,22 @@ class NpmProcess(PopenProcess):
 
 class WebProcess(CogmentVerseProcess):
     def __init__(self, name, specs_filename, services_directory, web_cfg):
-        served_dir = os.path.abspath(os.path.join(WEB_DIR, "build"))
         # TODO find a better way to detect a rebuild is needed
-        if not os.path.isdir(served_dir) or web_cfg.get("build", False):
-            log.info("Installing web components dependencies using `npm install`...")
-            npm_command(["install", "--no-audit"], WEB_DIR)
+        if not os.path.isdir(WEB_BUILD_DIR) or web_cfg.get("build", False):
+            log.info("Installing web app dependencies using `npm install`...")
+            npm_command(["install", "--no-audit"], WEB_SOURCES_DIR)
 
-            generate(specs_filename, WEB_DIR, True)
+            generate(specs_filename, WEB_SOURCES_DIR, True)
 
-            log.info("Building the web components `npm run build`...")
-            npm_command(["run", "build"], WEB_DIR)
+            log.info("Building the web app `npm run build`...")
+            npm_command(["run", "build"], WEB_SOURCES_DIR)
 
         super().__init__(
             name=name,
             target=server_main,
             port=web_cfg.port,
             orchestrator_web_endpoint=services_directory.get(ServiceType.ORCHESTRATOR_WEB_ENDPOINT),
-            served_dir=served_dir,
+            served_dir=WEB_BUILD_DIR,
         )
 
 

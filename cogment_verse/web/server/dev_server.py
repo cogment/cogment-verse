@@ -29,5 +29,5 @@ def create_dev_server_popen_kwargs(port, orchestrator_web_endpoint, **kwargs):
         **kwargs,
         "args": [NPM_BIN, "run", "start"],
         "env": extended_env,
-        "cwd": os.path.abspath(os.path.join(os.path.dirname(__file__), "../components")),
+        "cwd": os.path.abspath(os.path.join(os.path.dirname(__file__), "../web_app")),
     }
