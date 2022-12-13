@@ -70,7 +70,7 @@ class Environment:
         self.env_type = PzEnvType(env_type_str)
         self.env_class = import_class(self.env_class_name)
 
-        self.pz_env = self.env_class.env()
+        self.pz_env = self.env_class.env(render_mode="rgb_array")
 
         if env_type_str == "atari":
             self.pz_env = ss.max_observation_v0(self.pz_env, 2)
@@ -130,7 +130,6 @@ class Environment:
         assert len(teacher_actors) == 0
 
         session_cfg = environment_session.config
-
         self.pz_env.reset(seed=session_cfg.seed)
         pz_observation, _pz_reward, _pz_done, _pz_trunc, _pz_info = self.pz_env.last()
         current_player_pz_agent, _ = get_current_agent(observation=pz_observation, agent_names=self.pz_env.agents)
@@ -144,7 +143,8 @@ class Environment:
             if "rgb_array" not in self.pz_env.metadata["render_modes"]:
                 log.warning(f"Petting Zoo environment [{self.env_class_name}] doesn't support rendering to pixels")
                 return
-            rendered_frame = encode_rendered_frame(self.pz_env.render(mode="rgb_array"), session_cfg.render_width)
+            self.pz_env.render_mode = "rgb_array"
+            rendered_frame = encode_rendered_frame(self.pz_env.render(), session_cfg.render_width)
 
         environment_session.start(
             [
@@ -177,7 +177,7 @@ class Environment:
                 rendered_frame = None
                 if session_cfg.render:
                     rendered_frame = encode_rendered_frame(
-                        self.pz_env.render(mode="rgb_array"), session_cfg.render_width
+                        self.pz_env.render(), session_cfg.render_width
                     )
 
                 observations = [
