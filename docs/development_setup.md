@@ -2,14 +2,6 @@
 
 This is a practical guide for developers wanting to develop within cogment verse.
 
-## Additional dependencies
-
-To support development, additional dependencies are required.
-
-- [Node.JS v14](https://nodejs.org/) or above is required to develop the web components of cogment verse.
-
-> 🚧 _in construction_ 🚧
-
 ## Linting
 
 ### Python code formatting
@@ -34,33 +26,71 @@ Check the code quality using `pylint` by running the following in the virtual en
 $ pylint --recursive=y .
 ```
 
-## PDB debugger with multiprocessing 
+## PDB debugger with multiprocessing
+
 1. Create the following python script `md_debug.py`
-    ```python
-    import sys
-    import pdb
 
-    class ForkedPdb(pdb.Pdb):
-        """A Pdb subclass that may be used from a forked multiprocessing child"""
+   ```python
+   import sys
+   import pdb
 
-        def interaction(self, *args, **kwargs):
-            _stdin = sys.stdin
-            try:
-                sys.stdin = open('/dev/stdin')
-                pdb.Pdb.interaction(self, *args, **kwargs)
-            finally:
-                sys.stdin = _stdin
-    ```
+   class ForkedPdb(pdb.Pdb):
+       """A Pdb subclass that may be used from a forked multiprocessing child"""
+
+       def interaction(self, *args, **kwargs):
+           _stdin = sys.stdin
+           try:
+               sys.stdin = open('/dev/stdin')
+               pdb.Pdb.interaction(self, *args, **kwargs)
+           finally:
+               sys.stdin = _stdin
+   ```
+
 2. Import the above script to the python file that you want to debug
-    ```python
-    from mp_debug import ForkedPdb 
-    ```
+   ```python
+   from mp_debug import ForkedPdb
+   ```
 3. Set a breakpoint using the following command
-    ```python
-    ForkedPdb().set_trace()
-    ```
-NOTE: The other commands are the same as the [PDB debugger](https://docs.python.org/3/library/pdb.html).
+   `python ForkedPdb().set_trace() `
+   NOTE: The other commands are the same as the [PDB debugger](https://docs.python.org/3/library/pdb.html).
 
+## Developing the web app
+
+Cogment verse includes a web app designed for human-in-the-loop learning developed with React.
+
+To develop the web app, you'll need to install [Node.JS v16](https://nodejs.org/) or above.
+
+Sources for the web app can be found in `/cogment_verse/web/web_app`.
+
+### Prebuilt web app - Default
+
+When running a default instance of cogment verse, the prebuilt web app, located in `/cogment_verse/web/web_app/build` is used. e.g.
+
+```console
+$ python -m main
+```
+
+> ⚠️ in this mode, any changes to the sources will be ignored
+
+### Trigger a rebuild
+
+To trigger a rebuild before launching the webapp, the `services.web.build` needs to be set to `True`. e.g.
+
+```console
+$ python -m main service.web.build=True
+```
+
+This perform to a full static build of the web app before launching the instance.
+
+### Development "autoreload" mode
+
+To start an autoreloading isntance of the webapp, set `services.web.dev` to `True`. e.g.
+
+```console
+$ python -m main service.web.dev=True
+```
+
+The web app will be served as an autoreloading server: any edit to the web app sources will be taken into account and cause a reload.
 
 ## Testing
 
