@@ -176,10 +176,10 @@ class Environment:
 
                 rendered_frame = None
                 if session_cfg.render:
+                    self.pz_env.render_mode = "rgb_array"
                     rendered_frame = encode_rendered_frame(
                         self.pz_env.render(), session_cfg.render_width
                     )
-
                 observations = [
                     (
                         "*",

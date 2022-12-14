@@ -35,8 +35,6 @@ from cogment_verse.specs import (
     flattened_dimensions,
     unflatten,
 )
-import matplotlib.pyplot as plt
-from debug.mp_pdb import ForkedPdb
 
 torch.multiprocessing.set_sharing_strategy("file_system")
 
@@ -356,6 +354,7 @@ class PPOTraining:
         rewards = []
         dones = []
         episode_rewards = []
+        num_updates = 0
         for iter_idx in range(self._cfg.num_iter):
             for (_, _, _, sample) in run_session.start_and_await_trials(
                 trials_id_and_params=[
@@ -377,6 +376,7 @@ class PPOTraining:
 
                 # Publish the newly trained version every 100 steps
                 if len(actions) >= self._cfg.num_steps * self._cfg.epoch_num_trials + 1:
+                    num_updates += 1
                     # Update model parameters
                     policy_loss, value_loss = await self.train_step(
                         observations=observations, rewards=rewards, actions=actions, dones=dones
@@ -403,7 +403,10 @@ class PPOTraining:
 
                     # Publish the newly updated model
                     self.model.iter_idx = iter_idx
-                    version_info = await run_session.model_registry.publish_version(self.model)
+                    if num_updates % 10 == 0:
+                        version_info = await run_session.model_registry.publish_version(self.model, archived=True)
+                    else:
+                        version_info = await run_session.model_registry.publish_version(self.model)
                     self.model.network.to(self._device)
 
     async def train_step(

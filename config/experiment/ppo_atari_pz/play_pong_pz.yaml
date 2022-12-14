@@ -3,7 +3,7 @@ defaults:
   - override /services/actor:
       - ppo_atari_pz
   - override /services/environment: pong_pz
-  - override /run: observe
+  - override /run: play
 run:
   players:
     - name: player_1
@@ -12,7 +12,4 @@ run:
         model_id: hopeful_mccarthy_0_model
         model_version: 101
     - name: player_2
-      implementation: actors.ppo_atari_pz.PPOActor
-      agent_config:
-        model_id: hopeful_mccarthy_0_model
-        model_version: 101
+      implementation: client
