@@ -28,16 +28,16 @@ In this case, it defines two Cogment implementations: an actor called `simple_bc
 - The agent adapter itself is defined in `/actors/tutorial/tutorial_1.py`.
 - The adapter is registered with the service in `/torch_agents/main.py`
 - The actor implementations `simple_bc` is added to the list of actor endpoints `COGMENT_VERSE_ACTOR_ENDPOINTS` in `/.env`. This enables Cogment to access the service(s) providing this implementation.
-- Similarly, the run implementtion `simple_bc_training` is added to the list of run endpoints `COGMENT_VERSE_RUN_ENDPOINTS` in `/.env`.
-- In order to configure the run, the `SimpleBCTrainingRunConfig` data structure (and the underlying `SimpleBCTrainingConfig`) are definined in `/data.proto`.
-- Finally to be able to start runs, a few configurations are defined in `/run_params.yaml`, namely `simple_bc_lander` that uses the Lunar Lander environment, `simple_bc_cartpole` that uses Cartpole and `simple_bc_mountaincar` that uses MountainCar.
+- Similarly, the run implementation `simple_bc_training` is added to the list of run endpoints `COGMENT_VERSE_RUN_ENDPOINTS` in `/.env`.
+- In order to configure the run, the `SimpleBCTrainingRunConfig` data structure (and the underlying `SimpleBCTrainingConfig`) are defined in `/data.proto`.
+- Finally, to be able to start runs, a few configurations are defined in `/run_params.yaml`, namely `simple_bc_lander` that uses the Lunar Lander environment, `simple_bc_cartpole` that uses Cartpole and `simple_bc_mountaincar` that uses MountainCar.
 
 #### Implement the agent adapter
 
 The `AgentAdapter` base class provides a simple way to implement new agents together with their corresponding training algorithms. A few methods must be implemented.
 
 - `_create`: This instantiates the PyTorch model to be used by the actor implementation during trials and trained by the run implementation.
-- `_save` and `_load`: These are used by Cogment Verse to serialize and deserialize models to and fro t tfrom the model registry to enable the distribution and storage of trained models.
+- `_save` and `_load`: These are used by Cogment Verse to serialize and deserialize models to and from the model registry to enable the distribution and storage of trained models.
 - `_create_actor_implementations`: Returns the list of actor implementations to be registered, in our case only one named `simple_bc`.
 - `_create_run_implementations`: Returns the list of run implementations (e.g. training/evaluation regimens) to be registered, in our case only one named `simple_bc_training`.
 
@@ -45,7 +45,7 @@ In this step, `_create`, `_save` and `_load` remains unimplemented.
 
 #### First actor implementation, doing random action
 
-In Cogment terminology, an **actor implementation** is a function that takes an actor session from a running trial and performs actions for each event in the actor's event loop for the trial, i.e. a funcion that performs an action for each observation received from the environment. In this first step the actor implementation does random actions.
+In Cogment terminology, an **actor implementation** is a function that takes an actor session from a running trial and performs actions for each event in the actor's event loop for the trial, i.e. a function that performs an action for each observation received from the environment. In this first step the actor implementation does random actions.
 
 #### First run implementation, starting trials with a human teacher
 
@@ -53,7 +53,7 @@ A **run implementation** consists of a function that launches trials and consume
 
 The run implementation is paired with a **sample producer implementation** that is tasked with taking the raw event stream from a trial (e.g. `(state, action, reward)` tuples) and emits samples that can be directly consumed by the training/evaluation algorithm (e.g. `(state, action, reward, next_state)` transitions). In this first step the sample producer implementation does little, only logging a message each time a sample is received. [Step 2](#step-2-producing-samples) will go further.
 
-In the first step, the run implementation is pretty minimal. It setup an experiment metrics tracker using MLFlow, then defines a function to create trial configuration and then starts a bunch a trials. No samples are retrieved yet because sample producer implementation doesn't produce any.
+In the first step, the run implementation is pretty minimal. It sets up an experiment metrics tracker using MLFlow, then defines a function to create trial configuration and then starts a bunch of trials. No samples are retrieved yet because sample producer implementation doesn't produce any.
 
 #### Running everything
 
@@ -121,7 +121,7 @@ The agent implementation uses `self.retrieve_version` to retrieve the model havi
 
 Make sure you are using step 3 version of the adapter by editing the "default" export in `/torch_agents/cogment_verse_torch_agents/simple_bc/__init__.py` and then launch a run as described in the previous step.
 
-Nothing should change in the web browser the agent is still doing random actions, but it's now random actions computed by a neural network.
+Nothing should change in the web browser - the agent is still doing random actions, but it's now random actions computed by a neural network.
 
 ### Step 4 - Training
 
@@ -131,7 +131,7 @@ Nothing should change in the web browser the agent is still doing random actions
 
 This fourth step is about actually training the policy, aside from some import at the top, the changes are located in the run implementation and should be pretty straightforward for someone familiar with supervised learning with PyTorch.
 
-One thing to notice is the way we deal with publishing new version of the model. This part of the code is only executed every 100 training steps, this is a tradeof between the reactivity of the training and limiting the amount of data exchanged over the network and the time spent serializing and deserializing models.
+One thing to notice is the way we deal with publishing new version of the model. This part of the code is only executed every 100 training steps, this is a tradeoff between the reactivity of the training and limiting the amount of data exchanged over the network and the time spent serializing and deserializing models.
 
 Make sure you are using step 4 version of the adapter by editing the "default" export in `/torch_agents/cogment_verse_torch_agents/simple_bc/__init__.py` and then launch a run as described in the previous step.
 
