@@ -214,6 +214,15 @@ class SimpleDQNTraining:
         "train_frequency": 10,
         "model_update_frequency": 10,
         "value_network": {"num_hidden_nodes": [128, 64]},
+        "min_replay_history": 5000,
+        "loss_fn": None,
+        "init_fn": None,
+        "optimizer_fn": None,
+        "target_net_soft_update": False,
+        "target_net_update_fraction": 0.05,
+        "n_step": 1,
+        "grad_clip": None,
+        "reward_clip": None,
     }
 
     def __init__(self, environment_specs, cfg):
@@ -301,7 +310,9 @@ class SimpleDQNTraining:
         )
 
         # Configure the optimizer
-        optimizer = torch.optim.Adam(
+        if self._cfg.optimizer_fn is None:
+            optimizer_fn = torch.optim.Adam
+        optimizer = optimizer_fn(
             model.network.parameters(),
             lr=self._cfg.learning_rate,
         )
@@ -318,6 +329,16 @@ class SimpleDQNTraining:
             reward_dtype=self._dtype,
             seed=self._cfg.seed,
         )
+
+        discount_rate = self._cfg.discount_factor
+        grad_clip = self._cfg.grad_clip
+        reward_clip = self._cfg.reward_clip
+        target_net_soft_update = self._cfg.target_net_soft_update
+        target_net_update_fraction = self._cfg.target_net_update_fraction
+        if self._cfg.loss_fn is None:
+            loss_fn = torch.nn.SmoothL1Loss
+        loss_fn = loss_fn(reduction="none")
+
 
         start_time = time.time()
         total_reward_cum = 0
