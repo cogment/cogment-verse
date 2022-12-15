@@ -5,6 +5,7 @@
 
 .canvas,
 .overlay {
+  height: 800px;
   grid-area: 1/-1;
   z-index: 0;
 

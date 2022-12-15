@@ -6,12 +6,12 @@ defaults:
   - override /run: observe
 run:
   players:
-    - name: player_1
+    - name: first_0
       implementation: actors.ppo_atari_pz.PPOActor
       agent_config:
         model_id: hopeful_mccarthy_0_model
         model_version: 101
-    - name: player_2
+    - name: second_0
       implementation: actors.ppo_atari_pz.PPOActor
       agent_config:
         model_id: hopeful_mccarthy_0_model

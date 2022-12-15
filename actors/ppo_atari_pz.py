@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import logging
+from ast import literal_eval
 from typing import List, Tuple
 
 import cogment
@@ -42,6 +43,7 @@ log = logging.getLogger(__name__)
 
 # pylint: disable=E1102
 # pylint: disable=W0212
+# pylint: disable=W0223
 def initialize_weight(param) -> None:
     """Orthogonal initialization of the weight's values of a network"""
 
@@ -49,11 +51,13 @@ def initialize_weight(param) -> None:
         torch.nn.init.orthogonal_(param.weight.data)
         torch.nn.init.constant_(param.bias.data, 0)
 
-def initalize_layer(layer: torch.nn.Module, std: float=np.sqrt(2), bias_const:float=0.0):
+
+def initalize_layer(layer: torch.nn.Module, std: float = np.sqrt(2), bias_const: float = 0.0):
     """Layer initialization"""
     torch.nn.init.orthogonal_(layer.weight, std)
     torch.nn.init.constant_(layer.bias, bias_const)
     return layer
+
 
 class PolicyValueNetwork(torch.nn.Module):
     """Policy and Value networks for Atari games"""
@@ -86,6 +90,7 @@ class PolicyValueNetwork(torch.nn.Module):
         dist = torch.distributions.categorical.Categorical(logits=action_logits)
 
         return dist
+
 
 class PPOModel(Model):
     """Proximal Policy Optimization (PPO) is an on-policy algorithm.
@@ -153,7 +158,7 @@ class PPOModel(Model):
             version_number=version_number,
             environment_implementation=model_user_data["environment_implementation"],
             num_actions=int(model_user_data["num_actions"]),
-            input_shape=eval(model_user_data["input_shape"]),
+            input_shape=literal_eval(model_user_data["input_shape"]),
             num_policy_outputs=int(model_user_data["num_policy_outputs"]),
             device=model_user_data["device"],
         )
@@ -267,11 +272,11 @@ class PPOTraining:
         reward = []
         done = []
 
-        players_params = {
-            actor_params.name: actor_params
-            for actor_params in sample_producer_session.trial_info.parameters.actors
-            if actor_params.class_name == PLAYER_ACTOR_CLASS
-        }
+        # players_params = {
+        #     actor_params.name: actor_params
+        #     for actor_params in sample_producer_session.trial_info.parameters.actors
+        #     if actor_params.class_name == PLAYER_ACTOR_CLASS
+        # }
 
         player_actor_params = sample_producer_session.trial_info.parameters.actors[0]
         player_actor_name = player_actor_params.name
@@ -526,16 +531,17 @@ class PPOTraining:
         for obs, action in zip(observations, actions):
             log_prob = self.compute_log_lik(observation=obs, action=action)
             log_probs.append(log_prob)
-    
+
         return torch.vstack(log_probs)
-    
+
     def compute_log_lik(self, observation: torch.Tensor, action: torch.Tensor) -> torch.Tensor:
         """Compute the log likelihood for each actions"""
         with torch.no_grad():
             dist = self.model.network.get_action(observation)
         log_prob = dist.log_prob(action.flatten()).view(-1, 1)
-    
+
         return log_prob
+
     @staticmethod
     async def get_n_steps_data(dataset: torch.Tensor, num_steps: int) -> torch.tensor:
         """Get the data up to nth steps"""
