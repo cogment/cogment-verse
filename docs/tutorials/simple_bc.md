@@ -25,13 +25,6 @@ In this step we create a dedicated **agent adapter** to implement behavior cloni
 
 In this case, it defines two Cogment implementations: an actor called `simple_bc` that is using the trained model, in this case a simple policy network, to take actions and a run called `simple_bc_training` that is orchestrating the training of the model.
 
-- The agent adapter itself is defined in `/actors/tutorial/tutorial_1.py`.
-- The adapter is registered with the service in `/torch_agents/main.py`
-- The actor implementations `simple_bc` is added to the list of actor endpoints `COGMENT_VERSE_ACTOR_ENDPOINTS` in `/.env`. This enables Cogment to access the service(s) providing this implementation.
-- Similarly, the run implementation `simple_bc_training` is added to the list of run endpoints `COGMENT_VERSE_RUN_ENDPOINTS` in `/.env`.
-- In order to configure the run, the `SimpleBCTrainingRunConfig` data structure (and the underlying `SimpleBCTrainingConfig`) are defined in `/data.proto`.
-- Finally, to be able to start runs, a few configurations are defined in `/run_params.yaml`, namely `simple_bc_lander` that uses the Lunar Lander environment, `simple_bc_cartpole` that uses Cartpole and `simple_bc_mountaincar` that uses MountainCar.
-
 #### Implement the agent adapter
 
 The `AgentAdapter` base class provides a simple way to implement new agents together with their corresponding training algorithms. A few methods must be implemented.
@@ -57,25 +50,20 @@ In the first step, the run implementation is pretty minimal. It sets up an exper
 
 #### Running everything
 
-Make sure you are using step 1 version of the adapter by editing the "default" export in `/torch_agents/cogment_verse_torch_agents/simple_bc/__init__.py`.
+Make sure you are using step 1 version of the adapter by editing the "default" export in `config/experiment/simple_bc/mountain_car.yaml`.
 
-First start the service:
+First, launch a mlflow server on port 3000 using:
 
 ```
-./run.sh services_start
+python -m simple_mlflow
 ```
-and web client in another terminal:
+launch a simple behavior cloning run with the mountain car gym environment using:
 ```
-./run.sh web_client_start
+python -m main +experiment=simple_bc/mountain_car
 ```
 
 Open `localhost:8080`.
 
-Now we can launch a training run. There are three configurations provided:
-
-- simple_bc_cartpole
-- simple_bc_mountaincar
-- simple_bc_lander
 
 Start a training run as follows in the third terminal:
 
@@ -83,7 +71,7 @@ Start a training run as follows in the third terminal:
 ./run.sh client start simple_bc_lander
 ```
 
-and open the web client to start interacting with the agent. At this step the agent will take random actions, as a human you can take over to play the game. In the console, the run implementation will log every time a sample is retrieved.
+Open Chrome (other web browser might work but haven't tested) and navigate to http://localhost:8080/. At this step the agent will take random actions, as a human you can take over to play the game. In the console, the run implementation will log every time a sample is retrieved.
 
 ### Step 2 - Producing samples
 
@@ -99,7 +87,7 @@ In the event loop of the **sample producer implementation** those helpers are us
 
 Samples are produced as tuples consisting: a flag identifying if the sample is a demonstration (coming from the teacher), the observation as a tensor, the action as a tensor.
 
-Make sure you are using step 2 version of the adapter by editing the "default" export in `/torch_agents/cogment_verse_torch_agents/simple_bc/__init__.py` and then launch a run as described in the previous step.
+Make sure you are using step 2 version of the adapter by editing the "default" export in `config/experiment/simple_bc/mountain_car.yaml` and then launch a run as described in the previous step.
 
 Nothing should change in the web browser but received samples should be logged. Notice that when the human takes over samples are logged with the demonstration flag to `True`.
 
@@ -119,7 +107,7 @@ Notice that we added named arguments to the `_create` functions. They are forwar
 
 The agent implementation uses `self.retrieve_version` to retrieve the model having the configured name and version. These are now specified as a part of the actor params in the run implementation. The version number is defined as `-1`, which means the latest available version. Also in the agent implementation, we use the action conversion helpers to build an `ActorAction` from the output of the policy network.
 
-Make sure you are using step 3 version of the adapter by editing the "default" export in `/torch_agents/cogment_verse_torch_agents/simple_bc/__init__.py` and then launch a run as described in the previous step.
+Make sure you are using step 3 version of the adapter by editing the "default" export in `config/experiment/simple_bc/mountain_car.yaml` and then launch a run as described in the previous step.
 
 Nothing should change in the web browser - the agent is still doing random actions, but it's now random actions computed by a neural network.
 
@@ -133,7 +121,7 @@ This fourth step is about actually training the policy, aside from some import a
 
 One thing to notice is the way we deal with publishing new version of the model. This part of the code is only executed every 100 training steps, this is a tradeoff between the reactivity of the training and limiting the amount of data exchanged over the network and the time spent serializing and deserializing models.
 
-Make sure you are using step 4 version of the adapter by editing the "default" export in `/torch_agents/cogment_verse_torch_agents/simple_bc/__init__.py` and then launch a run as described in the previous step.
+Make sure you are using step 4 version of the adapter by editing the "default" export in `config/experiment/simple_bc/mountain_car.yaml` and then launch a run as described in the previous step.
 
 The agent is now learning, with a few demonstrations it should start to clone the behavior of the human player.
 
