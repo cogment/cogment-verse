@@ -1,4 +1,4 @@
-cogment[generate]==2.1.1
+cogment[generate]==2.4.1
 names_generator~=0.1.0
 mlflow~=1.21.0
 
