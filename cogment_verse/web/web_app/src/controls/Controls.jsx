@@ -49,7 +49,6 @@ export const Controls = ({ environment, actorClass, sendAction, fps, turnBased, 
     }
     if ([PLAYER_ACTOR_CLASS, TEACHER_ACTOR_CLASS].includes(actorClass)) {
       const control = CONTROLS.find(({ environments }) => environments.includes(environment));
-      debugger;
       if (control == null) {
         return () => <div>{environment} is not playable</div>;
       }

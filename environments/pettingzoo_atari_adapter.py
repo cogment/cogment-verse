@@ -21,7 +21,7 @@ import gymnasium as gymna
 import numpy as np
 import supersuit as ss
 
-from cogment_verse.constants import PLAYER_ACTOR_CLASS, TEACHER_ACTOR_CLASS
+from cogment_verse.constants import PLAYER_ACTOR_CLASS
 from cogment_verse.specs import (
     EnvironmentSpecs,
     Observation,

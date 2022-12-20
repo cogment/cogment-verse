@@ -58,7 +58,7 @@ ATARI_LOOKUP.setAction(["LEFT"], new cogment_verse.PlayerAction({ value: { prope
 //   new cogment_verse.PlayerAction({ value: { properties: [{ discrete: 17 }] } })
 // );
 
-export const AtariPongPzEnvironments = ["environment.pettingzoo_atari_adapter_v2.Environment/pettingzoo.atari.pong_v3"];
+export const AtariPongPzEnvironments = ["environments.pettingzoo_atari_adapter_v2.Environment/pettingzoo.atari.pong_v3"];
 export const AtariPongPzControls = ({ sendAction, fps = 30, actorClass, ...props }) => {
   const [paused, setPaused] = useState(false);
   const togglePause = useCallback(() => setPaused((paused) => !paused), [setPaused]);

@@ -204,6 +204,13 @@ class PPOActor:
 
         async for event in actor_session.all_events():
             if event.observation and event.type == cogment.EventType.ACTIVE:
+                if (
+                    event.observation.observation.HasField("current_player")
+                    and event.observation.observation.current_player != actor_session.name
+                ):
+                    # Not the turn of the agent
+                    actor_session.do_action(PlayerAction())
+                    continue
                 obs_tensor = torch.tensor(
                     flatten(observation_space, event.observation.observation.value), dtype=self._dtype
                 ).reshape(obs_shape)
@@ -664,7 +671,6 @@ class HillPPOTraining:
                 # The last sample was the last useful one
                 done[-1] = torch.ones(1, dtype=self._dtype)
                 break
-
             actor_sample = sample.actors_data[player_actor_name]
             obs_flat = flatten(player_observation_space, actor_sample.observation.value)
             observation_value = torch.unsqueeze(
@@ -704,30 +710,40 @@ class HillPPOTraining:
         )
 
         # Create actor parameters
-        def create_actor_params(name: str, version_number: int = -1, human: bool = False):
-            if human:
-                return cogment.ActorParameters(
-                    cog_settings,
-                    name=WEB_ACTOR_NAME,
-                    class_name=PLAYER_ACTOR_CLASS,
-                    implementation=HUMAN_ACTOR_IMPL,
-                    config=AgentConfig(
-                        run_id=run_session.run_id,
-                        environment_specs=self._environment_specs,
-                    ),
-                )
-            return cogment.ActorParameters(
-                cog_settings,
-                name=name,
-                class_name=PLAYER_ACTOR_CLASS,
-                implementation="actors.ppo_atari_pz.PPOActor",
-                config=AgentConfig(
-                    run_id=run_session.run_id,
-                    environment_specs=self._environment_specs,
-                    model_id=model_id,
-                    model_version=version_number,
-                ),
-            )
+        def create_actor_params(
+            actor_names: List[str], trial_idx: int, hill_training_trial_period: int, version_number: int = -1
+        ):
+            human_actor_idx = np.random.choice(len(actor_names), 1, replace=False)
+            human = True
+            actors = []
+            for i, name in enumerate(actor_names):
+                if human and i == human_actor_idx:
+                    actor = cogment.ActorParameters(
+                        cog_settings,
+                        name=WEB_ACTOR_NAME,
+                        class_name=PLAYER_ACTOR_CLASS,
+                        implementation=HUMAN_ACTOR_IMPL,
+                        config=AgentConfig(
+                            run_id=run_session.run_id,
+                            environment_specs=self._environment_specs,
+                        ),
+                    )
+                else:
+                    actor = cogment.ActorParameters(
+                        cog_settings,
+                        name=name,
+                        class_name=PLAYER_ACTOR_CLASS,
+                        implementation="actors.ppo_atari_pz.PPOActor",
+                        config=AgentConfig(
+                            run_id=run_session.run_id,
+                            environment_specs=self._environment_specs,
+                            model_id=model_id,
+                            model_version=version_number,
+                        ),
+                    )
+                actors.append(actor)
+
+            return actors
 
         # Helper function to create a trial configuration
         def create_trial_params(trial_idx: int, iter_idx: int, actors: list):
@@ -738,7 +754,7 @@ class HillPPOTraining:
                 environment_implementation=self._environment_specs.implementation,
                 environment_config=EnvironmentConfig(
                     run_id=run_session.run_id,
-                    render=False,
+                    render=HUMAN_ACTOR_IMPL in [actor.implementation for actor in actors],
                     seed=self._cfg.seed + trial_idx + iter_idx * self._cfg.epoch_num_trials,
                 ),
                 actors=actors,
@@ -763,10 +779,11 @@ class HillPPOTraining:
                         create_trial_params(
                             trial_idx,
                             iter_idx,
-                            actors=[
-                                create_actor_params(name="first_0", human=False),
-                                create_actor_params(name="second_0", human=True),
-                            ],
+                            actors=create_actor_params(
+                                actor_names=["first_0", "second_0"],
+                                trial_idx=trial_idx,
+                                hill_training_trial_period=hill_training_trial_period,
+                            ),
                         ),
                     )
                     for trial_idx in range(self._cfg.epoch_num_trials)

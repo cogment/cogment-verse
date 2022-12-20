@@ -28,7 +28,6 @@ from cogment_verse.specs import (
 )
 from cogment_verse.constants import PLAYER_ACTOR_CLASS, TEACHER_ACTOR_CLASS
 from cogment_verse.utils import import_class
-from debug.mp_pdb import ForkedPdb
 
 log = logging.getLogger(__name__)
 

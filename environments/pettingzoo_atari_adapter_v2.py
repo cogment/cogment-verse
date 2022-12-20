@@ -21,7 +21,7 @@ import gymnasium as gymna
 import numpy as np
 import supersuit as ss
 
-from cogment_verse.constants import PLAYER_ACTOR_CLASS, TEACHER_ACTOR_CLASS
+from cogment_verse.constants import PLAYER_ACTOR_CLASS
 from cogment_verse.specs import (
     EnvironmentSpecs,
     Observation,
@@ -125,11 +125,7 @@ class Environment:
 
     async def impl(self, environment_session):
         actors = environment_session.get_active_actors()
-        actor_names = {
-            actor.actor_name: count
-            for (count, actor) in enumerate(actors)
-            if actor.actor_class_name == PLAYER_ACTOR_CLASS
-        }
+        actor_names = [actor.actor_name for actor in actors if actor.actor_class_name == PLAYER_ACTOR_CLASS]
         session_cfg = environment_session.config
 
         # Reset environment.
@@ -145,10 +141,10 @@ class Environment:
 
         if len(pz_env.agents) != len(actor_names) and len(actor_names) > 1:
             raise ValueError(f"Number of actors does not match environments requirement ({len(pz_env.agents)} actors)")
-
-        pz_player_name, _ = get_pz_player(observation=pz_observation, actor_names=pz_env.agents)
-        pz_player_name_2 = next(pz_agent_iterator)
-        rl_actor_idx = actor_names[pz_player_name]
+        pz_player_names = {agent_name: count for (count, agent_name) in enumerate(pz_env.agents)}
+        pz_player_name = next(pz_agent_iterator)
+        rl_actor_idx = pz_player_names[pz_player_name]
+        actor_name = actor_names[rl_actor_idx]
         observation_value = observation_from_gym_observation(pz_env.observation_space(pz_player_name), pz_observation)
 
         # Render the pixel for UI
@@ -166,7 +162,7 @@ class Environment:
                     Observation(
                         value=observation_value,  # TODO Should only be sent to the current player
                         rendered_frame=rendered_frame,  # TODO Should only be sent to observers
-                        current_player=pz_player_name,
+                        current_player=actor_name,
                     ),
                 )
             ]
@@ -185,9 +181,9 @@ class Environment:
                 pz_observation, pz_reward, done, _, _ = pz_env.last()
 
                 # Actor names
-                pz_player_name, _ = get_pz_player(observation=pz_observation, actor_names=pz_env.agents)
-                pz_player_name_2 = next(pz_agent_iterator)
-                rl_actor_idx = actor_names[pz_player_name]
+                pz_player_name = next(pz_agent_iterator)
+                rl_actor_idx = pz_player_names[pz_player_name]
+                actor_name = actor_names[rl_actor_idx]
 
                 # Send data
                 observation_value = observation_from_gym_observation(
@@ -203,14 +199,14 @@ class Environment:
                         Observation(
                             value=observation_value,
                             rendered_frame=rendered_frame,
-                            current_player=pz_player_name,
+                            current_player=actor_name,
                         ),
                     )
                 ]
                 environment_session.add_reward(
                     value=pz_reward,
                     confidence=1.0,
-                    to=[pz_player_name],
+                    to=[actor_name],
                 )
 
                 if done:
