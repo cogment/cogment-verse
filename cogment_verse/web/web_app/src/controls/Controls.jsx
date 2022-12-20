@@ -25,6 +25,7 @@ import { GymCartPoleEnvironments, GymCartPoleControls } from "./GymCartPoleContr
 import { GymMountainCarEnvironments, GymMountainCarControls } from "./GymMountainCarControls";
 import { AtariPitfallEnvironments, AtariPitfallControls } from "./AtariPitfallControls";
 import { TetrisEnvironments, TetrisControls } from "./TetrisControls";
+import { AtariPongPzEnvironments, AtariPongPzControls } from "./AtariPongPzControls";
 import { TEACHER_ACTOR_CLASS, PLAYER_ACTOR_CLASS, OBSERVER_ACTOR_CLASS } from "../utils/constants";
 
 const CONTROLS = [
@@ -35,6 +36,7 @@ const CONTROLS = [
   { environments: AtariPitfallEnvironments, component: AtariPitfallControls },
   { environments: TetrisEnvironments, component: TetrisControls },
   { environments: ConnectFourEnvironments, component: ConnectFourControls },
+  { environments: AtariPongPzEnvironments, component: AtariPongPzControls },
 ];
 
 export const Controls = ({ environment, actorClass, sendAction, fps, turnBased, observation }) => {
@@ -47,6 +49,7 @@ export const Controls = ({ environment, actorClass, sendAction, fps, turnBased, 
     }
     if ([PLAYER_ACTOR_CLASS, TEACHER_ACTOR_CLASS].includes(actorClass)) {
       const control = CONTROLS.find(({ environments }) => environments.includes(environment));
+      debugger;
       if (control == null) {
         return () => <div>{environment} is not playable</div>;
       }

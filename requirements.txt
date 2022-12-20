@@ -12,9 +12,9 @@ uvicorn==0.17.6
 gym[atari,box2d,classic_control, mujoco]>=0.25,<0.26
 PettingZoo[classic]>=1.18,<1.19
 PettingZoo[atari]==1.22.2
-SuperSuit==3.7.0
-Gymnasium==0.26.3
-AutoROM==0.4.2
+SuperSuit~=3.7.0
+Gymnasium~=0.26.3
+AutoROM~=0.4.2
 
 
 # actors

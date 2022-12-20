@@ -2,10 +2,11 @@
 defaults:
   - override /services/actor:
       - ppo_atari_pz
-  - override /services/environment: pong_pz
+      - random
+  - override /services/environment: pong_pz_v2
 
 run:
-  class_name: actors.ppo_atari_pz.PPOTraining
+  class_name: actors.ppo_atari_pz.HillPPOTraining
   seed: 0
   num_epochs: 4
   num_iter: 5000
@@ -23,3 +24,4 @@ run:
   clipping_coef: 0.2
   grad_norm: 0.5
   image_size: [6, 84, 84]
+  hill_training_trials_ratio: 0.05

@@ -12,23 +12,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from enum import Enum
 import logging
+from enum import Enum
+from typing import Tuple
 
 import cogment
+import gymnasium as gymna
+import numpy as np
+import supersuit as ss
 
+from cogment_verse.constants import PLAYER_ACTOR_CLASS, TEACHER_ACTOR_CLASS
 from cogment_verse.specs import (
-    encode_rendered_frame,
     EnvironmentSpecs,
     Observation,
     SpaceMask,
-    space_from_gym_space,
+    encode_rendered_frame,
     gym_action_from_action,
     observation_from_gym_observation,
+    space_from_gym_space,
 )
-from cogment_verse.constants import PLAYER_ACTOR_CLASS, TEACHER_ACTOR_CLASS
 from cogment_verse.utils import import_class
-from debug.mp_pdb import ForkedPdb
 
 log = logging.getLogger(__name__)
 
@@ -43,20 +46,54 @@ def action_mask_from_pz_action_mask(pz_action_mask):
     )
 
 
+def get_pz_player(observation: np.ndarray, actor_names: list) -> Tuple[str, int]:
+    """Get name and index for the petting zoo player. Note that it works specifically to Atari game"""
+    num_agents = len(actor_names)
+    indicators = observation[0, 0, -num_agents:]
+    idx = int(np.where(indicators)[0])
+    current_agent_name = actor_names[idx]
+
+    return current_agent_name, idx
+
+
+def get_rl_agent(current_pz_agent_name: str, actor_names: list) -> Tuple[str, int]:
+    """Get index and name for reinforcement leanring"""
+    if len(actor_names) == 1:
+        return (actor_names[0], 0)
+    idx = [count for (count, agent_name) in enumerate(actor_names) if agent_name == current_pz_agent_name][0]
+    return (actor_names[idx], idx)
+
+
+def atari_env_wrapper(env: gymna.Env) -> gymna.Env:
+    """Wrapper for atari env"""
+    env = ss.max_observation_v0(env, 2)
+    env = ss.frame_skip_v0(env, 4)
+    env = ss.clip_reward_v0(env, lower_bound=-1, upper_bound=1)
+    env = ss.color_reduction_v0(env, mode="B")
+    env = ss.resize_v1(env, x_size=84, y_size=84)
+    env = ss.frame_stack_v1(env, 4)
+    env = ss.agent_indicator_v0(env, type_only=False)
+
+    return env
+
+
 class PzEnvType(Enum):
     CLASSIC = "classic"
+    ATARI = "atari"
 
 
 class Environment:
     def __init__(self, cfg):
         self.env_class_name = cfg.env_class_name
-        env_type_str = self.env_class_name.split(".")[1]
-        if env_type_str not in [pz_env_type.value for pz_env_type in PzEnvType]:
-            raise RuntimeError(f"PettingZoo adapter does not support environments of type [{env_type_str}]")
-        self.env_type = PzEnvType(env_type_str)
-        self.env_class = import_class(self.env_class_name)
+        self.env_type_str = self.env_class_name.split(".")[1]
+        if self.env_type_str not in [pz_env_type.value for pz_env_type in PzEnvType]:
+            raise RuntimeError(f"PettingZoo adapter does not support environments of type [{self.env_type_str}]")
 
+        self.env_type = PzEnvType(self.env_type_str)
+        self.env_class = import_class(self.env_class_name)
         pz_env = self.env_class.env()
+        if self.env_type_str == "atari":
+            pz_env = atari_env_wrapper(pz_env)
 
         num_players = 0
         observation_space = None
@@ -73,10 +110,9 @@ class Environment:
                     )
 
         assert num_players >= 1
-
         self.env_specs = EnvironmentSpecs(
             num_players=num_players,
-            observation_space=space_from_gym_space(observation_space["observation"]),
+            observation_space=space_from_gym_space(observation_space),
             action_space=space_from_gym_space(action_space),
             turn_based=self.env_type in [PzEnvType.CLASSIC],
         )
@@ -89,54 +125,39 @@ class Environment:
 
     async def impl(self, environment_session):
         actors = environment_session.get_active_actors()
-        player_actors = [
-            (actor_idx, actor.actor_name)
-            for (actor_idx, actor) in enumerate(actors)
+        actor_names = {
+            actor.actor_name: count
+            for (count, actor) in enumerate(actors)
             if actor.actor_class_name == PLAYER_ACTOR_CLASS
-        ]
-        assert len(player_actors) == self.env_specs.num_players  # pylint: disable=no-member
-
-        # No support for teachers
-        teacher_actors = [
-            (actor_idx, actor.actor_name)
-            for (actor_idx, actor) in enumerate(actors)
-            if actor.actor_class_name == TEACHER_ACTOR_CLASS
-        ]
-        assert len(teacher_actors) == 0
-
+        }
         session_cfg = environment_session.config
 
-        pz_env = self.env_class.env()
-
+        # Reset environment.
+        if session_cfg.render:
+            pz_env = self.env_class.env(render_mode="rgb_array")
+        else:
+            pz_env = self.env_class.env()
+        if self.env_type_str == "atari":
+            pz_env = atari_env_wrapper(pz_env)
         pz_env.reset(seed=session_cfg.seed)
-
         pz_agent_iterator = iter(pz_env.agent_iter())
+        pz_observation, _, _, _, _ = pz_env.last()
 
-        def next_player():
-            nonlocal pz_agent_iterator
-            current_player_pz_agent = next(pz_agent_iterator)
-            current_player_actor_idx, current_player_actor_name = next(
-                (player_actor_idx, player_actor_name)
-                for (player_pz_agent, (player_actor_idx, player_actor_name)) in zip(pz_env.agents, player_actors)
-                if player_pz_agent == current_player_pz_agent
-            )
-            return (current_player_pz_agent, current_player_actor_idx, current_player_actor_name)
+        if len(pz_env.agents) != len(actor_names) and len(actor_names) > 1:
+            raise ValueError(f"Number of actors does not match environments requirement ({len(pz_env.agents)} actors)")
 
-        current_player_pz_agent, current_player_actor_idx, current_player_actor_name = next_player()
+        pz_player_name, _ = get_pz_player(observation=pz_observation, actor_names=pz_env.agents)
+        pz_player_name_2 = next(pz_agent_iterator)
+        rl_actor_idx = actor_names[pz_player_name]
+        observation_value = observation_from_gym_observation(pz_env.observation_space(pz_player_name), pz_observation)
 
-        pz_observation, _pz_reward, _pz_done, _pz_info = pz_env.last()
-
-        observation_value = observation_from_gym_observation(
-            pz_env.observation_space(current_player_pz_agent)["observation"], pz_observation["observation"]
-        )
-        action_mask = action_mask_from_pz_action_mask(pz_observation["action_mask"])
-
+        # Render the pixel for UI
         rendered_frame = None
         if session_cfg.render:
             if "rgb_array" not in pz_env.metadata["render_modes"]:
                 log.warning(f"Petting Zoo environment [{self.env_class_name}] doesn't support rendering to pixels")
                 return
-            rendered_frame = encode_rendered_frame(pz_env.render(mode="rgb_array"), session_cfg.render_width)
+            rendered_frame = encode_rendered_frame(pz_env.render(), session_cfg.render_width)
 
         environment_session.start(
             [
@@ -145,70 +166,52 @@ class Environment:
                     Observation(
                         value=observation_value,  # TODO Should only be sent to the current player
                         rendered_frame=rendered_frame,  # TODO Should only be sent to observers
-                        action_mask=action_mask,  # TODO Should only be sent to the current player
-                        current_player=current_player_actor_name,
+                        current_player=pz_player_name,
                     ),
                 )
             ]
         )
-
         async for event in environment_session.all_events():
             if event.actions:
-                player_action_value = event.actions[current_player_actor_idx].action.value
+                # Action
+                player_action_value = event.actions[rl_actor_idx].action.value
                 action_value = player_action_value
-                # overridden_players = []
-                # if has_teacher and event.actions[teacher_actor_idx].action.HasField("value"):
-                #     teacher_action_value = event.actions[teacher_actor_idx].action.value
-                #     action_value = teacher_action_value
-                #     overridden_players = [player_actor_name]
 
+                # Observation
                 gym_action = gym_action_from_action(
                     self.env_specs.action_space, action_value  # pylint: disable=no-member
                 )
-
                 pz_env.step(gym_action)
+                pz_observation, pz_reward, done, _, _ = pz_env.last()
 
-                current_player_pz_agent, current_player_actor_idx, current_player_actor_name = next_player()
-                pz_observation, _pz_reward, _pz_done, _pz_info = pz_env.last()
+                # Actor names
+                pz_player_name, _ = get_pz_player(observation=pz_observation, actor_names=pz_env.agents)
+                pz_player_name_2 = next(pz_agent_iterator)
+                rl_actor_idx = actor_names[pz_player_name]
 
+                # Send data
                 observation_value = observation_from_gym_observation(
-                    pz_env.observation_space(current_player_pz_agent)["observation"], pz_observation["observation"]
+                    pz_env.observation_space(pz_player_name), pz_observation
                 )
-                action_mask = action_mask_from_pz_action_mask(pz_observation["action_mask"])
 
                 rendered_frame = None
                 if session_cfg.render:
-                    rendered_frame = encode_rendered_frame(pz_env.render(mode="rgb_array"), session_cfg.render_width)
-
+                    rendered_frame = encode_rendered_frame(pz_env.render(), session_cfg.render_width)
                 observations = [
                     (
                         "*",
                         Observation(
                             value=observation_value,
                             rendered_frame=rendered_frame,
-                            action_mask=action_mask,
-                            current_player=current_player_actor_name,
+                            current_player=pz_player_name,
                         ),
                     )
                 ]
-
-                for (rewarded_player_pz_agent, pz_reward) in pz_env.rewards.items():
-                    if pz_reward == 0:
-                        continue
-                    rewarded_player_actor_name = next(
-                        player_actor_name
-                        for (player_pz_agent, (player_actor_idx, player_actor_name)) in zip(
-                            pz_env.agents, player_actors
-                        )
-                        if player_pz_agent == rewarded_player_pz_agent
-                    )
-                    environment_session.add_reward(
-                        value=pz_reward,
-                        confidence=1.0,
-                        to=[rewarded_player_actor_name],
-                    )
-
-                done = all(pz_env.dones[pz_agent] for pz_agent in pz_env.agents)
+                environment_session.add_reward(
+                    value=pz_reward,
+                    confidence=1.0,
+                    to=[pz_player_name],
+                )
 
                 if done:
                     # The trial ended

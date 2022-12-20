@@ -12,26 +12,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Tuple
-from enum import Enum
 import logging
+from enum import Enum
+from typing import Tuple
 
 import cogment
+import gymnasium as gymna
+import numpy as np
+import supersuit as ss
 
+from cogment_verse.constants import PLAYER_ACTOR_CLASS, TEACHER_ACTOR_CLASS
 from cogment_verse.specs import (
-    encode_rendered_frame,
     EnvironmentSpecs,
     Observation,
     SpaceMask,
-    space_from_gym_space,
+    encode_rendered_frame,
     gym_action_from_action,
     observation_from_gym_observation,
+    space_from_gym_space,
 )
-from cogment_verse.constants import PLAYER_ACTOR_CLASS, TEACHER_ACTOR_CLASS
 from cogment_verse.utils import import_class
-import supersuit as ss
-import numpy as np
-import gymnasium as gymna
 
 log = logging.getLogger(__name__)
 
@@ -46,20 +46,22 @@ def action_mask_from_pz_action_mask(pz_action_mask):
     )
 
 
-def get_pz_player(observation: np.ndarray, agent_names: list) -> Tuple[str, int]:
+def get_pz_player(observation: np.ndarray, actor_names: list) -> Tuple[str, int]:
     """Get name and index for the petting zoo player. Note that it works specifically to Atari game"""
-    num_agents = len(agent_names)
+    num_agents = len(actor_names)
     indicators = observation[0, 0, -num_agents:]
     idx = int(np.where(indicators)[0])
-    current_agent_name = agent_names[idx]
+    current_agent_name = actor_names[idx]
 
     return current_agent_name, idx
 
 
-def get_rl_agent(current_pz_agent_name: str, agent_names: list) -> Tuple[str, int]:
+def get_rl_agent(current_pz_agent_name: str, actor_names: list) -> Tuple[str, int]:
     """Get index and name for reinforcement leanring"""
-    idx = [count for (count, agent_name) in enumerate(agent_names) if agent_name == current_pz_agent_name][0]
-    return agent_names[idx], idx
+    if len(actor_names) == 1:
+        return (actor_names[0], 0)
+    idx = [count for (count, agent_name) in enumerate(actor_names) if agent_name == current_pz_agent_name][0]
+    return (actor_names[idx], idx)
 
 
 def atari_env_wrapper(env: gymna.Env) -> gymna.Env:
@@ -123,35 +125,24 @@ class Environment:
 
     async def impl(self, environment_session):
         actors = environment_session.get_active_actors()
-        player_actors = [
-            (actor_idx, actor.actor_name)
-            for (actor_idx, actor) in enumerate(actors)
-            if actor.actor_class_name == PLAYER_ACTOR_CLASS
-        ]
-        agent_names = [play_actor[1] for play_actor in player_actors]
-
-        # No support for teachers
-        teacher_actors = [
-            (actor_idx, actor.actor_name)
-            for (actor_idx, actor) in enumerate(actors)
-            if actor.actor_class_name == TEACHER_ACTOR_CLASS
-        ]
-        assert len(teacher_actors) == 0
+        actor_names = [actor.actor_name for actor in actors if actor.actor_class_name == PLAYER_ACTOR_CLASS]
         session_cfg = environment_session.config
 
-        # Reset environment
+        # Reset environment.
         if session_cfg.render:
             pz_env = self.env_class.env(render_mode="rgb_array")
         else:
             pz_env = self.env_class.env()
-
         if self.env_type_str == "atari":
             pz_env = atari_env_wrapper(pz_env)
-
         pz_env.reset(seed=session_cfg.seed)
         pz_observation, _, _, _, _ = pz_env.last()
-        pz_player_name, _ = get_pz_player(observation=pz_observation, agent_names=pz_env.agents)
-        rl_actor_name, rl_actor_idx = get_rl_agent(current_pz_agent_name=pz_player_name, agent_names=agent_names)
+
+        if len(pz_env.agents) != len(actor_names) and len(actor_names) > 1:
+            raise ValueError(f"Number of actors does not match environments requirement ({len(pz_env.agents)} actors)")
+
+        pz_player_name, _ = get_pz_player(observation=pz_observation, actor_names=pz_env.agents)
+        rl_actor_name, rl_actor_idx = get_rl_agent(current_pz_agent_name=pz_player_name, actor_names=actor_names)
         observation_value = observation_from_gym_observation(pz_env.observation_space(pz_player_name), pz_observation)
 
         # Render the pixel for UI
@@ -187,10 +178,10 @@ class Environment:
                 pz_env.step(gym_action)
                 pz_observation, pz_reward, done, _, _ = pz_env.last()
 
-                # Player names
-                pz_player_name, _ = get_pz_player(observation=pz_observation, agent_names=pz_env.agents)
+                # Actor names
+                pz_player_name, _ = get_pz_player(observation=pz_observation, actor_names=pz_env.agents)
                 rl_actor_name, rl_actor_idx = get_rl_agent(
-                    current_pz_agent_name=pz_player_name, agent_names=agent_names
+                    current_pz_agent_name=pz_player_name, actor_names=actor_names
                 )
 
                 # Send data
