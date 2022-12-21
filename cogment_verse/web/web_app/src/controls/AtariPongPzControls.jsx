@@ -28,35 +28,6 @@ ATARI_LOOKUP.setAction([], new cogment_verse.PlayerAction({ value: { properties:
 ATARI_LOOKUP.setAction(["FIRE"], new cogment_verse.PlayerAction({ value: { properties: [{ discrete: 1 }] } }));
 ATARI_LOOKUP.setAction(["UP"], new cogment_verse.PlayerAction({ value: { properties: [{ discrete: 2 }] } }));
 ATARI_LOOKUP.setAction(["DOWN"], new cogment_verse.PlayerAction({ value: { properties: [{ discrete: 3 }] } }));
-ATARI_LOOKUP.setAction(["RIGHT"], new cogment_verse.PlayerAction({ value: { properties: [{ discrete: 4 }] } }));
-ATARI_LOOKUP.setAction(["LEFT"], new cogment_verse.PlayerAction({ value: { properties: [{ discrete: 5 }] } }));
-// ATARI_LOOKUP.setAction(["UP", "RIGHT"], new cogment_verse.PlayerAction({ value: { properties: [{ discrete: 6 }] } }));
-// ATARI_LOOKUP.setAction(["UP", "LEFT"], new cogment_verse.PlayerAction({ value: { properties: [{ discrete: 7 }] } }));
-// ATARI_LOOKUP.setAction(["DOWN", "RIGHT"], new cogment_verse.PlayerAction({ value: { properties: [{ discrete: 8 }] } }));
-// ATARI_LOOKUP.setAction(["DOWN", "LEFT"], new cogment_verse.PlayerAction({ value: { properties: [{ discrete: 9 }] } }));
-// ATARI_LOOKUP.setAction(["UP", "FIRE"], new cogment_verse.PlayerAction({ value: { properties: [{ discrete: 10 }] } }));
-// ATARI_LOOKUP.setAction(
-//   ["RIGHT", "FIRE"],
-//   new cogment_verse.PlayerAction({ value: { properties: [{ discrete: 11 }] } })
-// );
-// ATARI_LOOKUP.setAction(["LEFT", "FIRE"], new cogment_verse.PlayerAction({ value: { properties: [{ discrete: 12 }] } }));
-// ATARI_LOOKUP.setAction(["DOWN", "FIRE"], new cogment_verse.PlayerAction({ value: { properties: [{ discrete: 13 }] } }));
-// ATARI_LOOKUP.setAction(
-//   ["UP", "RIGHT", "FIRE"],
-//   new cogment_verse.PlayerAction({ value: { properties: [{ discrete: 14 }] } })
-// );
-// ATARI_LOOKUP.setAction(
-//   ["UP", "LEFT", "FIRE"],
-//   new cogment_verse.PlayerAction({ value: { properties: [{ discrete: 15 }] } })
-// );
-// ATARI_LOOKUP.setAction(
-//   ["DOWN", "RIGHT", "FIRE"],
-//   new cogment_verse.PlayerAction({ value: { properties: [{ discrete: 16 }] } })
-// );
-// ATARI_LOOKUP.setAction(
-//   ["DOWN", "LEFT", "FIRE"],
-//   new cogment_verse.PlayerAction({ value: { properties: [{ discrete: 17 }] } })
-// );
 
 export const AtariPongPzEnvironments = ["environments.pettingzoo_atari_adapter_v2.Environment/pettingzoo.atari.pong_v3"];
 export const AtariPongPzControls = ({ sendAction, fps = 30, actorClass, ...props }) => {
@@ -75,11 +46,6 @@ export const AtariPongPzControls = ({ sendAction, fps = 30, actorClass, ...props
 
       const controls = [];
 
-      if (pressedKeys.has("ArrowLeft")) {
-        controls.push("LEFT");
-      } else if (pressedKeys.has("ArrowRight")) {
-        controls.push("RIGHT");
-      }
       if (pressedKeys.has("ArrowDown")) {
         controls.push("DOWN");
       } else if (pressedKeys.has("ArrowUp")) {
@@ -106,8 +72,8 @@ export const AtariPongPzControls = ({ sendAction, fps = 30, actorClass, ...props
       </div>
       <KeyboardControlList
         items={[
-          ["Left/Right/Down/Up Arrows", "Move the character"],
-          ["Space", "Jump"],
+          ["Down/Up Arrows", "Move the paddle"],
+          ["Spacebar", "Serve the ball"],
           ["p", "Pause/Unpause"],
         ]}
       />

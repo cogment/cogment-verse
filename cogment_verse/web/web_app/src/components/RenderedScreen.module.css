@@ -5,11 +5,11 @@
 
 .canvas,
 .overlay {
-  height: 800px;
   grid-area: 1/-1;
   z-index: 0;
 
-  width: 100%;
+  width: auto;
+  height: 100%;
 }
 
 .overlay {

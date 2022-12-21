@@ -59,7 +59,7 @@ const Play = () => {
   const redirectToPlayAny = useCallback(() => navigate(".."), [navigate]);
 
   return (
-    <div className="max-w-screen-md mx-auto min-h-screen">
+    <div className="max-w-screen-md mx-auto min-h-screen flex flex-col items-center">
       <div className="p-2">
         <h1 className="text-xl font-semibold">{environment}</h1>
         <div className="text-base">
@@ -68,6 +68,7 @@ const Play = () => {
       </div>
 
       <RenderedScreen
+        className="grow w-full justify-items-center"
         observation={event.observation}
         overlay={
           trialStatus === TRIAL_STATUS.JOINING ? (
@@ -79,7 +80,7 @@ const Play = () => {
           ) : null
         }
       />
-      <div className="p-2 flex flex-col gap-2">
+      <div className="p-2 flex flex-col gap-2 w-full">
         {trialStatus === TRIAL_STATUS.ONGOING ? (
           <Controls
             actorClass={actorClassName}
