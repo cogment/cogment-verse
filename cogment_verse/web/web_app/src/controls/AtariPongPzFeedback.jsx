@@ -37,36 +37,6 @@ export const AtariPongPzFeedback = ({ sendAction, fps = 30, actorClass, ...props
     const togglePause = useCallback(() => setPaused((paused) => !paused), [setPaused]);
     useDocumentKeypressListener("p", togglePause);
 
-    // const pressedKeys = usePressedKeys();
-
-    // const computeAndSendAction = useCallback(
-    //     (dt) => {
-    //         if (pressedKeys.size === 0 && actorClass === TEACHER_ACTOR_CLASS) {
-    //             sendAction(TEACHER_NOOP_ACTION);
-    //             return;
-    //         }
-
-    //         
-
-    //         if (pressedKeys.has("ArrowLeft")) {
-    //             controls.push("LEFT");
-    //         } else if (pressedKeys.has("ArrowRight")) {
-    //             controls.push("RIGHT");
-    //         }
-    //         if (pressedKeys.has("ArrowDown")) {
-    //             controls.push("DOWN");
-    //         } else if (pressedKeys.has("ArrowUp")) {
-    //             controls.push("UP");
-    //         }
-    //         if (pressedKeys.has(" ")) {
-    //             controls.push("FIRE");
-    //         }
-    //         const action = ATARI_LOOKUP.getAction(controls);
-    //         sendAction(action);
-    //     },
-    //     [pressedKeys, sendAction, actorClass]
-    // );
-
     const { currentFps } = useRealTimeUpdateV2(fps, paused);
     const sendFeedback = (feedback) => {
         const controls = [];
@@ -81,18 +51,25 @@ export const AtariPongPzFeedback = ({ sendAction, fps = 30, actorClass, ...props
                 paddingBottom: 10,
                 padingTop: 10, 
             }}>
-                <button onClick={sendFeedback("LIKE")}>
+                <button 
+                    onClick={() => sendFeedback("LIKE")}
+                    disabled=""
+                    >
                     <FontAwesomeIcon
                         icon={faThumbsUp}
-                        style={{ paddingRight: 50 }}
+                        style={{ paddingRight: 10 }}
                         size="4x"
+                        color="green"
                     />
                 </button>
-                <button onClick={sendFeedback("DISLIKE")}>
+                <button 
+                    onClick={() => sendFeedback("DISLIKE")}
+                    >
                     <FontAwesomeIcon
                         icon={faThumbsDown}
                         style={{ paddingLeft: 5 }}
                         size="4x"
+                        color="red"
                     />
                 </button>
             </div>
@@ -102,13 +79,6 @@ export const AtariPongPzFeedback = ({ sendAction, fps = 30, actorClass, ...props
                 </Button>
                 <FpsCounter className="flex-none w-fit" value={currentFps} />
             </div>
-            <KeyboardControlList
-                items={[
-                    ["Left/Right/Down/Up Arrows", "Move the character"],
-                    ["Space", "Jump"],
-                    ["p", "Pause/Unpause"],
-                ]}
-            />
         </div>
     );
 };

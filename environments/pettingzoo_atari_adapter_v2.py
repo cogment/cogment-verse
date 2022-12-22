@@ -21,7 +21,7 @@ import gymnasium as gymna
 import numpy as np
 import supersuit as ss
 
-from cogment_verse.constants import PLAYER_ACTOR_CLASS, WEB_ACTOR_NAME 
+from cogment_verse.constants import PLAYER_ACTOR_CLASS, WEB_ACTOR_NAME
 from cogment_verse.specs import (
     EnvironmentSpecs,
     Observation,
@@ -203,11 +203,7 @@ class Environment:
                         ),
                     )
                 ]
-                environment_session.add_reward(
-                    value=pz_reward,
-                    confidence=1.0,
-                    to=[actor_name],
-                )
+                environment_session.add_reward(value=pz_reward, confidence=1.0, to=[actor_name])
 
                 if done:
                     # The trial ended
@@ -220,6 +216,7 @@ class Environment:
                     environment_session.produce_observations(observations)
 
         pz_env.close()
+
 
 class HumanFeedbackEnvironment:
     def __init__(self, cfg):
@@ -342,11 +339,7 @@ class HumanFeedbackEnvironment:
                         ),
                     )
                 ]
-                environment_session.add_reward(
-                    value=pz_reward,
-                    confidence=1.0,
-                    to=[actor_name],
-                )
+                environment_session.add_reward(value=pz_reward, confidence=1.0, to=[actor_name])
 
                 if done:
                     # The trial ended
