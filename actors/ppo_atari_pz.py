@@ -723,10 +723,7 @@ class HillPPOTraining:
                         name=WEB_ACTOR_NAME,
                         class_name=PLAYER_ACTOR_CLASS,
                         implementation=HUMAN_ACTOR_IMPL,
-                        config=AgentConfig(
-                            run_id=run_session.run_id,
-                            environment_specs=self._environment_specs,
-                        ),
+                        config=AgentConfig(run_id=run_session.run_id, environment_specs=self._environment_specs),
                     )
                 else:
                     actor = cogment.ActorParameters(
@@ -759,7 +756,6 @@ class HillPPOTraining:
                 ),
                 actors=actors,
             )
-
         hill_training_trial_period = (
             math.floor(1 / self._cfg.hill_training_trials_ratio) if self._cfg.hill_training_trials_ratio > 0 else 0
         )
@@ -772,6 +768,7 @@ class HillPPOTraining:
         episode_rewards = []
         num_updates = 0
         for iter_idx in range(self._cfg.num_iter):
+            #TODO: actor names should not be hard-coding 
             for (_, _, _, sample) in run_session.start_and_await_trials(
                 trials_id_and_params=[
                     (

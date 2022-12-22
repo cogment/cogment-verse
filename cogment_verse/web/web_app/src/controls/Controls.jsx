@@ -26,6 +26,7 @@ import { GymMountainCarEnvironments, GymMountainCarControls } from "./GymMountai
 import { AtariPitfallEnvironments, AtariPitfallControls } from "./AtariPitfallControls";
 import { TetrisEnvironments, TetrisControls } from "./TetrisControls";
 import { AtariPongPzEnvironments, AtariPongPzControls } from "./AtariPongPzControls";
+import { AtariPongPzHfbEnvironments, AtariPongPzFeedback } from "./AtariPongPzFeedback";
 import { TEACHER_ACTOR_CLASS, PLAYER_ACTOR_CLASS, OBSERVER_ACTOR_CLASS } from "../utils/constants";
 
 const CONTROLS = [
@@ -37,6 +38,7 @@ const CONTROLS = [
   { environments: TetrisEnvironments, component: TetrisControls },
   { environments: ConnectFourEnvironments, component: ConnectFourControls },
   { environments: AtariPongPzEnvironments, component: AtariPongPzControls },
+  { environments: AtariPongPzHfbEnvironments, component: AtariPongPzFeedback},
 ];
 
 export const Controls = ({ environment, actorClass, sendAction, fps, turnBased, observation }) => {
