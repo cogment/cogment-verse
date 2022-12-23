@@ -18,6 +18,7 @@ from data_pb2 import (  # pylint: disable=import-error
     EnvironmentSpecs,
     Observation,
     PlayerAction,
+    ObserverAction,
     Space,
     SpaceMask,
     SpaceValue,

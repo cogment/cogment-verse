@@ -6,7 +6,7 @@ defaults:
   - override /services/environment: pong_pz_hfb
 
 run:
-  class_name: actors.ppo_atari_pz.HillPPOTraining
+  class_name: actors.ppo_atari_pz.HumanFeedbackPPOTraining
   seed: 0
   num_epochs: 4
   num_iter: 5000

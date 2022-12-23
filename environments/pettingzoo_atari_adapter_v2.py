@@ -167,6 +167,8 @@ class Environment:
                 )
             ]
         )
+        is_rl_agent = False
+        pz_reward = 0
         async for event in environment_session.all_events():
             if event.actions:
                 # Action
@@ -214,7 +216,6 @@ class Environment:
                 else:
                     # The trial is active
                     environment_session.produce_observations(observations)
-
         pz_env.close()
 
 
@@ -275,7 +276,7 @@ class HumanFeedbackEnvironment:
         pz_agent_iterator = iter(pz_env.agent_iter())
         pz_observation, _, _, _, _ = pz_env.last()
 
-        if len(pz_env.agents) != len(actor_names) and len(actor_names) > 1:
+        if (len(actor_names) != len(pz_env.agents) + 1) and len(actor_names) > 1:
             raise ValueError(f"Number of actors does not match environments requirement ({len(pz_env.agents)} actors)")
         pz_player_names = {agent_name: count for (count, agent_name) in enumerate(pz_env.agents)}
         pz_player_name = next(pz_agent_iterator)
@@ -299,36 +300,52 @@ class HumanFeedbackEnvironment:
                         value=observation_value,  # TODO Should only be sent to the current player
                         rendered_frame=rendered_frame,  # TODO Should only be sent to observers
                         current_player=actor_name,
+                        order=0,
                     ),
                 )
             ]
         )
+        is_rl_agent = True
+        eval_done = False
+        step = 0
         async for event in environment_session.all_events():
             if event.actions:
                 # Action
                 player_action_value = event.actions[rl_actor_idx].action.value
                 action_value = player_action_value
+                if is_rl_agent:
+                    # Observation
+                    gym_action = gym_action_from_action(
+                        self.env_specs.action_space, action_value  # pylint: disable=no-member
+                    )
+                    pz_env.step(gym_action)
+                    pz_observation, pz_reward, done, _, _ = pz_env.last()
 
-                # Observation
-                gym_action = gym_action_from_action(
-                    self.env_specs.action_space, action_value  # pylint: disable=no-member
-                )
-                pz_env.step(gym_action)
-                pz_observation, pz_reward, done, _, _ = pz_env.last()
+                    # Actor names for evaluator
+                    rewarded_actor_name = actor_name
+                    rl_actor_idx = -1
+                    actor_name = actor_names[rl_actor_idx]
 
-                # Actor names
-                pz_player_name = next(pz_agent_iterator)
-                rl_actor_idx = pz_player_names[pz_player_name]
-                actor_name = actor_names[rl_actor_idx]
+                    # Send data
+                    observation_value = observation_from_gym_observation(
+                        pz_env.observation_space(pz_player_name), pz_observation
+                    )
 
-                # Send data
-                observation_value = observation_from_gym_observation(
-                    pz_env.observation_space(pz_player_name), pz_observation
-                )
-
-                rendered_frame = None
-                if session_cfg.render:
-                    rendered_frame = encode_rendered_frame(pz_env.render(), session_cfg.render_width)
+                    # Pixel frame display on UI
+                    rendered_frame = None
+                    if session_cfg.render:
+                        rendered_frame = encode_rendered_frame(pz_env.render(), session_cfg.render_width)
+                    is_rl_agent = False
+                    eval_done = False
+                else:
+                    pz_reward = action_value.properties[0].simple_box.values[0]
+                    rewarded_actor_name = actor_name
+                    pz_player_name = next(pz_agent_iterator)
+                    rl_actor_idx = pz_player_names[pz_player_name]
+                    actor_name = actor_names[rl_actor_idx]
+                    eval_done = True
+                    is_rl_agent = True
+                step += 1
                 observations = [
                     (
                         "*",
@@ -336,12 +353,16 @@ class HumanFeedbackEnvironment:
                             value=observation_value,
                             rendered_frame=rendered_frame,
                             current_player=actor_name,
+                            order=step,
                         ),
                     )
                 ]
-                environment_session.add_reward(value=pz_reward, confidence=1.0, to=[actor_name])
+                environment_session.add_reward(value=pz_reward, confidence=1.0, to=[rewarded_actor_name])
 
-                if done:
+                if step > 7 and eval_done:
+                    done = True
+
+                if done and eval_done:
                     # The trial ended
                     environment_session.end(observations)
                 elif event.type != cogment.EventType.ACTIVE:
