@@ -58,7 +58,7 @@ ATARI_LOOKUP.setAction(["LEFT"], new cogment_verse.PlayerAction({ value: { prope
 //   new cogment_verse.PlayerAction({ value: { properties: [{ discrete: 17 }] } })
 // );
 
-export const AtariPongPzEnvironments = ["environments.pettingzoo_atari_adapter_v2.Environment/pettingzoo.atari.pong_v3"];
+export const AtariPongPzEnvironments = ["environments.pettingzoo_atari_adapter.RlEnvironment/pettingzoo.atari.pong_v3"];
 export const AtariPongPzControls = ({ sendAction, fps = 30, actorClass, ...props }) => {
   const [paused, setPaused] = useState(false);
   const togglePause = useCallback(() => setPaused((paused) => !paused), [setPaused]);
@@ -79,13 +79,11 @@ export const AtariPongPzControls = ({ sendAction, fps = 30, actorClass, ...props
         controls.push("LEFT");
       } else if (pressedKeys.has("ArrowRight")) {
         controls.push("RIGHT");
-      }
-      if (pressedKeys.has("ArrowDown")) {
+      } else if (pressedKeys.has("ArrowDown")) {
         controls.push("DOWN");
       } else if (pressedKeys.has("ArrowUp")) {
         controls.push("UP");
-      }
-      if (pressedKeys.has(" ")) {
+      } else if (pressedKeys.has("Enter")) {
         controls.push("FIRE");
       }
       const action = ATARI_LOOKUP.getAction(controls);

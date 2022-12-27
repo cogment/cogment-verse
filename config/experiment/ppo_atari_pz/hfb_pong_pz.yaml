@@ -25,3 +25,4 @@ run:
   grad_norm: 0.5
   image_size: [6, 84, 84]
   hill_training_trials_ratio: 0.05
+  buffer_capacity: 100_000

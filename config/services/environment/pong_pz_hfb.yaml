@@ -1,3 +1,3 @@
-class_name: environments.pettingzoo_atari_adapter_v2.HumanFeedbackEnvironment
+class_name: environments.pettingzoo_atari_adapter.HumanFeedbackEnvironment
 env_class_name: pettingzoo.atari.pong_v3
-port: ${generate_port:environments.pettingzoo_atari_adapter_v2.HumanFeedbackEnvironment}
+port: ${generate_port:environments.pettingzoo_atari_adapter.HumanFeedbackEnvironment}

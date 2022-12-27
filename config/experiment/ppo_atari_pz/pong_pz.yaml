@@ -5,7 +5,7 @@ defaults:
   - override /services/environment: pong_pz
 
 run:
-  class_name: actors.ppo_atari_pz.PPOTraining
+  class_name: actors.ppo_atari_pz.PPOSelfTraining
   seed: 0
   num_epochs: 4
   num_iter: 5000
@@ -16,7 +16,7 @@ run:
   num_steps: 256
   discount_factor: 0.99
   lambda_gae: 0.95
-  device: cpu
+  device: cuda
   entropy_loss_coef: 0.05
   value_loss_coef: 0.5
   action_loss_coef: 0.1

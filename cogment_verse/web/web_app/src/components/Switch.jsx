@@ -12,17 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import {useState} from "react";
 import styles from "./Switch.module.css";
 import classNames from "classnames";
 
-export const Switch = ({check, onChange, label}) => {
+export const Switch = ({ check, onChange, label }) => {
 
   return <div className="flex items-center gap-2">
-          <span>{label}</span>
-          <label className={styles.switch}>
-          <input type="checkbox" value={check} onChange={onChange}/>
-          <span className={classNames(styles.slider, styles.round)} ></span>
-          </label>
-        </div>
+    <span>{label}</span>
+    <label className={styles.switch}>
+      <input type="checkbox" checked={check} onChange={onChange} />
+      <span className={classNames(styles.slider, styles.round)} ></span>
+    </label>
+  </div>
 };

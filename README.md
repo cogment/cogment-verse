@@ -125,6 +125,54 @@ If you want to use Isaac Gym, use python3.8 (not python3.9)
 5. nvidia-smi` to check that you have NVIDIA drivers and proper cuda installations.
 6. (Assuming you already have mlflow running in a different terminal), Run `python -m main services/environment=ant`
 
+## Peeting Zoo
+### Installation
+  1. Clone this repository
+      ```sh
+      git clone https://github.com/cogment/cogment-verse.git
+      ```
+  2. Create and activate the virtual python environment
+      ```sh
+      python -m venv .venv
+      source .venv/bin/activate
+      ```
+  3. This step is only required for Apple silicon-based computers (e.g., M1&2 chips). Clone [Multi-Agent-ALE](https://github.com/Farama-Foundation/Multi-Agent-ALE) repository
+      ```sh
+      git clone https://github.com/Farama-Foundation/Multi-Agent-ALE.git
+      cd Multi-Agent-ALE
+      pip install .
+      ```
+
+  4. Install requirements
+      ```sh
+      pip install -r requirements.txt
+      ```
+  5. Activate [AutoROM](https://github.com/Farama-Foundation/AutoROM) license relating to Atari games
+      ```sh
+      AutoROM --accept-license
+      ```
+
+### Examples on [Atari Pong](https://pettingzoo.farama.org/environments/atari/pong/)
+  1. Run mlflow on the terminal
+      ```sh
+      python -m simple_mlflow
+      ```
+  2. Run one of these examples on a separate terminal
+      * Example #1: Self-training
+        ```sh
+        python -m main +experiment=ppo_atari_pz/pong_pz
+        ```
+      * Example #2: Human provides demonstrations
+        ```sh
+        python -m main +experiment=ppo_atari_pz/hill_pong_pz
+        ```
+      * Example #3: Human provides feedback
+        ```sh
+        python -m main +experiment=ppo_atari_pz/hfb_pong_pz
+        ```
+  *NOTE: Example 3&4 requires users to open Chrome and navigate to http://localhost:8080 in order to provide either demostrations or feedback.
+  
+
 ## List of publications and submissions using Cogment and/or Cogment Verse
 
 - Analyzing and Overcoming Degradation in Warm-Start Off-Policy Reinforcement Learning [code](https://github.com/benwex93/cogment-verse)

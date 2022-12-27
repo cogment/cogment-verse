@@ -1,7 +1,7 @@
 cogment[generate]==2.2.2
 grpcio==1.43.0
 hydra-core==1.2.0
-mlflow~=1.30.0
+mlflow==1.30.0
 names_generator~=0.1.0
 opencv-python~=4.5.5
 PyYAML~=5.3.1
@@ -10,10 +10,10 @@ uvicorn==0.17.6
 
 # environments
 gym[box2d,classic_control, mujoco]>=0.25,<0.26
-PettingZoo[atari, classic]~=1.22.2
-SuperSuit~=3.7.0
-Gymnasium~=0.26.3
-AutoROM~=0.4.2
+PettingZoo[atari, classic]==1.22.2
+SuperSuit==3.7.0
+Gymnasium==0.26.3
+AutoROM==0.4.2
 
 
 # actors

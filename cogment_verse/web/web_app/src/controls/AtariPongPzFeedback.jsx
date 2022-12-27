@@ -12,11 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { cogment_verse } from "../data_pb";
 import { useDocumentKeypressListener, usePressedKeys } from "../hooks/usePressedKeys";
 import { useRealTimeUpdateV2 } from "../hooks/useRealTimeUpdate_v2";
 import { createLookup } from "../utils/controlLookup";
+import { WEB_ACTOR_NAME } from "../utils/constants";
 import { Button } from "../components/Button";
 import { FpsCounter } from "../components/FpsCounter";
 import { Switch } from "../components/Switch"
@@ -29,11 +30,32 @@ import { faThumbsUp, faThumbsDown } from "@fortawesome/free-solid-svg-icons";
 // ATARI_LOOKUP.setAction(["LIKE"], new cogment_verse.ObserverAction({ value: 1 }));
 // ATARI_LOOKUP.setAction(["DISLIKE"], new cogment_verse.ObserverAction({ value: -1 }));
 
-export const AtariPongPzHfbEnvironments = ["environments.pettingzoo_atari_adapter_v2.HumanFeedbackEnvironment/pettingzoo.atari.pong_v3"];
-export const AtariPongPzFeedback = ({ sendAction, fps = 30, actorClass, ...props }) => {
+export const AtariPongPzHfbEnvironments = ["environments.pettingzoo_atari_adapter.HumanFeedbackEnvironment/pettingzoo.atari.pong_v3"];
+export const AtariPongPzFeedback = ({ sendAction, fps = 30, actorClass, observation, ...props }) => {
     const [paused, setPaused] = useState(false);
     const [humanMode, setHumanMode] = useState(true);
     const [selectedFeedback, setFeedback] = useState(0);
+    const [humanTurn, setHumanTurn] = useState(false);
+    const [playerPos, setPlayerPos] = useState('left');
+    const playerName = observation?.playerEvaluated;
+    const timeStep = observation?.step;
+    // const isHumanTurn = observation?.isHuman;
+
+    // useEffect(() => {
+    //     if (playerName.includes('first')) {
+    //         setPlayerPos('left');
+    //     } else {
+    //         setPlayerPos('right');
+    //     }
+    // }, [playerName])
+
+    // useEffect(() => {
+    //     if (isHumanTurn) {
+    //         setHumanTurn(true);
+    //     } else {
+    //         setHumanTurn(false);
+    //     }
+    // }, [isHumanTurn])
 
     const togglePause = useCallback(() => setPaused((paused) => !paused), [setPaused]);
     const toggleHuman = useCallback(() => setHumanMode((humanMode) => !humanMode), [setHumanMode]);
@@ -49,37 +71,42 @@ export const AtariPongPzFeedback = ({ sendAction, fps = 30, actorClass, ...props
     }
     const sendFeedback = (feedback) => {
         setFeedback(feedback == "LIKE" ? 1 : -1);
-        setTimeout(() => { setFeedback(0) }, 100);
+        setTimeout(() => { setFeedback(0) }, 150);
         const action = new cogment_verse.ObserverAction({ value: { properties: [{ simpleBox: { values: feedback == "LIKE" ? [1.0] : [-1.0] } }] } });
         sendAction(action);
     };
 
     return (
         <div {...props}>
+            <div className={playerPos == 'right' ? "flex flex-row-reverse text-bold text-base" : "flex flex-col-reverse text-bold text-base"}>
+                {timeStep}
+            </div>
             {humanMode && <div className="text-center" style={{
                 paddingBottom: 10,
                 padingTop: 10,
             }}>
                 <button
+                    type="button"
                     onClick={() => sendFeedback("LIKE")}
-                    disabled={selectedFeedback != 0}
+                // disabled={selectedFeedback != 0}
                 >
                     <FontAwesomeIcon
                         icon={faThumbsUp}
                         style={{ paddingRight: 10 }}
                         size="4x"
-                        color={selectedFeedback == 1 && "green"}
+                        color={selectedFeedback == 1 ? "green" : "gray"}
                     />
                 </button>
                 <button
+                    type="button"
                     onClick={() => sendFeedback("DISLIKE")}
-                    disabled={selectedFeedback != 0}
+                // disabled={selectedFeedback != 0}
                 >
                     <FontAwesomeIcon
                         icon={faThumbsDown}
                         style={{ paddingLeft: 5 }}
                         size="4x"
-                        color={selectedFeedback == -1 && "red"}
+                        color={selectedFeedback == -1 ? "red" : "gray"}
                     />
                 </button>
             </div>}

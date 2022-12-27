@@ -3,7 +3,7 @@ defaults:
   - override /services/actor:
       - ppo_atari_pz
       - random
-  - override /services/environment: pong_pz_v2
+  - override /services/environment: pong_pz
 
 run:
   class_name: actors.ppo_atari_pz.HillPPOTraining
@@ -25,3 +25,4 @@ run:
   grad_norm: 0.5
   image_size: [6, 84, 84]
   hill_training_trials_ratio: 0.05
+  buffer_capacity: 100_000

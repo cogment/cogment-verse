@@ -23,7 +23,7 @@ import numpy as np
 import torch
 from torch.distributions.distribution import Distribution
 
-from cogment_verse import Model
+from cogment_verse import Model, HumanDataBuffer
 from cogment_verse.run.run_session import RunSession
 from cogment_verse.run.sample_producer_worker import SampleProducerSession
 from cogment_verse.specs import (
@@ -49,6 +49,8 @@ log = logging.getLogger(__name__)
 # pylint: disable=E1102
 # pylint: disable=W0212
 # pylint: disable=W0223
+# pylint: disable=W0613
+# pylint: disable=W0612
 def initialize_weight(param) -> None:
     """Orthogonal initialization of the weight's values of a network"""
 
@@ -256,6 +258,7 @@ class BasePPOTraining(ABC):
         "device": "cpu",
         "grad_norm": 0.5,
         "image_size": [6, 84, 84],
+        "buffer_capacity": 100_000,
     }
 
     def __init__(self, environment_specs: EnvironmentSpecs, cfg: EnvironmentConfig) -> None:
@@ -263,7 +266,7 @@ class BasePPOTraining(ABC):
         self._dtype = torch.float32
         self._environment_specs = environment_specs
         self._cfg = cfg
-        self._device = torch.device(self._cfg.device)
+        self._device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.returns = 0
         self.model = PPOModel(
             model_id="",
@@ -413,8 +416,63 @@ class BasePPOTraining(ABC):
 
         return log_prob
 
+    @staticmethod
+    async def get_n_steps_data(dataset: torch.Tensor, num_steps: int) -> torch.tensor:
+        """Get the data up to nth steps"""
+        return dataset[:num_steps]
 
-class PPOTraining(BasePPOTraining):
+    def make_dataloader(self, dataset: torch.Tensor, batch_size: int, obs_shape: int) -> List[torch.Tensor]:
+        """Create a dataloader in batches"""
+        # Initialization
+        output_batches = torch.zeros((batch_size, *obs_shape), dtype=self._dtype).to(self._device)
+        num_data = len(dataset)
+        data_loader = []
+        count = 0
+        for i, y_batch in enumerate(dataset):
+            output_batches[count] = y_batch
+            # Store data
+            if (i + 1) % batch_size == 0:
+                data_loader.append(output_batches)
+
+                # Reset
+                count = 0
+                output_batches = torch.zeros((batch_size, *obs_shape), dtype=self._dtype).to(self._device)
+            else:
+                count += 1
+                if i == num_data - 1:
+                    data_loader.append(output_batches[:count])
+
+        return data_loader
+
+    def normalize_rewards(self, rewards: list, model: PPOModel) -> list:
+        """Normalize the rewards"""
+        normalized_reward = []
+        for rew in rewards:
+            normalized_reward.append(rew / (model.reward_normalizaiton.var + 1e-8) ** 0.5)
+            self.returns = self.returns * self._cfg.discount_factor + rew
+            model.reward_normalization.update(self.returns)
+
+        return normalized_reward
+
+    def compute_gae(
+        self, rewards: torch.Tensor, values: torch.Tensor, dones: torch.Tensor, gamma: float = 0.99, lam: float = 0.95
+    ) -> torch.Tensor:
+        """Compute Generalized Advantage Estimation. See equations 11 & 12 in
+        https://arxiv.org/pdf/1707.06347.pdf
+        """
+
+        advs = []
+        gae = 0.0
+        dones = torch.cat((dones, torch.zeros(1, 1).to(self._device)), dim=0)
+        for i in reversed(range(len(rewards))):
+            delta = rewards[i] + gamma * (values[i + 1]) * (1 - dones[i]) - values[i]
+            gae = delta + gamma * lam * (1 - dones[i]) * gae
+            advs.append(gae)
+        advs.reverse()
+        return torch.vstack(advs)
+
+
+class PPOSelfTraining(BasePPOTraining):
     """Train PPO agent"""
 
     async def trial_sample_sequences_producer_impl(self, sample_producer_session: SampleProducerSession):
@@ -469,7 +527,10 @@ class PPOTraining(BasePPOTraining):
         self.model.network.to(self._device)
 
         run_session.log_params(
-            self._cfg, model_id=model_id, environment_implementation=self._environment_specs.implementation
+            self._cfg,
+            model_id=model_id,
+            environment_implementation=self._environment_specs.implementation,
+            hill_type="none",
         )
 
         # Helper function to create a trial configuration
@@ -505,7 +566,10 @@ class PPOTraining(BasePPOTraining):
         rewards = []
         dones = []
         episode_rewards = []
+        episode_lens = []
+
         num_updates = 0
+        total_steps = 0
         for iter_idx in range(self._cfg.num_iter):
             for (_, _, _, sample) in run_session.start_and_await_trials(
                 trials_id_and_params=[
@@ -523,11 +587,13 @@ class PPOTraining(BasePPOTraining):
                 rewards.extend(trial_reward)
                 dones.extend(trial_done)
 
-                episode_rewards.append(torch.tensor(len(trial_action), dtype=torch.float32))
+                episode_rewards.append(torch.vstack(trial_reward).sum())
+                episode_lens.append(torch.tensor(len(trial_action), dtype=torch.float32))
 
                 # Publish the newly trained version every 100 steps
                 if len(actions) >= self._cfg.num_steps * self._cfg.epoch_num_trials + 1:
                     num_updates += 1
+                    total_steps += self._cfg.num_steps * self._cfg.epoch_num_trials
                     # Update model parameters
                     policy_loss, value_loss = await self.train_step(
                         observations=observations, rewards=rewards, actions=actions, dones=dones
@@ -541,15 +607,19 @@ class PPOTraining(BasePPOTraining):
                     if iter_idx % 1 == 0:
                         # Compute average rewards for last 100 episodes
                         avg_rewards = await self.compute_average_reward(episode_rewards)
+                        avg_lens = await self.compute_average_reward(episode_lens) / self._environment_specs.num_players
                         log.info(
-                            f"epoch #{iter_idx + 1}/{self._cfg.num_iter}: [policy loss: {policy_loss:0.2f}, value loss: {value_loss:0.2f}, avg. rewards: {avg_rewards:0.2f}]"
+                            f"epoch #{iter_idx + 1}/{self._cfg.num_iter}: [policy loss: {policy_loss:0.2f}, value loss: {value_loss:0.2f}, avg. len: {avg_lens:0.2f}]"
                         )
 
                         run_session.log_metrics(
                             model_version_number=version_info["version_number"],
                             policy_loss=policy_loss.item(),
                             value_loss=value_loss.item(),
-                            rewards=avg_rewards.item(),
+                            avg_rewards=avg_rewards.item(),
+                            avg_lens=avg_lens.item(),
+                            num_steps=total_steps,
+                            num_updates=num_updates,
                         )
 
                     # Publish the newly updated model
@@ -570,6 +640,7 @@ class HillPPOTraining(BasePPOTraining):
         action = []
         reward = []
         done = []
+        actors = []
 
         actor_params = {
             actor_params.name: actor_params
@@ -587,6 +658,9 @@ class HillPPOTraining(BasePPOTraining):
                 # The last sample was the last useful one
                 done[-1] = torch.ones(1, dtype=self._dtype)
                 break
+
+            previous_actor_sample = sample.actors_data[player_actor_name]
+            player_actor_name = previous_actor_sample.observation.current_player
             actor_sample = sample.actors_data[player_actor_name]
             obs_flat = flatten(player_observation_space, actor_sample.observation.value)
             observation_value = torch.unsqueeze(
@@ -605,10 +679,10 @@ class HillPPOTraining(BasePPOTraining):
             action.append(action_value)
             reward.append(reward_value)
             done.append(torch.zeros(1, dtype=self._dtype))
-            player_actor_name = actor_sample.observation.current_player
+            actors.append(player_actor_name)
 
         # Keeping the samples grouped by trial by emitting only one grouped sample at the end of the trial
-        sample_producer_session.produce_sample((observation, action, reward, done))
+        sample_producer_session.produce_sample((observation, action, reward, done, actors))
 
     async def impl(self, run_session: RunSession) -> dict:
         """Train and publish the model"""
@@ -622,7 +696,21 @@ class HillPPOTraining(BasePPOTraining):
         self.model.network.to(self._device)
 
         run_session.log_params(
-            self._cfg, model_id=model_id, environment_implementation=self._environment_specs.implementation
+            self._cfg,
+            model_id=model_id,
+            environment_implementation=self._environment_specs.implementation,
+            hill_type="demo",
+        )
+
+        # Human data buffer
+        human_data_category = "demo"
+        human_data_buffer = HumanDataBuffer(
+            observation_shape=tuple(self._cfg.image_size),
+            action_shape=(1,),
+            human_data_category=human_data_category,
+            capacity=self._cfg.buffer_capacity,
+            action_dtype=np.int32,
+            file_name=f"{human_data_category}_{run_session.run_id}",
         )
 
         # Create actor parameters
@@ -683,7 +771,10 @@ class HillPPOTraining(BasePPOTraining):
         rewards = []
         dones = []
         episode_rewards = []
+        episode_lens = []
+
         num_updates = 0
+        total_steps = 0
         for iter_idx in range(self._cfg.num_iter):
             # TODO: actor names should not be hard-coding
             for (_, _, _, sample) in run_session.start_and_await_trials(
@@ -706,14 +797,23 @@ class HillPPOTraining(BasePPOTraining):
                 num_parallel_trials=self._cfg.num_parallel_trials,
             ):
                 # Collect the rollout
-                (trial_observation, trial_action, trial_reward, trial_done) = sample
+                (trial_observation, trial_action, trial_reward, trial_done, trial_actor) = sample
+                trial_human_observation = [
+                    obs for (obs, actor_name) in zip(trial_observation, trial_actor) if actor_name == WEB_ACTOR_NAME
+                ]
+                trial_human_action = [
+                    act for (act, actor_name) in zip(trial_action, trial_actor) if actor_name == WEB_ACTOR_NAME
+                ]
+                for (obs, act) in zip(trial_human_observation, trial_human_action):
+                    human_data_buffer.add(observation=obs, action=act)
 
                 observations.extend(trial_observation)
                 actions.extend(trial_action)
                 rewards.extend(trial_reward)
                 dones.extend(trial_done)
 
-                episode_rewards.append(torch.tensor(len(trial_action), dtype=torch.float32))
+                episode_rewards.append(torch.vstack(trial_reward).sum())
+                episode_lens.append(torch.tensor(len(trial_action), dtype=torch.float32))
 
                 # Publish the newly trained version every 100 steps
                 if len(actions) >= self._cfg.num_steps * self._cfg.epoch_num_trials + 1:
@@ -731,15 +831,19 @@ class HillPPOTraining(BasePPOTraining):
                     if iter_idx % 1 == 0:
                         # Compute average rewards for last 100 episodes
                         avg_rewards = await self.compute_average_reward(episode_rewards)
+                        avg_lens = await self.compute_average_reward(episode_lens) / self._environment_specs.num_players
                         log.info(
-                            f"epoch #{iter_idx + 1}/{self._cfg.num_iter}: [policy loss: {policy_loss:0.2f}, value loss: {value_loss:0.2f}, avg. rewards: {avg_rewards:0.2f}]"
+                            f"epoch #{iter_idx + 1}/{self._cfg.num_iter}: [policy loss: {policy_loss:0.2f}, value loss: {value_loss:0.2f}, avg. len: {avg_lens:0.2f}]"
                         )
 
                         run_session.log_metrics(
                             model_version_number=version_info["version_number"],
                             policy_loss=policy_loss.item(),
                             value_loss=value_loss.item(),
-                            rewards=avg_rewards.item(),
+                            avg_rewards=avg_rewards.item(),
+                            avg_lens=avg_lens.item(),
+                            num_steps=total_steps,
+                            num_updates=num_updates,
                         )
 
                     # Publish the newly updated model
@@ -826,7 +930,21 @@ class HumanFeedbackPPOTraining(BasePPOTraining):
         self.model.network.to(self._device)
 
         run_session.log_params(
-            self._cfg, model_id=model_id, environment_implementation=self._environment_specs.implementation
+            self._cfg,
+            model_id=model_id,
+            environment_implementation=self._environment_specs.implementation,
+            hill_type="feedback",
+        )
+
+        # Human data buffer
+        human_data_category = "feedback"
+        human_data_buffer = HumanDataBuffer(
+            observation_shape=tuple(self._cfg.image_size),
+            action_shape=(1,),
+            human_data_category=human_data_category,
+            capacity=self._cfg.buffer_capacity,
+            action_dtype=np.int32,
+            file_name=f"{human_data_category}_{run_session.run_id}",
         )
 
         # Create actor parameters
@@ -886,7 +1004,10 @@ class HumanFeedbackPPOTraining(BasePPOTraining):
         dones = []
         human_rewards = []
         episode_rewards = []
+        episode_lens = []
+
         num_updates = 0
+        total_steps = 0
         for iter_idx in range(self._cfg.num_iter):
             # TODO: actor names should not be hard-coding
             for (_, _, _, sample) in run_session.start_and_await_trials(
@@ -910,6 +1031,9 @@ class HumanFeedbackPPOTraining(BasePPOTraining):
             ):
                 # Collect the rollout
                 (trial_observation, trial_action, trial_reward, trial_done, trial_human_reward) = sample
+
+                for (obs, act, rew) in zip(trial_observation, trial_action, trial_human_reward):
+                    human_data_buffer.add(observation=obs, action=act, feedback=rew)
 
                 observations.extend(trial_observation)
                 actions.extend(trial_action)
@@ -936,15 +1060,19 @@ class HumanFeedbackPPOTraining(BasePPOTraining):
                     if iter_idx % 1 == 0:
                         # Compute average rewards for last 100 episodes
                         avg_rewards = await self.compute_average_reward(episode_rewards)
+                        avg_lens = await self.compute_average_reward(episode_lens) / self._environment_specs.num_players
                         log.info(
-                            f"epoch #{iter_idx + 1}/{self._cfg.num_iter}: [policy loss: {policy_loss:0.2f}, value loss: {value_loss:0.2f}, avg. rewards: {avg_rewards:0.2f}]"
+                            f"epoch #{iter_idx + 1}/{self._cfg.num_iter}: [policy loss: {policy_loss:0.2f}, value loss: {value_loss:0.2f}, avg. len: {avg_lens:0.2f}]"
                         )
 
                         run_session.log_metrics(
                             model_version_number=version_info["version_number"],
                             policy_loss=policy_loss.item(),
                             value_loss=value_loss.item(),
-                            rewards=avg_rewards.item(),
+                            avg_rewards=avg_rewards.item(),
+                            avg_lens=avg_lens.item(),
+                            num_steps=total_steps,
+                            num_updates=num_updates,
                         )
 
                     # Publish the newly updated model
