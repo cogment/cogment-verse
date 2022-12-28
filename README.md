@@ -170,7 +170,7 @@ If you want to use Isaac Gym, use python3.8 (not python3.9)
         ```sh
         python -m main +experiment=ppo_atari_pz/hfb_pong_pz
         ```
-  *NOTE: Example 2&3 requires users to open Chrome and navigate to http://localhost:8080 in order to provide either demonstrations or feedback.
+  *NOTE: Example 2&3 require users to open Chrome and navigate to http://localhost:8080 in order to provide either demonstrations or feedback.
   
 
 ## List of publications and submissions using Cogment and/or Cogment Verse
