@@ -162,15 +162,15 @@ If you want to use Isaac Gym, use python3.8 (not python3.9)
         ```sh
         python -m main +experiment=ppo_atari_pz/pong_pz
         ```
-      * Example #2: Human provides demonstrations
+      * Example #2: Training with human's demonstrations
         ```sh
         python -m main +experiment=ppo_atari_pz/hill_pong_pz
         ```
-      * Example #3: Human provides feedback
+      * Example #3: Training with human's feedback
         ```sh
         python -m main +experiment=ppo_atari_pz/hfb_pong_pz
         ```
-  *NOTE: Example 3&4 requires users to open Chrome and navigate to http://localhost:8080 in order to provide either demostrations or feedback.
+  *NOTE: Example 2&3 requires users to open Chrome and navigate to http://localhost:8080 in order to provide either demonstrations or feedback.
   
 
 ## List of publications and submissions using Cogment and/or Cogment Verse

@@ -608,9 +608,7 @@ class PPOSelfTraining(BasePPOTraining):
                         # Compute average rewards for last 100 episodes
                         avg_rewards = await self.compute_average_reward(episode_rewards)
                         avg_lens = await self.compute_average_reward(episode_lens) / self._environment_specs.num_players
-                        log.info(
-                            f"epoch #{iter_idx + 1}/{self._cfg.num_iter}: [policy loss: {policy_loss:0.2f}, value loss: {value_loss:0.2f}, avg. len: {avg_lens:0.2f}]"
-                        )
+                        log.info(f"epoch #{iter_idx + 1}/{self._cfg.num_iter}| avg. len: {avg_lens:0.2f}]")
 
                         run_session.log_metrics(
                             model_version_number=version_info["version_number"],
@@ -832,9 +830,7 @@ class HillPPOTraining(BasePPOTraining):
                         # Compute average rewards for last 100 episodes
                         avg_rewards = await self.compute_average_reward(episode_rewards)
                         avg_lens = await self.compute_average_reward(episode_lens) / self._environment_specs.num_players
-                        log.info(
-                            f"epoch #{iter_idx + 1}/{self._cfg.num_iter}: [policy loss: {policy_loss:0.2f}, value loss: {value_loss:0.2f}, avg. len: {avg_lens:0.2f}]"
-                        )
+                        log.info(f"epoch #{iter_idx + 1}/{self._cfg.num_iter}| avg. len: {avg_lens:0.2f}")
 
                         run_session.log_metrics(
                             model_version_number=version_info["version_number"],
@@ -1061,9 +1057,7 @@ class HumanFeedbackPPOTraining(BasePPOTraining):
                         # Compute average rewards for last 100 episodes
                         avg_rewards = await self.compute_average_reward(episode_rewards)
                         avg_lens = await self.compute_average_reward(episode_lens) / self._environment_specs.num_players
-                        log.info(
-                            f"epoch #{iter_idx + 1}/{self._cfg.num_iter}: [policy loss: {policy_loss:0.2f}, value loss: {value_loss:0.2f}, avg. len: {avg_lens:0.2f}]"
-                        )
+                        log.info(f"epoch #{iter_idx + 1}/{self._cfg.num_iter}| avg. len: {avg_lens:0.2f}")
 
                         run_session.log_metrics(
                             model_version_number=version_info["version_number"],

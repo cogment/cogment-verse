@@ -36,3 +36,6 @@ multirun
 
 # Local ngrok configuration
 ngrok.yaml
+
+# Data file
+*.npz
