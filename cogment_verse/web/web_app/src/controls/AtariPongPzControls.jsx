@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { useCallback, useState } from "react";
+import { useCallback, useState, useEffect } from "react";
 import { cogment_verse } from "../data_pb";
 import { useDocumentKeypressListener, usePressedKeys } from "../hooks/usePressedKeys";
 import { useRealTimeUpdate } from "../hooks/useRealTimeUpdate";
@@ -30,39 +30,18 @@ ATARI_LOOKUP.setAction(["UP"], new cogment_verse.PlayerAction({ value: { propert
 ATARI_LOOKUP.setAction(["DOWN"], new cogment_verse.PlayerAction({ value: { properties: [{ discrete: 3 }] } }));
 ATARI_LOOKUP.setAction(["RIGHT"], new cogment_verse.PlayerAction({ value: { properties: [{ discrete: 4 }] } }));
 ATARI_LOOKUP.setAction(["LEFT"], new cogment_verse.PlayerAction({ value: { properties: [{ discrete: 5 }] } }));
-// ATARI_LOOKUP.setAction(["UP", "RIGHT"], new cogment_verse.PlayerAction({ value: { properties: [{ discrete: 6 }] } }));
-// ATARI_LOOKUP.setAction(["UP", "LEFT"], new cogment_verse.PlayerAction({ value: { properties: [{ discrete: 7 }] } }));
-// ATARI_LOOKUP.setAction(["DOWN", "RIGHT"], new cogment_verse.PlayerAction({ value: { properties: [{ discrete: 8 }] } }));
-// ATARI_LOOKUP.setAction(["DOWN", "LEFT"], new cogment_verse.PlayerAction({ value: { properties: [{ discrete: 9 }] } }));
-// ATARI_LOOKUP.setAction(["UP", "FIRE"], new cogment_verse.PlayerAction({ value: { properties: [{ discrete: 10 }] } }));
-// ATARI_LOOKUP.setAction(
-//   ["RIGHT", "FIRE"],
-//   new cogment_verse.PlayerAction({ value: { properties: [{ discrete: 11 }] } })
-// );
-// ATARI_LOOKUP.setAction(["LEFT", "FIRE"], new cogment_verse.PlayerAction({ value: { properties: [{ discrete: 12 }] } }));
-// ATARI_LOOKUP.setAction(["DOWN", "FIRE"], new cogment_verse.PlayerAction({ value: { properties: [{ discrete: 13 }] } }));
-// ATARI_LOOKUP.setAction(
-//   ["UP", "RIGHT", "FIRE"],
-//   new cogment_verse.PlayerAction({ value: { properties: [{ discrete: 14 }] } })
-// );
-// ATARI_LOOKUP.setAction(
-//   ["UP", "LEFT", "FIRE"],
-//   new cogment_verse.PlayerAction({ value: { properties: [{ discrete: 15 }] } })
-// );
-// ATARI_LOOKUP.setAction(
-//   ["DOWN", "RIGHT", "FIRE"],
-//   new cogment_verse.PlayerAction({ value: { properties: [{ discrete: 16 }] } })
-// );
-// ATARI_LOOKUP.setAction(
-//   ["DOWN", "LEFT", "FIRE"],
-//   new cogment_verse.PlayerAction({ value: { properties: [{ discrete: 17 }] } })
-// );
 
 export const AtariPongPzEnvironments = ["environments.pettingzoo_atari_adapter.RlEnvironment/pettingzoo.atari.pong_v3"];
-export const AtariPongPzControls = ({ sendAction, fps = 30, actorClass, ...props }) => {
+export const AtariPongPzControls = ({ sendAction, fps = 30, actorClass, observation, ...props }) => {
   const [paused, setPaused] = useState(false);
+  const [playerPos, setPlayerPos] = useState('left');
+  const [displayPlayer, setDisplayPlayer] = useState(false);
   const togglePause = useCallback(() => setPaused((paused) => !paused), [setPaused]);
   useDocumentKeypressListener("p", togglePause);
+  const playerName = observation?.gamePlayerName;
+  const playerBox = 'opacity-90 py-2 rounded-full items-center text-white font-bold, px-5 text-base outline-none'
+  const player1 = `bg-green-500 ${playerBox}`;
+  const player2 = `bg-orange-500 ${playerBox}`;
 
   const pressedKeys = usePressedKeys();
 
@@ -91,12 +70,28 @@ export const AtariPongPzControls = ({ sendAction, fps = 30, actorClass, ...props
     },
     [pressedKeys, sendAction, actorClass]
   );
+  // useEffect(() => {
+  //   if (playerName) {
+  //     if (playerName.includes('first')) {
+  //       setPlayerPos('right');
+  //     } else {
+  //       setPlayerPos('left');
+  //     }
+  //   }
+  // }, [playerName]);
 
   const { currentFps } = useRealTimeUpdate(computeAndSendAction, fps, paused);
 
   return (
     <div {...props}>
-      <div className="flex flex-row gap-1">
+
+      {/* <div className={playerPos == "right" ? ("flex flex-row-reverse") : ("flex flex-row")}>
+        <div className={playerPos == "right" ? (player1) : (player2)}>
+          {playerName}
+        </div>
+      </div> */}
+
+      <div className="flex flex-row p-4 gap-1">
         <Button className="flex-1" onClick={togglePause}>
           {paused ? "Resume" : "Pause"}
         </Button>

@@ -34,6 +34,7 @@ from cogment_verse.specs import (
     space_from_gym_space,
 )
 from cogment_verse.utils import import_class
+import matplotlib.pyplot as plt
 
 log = logging.getLogger(__name__)
 
@@ -134,9 +135,10 @@ class RlEnvironment(Environment):
     async def impl(self, environment_session: EnvironmentSession):
         actors = environment_session.get_active_actors()
         actor_names = [actor.actor_name for actor in actors if actor.actor_class_name == PLAYER_ACTOR_CLASS]
+        web_actor_idx = [count for (count, actor_name) in enumerate(actor_names) if actor_name == WEB_ACTOR_NAME]
         session_cfg = environment_session.config
 
-        # Reset environment.
+        # Reset environment
         if session_cfg.render:
             pz_env = self.env_class.env(render_mode="rgb_array")
         else:
@@ -154,6 +156,11 @@ class RlEnvironment(Environment):
             pz_player_names = {agent_name: 0 for agent_name in pz_env.agents}
         else:
             pz_player_names = {agent_name: count for (count, agent_name) in enumerate(pz_env.agents)}
+
+        # TODO: It does not work if we have more than two human players
+        human_player_name = ""
+        if len(web_actor_idx) > 0:
+            human_player_name = pz_env.agents[web_actor_idx[0]]
 
         pz_player_name = next(pz_agent_iterator)
         rl_actor_idx = pz_player_names[pz_player_name]
@@ -176,6 +183,7 @@ class RlEnvironment(Environment):
                         value=observation_value,  # TODO Should only be sent to the current player
                         rendered_frame=rendered_frame,  # TODO Should only be sent to observers
                         current_player=actor_name,
+                        game_player_name=human_player_name,
                     ),
                 )
             ]
@@ -184,7 +192,6 @@ class RlEnvironment(Environment):
         async for event in environment_session.all_events():
             if event.actions:
                 # Action
-                # ForkedPdb().set_trace()
                 player_action_value = event.actions[rl_actor_idx].action.value
                 action_value = player_action_value
 
@@ -215,6 +222,7 @@ class RlEnvironment(Environment):
                             value=observation_value,
                             rendered_frame=rendered_frame,
                             current_player=actor_name,
+                            game_player_name=human_player_name,
                         ),
                     )
                 ]
@@ -264,7 +272,8 @@ class HumanFeedbackEnvironment(Environment):
             if "rgb_array" not in pz_env.metadata["render_modes"]:
                 log.warning(f"Petting Zoo environment [{self.env_class_name}] doesn't support rendering to pixels")
                 return
-            rendered_frame = encode_rendered_frame(pz_env.render(), session_cfg.render_width)
+            img = pz_env.render()
+            rendered_frame = encode_rendered_frame(img, session_cfg.render_width)
 
         environment_session.start(
             [
@@ -274,8 +283,10 @@ class HumanFeedbackEnvironment(Environment):
                         value=observation_value,  # TODO Should only be sent to the current player
                         rendered_frame=rendered_frame,  # TODO Should only be sent to observers
                         current_player=actor_name,
-                        player_evaluated=actor_name,
+                        game_player_name=actor_name,
                         step=0,
+                        feedback_required=True,
+                        action=0,
                     ),
                 )
             ]
@@ -294,6 +305,10 @@ class HumanFeedbackEnvironment(Environment):
                     gym_action = gym_action_from_action(
                         self.env_specs.action_space, action_value  # pylint: disable=no-member
                     )
+                    if actor_name == "first_0":
+                        gym_action = 2
+                    else:
+                        gym_action = 3
                     pz_env.step(gym_action)
                     pz_observation, pz_reward, done, _, _ = pz_env.last()
 
@@ -310,7 +325,8 @@ class HumanFeedbackEnvironment(Environment):
                     # Pixel frame display on UI
                     rendered_frame = None
                     if session_cfg.render:
-                        rendered_frame = encode_rendered_frame(pz_env.render(), session_cfg.render_width)
+                        img = pz_env.render()
+                        rendered_frame = encode_rendered_frame(img, session_cfg.render_width)
                     is_rl_agent = False
                     eval_done = False
                 else:
@@ -328,8 +344,10 @@ class HumanFeedbackEnvironment(Environment):
                             value=observation_value,
                             rendered_frame=rendered_frame,
                             current_player=actor_name,
-                            player_evaluated=rewarded_actor_name,
+                            game_player_name=rewarded_actor_name,
                             step=step,
+                            feedback_required=not is_rl_agent,
+                            action=gym_action,
                         ),
                     )
                 ]

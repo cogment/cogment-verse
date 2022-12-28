@@ -119,8 +119,10 @@ message Observation {
   optional bytes rendered_frame = 4;
   repeated string overridden_players = 5;  // list of players that provided an action that was overriden during the last tick
   //NDArray segmentation = 6;
-  optional string player_evaluated = 7;
+  optional string game_player_name = 7;
   optional int32 step = 8;
+  optional bool feedback_required = 9;
+  optional int32 action = 10;
 
 }
 

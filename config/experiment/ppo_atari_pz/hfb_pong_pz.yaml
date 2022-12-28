@@ -2,7 +2,7 @@
 defaults:
   - override /services/actor:
       - ppo_atari_pz
-      - random
+      - ppo_atari_pz
   - override /services/environment: pong_pz_hfb
 
 run:

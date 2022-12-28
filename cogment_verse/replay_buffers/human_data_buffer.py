@@ -28,7 +28,7 @@ class HumanDataBuffer:
         observation_shape: tuple,
         action_shape: tuple,
         file_name: str = "",
-        saving_path: str = "./cogment_verse/replay_buffer/data",
+        saving_path: str = "./cogment_verse/replay_buffers/data",
         seed: int = 0,
         capacity: int = 100_000,
         observation_dtype=np.float32,
