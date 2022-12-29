@@ -32,18 +32,17 @@ ATARI_LOOKUP.setAction(["RIGHT"], new cogment_verse.PlayerAction({ value: { prop
 ATARI_LOOKUP.setAction(["LEFT"], new cogment_verse.PlayerAction({ value: { properties: [{ discrete: 5 }] } }));
 
 export const AtariPongPzEnvironments = ["environments.pettingzoo_atari_adapter.RlEnvironment/pettingzoo.atari.pong_v3"];
-export const AtariPongPzControls = ({ sendAction, fps = 30, actorClass, observation, ...props }) => {
+export const AtariPongPzControls = ({ sendAction, fps = 40, actorClass, observation, ...props }) => {
   const [paused, setPaused] = useState(false);
   const [playerPos, setPlayerPos] = useState('left');
-  const [displayPlayer, setDisplayPlayer] = useState(false);
   const togglePause = useCallback(() => setPaused((paused) => !paused), [setPaused]);
   useDocumentKeypressListener("p", togglePause);
   const playerName = observation?.gamePlayerName;
   const playerBox = 'opacity-90 py-2 rounded-full items-center text-white font-bold, px-5 text-base outline-none'
   const player1 = `bg-green-500 ${playerBox}`;
   const player2 = `bg-orange-500 ${playerBox}`;
-
   const pressedKeys = usePressedKeys();
+
 
   const computeAndSendAction = useCallback(
     (dt) => {
@@ -70,6 +69,7 @@ export const AtariPongPzControls = ({ sendAction, fps = 30, actorClass, observat
     },
     [pressedKeys, sendAction, actorClass]
   );
+  const { currentFps } = useRealTimeUpdate(computeAndSendAction, fps, paused);
   // useEffect(() => {
   //   if (playerName) {
   //     if (playerName.includes('first')) {
@@ -80,18 +80,14 @@ export const AtariPongPzControls = ({ sendAction, fps = 30, actorClass, observat
   //   }
   // }, [playerName]);
 
-  const { currentFps } = useRealTimeUpdate(computeAndSendAction, fps, paused);
-
   return (
     <div {...props}>
-
-      {/* <div className={playerPos == "right" ? ("flex flex-row-reverse") : ("flex flex-row")}>
-        <div className={playerPos == "right" ? (player1) : (player2)}>
+      {/* <div className={playerPos == "right" ? "flex flex-row-reverse" : "flex flex-row"}>
+        <div className={playerPos == "right" ? player1 : player2}>
           {playerName}
         </div>
       </div> */}
-
-      <div className="flex flex-row p-4 gap-1">
+      <div className="flex flex-row py-4 gap-1">
         <Button className="flex-1" onClick={togglePause}>
           {paused ? "Resume" : "Pause"}
         </Button>
@@ -99,7 +95,8 @@ export const AtariPongPzControls = ({ sendAction, fps = 30, actorClass, observat
       </div>
       <KeyboardControlList
         items={[
-          ["Left/Right/Down/Up Arrows", "Move the character"],
+          ["Left/Right Arrows", "MOVE UP/DOWN"],
+          ["Up/Down Arrows", "MOVE UP/DOWN"],
           ["Space", "Jump"],
           ["p", "Pause/Unpause"],
         ]}

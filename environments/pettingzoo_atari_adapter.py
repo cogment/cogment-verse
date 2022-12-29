@@ -34,7 +34,6 @@ from cogment_verse.specs import (
     space_from_gym_space,
 )
 from cogment_verse.utils import import_class
-import matplotlib.pyplot as plt
 
 log = logging.getLogger(__name__)
 
@@ -184,6 +183,7 @@ class RlEnvironment(Environment):
                         rendered_frame=rendered_frame,  # TODO Should only be sent to observers
                         current_player=actor_name,
                         game_player_name=human_player_name,
+                        step=0,
                     ),
                 )
             ]
@@ -211,10 +211,11 @@ class RlEnvironment(Environment):
                 observation_value = observation_from_gym_observation(
                     pz_env.observation_space(pz_player_name), pz_observation
                 )
-
                 rendered_frame = None
                 if session_cfg.render:
                     rendered_frame = encode_rendered_frame(pz_env.render(), session_cfg.render_width)
+
+                step += 1
                 observations = [
                     (
                         "*",
@@ -223,12 +224,11 @@ class RlEnvironment(Environment):
                             rendered_frame=rendered_frame,
                             current_player=actor_name,
                             game_player_name=human_player_name,
+                            step=step,
                         ),
                     )
                 ]
                 environment_session.add_reward(value=pz_reward, confidence=1.0, to=[actor_name])
-                step += 1
-
                 if done:
                     # The trial ended
                     environment_session.end(observations)
@@ -305,10 +305,6 @@ class HumanFeedbackEnvironment(Environment):
                     gym_action = gym_action_from_action(
                         self.env_specs.action_space, action_value  # pylint: disable=no-member
                     )
-                    if actor_name == "first_0":
-                        gym_action = 2
-                    else:
-                        gym_action = 3
                     pz_env.step(gym_action)
                     pz_observation, pz_reward, done, _, _ = pz_env.last()
 
@@ -329,6 +325,7 @@ class HumanFeedbackEnvironment(Environment):
                         rendered_frame = encode_rendered_frame(img, session_cfg.render_width)
                     is_rl_agent = False
                     eval_done = False
+                    step += 1
                 else:
                     pz_reward = action_value.properties[0].simple_box.values[0]
                     pz_player_name = next(pz_agent_iterator)
@@ -336,7 +333,6 @@ class HumanFeedbackEnvironment(Environment):
                     actor_name = actor_names[rl_actor_idx]
                     eval_done = True
                     is_rl_agent = True
-                step += 1
                 observations = [
                     (
                         "*",
@@ -352,7 +348,6 @@ class HumanFeedbackEnvironment(Environment):
                     )
                 ]
                 environment_session.add_reward(value=pz_reward, confidence=1.0, to=[rewarded_actor_name])
-
                 if done and eval_done:
                     # The trial ended
                     environment_session.end(observations)

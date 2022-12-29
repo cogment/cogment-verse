@@ -38,7 +38,7 @@ const CONTROLS = [
   { environments: TetrisEnvironments, component: TetrisControls },
   { environments: ConnectFourEnvironments, component: ConnectFourControls },
   { environments: AtariPongPzEnvironments, component: AtariPongPzControls },
-  { environments: AtariPongPzHfbEnvironments, component: AtariPongPzFeedback},
+  { environments: AtariPongPzHfbEnvironments, component: AtariPongPzFeedback },
 ];
 
 export const Controls = ({ environment, actorClass, sendAction, fps, turnBased, observation }) => {

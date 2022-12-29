@@ -33,7 +33,6 @@ from cogment_verse.specs import (
     AgentConfig,
     EnvironmentConfig,
     EnvironmentSpecs,
-    ObserverAction,
     PlayerAction,
     SpaceValue,
     cog_settings,
@@ -214,7 +213,7 @@ class PPOActor:
                 ):
                     # # Not the turn of the agent
                     if event.observation.observation.current_player == WEB_ACTOR_NAME:
-                        actor_session.do_action(ObserverAction())
+                        actor_session.do_action(PlayerAction())
                     else:
                         actor_session.do_action(PlayerAction())
                     continue
@@ -481,6 +480,7 @@ class PPOSelfTraining(BasePPOTraining):
         action = []
         reward = []
         done = []
+        steps = []
 
         player_actor_params = sample_producer_session.trial_info.parameters.actors[0]
         player_actor_name = player_actor_params.name
@@ -493,6 +493,8 @@ class PPOSelfTraining(BasePPOTraining):
                 # The last sample was the last useful one
                 done[-1] = torch.ones(1, dtype=self._dtype)
                 break
+            previous_actor_sample = sample.actors_data[player_actor_name]
+            player_actor_name = previous_actor_sample.observation.current_player
             actor_sample = sample.actors_data[player_actor_name]
             obs_flat = flatten(player_observation_space, actor_sample.observation.value)
             observation_value = torch.unsqueeze(
@@ -511,6 +513,7 @@ class PPOSelfTraining(BasePPOTraining):
             action.append(action_value)
             reward.append(reward_value)
             done.append(torch.zeros(1, dtype=self._dtype))
+            steps.append(actor_sample.observation.step)
 
         # Keeping the samples grouped by trial by emitting only one grouped sample at the end of the trial
         sample_producer_session.produce_sample((observation, action, reward, done))
@@ -639,6 +642,7 @@ class HillPPOTraining(BasePPOTraining):
         reward = []
         done = []
         actors = []
+        steps = []
 
         actor_params = {
             actor_params.name: actor_params
@@ -678,6 +682,7 @@ class HillPPOTraining(BasePPOTraining):
             reward.append(reward_value)
             done.append(torch.zeros(1, dtype=self._dtype))
             actors.append(player_actor_name)
+            steps.append(actor_sample.observation.step)
 
         # Keeping the samples grouped by trial by emitting only one grouped sample at the end of the trial
         sample_producer_session.produce_sample((observation, action, reward, done, actors))
@@ -860,8 +865,10 @@ class HumanFeedbackPPOTraining(BasePPOTraining):
         action = []
         reward = []
         done = []
+        steps = []
         human_observation = []
         human_reward = []
+        human_steps = []
 
         actor_params = {
             actor_params.name: actor_params
@@ -900,6 +907,7 @@ class HumanFeedbackPPOTraining(BasePPOTraining):
                 action.append(action_value)
                 reward.append(reward_value)
                 done.append(torch.zeros(1, dtype=self._dtype))
+                steps.append(actor_sample.observation.step)
             else:
                 obs_flat = flatten(player_observation_space, actor_sample.observation.value)
                 observation_value = torch.unsqueeze(
@@ -910,6 +918,7 @@ class HumanFeedbackPPOTraining(BasePPOTraining):
                 )
                 human_observation.append(observation_value)
                 human_reward.append(reward_value)
+                human_steps.append(actor_sample.observation.step)
 
         # Keeping the samples grouped by trial by emitting only one grouped sample at the end of the trial
         sample_producer_session.produce_sample((observation, action, reward, done, human_reward))
@@ -1038,6 +1047,7 @@ class HumanFeedbackPPOTraining(BasePPOTraining):
                 human_rewards.extend(trial_human_reward)
 
                 episode_rewards.append(torch.tensor(len(trial_action), dtype=torch.float32))
+                episode_lens.append(torch.tensor(len(trial_action), dtype=torch.float32))
 
                 # Publish the newly trained version every 100 steps
                 if len(actions) >= self._cfg.num_steps * self._cfg.epoch_num_trials + 1:
