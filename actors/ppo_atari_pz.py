@@ -345,7 +345,7 @@ class BasePPOTraining(ABC):
 
         returns = advs + values
         num_obs = len(returns)
-        advs = (advs - advs.mean()) / (advs.std() + 1e-8)
+        # advs = (advs - advs.mean()) / (advs.std() + 1e-8)
         for _ in range(num_epochs):
             for _ in range(num_obs // self._cfg.batch_size):
                 # Get data in batch. TODO: Send data to device (need to test with cuda)
@@ -625,7 +625,7 @@ class PPOSelfTraining(BasePPOTraining):
 
                     # Publish the newly updated model
                     self.model.iter_idx = iter_idx
-                    if num_updates % 10 == 0:
+                    if num_updates % 50 == 0:
                         version_info = await run_session.model_registry.publish_version(self.model, archived=True)
                     else:
                         version_info = await run_session.model_registry.publish_version(self.model)
