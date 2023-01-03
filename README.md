@@ -125,7 +125,7 @@ If you want to use Isaac Gym, use python3.8 (not python3.9)
 5. nvidia-smi` to check that you have NVIDIA drivers and proper cuda installations.
 6. (Assuming you already have mlflow running in a different terminal), Run `python -m main services/environment=ant`
 
-## Peeting Zoo
+## Petting Zoo
 ### Installation
   1. Clone this repository
       ```sh

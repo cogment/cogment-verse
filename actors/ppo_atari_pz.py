@@ -351,11 +351,14 @@ class BasePPOTraining(ABC):
 
         returns = advs + values
         num_obs = len(returns)
+        global_idx = np.arange(num_obs)
         for _ in range(num_epochs):
-            for _ in range(num_obs // self._cfg.batch_size):
+            np.random.shuffle(global_idx)
+            for i in range(0, num_obs, self._cfg.batch_size):
                 # Get data in batch. TODO: Send data to device (need to test with cuda)
                 # idx = np.random.randint(0, num_obs, self._cfg.batch_size)
-                idx = np.random.choice(num_obs, self._cfg.batch_size, replace=False)
+                # idx = np.random.choice(num_obs, self._cfg.batch_size, replace=False)
+                idx = global_idx[i:i+self._cfg.batch_size]
                 observation = observations[idx]
                 action = actions[idx]
                 return_ = returns[idx]

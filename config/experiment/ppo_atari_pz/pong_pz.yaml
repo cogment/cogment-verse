@@ -7,7 +7,7 @@ defaults:
 run:
   class_name: actors.ppo_atari_pz.PPOSelfTraining
   seed: 0
-  num_epochs: 1
+  num_epochs: 2
   num_iter: 5000
   epoch_num_trials: 1
   num_parallel_trials: 1
