@@ -133,6 +133,7 @@ class PPOModel(Model):
 
         # Get optimizer for two models
         self.network_optimizer = torch.optim.Adam(self.network.parameters(), lr=learning_rate)
+        self.scheduler = torch.optim.lr_scheduler.StepLR(self.network_optimizer, step_size=1000, gamma=0.1)
 
         # version user data
         self.iter_idx = 0
@@ -296,13 +297,18 @@ class BasePPOTraining(ABC):
     ):
         """Train the model after collecting the data from the trial"""
 
-        # Take n steps from the rollout
-        observations = torch.vstack(observations)[: self._cfg.num_steps * self._cfg.epoch_num_trials + 1].to(
-            self._device
-        )
-        actions = torch.vstack(actions)[: self._cfg.num_steps * self._cfg.epoch_num_trials].to(self._device)
-        rewards = torch.vstack(rewards)[: self._cfg.num_steps * self._cfg.epoch_num_trials].to(self._device)
-        dones = torch.vstack(dones)[: self._cfg.num_steps * self._cfg.epoch_num_trials].to(self._device)
+        # # Take n steps from the rollout
+        # observations = torch.vstack(observations)[: self._cfg.num_steps * self._cfg.epoch_num_trials + 1].to(
+        #     self._device
+        # )
+        # actions = torch.vstack(actions)[: self._cfg.num_steps * self._cfg.epoch_num_trials].to(self._device)
+        # rewards = torch.vstack(rewards)[: self._cfg.num_steps * self._cfg.epoch_num_trials].to(self._device)
+        # dones = torch.vstack(dones)[: self._cfg.num_steps * self._cfg.epoch_num_trials].to(self._device)
+
+        observations = torch.vstack(observations).to(self._device)
+        actions = torch.vstack(actions)[: -1].to(self._device)
+        rewards = torch.vstack(rewards)[: -1].to(self._device)
+        dones = torch.vstack(dones)[: -1].to(self._device)
 
         # Make a dataloader in order to process data in batch
         batch_state = self.make_dataloader(observations[:-1], self._cfg.batch_size, self.model.input_shape)
@@ -345,16 +351,18 @@ class BasePPOTraining(ABC):
 
         returns = advs + values
         num_obs = len(returns)
-        # advs = (advs - advs.mean()) / (advs.std() + 1e-8)
         for _ in range(num_epochs):
             for _ in range(num_obs // self._cfg.batch_size):
                 # Get data in batch. TODO: Send data to device (need to test with cuda)
-                idx = np.random.randint(0, num_obs, self._cfg.batch_size)
+                # idx = np.random.randint(0, num_obs, self._cfg.batch_size)
+                idx = np.random.choice(num_obs, self._cfg.batch_size, replace=False)
                 observation = observations[idx]
                 action = actions[idx]
                 return_ = returns[idx]
                 adv = advs[idx]
                 old_log_prob = log_probs[idx]
+
+                adv = (adv - adv.mean()) / (adv.std() + 1e-8)
 
                 # Compute the value and values loss
                 value = self.model.network.get_value(observation)
@@ -365,9 +373,9 @@ class BasePPOTraining(ABC):
                 ratio = torch.exp(new_log_prob - old_log_prob)
 
                 # Compute policy loss
-                policy_loss_1 = adv * ratio
-                policy_loss_2 = adv * torch.clamp(ratio, 1 - self._cfg.clipping_coef, 1 + self._cfg.clipping_coef)
-                policy_loss = -torch.min(policy_loss_1, policy_loss_2).mean()
+                policy_loss_1 = - adv * ratio
+                policy_loss_2 = - adv * torch.clamp(ratio, 1 - self._cfg.clipping_coef, 1 + self._cfg.clipping_coef)
+                policy_loss = torch.max(policy_loss_1, policy_loss_2).mean()
 
                 # Loss
                 loss = policy_loss + value_loss
@@ -378,8 +386,8 @@ class BasePPOTraining(ABC):
                 torch.nn.utils.clip_grad_norm_(self.model.network.parameters(), self._cfg.grad_norm)
                 self.model.network_optimizer.step()
 
-        # # Decaying learning rate after each update
-        # self.model.network_scheduler.step()
+        # Decaying learning rate after each update
+        self.model.scheduler.step()
 
         return policy_loss, value_loss
 
