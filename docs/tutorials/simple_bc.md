@@ -62,15 +62,6 @@ launch a simple behavior cloning run with the mountain car gym environment using
 python -m main +experiment=simple_bc/mountain_car
 ```
 
-Open `localhost:8080`.
-
-
-Start a training run as follows in the third terminal:
-
-```
-./run.sh client start simple_bc_lander
-```
-
 Open Chrome (other web browser might work but haven't tested) and navigate to http://localhost:8080/. At this step the agent will take random actions, as a human you can take over to play the game. In the console, the run implementation will log every time a sample is retrieved.
 
 ### Step 2 - Producing samples
