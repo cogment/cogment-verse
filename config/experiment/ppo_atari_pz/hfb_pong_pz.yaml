@@ -13,7 +13,7 @@ run:
   epoch_num_trials: 1
   num_parallel_trials: 1
   learning_rate: 3e-4
-  batch_size: 64
+  batch_size: -1
   num_steps: 256
   discount_factor: 0.99
   lambda_gae: 0.95

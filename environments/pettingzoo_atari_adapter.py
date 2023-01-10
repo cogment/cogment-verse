@@ -228,6 +228,7 @@ class RlEnvironment(Environment):
                         ),
                     )
                 ]
+                # TODO: need to revise the actor name received the reward
                 environment_session.add_reward(value=pz_reward, confidence=1.0, to=[actor_name])
                 if done:
                     # The trial ended

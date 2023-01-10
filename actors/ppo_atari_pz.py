@@ -132,7 +132,9 @@ class PPOModel(Model):
         self.network.to(torch.device(self.device))
 
         # Get optimizer for two models
-        self.network_optimizer = torch.optim.Adam(self.network.parameters(), lr=learning_rate)
+        self.network_optimizer = torch.optim.Adam(self.network.parameters(), lr=learning_rate, eps=1e-5)
+        # lambda1 = lambda epoch: 0.98 ** epoch
+        # self.scheduler = torch.optim.lr_scheduler.LambdaLR(self.network_optimizer, lr_lambda=lambda1)
         self.scheduler = torch.optim.lr_scheduler.StepLR(self.network_optimizer, step_size=1000, gamma=0.1)
 
         # version user data
@@ -201,9 +203,10 @@ class PPOActor:
         action_space = config.environment_specs.action_space
 
         # Get model
-        model, _, _ = await actor_session.model_registry.retrieve_version(
+        model, _, version_info = await actor_session.model_registry.retrieve_version(
             PPOModel, config.model_id, config.model_version
         )
+        # log.info(f"Actor - retreved model number: {version_info['version_number']}")
         obs_shape = model.input_shape[::-1]
 
         async for event in actor_session.all_events():
@@ -241,7 +244,7 @@ class BasePPOTraining(ABC):
     """Abstract class for training PPO agent"""
 
     default_cfg = {
-        "seed": 10,
+        "seed": 0,
         "num_epochs": 10,
         "num_iter": 500,
         "epoch_num_trials": 1,
@@ -297,18 +300,11 @@ class BasePPOTraining(ABC):
     ):
         """Train the model after collecting the data from the trial"""
 
-        # # Take n steps from the rollout
-        # observations = torch.vstack(observations)[: self._cfg.num_steps * self._cfg.epoch_num_trials + 1].to(
-        #     self._device
-        # )
-        # actions = torch.vstack(actions)[: self._cfg.num_steps * self._cfg.epoch_num_trials].to(self._device)
-        # rewards = torch.vstack(rewards)[: self._cfg.num_steps * self._cfg.epoch_num_trials].to(self._device)
-        # dones = torch.vstack(dones)[: self._cfg.num_steps * self._cfg.epoch_num_trials].to(self._device)
-
+        # Take n steps from the rollout
         observations = torch.vstack(observations).to(self._device)
-        actions = torch.vstack(actions)[: -1].to(self._device)
-        rewards = torch.vstack(rewards)[: -1].to(self._device)
-        dones = torch.vstack(dones)[: -1].to(self._device)
+        actions = torch.vstack(actions)[:-1].to(self._device)
+        rewards = torch.vstack(rewards)[:-1].to(self._device)
+        dones = torch.vstack(dones).to(self._device)
 
         # Make a dataloader in order to process data in batch
         batch_state = self.make_dataloader(observations[:-1], self._cfg.batch_size, self.model.input_shape)
@@ -352,36 +348,46 @@ class BasePPOTraining(ABC):
         returns = advs + values
         num_obs = len(returns)
         global_idx = np.arange(num_obs)
+        advs = (advs - advs.mean()) / (advs.std() + 1e-8)
         for _ in range(num_epochs):
             np.random.shuffle(global_idx)
             for i in range(0, num_obs, self._cfg.batch_size):
                 # Get data in batch. TODO: Send data to device (need to test with cuda)
                 # idx = np.random.randint(0, num_obs, self._cfg.batch_size)
                 # idx = np.random.choice(num_obs, self._cfg.batch_size, replace=False)
-                idx = global_idx[i:i+self._cfg.batch_size]
+                idx = global_idx[i : i + self._cfg.batch_size]
                 observation = observations[idx]
                 action = actions[idx]
                 return_ = returns[idx]
                 adv = advs[idx]
+                old_value = values[idx]
                 old_log_prob = log_probs[idx]
 
-                adv = (adv - adv.mean()) / (adv.std() + 1e-8)
+                # adv = (adv - adv.mean()) / (adv.std() + 1e-8)
 
                 # Compute the value and values loss
                 value = self.model.network.get_value(observation)
-                value_loss = torch.nn.functional.mse_loss(return_, value) * self._cfg.value_loss_coef
+                # value_loss = torch.nn.functional.mse_loss(return_, value) * self._cfg.value_loss_coef
+                value_loss_unclipped = (value - return_) ** 2
+                value_clipped = old_value + torch.clamp(value - old_value, -0.1, 0.1)
+                value_loss_clipped = (value_clipped - return_) ** 2
+                value_loss_max = torch.max(value_loss_unclipped, value_loss_clipped)
+                value_loss = 0.5 * value_loss_max.mean() * self._cfg.value_loss_coef
 
                 # Get action distribution & the log-likelihood
-                new_log_prob = self.compute_log_lik(observation=observation, action=action)
+                dist = self.model.network.get_action(observation)
+                new_log_prob = dist.log_prob(action.flatten()).view(-1, 1)
+                entropy = dist.entropy()
                 ratio = torch.exp(new_log_prob - old_log_prob)
 
                 # Compute policy loss
-                policy_loss_1 = - adv * ratio
-                policy_loss_2 = - adv * torch.clamp(ratio, 1 - self._cfg.clipping_coef, 1 + self._cfg.clipping_coef)
+                policy_loss_1 = -adv * ratio
+                policy_loss_2 = -adv * torch.clamp(ratio, 1 - self._cfg.clipping_coef, 1 + self._cfg.clipping_coef)
                 policy_loss = torch.max(policy_loss_1, policy_loss_2).mean()
 
                 # Loss
-                loss = policy_loss + value_loss
+                entropy_loss = entropy.mean()
+                loss = policy_loss - self._cfg.entropy_loss_coef * entropy_loss + value_loss
 
                 # Update value network
                 self.model.network_optimizer.zero_grad()
@@ -390,7 +396,9 @@ class BasePPOTraining(ABC):
                 self.model.network_optimizer.step()
 
         # Decaying learning rate after each update
-        self.model.scheduler.step()
+        self.model.network_optimizer.param_groups[0]["lr"] = 0.9995 * self.model.network_optimizer.param_groups[0]["lr"]
+        # log.info(f"learning rate {self.model.network_optimizer.param_groups[0]['lr']}")
+        # self.model.scheduler.step()
 
         return policy_loss, value_loss
 
@@ -403,8 +411,8 @@ class BasePPOTraining(ABC):
     def compute_value(self, observations: torch.Tensor) -> torch.Tensor:
         """Compute values given the states"""
         values = []
-        for obs in observations:
-            with torch.no_grad():
+        with torch.no_grad():
+            for obs in observations:
                 values.append(self.model.network.get_value(obs))
 
         return torch.vstack(values)
@@ -422,6 +430,14 @@ class BasePPOTraining(ABC):
         """Compute the log likelihood for each actions"""
         with torch.no_grad():
             dist = self.model.network.get_action(observation)
+        log_prob = dist.log_prob(action.flatten()).view(-1, 1)
+
+        return log_prob
+
+    def compute_log_lik_with_grad(self, observation: torch.Tensor, action: torch.Tensor) -> torch.Tensor:
+        """Compute the log likelihood for each actions"""
+
+        dist = self.model.network.get_action(observation)
         log_prob = dist.log_prob(action.flatten()).view(-1, 1)
 
         return log_prob
@@ -472,12 +488,13 @@ class BasePPOTraining(ABC):
         """
 
         advs = []
-        gae = 0.0
-        dones = torch.cat((dones, torch.zeros(1, 1).to(self._device)), dim=0)
-        for i in reversed(range(len(rewards))):
-            delta = rewards[i] + gamma * (values[i + 1]) * (1 - dones[i]) - values[i]
-            gae = delta + gamma * lam * (1 - dones[i]) * gae
-            advs.append(gae)
+        with torch.no_grad():
+            gae = 0.0
+            # dones = torch.cat((dones, torch.zeros(1, 1).to(self._device)), dim=0)
+            for i in reversed(range(len(rewards))):
+                delta = rewards[i] + gamma * values[i + 1] * (1 - dones[i + 1]) - values[i]
+                gae = delta + gamma * lam * (1 - dones[i + 1]) * gae
+                advs.append(gae)
         advs.reverse()
         return torch.vstack(advs)
 
@@ -500,9 +517,9 @@ class PPOSelfTraining(BasePPOTraining):
 
         async for sample in sample_producer_session.all_trial_samples():
             if sample.trial_state == cogment.TrialState.ENDED:
-                # This sample includes the last observation and no action
-                # The last sample was the last useful one
-                done[-1] = torch.ones(1, dtype=self._dtype)
+                # Terminal state
+                done.append(torch.ones(1, dtype=self._dtype))
+                # done[-1] = torch.ones(1, dtype=self._dtype)
                 break
             previous_actor_sample = sample.actors_data[player_actor_name]
             player_actor_name = previous_actor_sample.observation.current_player
