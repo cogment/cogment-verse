@@ -189,6 +189,7 @@ class RlEnvironment(Environment):
             ]
         )
         step = 0
+
         async for event in environment_session.all_events():
             if event.actions:
                 # Action

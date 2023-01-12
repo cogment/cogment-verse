@@ -348,7 +348,6 @@ class BasePPOTraining(ABC):
         returns = advs + values
         num_obs = len(returns)
         global_idx = np.arange(num_obs)
-        advs = (advs - advs.mean()) / (advs.std() + 1e-8)
         for _ in range(num_epochs):
             np.random.shuffle(global_idx)
             for i in range(0, num_obs, self._cfg.batch_size):
@@ -356,6 +355,8 @@ class BasePPOTraining(ABC):
                 # idx = np.random.randint(0, num_obs, self._cfg.batch_size)
                 # idx = np.random.choice(num_obs, self._cfg.batch_size, replace=False)
                 idx = global_idx[i : i + self._cfg.batch_size]
+                if len(idx) < self._cfg.batch_size:
+                    break
                 observation = observations[idx]
                 action = actions[idx]
                 return_ = returns[idx]
@@ -363,7 +364,7 @@ class BasePPOTraining(ABC):
                 old_value = values[idx]
                 old_log_prob = log_probs[idx]
 
-                # adv = (adv - adv.mean()) / (adv.std() + 1e-8)
+                adv = (adv - adv.mean()) / (adv.std() + 1e-8)
 
                 # Compute the value and values loss
                 value = self.model.network.get_value(observation)
@@ -372,7 +373,7 @@ class BasePPOTraining(ABC):
                 value_clipped = old_value + torch.clamp(value - old_value, -0.1, 0.1)
                 value_loss_clipped = (value_clipped - return_) ** 2
                 value_loss_max = torch.max(value_loss_unclipped, value_loss_clipped)
-                value_loss = 0.5 * value_loss_max.mean() * self._cfg.value_loss_coef
+                value_loss = value_loss_max.mean() * self._cfg.value_loss_coef
 
                 # Get action distribution & the log-likelihood
                 dist = self.model.network.get_action(observation)
