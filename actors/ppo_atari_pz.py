@@ -302,8 +302,8 @@ class BasePPOTraining(ABC):
 
         # Take n steps from the rollout
         observations = torch.vstack(observations).to(self._device)
-        actions = torch.vstack(actions)[:-1].to(self._device)
-        rewards = torch.vstack(rewards)[:-1].to(self._device)
+        actions = torch.vstack(actions).to(self._device)
+        rewards = torch.vstack(rewards).to(self._device)
         dones = torch.vstack(dones).to(self._device)
 
         # Make a dataloader in order to process data in batch
@@ -435,14 +435,6 @@ class BasePPOTraining(ABC):
 
         return log_prob
 
-    def compute_log_lik_with_grad(self, observation: torch.Tensor, action: torch.Tensor) -> torch.Tensor:
-        """Compute the log likelihood for each actions"""
-
-        dist = self.model.network.get_action(observation)
-        log_prob = dist.log_prob(action.flatten()).view(-1, 1)
-
-        return log_prob
-
     @staticmethod
     async def get_n_steps_data(dataset: torch.Tensor, num_steps: int) -> torch.tensor:
         """Get the data up to nth steps"""
@@ -517,11 +509,6 @@ class PPOSelfTraining(BasePPOTraining):
         obs_shape = tuple(self._cfg.image_size)[::-1]
 
         async for sample in sample_producer_session.all_trial_samples():
-            if sample.trial_state == cogment.TrialState.ENDED:
-                # Terminal state
-                done.append(torch.ones(1, dtype=self._dtype))
-                # done[-1] = torch.ones(1, dtype=self._dtype)
-                break
             previous_actor_sample = sample.actors_data[player_actor_name]
             player_actor_name = previous_actor_sample.observation.current_player
             actor_sample = sample.actors_data[player_actor_name]
@@ -539,10 +526,14 @@ class PPOSelfTraining(BasePPOTraining):
                 actor_sample.reward if actor_sample.reward is not None else 0, dtype=self._dtype
             )
             observation.append(observation_value)
-            action.append(action_value)
-            reward.append(reward_value)
-            done.append(torch.zeros(1, dtype=self._dtype))
             steps.append(actor_sample.observation.step)
+            if sample.trial_state == cogment.TrialState.ENDED:
+                done.append(torch.ones(1, dtype=self._dtype))
+                break
+            else:
+                action.append(action_value)
+                reward.append(reward_value)
+                done.append(torch.zeros(1, dtype=self._dtype))
 
         # Keeping the samples grouped by trial by emitting only one grouped sample at the end of the trial
         sample_producer_session.produce_sample((observation, action, reward, done))
@@ -684,12 +675,6 @@ class HillPPOTraining(BasePPOTraining):
         player_actor_name = actor_names[0]
 
         async for sample in sample_producer_session.all_trial_samples():
-            if sample.trial_state == cogment.TrialState.ENDED:
-                # This sample includes the last observation and no action
-                # The last sample was the last useful one
-                done[-1] = torch.ones(1, dtype=self._dtype)
-                break
-
             previous_actor_sample = sample.actors_data[player_actor_name]
             player_actor_name = previous_actor_sample.observation.current_player
             actor_sample = sample.actors_data[player_actor_name]
@@ -707,11 +692,14 @@ class HillPPOTraining(BasePPOTraining):
                 actor_sample.reward if actor_sample.reward is not None else 0, dtype=self._dtype
             )
             observation.append(observation_value)
-            action.append(action_value)
-            reward.append(reward_value)
-            done.append(torch.zeros(1, dtype=self._dtype))
-            actors.append(player_actor_name)
             steps.append(actor_sample.observation.step)
+            if sample.trial_state == cogment.TrialState.ENDED:
+                done.append(torch.ones(1, dtype=self._dtype))
+                break
+            else:
+                action.append(action_value)
+                reward.append(reward_value)
+                done.append(torch.zeros(1, dtype=self._dtype))
 
         # Keeping the samples grouped by trial by emitting only one grouped sample at the end of the trial
         sample_producer_session.produce_sample((observation, action, reward, done, actors))
@@ -911,9 +899,12 @@ class HumanFeedbackPPOTraining(BasePPOTraining):
 
         async for sample in sample_producer_session.all_trial_samples():
             if sample.trial_state == cogment.TrialState.ENDED:
-                # This sample includes the last observation and no action
-                # The last sample was the last useful one
-                done[-1] = torch.ones(1, dtype=self._dtype)
+                obs_flat = flatten(player_observation_space, actor_sample.observation.value)
+                observation_value = torch.unsqueeze(
+                    torch.permute(torch.tensor(obs_flat, dtype=self._dtype).reshape(obs_shape), (2, 0, 1)), dim=0
+                )
+                observation.append(observation_value)
+                done.append(torch.ones(1, dtype=self._dtype))
                 break
             previous_actor_sample = sample.actors_data[player_actor_name]
             player_actor_name = previous_actor_sample.observation.current_player
@@ -933,10 +924,10 @@ class HumanFeedbackPPOTraining(BasePPOTraining):
                     actor_sample.reward if actor_sample.reward is not None else 0, dtype=self._dtype
                 )
                 observation.append(observation_value)
+                steps.append(actor_sample.observation.step)
                 action.append(action_value)
                 reward.append(reward_value)
                 done.append(torch.zeros(1, dtype=self._dtype))
-                steps.append(actor_sample.observation.step)
             else:
                 obs_flat = flatten(player_observation_space, actor_sample.observation.value)
                 observation_value = torch.unsqueeze(

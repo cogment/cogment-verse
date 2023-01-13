@@ -335,6 +335,7 @@ class HumanFeedbackEnvironment(Environment):
                     actor_name = actor_names[rl_actor_idx]
                     eval_done = True
                     is_rl_agent = True
+
                 observations = [
                     (
                         "*",

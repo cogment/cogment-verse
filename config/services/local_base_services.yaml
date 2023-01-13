@@ -10,6 +10,6 @@ model_registry:
   port: ${generate_port:model_registry}
   log_level: warning
 web:
-  port: 9080
+  port: 8080
   build: False
   dev: False

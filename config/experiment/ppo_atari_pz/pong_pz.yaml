@@ -11,7 +11,7 @@ run:
   num_iter: 5000
   epoch_num_trials: 1
   num_parallel_trials: 1
-  learning_rate: 0.0004
+  learning_rate: 0.00045
   batch_size: 128
   num_steps: -1
   discount_factor: 0.99

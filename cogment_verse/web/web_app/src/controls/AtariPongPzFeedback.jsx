@@ -92,13 +92,13 @@ export const AtariPongPzFeedback = ({ sendAction, fps = 30, actorClass, observat
         setTimeout(() => { setFeedback(2) }, 150);
         sendAction(action);
     };
-    const playerBox = 'opacity-90 py-2 rounded-full items-center text-white font-bold, px-5 text-base outline-none'
+    const playerBox = 'opacity-90 py-1 rounded-full items-center text-white px-2  text-sm outline-none'
     const player1 = `bg-green-500 ${playerBox}`;
     const player2 = `bg-orange-500 ${playerBox}`;
     return (
         <div {...props}>
             {playerNameDisplay ? (
-                <div className={playerPos == "right" ? ("flex flex-row-reverse") : ("flex flex-row")}>
+                <div className={"flex p-2 flex-row justify-center items-center"}>
                     <div className={playerPos == "right" ? (player1) : (player2)}>
                         {playerName}
                     </div>
@@ -107,12 +107,12 @@ export const AtariPongPzFeedback = ({ sendAction, fps = 30, actorClass, observat
                     </div>
                 </div>
             ) : (<div></div>)}
-            <div className="flex p-5 flex-row justify-center items-center">
-                <div className="flex justify-center p-5">
+            <div className="flex p-2 flex-row justify-center items-center">
+                <div className="flex justify-center p-2">
                     <Switch check={humanMode} onChange={toggleHuman} label="Human feedback" />
                 </div>
                 {
-                    humanMode && <div className="ml-10 text-center" style={{
+                    humanMode && <div className="ml-5 text-center" style={{
                         paddingBottom: 10,
                         padingTop: 10,
                     }}>
@@ -123,8 +123,8 @@ export const AtariPongPzFeedback = ({ sendAction, fps = 30, actorClass, observat
                         >
                             <FontAwesomeIcon
                                 icon={faThumbsUp}
-                                style={{ paddingRight: 10 }}
-                                size="3x"
+                                style={{ paddingRight: 5 }}
+                                size="2x"
                                 color={selectedFeedback == 1 ? "green" : "gray"}
                             />
                         </button>
@@ -135,8 +135,8 @@ export const AtariPongPzFeedback = ({ sendAction, fps = 30, actorClass, observat
                         >
                             <FontAwesomeIcon
                                 icon={faMeh}
-                                style={{ paddingLeft: 10 }}
-                                size="3x"
+                                style={{ paddingLeft: 5 }}
+                                size="2x"
                                 color={selectedFeedback == 0 ? "blue" : "gray"}
                             />
                         </button>
@@ -148,7 +148,7 @@ export const AtariPongPzFeedback = ({ sendAction, fps = 30, actorClass, observat
                             <FontAwesomeIcon
                                 icon={faThumbsDown}
                                 style={{ paddingLeft: 15 }}
-                                size="3x"
+                                size="2x"
                                 color={selectedFeedback == -1 ? "red" : "gray"}
                             />
                         </button>

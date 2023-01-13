@@ -5,11 +5,11 @@
 
 .canvas,
 .overlay {
-  height: 800px;
+  height: 400px;
   grid-area: 1/-1;
   z-index: 0;
 
-  width: 100%;
+  width: auto;
 }
 
 .overlay {
@@ -19,3 +19,4 @@
   justify-content: center;
   align-items: center;
 }
+

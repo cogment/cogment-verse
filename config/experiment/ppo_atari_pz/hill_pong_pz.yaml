@@ -2,7 +2,7 @@
 defaults:
   - override /services/actor:
       - ppo_atari_pz
-      - random
+      - ppo_atari_pz
   - override /services/environment: pong_pz
 
 run:
@@ -13,13 +13,13 @@ run:
   epoch_num_trials: 1
   num_parallel_trials: 1
   learning_rate: 3e-4
-  batch_size: 64
+  batch_size: 128
   num_steps: -1
   discount_factor: 0.99
   lambda_gae: 0.95
   device: cpu
   entropy_loss_coef: 0.05
-  value_loss_coef: 0.5
+  value_loss_coef: 0.2
   action_loss_coef: 0.1
   clipping_coef: 0.2
   grad_norm: 0.5
