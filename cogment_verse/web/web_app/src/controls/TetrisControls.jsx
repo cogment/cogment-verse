@@ -13,28 +13,34 @@
 // limitations under the License.
 
 import { useCallback, useState } from "react";
-import { cogment_verse } from "../data_pb";
 import { useDocumentKeypressListener, usePressedKeys } from "../hooks/usePressedKeys";
 import { useRealTimeUpdate } from "../hooks/useRealTimeUpdate";
 import { createLookup } from "../utils/controlLookup";
-import { TEACHER_ACTOR_CLASS, TEACHER_NOOP_ACTION } from "../utils/constants";
+import { TEACHER_ACTOR_CLASS } from "../utils/constants";
 import { Button } from "../components/Button";
 import { FpsCounter } from "../components/FpsCounter";
 import { KeyboardControlList } from "../components/KeyboardControlList";
+import { TEACHER_NOOP_ACTION, serializePlayerAction, Space } from "../utils/spaceSerialization";
+
+const ACTION_SPACE = new Space({
+  discrete: {
+    n: 12,
+  },
+});
 
 const TETRIS_LOOKUP = createLookup();
-TETRIS_LOOKUP.setAction([], new cogment_verse.PlayerAction({ discreteAction: 0 }));
-TETRIS_LOOKUP.setAction(["TURN_CW"], new cogment_verse.PlayerAction({ discreteAction: 1 }));
-TETRIS_LOOKUP.setAction(["TURN_CCW"], new cogment_verse.PlayerAction({ discreteAction: 2 }));
-TETRIS_LOOKUP.setAction(["RIGHT"], new cogment_verse.PlayerAction({ discreteAction: 3 }));
-TETRIS_LOOKUP.setAction(["RIGHT", "TURN_CW"], new cogment_verse.PlayerAction({ discreteAction: 4 }));
-TETRIS_LOOKUP.setAction(["RIGHT", "TURN_CCW"], new cogment_verse.PlayerAction({ discreteAction: 5 }));
-TETRIS_LOOKUP.setAction(["LEFT"], new cogment_verse.PlayerAction({ discreteAction: 6 }));
-TETRIS_LOOKUP.setAction(["LEFT", "TURN_CW"], new cogment_verse.PlayerAction({ discreteAction: 7 }));
-TETRIS_LOOKUP.setAction(["LEFT", "TURN_CCW"], new cogment_verse.PlayerAction({ discreteAction: 8 }));
-TETRIS_LOOKUP.setAction(["DOWN"], new cogment_verse.PlayerAction({ discreteAction: 9 }));
-TETRIS_LOOKUP.setAction(["DOWN", "TURN_CW"], new cogment_verse.PlayerAction({ discreteAction: 10 }));
-TETRIS_LOOKUP.setAction(["DOWN", "TURN_CCW"], new cogment_verse.PlayerAction({ discreteAction: 11 }));
+TETRIS_LOOKUP.setAction([], serializePlayerAction(ACTION_SPACE, 0));
+TETRIS_LOOKUP.setAction(["TURN_CW"], serializePlayerAction(ACTION_SPACE, 1));
+TETRIS_LOOKUP.setAction(["TURN_CCW"], serializePlayerAction(ACTION_SPACE, 2));
+TETRIS_LOOKUP.setAction(["RIGHT"], serializePlayerAction(ACTION_SPACE, 3));
+TETRIS_LOOKUP.setAction(["RIGHT", "TURN_CW"], serializePlayerAction(ACTION_SPACE, 4));
+TETRIS_LOOKUP.setAction(["RIGHT", "TURN_CCW"], serializePlayerAction(ACTION_SPACE, 5));
+TETRIS_LOOKUP.setAction(["LEFT"], serializePlayerAction(ACTION_SPACE, 6));
+TETRIS_LOOKUP.setAction(["LEFT", "TURN_CW"], serializePlayerAction(ACTION_SPACE, 7));
+TETRIS_LOOKUP.setAction(["LEFT", "TURN_CCW"], serializePlayerAction(ACTION_SPACE, 8));
+TETRIS_LOOKUP.setAction(["DOWN"], serializePlayerAction(ACTION_SPACE, 9));
+TETRIS_LOOKUP.setAction(["DOWN", "TURN_CW"], serializePlayerAction(ACTION_SPACE, 10));
+TETRIS_LOOKUP.setAction(["DOWN", "TURN_CCW"], serializePlayerAction(ACTION_SPACE, 11));
 
 export const TetrisEnvironments = ["tetris/TetrisA-v0"];
 export const TetrisControls = ({ sendAction, fps = 30, actorClass, ...props }) => {

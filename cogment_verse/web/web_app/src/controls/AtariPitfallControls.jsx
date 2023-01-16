@@ -13,52 +13,43 @@
 // limitations under the License.
 
 import { useCallback, useState } from "react";
-import { cogment_verse } from "../data_pb";
 import { useDocumentKeypressListener, usePressedKeys } from "../hooks/usePressedKeys";
 import { useRealTimeUpdate } from "../hooks/useRealTimeUpdate";
 import { createLookup } from "../utils/controlLookup";
-import { TEACHER_ACTOR_CLASS, TEACHER_NOOP_ACTION } from "../utils/constants";
+import { TEACHER_ACTOR_CLASS } from "../utils/constants";
 import { Button } from "../components/Button";
 import { FpsCounter } from "../components/FpsCounter";
 import { KeyboardControlList } from "../components/KeyboardControlList";
+import { serializePlayerAction, TEACHER_NOOP_ACTION, Space } from "../utils/spaceSerialization";
+
+const ACTION_SPACE = new Space({
+  discrete: {
+    n: 18,
+  },
+});
 
 // cf. https://www.gymlibrary.ml/environments/atari/#action-space
 const ATARI_LOOKUP = createLookup();
-ATARI_LOOKUP.setAction([], new cogment_verse.PlayerAction({ value: { properties: [{ discrete: 0 }] } }));
-ATARI_LOOKUP.setAction(["FIRE"], new cogment_verse.PlayerAction({ value: { properties: [{ discrete: 1 }] } }));
-ATARI_LOOKUP.setAction(["UP"], new cogment_verse.PlayerAction({ value: { properties: [{ discrete: 2 }] } }));
-ATARI_LOOKUP.setAction(["RIGHT"], new cogment_verse.PlayerAction({ value: { properties: [{ discrete: 3 }] } }));
-ATARI_LOOKUP.setAction(["LEFT"], new cogment_verse.PlayerAction({ value: { properties: [{ discrete: 4 }] } }));
-ATARI_LOOKUP.setAction(["DOWN"], new cogment_verse.PlayerAction({ value: { properties: [{ discrete: 5 }] } }));
-ATARI_LOOKUP.setAction(["UP", "RIGHT"], new cogment_verse.PlayerAction({ value: { properties: [{ discrete: 6 }] } }));
-ATARI_LOOKUP.setAction(["UP", "LEFT"], new cogment_verse.PlayerAction({ value: { properties: [{ discrete: 7 }] } }));
-ATARI_LOOKUP.setAction(["DOWN", "RIGHT"], new cogment_verse.PlayerAction({ value: { properties: [{ discrete: 8 }] } }));
-ATARI_LOOKUP.setAction(["DOWN", "LEFT"], new cogment_verse.PlayerAction({ value: { properties: [{ discrete: 9 }] } }));
-ATARI_LOOKUP.setAction(["UP", "FIRE"], new cogment_verse.PlayerAction({ value: { properties: [{ discrete: 10 }] } }));
-ATARI_LOOKUP.setAction(
-  ["RIGHT", "FIRE"],
-  new cogment_verse.PlayerAction({ value: { properties: [{ discrete: 11 }] } })
-);
-ATARI_LOOKUP.setAction(["LEFT", "FIRE"], new cogment_verse.PlayerAction({ value: { properties: [{ discrete: 12 }] } }));
-ATARI_LOOKUP.setAction(["DOWN", "FIRE"], new cogment_verse.PlayerAction({ value: { properties: [{ discrete: 13 }] } }));
-ATARI_LOOKUP.setAction(
-  ["UP", "RIGHT", "FIRE"],
-  new cogment_verse.PlayerAction({ value: { properties: [{ discrete: 14 }] } })
-);
-ATARI_LOOKUP.setAction(
-  ["UP", "LEFT", "FIRE"],
-  new cogment_verse.PlayerAction({ value: { properties: [{ discrete: 15 }] } })
-);
-ATARI_LOOKUP.setAction(
-  ["DOWN", "RIGHT", "FIRE"],
-  new cogment_verse.PlayerAction({ value: { properties: [{ discrete: 16 }] } })
-);
-ATARI_LOOKUP.setAction(
-  ["DOWN", "LEFT", "FIRE"],
-  new cogment_verse.PlayerAction({ value: { properties: [{ discrete: 17 }] } })
-);
+ATARI_LOOKUP.setAction([], serializePlayerAction(ACTION_SPACE, 0));
+ATARI_LOOKUP.setAction(["FIRE"], serializePlayerAction(ACTION_SPACE, 1));
+ATARI_LOOKUP.setAction(["UP"], serializePlayerAction(ACTION_SPACE, 2));
+ATARI_LOOKUP.setAction(["RIGHT"], serializePlayerAction(ACTION_SPACE, 3));
+ATARI_LOOKUP.setAction(["LEFT"], serializePlayerAction(ACTION_SPACE, 4));
+ATARI_LOOKUP.setAction(["DOWN"], serializePlayerAction(ACTION_SPACE, 5));
+ATARI_LOOKUP.setAction(["UP", "RIGHT"], serializePlayerAction(ACTION_SPACE, 6));
+ATARI_LOOKUP.setAction(["UP", "LEFT"], serializePlayerAction(ACTION_SPACE, 7));
+ATARI_LOOKUP.setAction(["DOWN", "RIGHT"], serializePlayerAction(ACTION_SPACE, 8));
+ATARI_LOOKUP.setAction(["DOWN", "LEFT"], serializePlayerAction(ACTION_SPACE, 9));
+ATARI_LOOKUP.setAction(["UP", "FIRE"], serializePlayerAction(ACTION_SPACE, 10));
+ATARI_LOOKUP.setAction(["RIGHT", "FIRE"], serializePlayerAction(ACTION_SPACE, 11));
+ATARI_LOOKUP.setAction(["LEFT", "FIRE"], serializePlayerAction(ACTION_SPACE, 12));
+ATARI_LOOKUP.setAction(["DOWN", "FIRE"], serializePlayerAction(ACTION_SPACE, 13));
+ATARI_LOOKUP.setAction(["UP", "RIGHT", "FIRE"], serializePlayerAction(ACTION_SPACE, 14));
+ATARI_LOOKUP.setAction(["UP", "LEFT", "FIRE"], serializePlayerAction(ACTION_SPACE, 15));
+ATARI_LOOKUP.setAction(["DOWN", "RIGHT", "FIRE"], serializePlayerAction(ACTION_SPACE, 16));
+ATARI_LOOKUP.setAction(["DOWN", "LEFT", "FIRE"], serializePlayerAction(ACTION_SPACE, 17));
 
-export const AtariPitfallEnvironments = ["atari/Pitfall"];
+export const AtariPitfallEnvironments = ["environments.gym_adapter.Environment/ALE/Pitfall-v5"];
 export const AtariPitfallControls = ({ sendAction, fps = 30, actorClass, ...props }) => {
   const [paused, setPaused] = useState(false);
   const togglePause = useCallback(() => setPaused((paused) => !paused), [setPaused]);

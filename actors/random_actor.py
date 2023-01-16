@@ -13,13 +13,8 @@
 # limitations under the License.
 
 import cogment
-import numpy as np
 
-from cogment_verse.specs import (
-    PLAYER_ACTOR_CLASS,
-    PlayerAction,
-    sample_space,
-)
+from cogment_verse.specs import PLAYER_ACTOR_CLASS, EnvironmentSpecs
 
 
 class RandomActor:
@@ -33,19 +28,19 @@ class RandomActor:
         actor_session.start()
 
         config = actor_session.config
+        environment_specs = EnvironmentSpecs.deserialize(config.environment_specs)
+        observation_space = environment_specs.get_observation_space()
+        action_space = environment_specs.get_action_space()
 
-        action_space = config.environment_specs.action_space
-
-        rng = np.random.default_rng(config.seed if config.seed is not None else 0)
+        action_space.gym_space.seed(config.seed if config.seed is not None else 0)
 
         async for event in actor_session.all_events():
             if event.observation and event.type == cogment.EventType.ACTIVE:
-                if (
-                    event.observation.observation.HasField("current_player")
-                    and event.observation.observation.current_player != actor_session.name
-                ):
+                observation = observation_space.deserialize(event.observation.observation)
+                if observation.current_player is not None and observation.current_player != actor_session.name:
                     # Not the turn of the agent
-                    actor_session.do_action(PlayerAction())
+                    actor_session.do_action(action_space.serialize(action_space.create()))
                     continue
-                [action_value] = sample_space(action_space, rng=rng, mask=event.observation.observation.action_mask)
-                actor_session.do_action(PlayerAction(value=action_value))
+
+                action = action_space.sample(mask=observation.action_mask)
+                actor_session.do_action(action_space.serialize(action))

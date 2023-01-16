@@ -52,7 +52,8 @@ $ pylint --recursive=y .
    ```
 3. Set a breakpoint using the following command
    `python ForkedPdb().set_trace() `
-   NOTE: The other commands are the same as the [PDB debugger](https://docs.python.org/3/library/pdb.html).
+
+NOTE: The other commands are the same as the [PDB debugger](https://docs.python.org/3/library/pdb.html).
 
 ## Developing the web app
 
@@ -77,7 +78,7 @@ $ python -m main
 To trigger a rebuild before launching the webapp, the `services.web.build` needs to be set to `True`. e.g.
 
 ```console
-$ python -m main service.web.build=True
+$ python -m main services.web.build=True
 ```
 
 This perform to a full static build of the web app before launching the instance.
@@ -87,10 +88,8 @@ This perform to a full static build of the web app before launching the instance
 To start an autoreloading isntance of the webapp, set `services.web.dev` to `True`. e.g.
 
 ```console
-$ python -m main service.web.dev=True
+$ python -m main services.web.dev=True
 ```
-
-The web app will be served as an autoreloading server: any edit to the web app sources will be taken into account and cause a reload.
 
 ## Testing
 

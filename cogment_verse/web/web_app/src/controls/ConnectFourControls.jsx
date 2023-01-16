@@ -13,15 +13,35 @@
 // limitations under the License.
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { cogment_verse } from "../data_pb";
 import { useDocumentKeypressListener } from "../hooks/usePressedKeys";
-import { TEACHER_NOOP_ACTION, WEB_ACTOR_NAME } from "../utils/constants";
+import { WEB_ACTOR_NAME } from "../utils/constants";
 import { Button } from "../components/Button";
 import { KeyboardControlList } from "../components/KeyboardControlList";
 import { CountdownCircleTimer } from "react-countdown-circle-timer";
+import {
+  serializePlayerAction,
+  TEACHER_NOOP_ACTION,
+  DType,
+  deserializeObservationActionMask,
+  Space,
+} from "../utils/spaceSerialization";
 
 const TURN_DURATION_SECS = 1;
 const COLUMNS = [0, 1, 2, 3, 4, 5, 6];
+const ACTION_SPACE = new Space({
+  discrete: {
+    n: COLUMNS.length,
+  },
+});
+const ACTION_MASK_SPACE = new Space({
+  box: {
+    low: {
+      // Only the dtype and shape of the lower bound are used to deserialize the observation
+      dtype: DType.DTYPE_INT8,
+      shape: [7],
+    },
+  },
+});
 
 export const ConnectFourEnvironments = [
   "environments.pettingzoo_adapter.Environment/pettingzoo.classic.connect_four_v3",
@@ -45,19 +65,15 @@ export const ConnectFourControls = ({ sendAction, observation, actorClass, ...pr
   }, [sendAction, opponentStepDisabled]);
   useDocumentKeypressListener(" ", opponentStep);
 
-  const columns = useMemo(
-    () =>
-      COLUMNS.map((columnIndex) => ({
-        disabled:
-          !expectingAction ||
-          currentPlayer !== WEB_ACTOR_NAME ||
-          observation?.actionMask?.properties[0]?.discrete.find((actionValue) => actionValue === columnIndex) == null,
-        play: () => {
-          sendAction(new cogment_verse.PlayerAction({ value: { properties: [{ discrete: columnIndex }] } }));
-        },
-      })),
-    [expectingAction, currentPlayer, sendAction, observation?.actionMask]
-  );
+  const columns = useMemo(() => {
+    const deserializedActionMask = deserializeObservationActionMask(ACTION_MASK_SPACE, observation);
+    return COLUMNS.map((columnIndex) => ({
+      disabled: !expectingAction || currentPlayer !== WEB_ACTOR_NAME || deserializedActionMask[columnIndex] !== 1,
+      play: () => {
+        sendAction(serializePlayerAction(ACTION_SPACE, columnIndex));
+      },
+    }));
+  }, [expectingAction, currentPlayer, sendAction, observation]);
 
   return (
     <div {...props}>

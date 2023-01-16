@@ -12,27 +12,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# pylint: disable=C0303
-# pylint: disable=W0611
-# pylint: disable=W0612
-
 import logging
 
 import cogment
 import torch
 
+from gym.spaces import utils, Discrete
+
 from cogment_verse import Model
 from cogment_verse.specs import (
-    PLAYER_ACTOR_CLASS,
     AgentConfig,
-    EnvironmentConfig,
-    PlayerAction,
-    SpaceValue,
     cog_settings,
-    flatten,
-    flattened_dimensions,
-    unflatten,
+    EnvironmentConfig,
+    EnvironmentSpecs,
 )
+from cogment_verse.constants import PLAYER_ACTOR_CLASS
 
 torch.multiprocessing.set_sharing_strategy("file_system")
 
@@ -132,12 +126,9 @@ class SimpleA2CActor:
 
         config = actor_session.config
 
-        assert config.environment_specs.num_players == 1
-        assert len(config.environment_specs.action_space.properties) == 1
-        # assert config.environment_specs.action_space.properties[0].WhichOneof("type") == "discrete"
-
-        observation_space = config.environment_specs.observation_space
-        action_space = config.environment_specs.action_space
+        environment_specs = EnvironmentSpecs.deserialize(config.environment_specs)
+        observation_space = environment_specs.get_observation_space()
+        action_space = environment_specs.get_action_space(seed=config.seed)
 
         model, _, _ = await actor_session.model_registry.retrieve_version(
             SimpleA2CModel, config.model_id, config.model_version
@@ -147,22 +138,17 @@ class SimpleA2CActor:
 
         async for event in actor_session.all_events():
             if event.observation and event.type == cogment.EventType.ACTIVE:
-                obs_tensor = torch.tensor(
-                    flatten(observation_space, event.observation.observation.value), dtype=self._dtype
-                )
-                if config.environment_specs.action_space.properties[0].WhichOneof("type") == "discrete":
-                    probs = torch.softmax(model.actor_network(obs_tensor), dim=-1)
+                observation = observation_space.deserialize(event.observation.observation)
+
+                if isinstance(action_space.gym_space, Discrete):
+                    observation_tensor = torch.tensor(observation.flat_value, dtype=self._dtype)
+                    probs = torch.softmax(model.actor_network(observation_tensor), dim=-1)
                     discrete_action_tensor = torch.distributions.Categorical(probs).sample()
-                    action_value = SpaceValue(
-                        properties=[SpaceValue.PropertyValue(discrete=discrete_action_tensor.item())]
-                    )
-
+                    action = action_space.create(value=discrete_action_tensor.numpy())
                 else:
-                    action = torch.rand((1,) + (action_space.properties[0].box.shape[0],))
-                    action = action.cpu().numpy()[0]
-                    action_value = unflatten(action_space, action)
+                    action = action_space.sample()
 
-                actor_session.do_action(PlayerAction(value=action_value))
+                actor_session.do_action(action_space.serialize(action))
 
 
 class SimpleA2CTraining:
@@ -195,7 +181,9 @@ class SimpleA2CTraining:
         player_actor_params = sample_producer_session.trial_info.parameters.actors[0]
 
         player_actor_name = player_actor_params.name
-        player_observation_space = player_actor_params.config.environment_specs.observation_space
+        player_environment_specs = EnvironmentSpecs.deserialize(player_actor_params.config.environment_specs)
+        player_observation_space = player_environment_specs.get_observation_space()
+        player_action_space = player_environment_specs.get_action_space()
 
         async for sample in sample_producer_session.all_trial_samples():
             if sample.trial_state == cogment.TrialState.ENDED:
@@ -206,14 +194,10 @@ class SimpleA2CTraining:
 
             actor_sample = sample.actors_data[player_actor_name]
             observation.append(
-                torch.tensor(flatten(player_observation_space, actor_sample.observation.value), dtype=self._dtype)
+                torch.tensor(player_observation_space.deserialize(actor_sample.observation).value, dtype=self._dtype)
             )
-            action_value = actor_sample.action.value
-            action.append(
-                torch.tensor(
-                    action_value.properties[0].discrete if len(action_value.properties) > 0 else 0, dtype=self._dtype
-                )
-            )
+
+            action.append(torch.tensor(player_action_space.deserialize(actor_sample.action).value, dtype=self._dtype))
             reward.append(
                 torch.tensor(actor_sample.reward if actor_sample.reward is not None else 0, dtype=self._dtype)
             )
@@ -227,14 +211,13 @@ class SimpleA2CTraining:
         model_id = f"{run_session.run_id}_model"
 
         assert self._environment_specs.num_players == 1
-        assert len(self._environment_specs.action_space.properties) == 1
-        # assert self._environment_specs.action_space.properties[0].WhichOneof("type") == "discrete"
+        assert isinstance(self._environment_specs.get_action_space().gym_space, Discrete)
 
         model = SimpleA2CModel(
             model_id,
             environment_implementation=self._environment_specs.implementation,
-            num_input=flattened_dimensions(self._environment_specs.observation_space),
-            num_output=flattened_dimensions(self._environment_specs.action_space),
+            num_input=utils.flatdim(self._environment_specs.get_observation_space().gym_space),
+            num_output=utils.flatdim(self._environment_specs.get_action_space().gym_space),
             actor_network_num_hidden_nodes=self._cfg.actor_network.num_hidden_nodes,
             critic_network_num_hidden_nodes=self._cfg.critic_network.num_hidden_nodes,
             dtype=self._dtype,
@@ -285,7 +268,7 @@ class SimpleA2CTraining:
                                         run_id=run_session.run_id,
                                         model_id=model_id,
                                         model_version=version_info["version_number"],
-                                        environment_specs=self._environment_specs,
+                                        environment_specs=self._environment_specs.serialize(),
                                     ),
                                 )
                             ],

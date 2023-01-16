@@ -14,12 +14,12 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useDocumentKeypressListener } from "../hooks/usePressedKeys";
-import { TEACHER_NOOP_ACTION } from "../utils/constants";
+import { TEACHER_NOOP_ACTION } from "../utils/spaceSerialization";
 import { Button } from "../components/Button";
 import { KeyboardControlList } from "../components/KeyboardControlList";
 import { CountdownCircleTimer } from "react-countdown-circle-timer";
 
-const TURN_DURATION_SECS = 10;
+const TURN_DURATION_SECS = 1;
 
 export const TurnBasedObserverControls = ({ sendAction, observation, actorClass, ...props }) => {
   const currentPlayer = observation?.currentPlayer;

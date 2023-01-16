@@ -1,5 +1,7 @@
 import:
   proto:
+    - ndarray.proto
+    - spaces.proto
     - data.proto
 
 environment:

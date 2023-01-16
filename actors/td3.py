@@ -12,15 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# pylint: disable=C0103
-# pylint: disable=W0613
-# pylint: disable=W0221
-# pylint: disable=W0212
-# pylint: disable=W0622
-# pylint: disable=R0402
-# pylint: disable=W0612
-# pylint: disable=W0611
-# pylint: disable=E0611
+# pylint: disable=invalid-name
 
 import logging
 import copy
@@ -28,36 +20,17 @@ import time
 import numpy as np
 import cogment
 import torch
-import torch.nn as nn
+from torch import nn
 import torch.nn.functional as F
 
-from cogment_verse.specs import (
-    AgentConfig,
-    cog_settings,
-    EnvironmentConfig,
-    flatten,
-    flattened_dimensions,
-    PLAYER_ACTOR_CLASS,
-    PlayerAction,
-    SpaceValue,
-    sample_space,
-    NDArray,
-)
+from gym.spaces import utils, Box
+
+from cogment_verse.specs import AgentConfig, cog_settings, EnvironmentConfig, EnvironmentSpecs, PLAYER_ACTOR_CLASS
 from cogment_verse import Model, TorchReplayBuffer
 
 torch.multiprocessing.set_sharing_strategy("file_system")
 
 log = logging.getLogger(__name__)
-
-
-def proto_array_from_np_array(arr):
-    return NDArray(shape=arr.shape, dtype=str(arr.dtype), data=arr.tobytes())
-
-
-def np_array_from_proto_array(arr):
-    # print("arr = ", arr)
-    dtype = arr.dtype or "int8"  # default type for empty array
-    return np.frombuffer(arr.data, dtype=dtype).reshape(*arr.shape)
 
 
 class Actor(nn.Module):
@@ -130,7 +103,7 @@ class TD3Model(Model):
         self._environment_implementation = environment_implementation
         self._num_input = num_input
         self._num_output = num_output
-        self._max_action = max_action
+        self.max_action = max_action
         self.time_steps = time_steps
         self.expl_noise = expl_noise
         self.random_steps = random_steps
@@ -150,7 +123,7 @@ class TD3Model(Model):
             "environment_implementation": self._environment_implementation,
             "num_input": self._num_input,
             "num_output": self._num_output,
-            "max_action": self._max_action,
+            "max_action": self.max_action,
             "expl_noise": self.expl_noise,
             "random_steps": self.random_steps,
         }
@@ -214,14 +187,12 @@ class TD3Actor:
         actor_session.start()
 
         config = actor_session.config
-        # print("config = ", config)
 
-        assert config.environment_specs.num_players == 1
-        assert len(config.environment_specs.action_space.properties) == 1
-        assert config.environment_specs.action_space.properties[0].WhichOneof("type") == "box"
+        environment_specs = EnvironmentSpecs.deserialize(config.environment_specs)
+        observation_space = environment_specs.get_observation_space()
+        action_space = environment_specs.get_action_space(seed=config.seed)
 
-        observation_space = config.environment_specs.observation_space
-        action_space = config.environment_specs.action_space
+        assert isinstance(action_space.gym_space, Box)
 
         model, _, _ = await actor_session.model_registry.retrieve_version(
             TD3Model, config.model_id, config.model_version
@@ -229,24 +200,20 @@ class TD3Actor:
 
         async for event in actor_session.all_events():
             if event.observation and event.type == cogment.EventType.ACTIVE:
+                observation = observation_space.deserialize(event.observation.observation)
+
                 if model.time_steps < model.random_steps:
-                    [action_value] = sample_space(action_space)
-                    action_value = SpaceValue(properties=[action_value.properties[0]])
-
+                    action = action_space.sample()
                 else:
-                    obs_tensor = torch.tensor(
-                        flatten(observation_space, event.observation.observation.value), dtype=self._dtype
-                    )
-                    action_value = model.actor(obs_tensor)
-                    action_value = action_value.cpu().detach().numpy()
-                    action_value = action_value + np.random.normal(
-                        0, model._max_action * model.expl_noise, size=2
-                    )  # adding exploration noise
+                    observation = torch.tensor(observation.value, dtype=self._dtype)
+                    action = model.actor(observation)
+                    action = action.cpu().detach().numpy()
+                    # adding exploration noise
+                    action = action + np.random.normal(0, model.max_action * model.expl_noise, size=2)
 
-                    action_value = proto_array_from_np_array(action_value)
-                    action_value = SpaceValue(properties=[SpaceValue.PropertyValue(box=action_value)])
+                    action = action_space.create(value=action)
 
-                actor_session.do_action(PlayerAction(value=action_value))
+                actor_session.do_action(action_space.serialize(action))
 
 
 class TD3Training:
@@ -274,7 +241,9 @@ class TD3Training:
         player_actor_params = sample_producer_session.trial_info.parameters.actors[0]
 
         player_actor_name = player_actor_params.name
-        player_observation_space = player_actor_params.config.environment_specs.observation_space
+        player_environment_specs = EnvironmentSpecs.deserialize(player_actor_params.config.environment_specs)
+        player_observation_space = player_environment_specs.get_observation_space()
+        player_action_space = player_environment_specs.get_action_space()
 
         observation = None
         action = None
@@ -288,7 +257,7 @@ class TD3Training:
                 continue
 
             next_observation = torch.tensor(
-                flatten(player_observation_space, actor_sample.observation.value), dtype=self._dtype
+                player_observation_space.deserialize(actor_sample.observation).flat_value, dtype=self._dtype
             )
 
             if observation is not None:
@@ -308,25 +277,23 @@ class TD3Training:
                     break
 
             observation = next_observation
-            action_value = actor_sample.action.value
-            action_value = np_array_from_proto_array(action_value.properties[0].box)
-            action = torch.tensor(action_value, dtype=torch.float)
+            action = torch.tensor(player_action_space.deserialize(actor_sample.action).value, dtype=self._dtype)
             reward = torch.tensor(actor_sample.reward if actor_sample.reward is not None else 0, dtype=self._dtype)
             total_reward += reward.item()
 
     async def impl(self, run_session):
         # Initializing a model
         model_id = f"{run_session.run_id}_model"
+
         assert self._environment_specs.num_players == 1
-        assert len(self._environment_specs.action_space.properties) == 1
-        assert self._environment_specs.action_space.properties[0].WhichOneof("type") == "box"
+        assert isinstance(self._environment_specs.get_action_space().gym_space, Box)
 
         model = TD3Model(
             model_id,
             environment_implementation=self._environment_specs.implementation,
-            num_input=flattened_dimensions(self._environment_specs.observation_space),
-            num_output=flattened_dimensions(self._environment_specs.action_space),
-            max_action=float(self._environment_specs.action_space.properties[0].box.high[0].bound),
+            num_input=utils.flatdim(self._environment_specs.get_observation_space().gym_space),
+            num_output=utils.flatdim(self._environment_specs.get_action_space().gym_space),
+            max_action=float(self._environment_specs.get_action_space().gym_space.high[0]),
             expl_noise=float(self._cfg.expl_noise),
             random_steps=int(self._cfg.random_steps),
             time_steps=0,
@@ -346,14 +313,15 @@ class TD3Training:
 
         replay_buffer = TorchReplayBuffer(
             capacity=self._cfg.buffer_size,
-            observation_shape=(flattened_dimensions(self._environment_specs.observation_space),),
+            observation_shape=(utils.flatdim(self._environment_specs.get_observation_space().gym_space),),
             observation_dtype=self._dtype,
-            action_shape=(flattened_dimensions(self._environment_specs.action_space),),
+            action_shape=(utils.flatdim(self._environment_specs.get_action_space().gym_space),),
             action_dtype=self._dtype,  # check
             reward_dtype=self._dtype,
             seed=self._cfg.seed,
         )
-        # start_time = time.time()
+
+        start_time = time.time()
         total_reward_cum = 0
 
         for (step_idx, _trial_id, trial_idx, sample,) in run_session.start_and_await_trials(
@@ -381,7 +349,7 @@ class TD3Training:
                                     model_id=model_id,
                                     model_version=-1,
                                     model_update_frequency=self._cfg.policy_freq,
-                                    environment_specs=self._environment_specs,
+                                    environment_specs=self._environment_specs.serialize(),
                                 ),
                             )
                         ],
@@ -417,7 +385,7 @@ class TD3Training:
                         -self._cfg.noise_clip, self._cfg.noise_clip
                     )
                     next_action = (model.actor_target(data.next_observation) + noise).clamp(
-                        -model._max_action, model._max_action
+                        -model.max_action, model.max_action
                     )
 
                     # Compute the target Q value
@@ -455,21 +423,26 @@ class TD3Training:
                     for param, target_param in zip(model.actor.parameters(), model.actor_target.parameters()):
                         target_param.data.copy_(self._cfg.tau * param.data + (1 - self._cfg.tau) * target_param.data)
 
+                    run_session.log_metrics(loss=actor_loss.item())
+
                 # Update the version info
                 model.total_samples += data.size()
+
+                if step_idx % 100 == 0:
+                    run_session.log_metrics(
+                        batch_avg_reward=data.reward.mean().item(),
+                    )
 
             model.time_steps += 1
             version_info = await run_session.model_registry.publish_version(model)
 
-            # if step_idx % 100 == 0:
-            #     end_time = time.time()
-            #     steps_per_seconds = 100 / (end_time - start_time)
-            #     start_time = end_time
-            #     run_session.log_metrics(
-            #         model_version_number=version_info["version_number"],
-            #         loss=actor_loss.item(),
-            #         batch_avg_reward=data.reward.mean().item(),
-            #         steps_per_seconds=steps_per_seconds,
-            #     )
+            if step_idx % 100 == 0:
+                end_time = time.time()
+                steps_per_seconds = 100 / (end_time - start_time)
+                start_time = end_time
+                run_session.log_metrics(
+                    model_version_number=version_info["version_number"],
+                    steps_per_seconds=steps_per_seconds,
+                )
 
         version_info = await run_session.model_registry.publish_version(model, archived=True)

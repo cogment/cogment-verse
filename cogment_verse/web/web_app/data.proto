@@ -16,68 +16,15 @@ syntax = "proto3";
 
 package cogment_verse;
 
-message NDArray {
-  string dtype = 1;
-  repeated uint32 shape = 2;
-  bytes data = 3;
-}
-
-// Space messages are used to define environments action or observation space
-// Similar to gym's "dict" space
-message Space {
-  message Discrete {
-    int32 num = 1;
-    repeated string labels = 2; // Define labels for the discrete elements in the space, overrides `num`
-  }
-  message Bound {
-    optional float bound = 1; // value of the bound, not set means unbounded
-  }
-  message Box {
-    repeated uint32 shape = 1;
-    repeated Bound low = 2; // independant lower bounds for each dimensions (gets reshaped)
-    repeated Bound high = 3; // independant upper bounds for each dimensions (gets reshaped)
-  }
-  message Property {
-    string key = 1;
-    oneof type {
-      Discrete discrete = 2;
-      Box box = 3;
-    }
-  }
-  repeated Property properties = 1;
-}
-
-// SpaceValue messages are values within a Space
-// `properties` are sorted in the same way than the value's Space
-message SpaceValue {
-  message SimpleBox {
-    repeated float values = 1;
-  }
-  message PropertyValue {
-    oneof value {
-      int32 discrete = 1;
-      NDArray box = 2;
-      SimpleBox simple_box = 3;
-    }
-  }
-  repeated PropertyValue properties = 1;
-}
-
-// SpaceMask messages are value masks within a space
-// `properties` are sorted in the same way than the value's Space
-message SpaceMask {
-  message PropertyMask {
-    repeated int32 discrete = 1; // The discrete actions that are valid
-  }
-  repeated PropertyMask properties = 1;
-}
+import "ndarray.proto";
+import "spaces.proto";
 
 message EnvironmentSpecs {
   string implementation = 1;
-  bool turn_based = 2;
-  int32 num_players = 3;
-  Space observation_space = 4;
-  Space action_space = 5;
+  bool turn_based = 6;
+  int32 num_players = 7;
+  spaces.Space observation_space = 4;
+  spaces.Space action_space = 5;
 }
 
 message EnvironmentConfig {
@@ -103,7 +50,6 @@ message AgentConfig {
   string model_id = 4;
   int32 model_version = 5;
   int32 model_update_frequency = 6;
-  // int32 actor_index = 6; // Used to figure out if an agent is the current_player in the observation space
   // string device = 7;
   // uint32 threads_per_worker = 8;
   // HFHubModel hf_hub_model = 9;
@@ -113,22 +59,22 @@ message TrialConfig {
 }
 
 message Observation {
-  SpaceValue value = 1;
+  nd_array.Array value = 1;
   optional string current_player = 2; // active player for multi-agent turn-based environments
-  optional SpaceMask action_mask = 3;
+  optional nd_array.Array action_mask = 3;
   optional bytes rendered_frame = 4;
   repeated string overridden_players = 5;  // list of players that provided an action that was overriden during the last tick
   //NDArray segmentation = 6;
 }
 
 message PlayerAction {
-  SpaceValue value = 1;
+  nd_array.Array value = 1;
   // NDArray policy = 2; // optional: policy from which action was drawn
   // float value = 3; // optional: value of the state from which the action was taken
 }
 
 message TeacherAction {
-  optional SpaceValue value = 1;
+  optional nd_array.Array value = 1;
   // NDArray policy = 2; // optional: policy from which action was drawn
   // float value = 3; // optional: value of the state from which the action was taken
 }
