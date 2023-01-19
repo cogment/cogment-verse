@@ -48,18 +48,25 @@ const deserializeNdArray = (serializedArray) => {
   const dtype = serializedArray.dtype;
   const shape = serializedArray.shape;
   const length = shape.reduce((accFlatdim, dim) => dim * accFlatdim, 1);
+  const rawData = serializedArray.rawData;
   let typedArray;
   switch (dtype) {
     case DType.DTYPE_INT8:
-      typedArray = new Int8Array(serializedArray.rawData.buffer, serializedArray.rawData.byteOffset, length);
+      typedArray = new Int8Array(rawData.buffer, rawData.byteOffset, length);
       break;
     case DType.DTYPE_FLOAT32:
-      typedArray = new Float32Array(serializedArray.rawData.buffer, serializedArray.rawData.byteOffset, length);
+      if (rawData.byteOffset % 4 !== 0) {
+        // original buffer is not aligne, we need to copy
+        const alignedData = Uint8Array.from(rawData);
+        typedArray = new Float32Array(alignedData.buffer, alignedData.byteOffset, length);
+      } else {
+        typedArray = new Float32Array(rawData.buffer, rawData.byteOffset, length);
+      }
       break;
     default:
       throw new Error(`Unsupported dtype [${dtype}]`);
   }
-  return [dtype, shape, typedArray];
+  return [dtype, shape, [...typedArray]];
 };
 
 const flatdim = (space) => {
@@ -215,4 +222,18 @@ export const deserializeObservationActionMask = (space, observation) => {
     return null;
   }
   return deserializeSpaceValue(space, observationActionMask);
+};
+
+export const deserializeObservationSpace = (serializedObservationSpace) => {
+  if (serializedObservationSpace == null) {
+    return {};
+  }
+  if (serializedObservationSpace.dict) {
+    const actionMaskSpace = serializedObservationSpace.dict.spaces.find(({ key }) => key === "action_mask");
+    if (actionMaskSpace != null) {
+      const observationSpace = serializedObservationSpace.dict.spaces.find(({ key }) => key === "observation");
+      return { observationSpace: observationSpace.space, actionMaskSpace: actionMaskSpace.space };
+    }
+  }
+  return { observationSpace: serializedObservationSpace };
 };
