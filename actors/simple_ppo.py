@@ -215,12 +215,14 @@ class PPOActor:
                     event.observation.observation.HasField("current_player")
                     and event.observation.observation.current_player != actor_session.name
                 ):
-                    # # Not the turn of the agent
+                    # # Not the turn of the agent # Why
                     if event.observation.observation.current_player == WEB_ACTOR_NAME:
                         actor_session.do_action(PlayerAction())
                     else:
                         actor_session.do_action(PlayerAction())
                     continue
+
+                # Why
                 obs_tensor = torch.tensor(
                     flatten(observation_space, event.observation.observation.value), dtype=self._dtype
                 ).reshape(obs_shape)
@@ -245,23 +247,23 @@ class BasePPOTraining(ABC):
 
     default_cfg = {
         "seed": 0,
-        "num_epochs": 10,
-        "num_iter": 500,
-        "epoch_num_trials": 1,
-        "num_parallel_trials": 1,
+        "num_epochs": 4, # update_epochs?
+        "num_iter": 500, # ?
+        "epoch_num_trials": 1, # ?
+        "num_parallel_trials": 1, # or 4
         "discount_factor": 0.99,
-        "entropy_loss_coef": 0.05,
+        "entropy_loss_coef": 0.01,
         "value_loss_coef": 0.5,
-        "action_loss_coef": 1.0,
+        "action_loss_coef": 1.0, # ?
         "clipping_coef": 0.1,
         "learning_rate": 3e-4,
-        "batch_size": 64,
-        "num_steps": 2048,
+        "batch_size": 128,  # should be num_envs *  num_steps
+        "num_steps": 128, # 2048 is too large?
         "lambda_gae": 0.95,
         "device": "cpu",
         "grad_norm": 0.5,
-        "image_size": [6, 84, 84],
-        "buffer_capacity": 100_000,
+        "image_size": [6, 84, 84],  # ?
+        "buffer_capacity": 100_000, # ?
     }
 
     def __init__(self, environment_specs: EnvironmentSpecs, cfg: EnvironmentConfig) -> None:
