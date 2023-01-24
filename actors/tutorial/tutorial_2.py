@@ -25,13 +25,9 @@ from cogment_verse.specs import (
     AgentConfig,
     cog_settings,
     EnvironmentConfig,
-    ############ TUTORIAL STEP 2 ############
-    flatten,
-    #########################################
+    EnvironmentSpecs,
     HUMAN_ACTOR_IMPL,
     PLAYER_ACTOR_CLASS,
-    PlayerAction,
-    sample_space,
     TEACHER_ACTOR_CLASS,
     WEB_ACTOR_NAME,
 )
@@ -53,10 +49,13 @@ class SimpleBCActor:
 
         config = actor_session.config
 
+        environment_specs = EnvironmentSpecs.deserialize(config.environment_specs)
+        action_space = environment_specs.get_action_space(seed=config.seed)
+
         async for event in actor_session.all_events():
             if event.observation and event.type == cogment.EventType.ACTIVE:
-                [action_value] = sample_space(config.environment_specs.action_space)
-                actor_session.do_action(PlayerAction(value=action_value))
+                action = action_space.sample()
+                actor_session.do_action(action_space.serialize(action))
 
 
 class SimpleBCTraining:
@@ -91,31 +90,36 @@ class SimpleBCTraining:
         player_params = players_params[0]
         teacher_params = teachers_params[0]
 
+        environment_specs = EnvironmentSpecs.deserialize(player_params.config.environment_specs)
+        action_space = environment_specs.get_action_space()
+
         ############ TUTORIAL STEP 2 ############
-        environment_specs = player_params.config.environment_specs
+        observation_space = environment_specs.get_observation_space()
         #########################################
 
         async for sample in sample_producer_session.all_trial_samples():
             ############ TUTORIAL STEP 2 ############
             observation_tensor = torch.tensor(
-                flatten(environment_specs.observation_space, sample.actors_data[player_params.name].observation.value),
+                observation_space.deserialize(sample.actors_data[player_params.name].observation).flat_value,
                 dtype=self._dtype,
             )
             #########################################
 
-            teacher_action = sample.actors_data[teacher_params.name].action
+            teacher_action = action_space.deserialize(sample.actors_data[teacher_params.name].action)
 
-            ############ TUTORIAL STEP 2 ############
-            if teacher_action.HasField("value"):
+            if teacher_action.flat_value is not None:
+                ############ TUTORIAL STEP 2 ############
                 applied_action = teacher_action
                 demonstration = True
             else:
-                applied_action = sample.actors_data[player_params.name].action
+                applied_action = action_space.deserialize(sample.actors_data[player_params.name].action)
                 demonstration = False
 
-            action_tensor = torch.tensor(
-                flatten(environment_specs.action_space, applied_action.value), dtype=self._dtype
-            )
+            if applied_action.flat_value is None:
+                # TODO figure out why we get into this situation
+                continue
+
+            action_tensor = torch.tensor(applied_action.flat_value, dtype=self._dtype)
             sample_producer_session.produce_sample((demonstration, observation_tensor, action_tensor))
             #########################################
 
@@ -138,7 +142,7 @@ class SimpleBCTraining:
                 #########################################
                 config=AgentConfig(
                     run_id=run_session.run_id,
-                    environment_specs=self._environment_specs,
+                    environment_specs=self._environment_specs.serialize(),
                 ),
             )
 
@@ -149,7 +153,7 @@ class SimpleBCTraining:
                 implementation=HUMAN_ACTOR_IMPL,
                 config=AgentConfig(
                     run_id=run_session.run_id,
-                    environment_specs=self._environment_specs,
+                    environment_specs=self._environment_specs.serialize(),
                 ),
             )
 

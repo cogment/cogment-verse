@@ -12,13 +12,34 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-export const WEB_ACTOR_NAME = "web_actor";
+syntax = "proto3";
 
-export const TEACHER_ACTOR_CLASS = "teacher";
-export const PLAYER_ACTOR_CLASS = "player";
-export const OBSERVER_ACTOR_CLASS = "observer";
+import "ndarray.proto";
 
-export const ORCHESTRATOR_WEB_ENDPOINT =
-  window.ORCHESTRATOR_WEB_ENDPOINT !== ""
-    ? window.ORCHESTRATOR_WEB_ENDPOINT
-    : process.env.REACT_APP_ORCHESTRATOR_WEB_ENDPOINT;
+package cogment_verse.spaces;
+
+message Discrete {
+  int32 n = 1;
+  int32 start = 2;
+}
+
+message Box {
+  nd_array.Array low = 2;
+  nd_array.Array high = 3;
+}
+
+message Dict {
+  message SubSpace {
+    string key = 1;
+    Space space = 2;
+  }
+  repeated SubSpace spaces = 1;
+}
+
+message Space {
+  oneof kind {
+    Discrete discrete = 1;
+    Box box = 2;
+    Dict dict = 3;
+  }
+}

@@ -106,7 +106,7 @@ class PlayRun:
                             config=extend_actor_config(
                                 actor_config_template=actor_params.get("agent_config", None),
                                 run_id=run_session.run_id,
-                                environment_specs=self._environment_specs,
+                                environment_specs=self._environment_specs.serialize(),
                                 seed=(self._cfg.seed + actor_idx) * trial_idx,
                             ),
                         )
@@ -122,7 +122,7 @@ class PlayRun:
                             config=extend_actor_config(
                                 actor_config_template=actor_params.get("agent_config", None),
                                 run_id=run_session.run_id,
-                                environment_specs=self._environment_specs,
+                                environment_specs=self._environment_specs.serialize(),
                                 seed=(self._cfg.seed + actor_idx) * trial_idx,
                             ),
                         )
@@ -140,7 +140,7 @@ class PlayRun:
                         implementation=HUMAN_ACTOR_IMPL,
                         config=AgentConfig(
                             run_id=run_session.run_id,
-                            environment_specs=self._environment_specs,
+                            environment_specs=self._environment_specs.serialize(),
                             seed=(self._cfg.seed + 100) * trial_idx,
                         ),
                     )

@@ -13,17 +13,23 @@
 // limitations under the License.
 
 import { useCallback, useState } from "react";
-import { cogment_verse } from "../data_pb";
 import { useDocumentKeypressListener, usePressedKeys } from "../hooks/usePressedKeys";
 import { useRealTimeUpdate } from "../hooks/useRealTimeUpdate";
-import { TEACHER_ACTOR_CLASS, TEACHER_NOOP_ACTION } from "../utils/constants";
+import { TEACHER_ACTOR_CLASS } from "../utils/constants";
 import { DPad, usePressedButtons, DPAD_BUTTONS } from "../components/DPad";
 import { Button } from "../components/Button";
 import { FpsCounter } from "../components/FpsCounter";
 import { KeyboardControlList } from "../components/KeyboardControlList";
+import { serializePlayerAction, TEACHER_NOOP_ACTION, Space } from "../utils/spaceSerialization";
 
 const DEACTIVATED_BUTTONS_TEACHER = [];
 const DEACTIVATED_BUTTONS_PLAYER = [DPAD_BUTTONS.UP];
+
+const ACTION_SPACE = new Space({
+  discrete: {
+    n: 4,
+  },
+});
 
 export const GymLunarLanderEnvironments = ["environments.gym_adapter.Environment/LunarLander-v2"];
 
@@ -41,20 +47,20 @@ export const GymLunarLanderControls = ({ sendAction, fps = 20, actorClass, ...pr
     (dt) => {
       if (pressedKeys.has("ArrowRight") || isButtonPressed(DPAD_BUTTONS.RIGHT)) {
         setActiveButtons([DPAD_BUTTONS.RIGHT]);
-        sendAction(new cogment_verse.PlayerAction({ value: { properties: [{ discrete: 1 }] } }));
+        sendAction(serializePlayerAction(ACTION_SPACE, 1));
         return;
       } else if (pressedKeys.has("ArrowDown") || isButtonPressed(DPAD_BUTTONS.DOWN)) {
         setActiveButtons([DPAD_BUTTONS.DOWN]);
-        sendAction(new cogment_verse.PlayerAction({ value: { properties: [{ discrete: 2 }] } }));
+        sendAction(serializePlayerAction(ACTION_SPACE, 2));
         return;
       } else if (pressedKeys.has("ArrowLeft") || isButtonPressed(DPAD_BUTTONS.LEFT)) {
         setActiveButtons([DPAD_BUTTONS.LEFT]);
-        sendAction(new cogment_verse.PlayerAction({ value: { properties: [{ discrete: 3 }] } }));
+        sendAction(serializePlayerAction(ACTION_SPACE, 3));
         return;
       } else if (isTeacher) {
         if (pressedKeys.has("ArrowUp") || isButtonPressed(DPAD_BUTTONS.UP)) {
           setActiveButtons([DPAD_BUTTONS.UP]);
-          sendAction(new cogment_verse.PlayerAction({ value: { properties: [{ discrete: 0 }] } }));
+          sendAction(serializePlayerAction(ACTION_SPACE, 0));
           return;
         }
         setActiveButtons([]);
@@ -62,7 +68,7 @@ export const GymLunarLanderControls = ({ sendAction, fps = 20, actorClass, ...pr
         return;
       }
       setActiveButtons([]);
-      sendAction(new cogment_verse.PlayerAction({ value: { properties: [{ discrete: 0 }] } }));
+      sendAction(serializePlayerAction(ACTION_SPACE, 0));
     },
     [isButtonPressed, pressedKeys, sendAction, setActiveButtons, isTeacher]
   );

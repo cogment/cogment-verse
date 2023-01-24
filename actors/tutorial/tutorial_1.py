@@ -20,10 +20,9 @@ from cogment_verse.specs import (
     AgentConfig,
     cog_settings,
     EnvironmentConfig,
+    EnvironmentSpecs,
     HUMAN_ACTOR_IMPL,
     PLAYER_ACTOR_CLASS,
-    PlayerAction,
-    sample_space,
     TEACHER_ACTOR_CLASS,
     WEB_ACTOR_NAME,
 )
@@ -43,10 +42,13 @@ class SimpleBCActor:
 
         config = actor_session.config
 
+        environment_specs = EnvironmentSpecs.deserialize(config.environment_specs)
+        action_space = environment_specs.get_action_space(seed=config.seed)
+
         async for event in actor_session.all_events():
             if event.observation and event.type == cogment.EventType.ACTIVE:
-                [action_value] = sample_space(config.environment_specs.action_space)
-                actor_session.do_action(PlayerAction(value=action_value))
+                action = action_space.sample()
+                actor_session.do_action(action_space.serialize(action))
 
 
 class SimpleBCTraining:
@@ -78,10 +80,13 @@ class SimpleBCTraining:
         player_params = players_params[0]
         teacher_params = teachers_params[0]
 
-        async for sample in sample_producer_session.all_trial_samples():
-            teacher_action = sample.actors_data[teacher_params.name].action
+        environment_specs = EnvironmentSpecs.deserialize(player_params.config.environment_specs)
+        action_space = environment_specs.get_action_space()
 
-            if teacher_action.HasField("value"):
+        async for sample in sample_producer_session.all_trial_samples():
+            teacher_action = action_space.deserialize(sample.actors_data[teacher_params.name].action)
+
+            if teacher_action.flat_value is not None:
                 log.info(f"Got raw sample with action override from [{teacher_params.name}]")
             else:
                 log.info(f"Got raw sample with action from [{player_params.name}]")
@@ -103,7 +108,7 @@ class SimpleBCTraining:
                 implementation="actors.tutorial.tutorial_1.SimpleBCActor",
                 config=AgentConfig(
                     run_id=run_session.run_id,
-                    environment_specs=self._environment_specs,
+                    environment_specs=self._environment_specs.serialize(),
                 ),
             )
 
@@ -114,7 +119,7 @@ class SimpleBCTraining:
                 implementation=HUMAN_ACTOR_IMPL,
                 config=AgentConfig(
                     run_id=run_session.run_id,
-                    environment_specs=self._environment_specs,
+                    environment_specs=self._environment_specs.serialize(),
                 ),
             )
 

@@ -17,21 +17,121 @@ import os
 from google.protobuf.json_format import MessageToDict, ParseDict
 import yaml
 
-from data_pb2 import EnvironmentSpecs  # pylint: disable=import-error
+from data_pb2 import EnvironmentSpecs as PbEnvironmentSpecs  # pylint: disable=import-error
+
+from .spaces_serialization import serialize_gym_space, deserialize_gym_space
+from .observation_space import ObservationSpace
+from .action_space import ActionSpace
+
+from ..constants import PLAYER_ACTOR_CLASS
 
 
-def save_environment_specs(work_dir, env_name, env_specs):
-    specs_filename = os.path.join(work_dir, "environment_specs", f"{env_name}.yaml")
-    os.makedirs(os.path.dirname(specs_filename), exist_ok=True)
+class EnvironmentSpecs:
+    """
+    Representation of the specification of an environment within cogment verse
 
-    env_specs.implementation = env_name
+    Properties:
+        implementation:
+            The name of the implementation for the environment.
+        num_players:
+            Number of players supported by the environment.
+        turn_based:
+            is this environment turn based (vs real time).
+    """
 
-    with open(specs_filename, "w", encoding="utf-8") as f:
-        yaml.safe_dump(MessageToDict(env_specs, preserving_proto_field_name=True), f)
+    def __init__(self, environment_specs_pb):
+        """
+        EnvironmentSpecs constructor.
+        Shouldn't be called directly, prefer the factory function such as EnvironmentSpecs.deserialize or EnvironmentSpecs.create_homogeneous.
+        """
+        self._pb = environment_specs_pb
 
+    @property
+    def implementation(self):
+        return self._pb.implementation
 
-def load_environment_specs(work_dir, env_name):
-    specs_filename = os.path.join(work_dir, "environment_specs", f"{env_name}.yaml")
+    @property
+    def num_players(self):
+        return self._pb.num_players
 
-    with open(specs_filename, "r", encoding="utf-8") as f:
-        return ParseDict(yaml.safe_load(f), EnvironmentSpecs())
+    @property
+    def turn_based(self):
+        return self._pb.turn_based
+
+    def get_observation_space(self, render_width=1024):
+        """
+        Build an instance of the observation space for this environment
+
+        Parameters:
+            render_width: optional
+                maximum width for the serialized rendered frame in observation
+
+        NOTE: In the future we'll want to support different observation space per agent role
+        """
+        return ObservationSpace(deserialize_gym_space(self._pb.observation_space), render_width)
+
+    def get_action_space(self, actor_class=PLAYER_ACTOR_CLASS, seed=None):
+        """
+        Build an instance of the action space for this environment
+
+        Parameters:
+            actor_class: optional
+                the class of the actor for which we want to retrieve the action space.
+                this parameters is mostly useful when serializing actions.
+            seed: optional
+                the seed used when generating random actions
+
+        NOTE: In the future we'll want to support different action space per agent roles
+        """
+        return ActionSpace(deserialize_gym_space(self._pb.action_space), actor_class, seed)
+
+    @classmethod
+    def create_homogeneous(cls, num_players, turn_based, observation_space, action_space):
+        """
+        Factory function building an homogenous EnvironmentSpecs, ie  with all actors having the same action and observation spaces.
+        """
+        return cls.deserialize(
+            PbEnvironmentSpecs(
+                num_players=num_players,
+                turn_based=turn_based,
+                observation_space=serialize_gym_space(observation_space),
+                action_space=serialize_gym_space(action_space),
+            )
+        )
+
+    def serialize(self):
+        """
+        Serialize to a EnvironmentSpecs protobuf message
+        """
+        return self._pb
+
+    @classmethod
+    def deserialize(cls, environment_specs_pb):
+        """
+        Factory function building an EnvironmentSpecs instance from a EnvironmentSpecs protobuf message
+        """
+        return cls(environment_specs_pb)
+
+    @classmethod
+    def load(cls, work_dir, env_name):
+        """
+        Factory function building an EnvironmentSpecs from cogment_version work dir cache
+        """
+
+        specs_filename = os.path.join(work_dir, "environment_specs", f"{env_name}.yaml")
+
+        with open(specs_filename, "r", encoding="utf-8") as f:
+            return cls.deserialize(ParseDict(yaml.safe_load(f), PbEnvironmentSpecs()))
+
+    def save(self, work_dir, env_name):
+        """
+        Saving to cogment_version work dir cache
+        """
+
+        specs_filename = os.path.join(work_dir, "environment_specs", f"{env_name}.yaml")
+        os.makedirs(os.path.dirname(specs_filename), exist_ok=True)
+
+        self._pb.implementation = env_name
+
+        with open(specs_filename, "w", encoding="utf-8") as f:
+            yaml.safe_dump(MessageToDict(self._pb, preserving_proto_field_name=True), f)
