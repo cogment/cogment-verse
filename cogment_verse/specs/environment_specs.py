@@ -72,7 +72,7 @@ class EnvironmentSpecs:
 
     def get_action_space(self, actor_class=PLAYER_ACTOR_CLASS, seed=None):
         """
-        Build an instance of the observation space for this environment
+        Build an instance of the action space for this environment
 
         Parameters:
             actor_class: optional
