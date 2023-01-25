@@ -42,7 +42,7 @@ DTYPE_FROM_PB_DTYPE = {
 }
 
 DOUBLE_DTYPES = frozenset(["float32", "float64"])
-INT32_DTYPES = frozenset(["int8"])
+INT32_DTYPES = frozenset(["int8", "int32"])
 INT64_DTYPES = frozenset(["int64"])
 
 
