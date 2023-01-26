@@ -44,7 +44,6 @@ def test_serialize_ndarray_raw(benchmark):
 @pytest.mark.benchmark(group="serialize_ndarray")
 def test_serialize_ndarray_npy(benchmark):
     array = create_large_nd_array()
-    print(array)
     serialized_array = benchmark(serialize_ndarray, array, SerializationFormat.NPY)
 
     deserialized_array = deserialize_ndarray(serialized_array)
@@ -66,6 +65,13 @@ def test_serialize_ndarray_structured(benchmark):
     deserialized_array = deserialize_ndarray(serialized_array)
     assert np.array_equal(array, deserialized_array)
 
+@pytest.mark.benchmark(group="serialize_ndarray")
+def test_serialize_ndarray_structured_int32(benchmark):
+    array = create_large_int_nd_array(seed=12, dtype=np.int32)
+    serialized_array = benchmark(serialize_ndarray, array, SerializationFormat.STRUCTURED)
+
+    deserialized_array = deserialize_ndarray(serialized_array)
+    assert np.array_equal(array, deserialized_array)
 
 @pytest.mark.benchmark(group="deserialize_ndarray")
 def test_deserialize_ndarray_raw(benchmark):
