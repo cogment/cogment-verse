@@ -50,14 +50,17 @@ In the first step, the run implementation is pretty minimal. It sets up an exper
 
 #### Running everything
 
-Make sure you are using step 1 version of the adapter by editing the "default" export in `config/experiment/simple_bc/mountain_car.yaml`.
+Make sure you are using step 1 version of the adapter by ensuring the following:
+1. In `config/experiment/simple_bc/mountain_car.yaml` file, `class_name` is set to `actors.tutorial.tutorial_1.SimpleBCTraining`.
+2. In `config/services/actor/simple_bc.yaml` file, `class_name` is set to `actors.tutorial.tutorial_1.SimpleBCActor`.
+3. Port 3000 is not in use.
 
 First, launch a mlflow server on port 3000 using:
 
 ```
 python -m simple_mlflow
 ```
-launch a simple behavior cloning run with the mountain car gym environment using:
+In a new terminal, launch a simple behavior cloning run with the mountain car gym environment using:
 ```
 python -m main +experiment=simple_bc/mountain_car
 ```
