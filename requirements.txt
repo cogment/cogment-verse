@@ -21,3 +21,6 @@ black~=22.3.0
 pylint~=2.14
 pytest~=6.2.5
 pytest-benchmark~=4.0.0
+
+# For Mlflow
+SQLAlchemy==1.4.44
