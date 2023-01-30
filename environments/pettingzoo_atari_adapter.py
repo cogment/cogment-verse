@@ -144,7 +144,7 @@ class RlEnvironment(Environment):
             pz_env = self.env_class.env()
         if self.env_type_str == "atari":
             pz_env = atari_env_wrapper(pz_env)
-        pz_env.reset(seed=session_cfg.seed)
+        pz_env.reset()
         pz_agent_iterator = iter(pz_env.agent_iter())
         pz_observation, _, _, _, _ = pz_env.last()
 

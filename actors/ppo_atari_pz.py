@@ -50,15 +50,7 @@ log = logging.getLogger(__name__)
 # pylint: disable=W0223
 # pylint: disable=W0613
 # pylint: disable=W0612
-def initialize_weight(param) -> None:
-    """Orthogonal initialization of the weight's values of a network"""
-
-    if isinstance(param, torch.nn.Linear):
-        torch.nn.init.orthogonal_(param.weight.data)
-        torch.nn.init.constant_(param.bias.data, 0)
-
-
-def initalize_layer(layer: torch.nn.Module, std: float = np.sqrt(2), bias_const: float = 0.0):
+def initialize_layer(layer: torch.nn.Module, std: float = np.sqrt(2), bias_const: float = 0.0):
     """Layer initialization"""
     torch.nn.init.orthogonal_(layer.weight, std)
     torch.nn.init.constant_(layer.bias, bias_const)
@@ -71,18 +63,18 @@ class PolicyValueNetwork(torch.nn.Module):
     def __init__(self, num_actions: int) -> None:
         super().__init__()
         self.shared_network = torch.nn.Sequential(
-            initalize_layer(torch.nn.Conv2d(6, 32, 8, stride=4)),
+            initialize_layer(torch.nn.Conv2d(6, 32, 8, stride=4)),
             torch.nn.ReLU(),
-            initalize_layer(torch.nn.Conv2d(32, 64, 3, stride=2)),
+            initialize_layer(torch.nn.Conv2d(32, 64, 3, stride=2)),
             torch.nn.ReLU(),
-            initalize_layer(torch.nn.Conv2d(64, 64, 3, stride=1)),
+            initialize_layer(torch.nn.Conv2d(64, 64, 3, stride=1)),
             torch.nn.ReLU(),
             torch.nn.Flatten(),
-            initalize_layer(torch.nn.Linear(64 * 7 * 7, 512)),
+            initialize_layer(torch.nn.Linear(64 * 7 * 7, 512)),
             torch.nn.ReLU(),
         )
-        self.actor = initalize_layer(torch.nn.Linear(512, num_actions), 0.01)
-        self.value = initalize_layer(torch.nn.Linear(512, 1), 1)
+        self.actor = initialize_layer(torch.nn.Linear(512, num_actions), 0.01)
+        self.value = initialize_layer(torch.nn.Linear(512, 1), 1)
 
     def get_value(self, observation: torch.Tensor) -> torch.Tensor:
         """Compute the value of being in a state"""
@@ -260,6 +252,7 @@ class BasePPOTraining(ABC):
         "lambda_gae": 0.95,
         "device": "cpu",
         "grad_norm": 0.5,
+        "lr_decay_factor": 0.999,
         "image_size": [6, 84, 84],
         "buffer_capacity": 100_000,
     }
@@ -397,7 +390,8 @@ class BasePPOTraining(ABC):
                 self.model.network_optimizer.step()
 
         # Decaying learning rate after each update
-        self.model.network_optimizer.param_groups[0]["lr"] = 0.9995 * self.model.network_optimizer.param_groups[0]["lr"]
+        self.model.network_optimizer.param_groups[0]["lr"] = self._cfg.lr_decay_factor * self.model.network_optimizer.param_groups[0]["lr"]
+        self._cfg.clipping_coef = self._cfg.lr_decay_factor * self._cfg.clipping_coef
         # log.info(f"learning rate {self.model.network_optimizer.param_groups[0]['lr']}")
         # self.model.scheduler.step()
 
