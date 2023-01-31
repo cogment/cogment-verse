@@ -13,5 +13,5 @@ ignore:
   - "**/node_modules"
   - "**/build"
 license:
-  CopyrightYear: 2022
+  CopyrightYear: 2023
   Author: "AI Redefined Inc. <dev+cogment@ai-r.com>"
