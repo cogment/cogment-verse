@@ -25,3 +25,7 @@ pytest-benchmark~=4.0.0
 # robosuite
 robosuite
 h5py
+
+# For Mlflow
+SQLAlchemy<2
+
