@@ -1,0 +1,7 @@
+model_id: thirsty_matsumoto_0_model
+user_data:
+  device: cpu
+  environment_implementation: environments.pettingzoo_atari_adapter.RlEnvironment/pettingzoo.atari.pong_v3
+  input_shape: (6, 84, 84)
+  num_actions: "6"
+  num_policy_outputs: "1"

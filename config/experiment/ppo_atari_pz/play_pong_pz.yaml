@@ -9,7 +9,7 @@ run:
     - name: player_1
       implementation: actors.ppo_atari_pz.PPOActor
       agent_config:
-        model_id: hopeful_mccarthy_0_model
-        model_version: 101
+        model_id: thirsty_matsumoto_0_model
+        model_version: 351
     - name: player_2
       implementation: client
