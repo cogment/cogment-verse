@@ -135,7 +135,7 @@ class PPOModel(Model):
         self.network_optimizer = torch.optim.Adam(self.network.parameters(), lr=learning_rate, eps=1e-5)
         # lambda1 = lambda epoch: 0.98 ** epoch
         # self.scheduler = torch.optim.lr_scheduler.LambdaLR(self.network_optimizer, lr_lambda=lambda1)
-        self.scheduler = torch.optim.lr_scheduler.StepLR(self.network_optimizer, step_size=1000, gamma=0.1) # Why?
+        self.scheduler = torch.optim.lr_scheduler.StepLR(self.network_optimizer, step_size=1000, gamma=0.1)  # Why?
 
         # version user data
         self.iter_idx = 0
@@ -196,7 +196,7 @@ class PPOActor:
         # Start a session
         actor_session.start()
         config = actor_session.config
-        assert len(config.environment_specs.action_space.properties) == 1 # Why?
+        assert len(config.environment_specs.action_space.properties) == 1  # Why?
 
         # Get observation and action space
         observation_space = config.environment_specs.observation_space
@@ -247,23 +247,23 @@ class BasePPOTraining(ABC):
 
     default_cfg = {
         "seed": 0,
-        "num_epochs": 4, # update_epochs?
-        "num_iter": 500, # ?
-        "epoch_num_trials": 1, # ?
-        "num_parallel_trials": 1, # or 4
+        "num_epochs": 4,  # update_epochs?
+        "num_iter": 500,  # ?
+        "epoch_num_trials": 1,  # ?
+        "num_parallel_trials": 1,  # or 4
         "discount_factor": 0.99,
         "entropy_loss_coef": 0.01,
         "value_loss_coef": 0.5,
-        "action_loss_coef": 1.0, # ?
+        "action_loss_coef": 1.0,  # ?
         "clipping_coef": 0.1,
         "learning_rate": 3e-4,
         "batch_size": 128,  # should be num_envs *  num_steps
-        "num_steps": 128, # 2048 is too large?
+        "num_steps": 128,  # 2048 is too large?
         "lambda_gae": 0.95,
         "device": "cpu",
         "grad_norm": 0.5,
         "image_size": [6, 84, 84],  # ?
-        "buffer_capacity": 100_000, # ?
+        "buffer_capacity": 100_000,  # ?
     }
 
     def __init__(self, environment_specs: EnvironmentSpecs, cfg: EnvironmentConfig) -> None:
@@ -652,4 +652,3 @@ class PPOSelfTraining(BasePPOTraining):
                     else:
                         version_info = await run_session.model_registry.publish_version(self.model)
                     self.model.network.to(self._device)
-

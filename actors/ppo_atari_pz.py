@@ -40,6 +40,7 @@ from cogment_verse.specs import (
     flattened_dimensions,
     unflatten,
 )
+from debug.mp_pdb import ForkedPdb
 
 torch.multiprocessing.set_sharing_strategy("file_system")
 
@@ -341,6 +342,7 @@ class BasePPOTraining(ABC):
         returns = advs + values
         num_obs = len(returns)
         global_idx = np.arange(num_obs)
+        advs = (advs - advs.mean()) / (advs.std() + 1e-8)
         for _ in range(num_epochs):
             np.random.shuffle(global_idx)
             for i in range(0, num_obs, self._cfg.batch_size):
@@ -357,7 +359,7 @@ class BasePPOTraining(ABC):
                 old_value = values[idx]
                 old_log_prob = log_probs[idx]
 
-                adv = (adv - adv.mean()) / (adv.std() + 1e-8)
+                # adv = (adv - adv.mean()) / (adv.std() + 1e-8)
 
                 # Compute the value and values loss
                 value = self.model.network.get_value(observation)
@@ -390,8 +392,9 @@ class BasePPOTraining(ABC):
                 self.model.network_optimizer.step()
 
         # Decaying learning rate after each update
-        self.model.network_optimizer.param_groups[0]["lr"] = self._cfg.lr_decay_factor * self.model.network_optimizer.param_groups[0]["lr"]
-        self._cfg.clipping_coef = self._cfg.lr_decay_factor * self._cfg.clipping_coef
+        self._cfg.learning_rate = max(self._cfg.lr_decay_factor * self._cfg.learning_rate, 0.000001)
+        self.model.network_optimizer.param_groups[0]["lr"] = self._cfg.learning_rate
+        self._cfg.clipping_coef = max(self._cfg.lr_decay_factor * self._cfg.clipping_coef, 0.05)
         # log.info(f"learning rate {self.model.network_optimizer.param_groups[0]['lr']}")
         # self.model.scheduler.step()
 
