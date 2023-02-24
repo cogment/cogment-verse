@@ -12,16 +12,27 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import styles from "./Switch.module.css";
+import { Link } from "react-router-dom";
 import classNames from "classnames";
 
-export const Switch = ({ check, onChange, label }) => {
+export const buttonClasses = [
+  "font-semibold",
+  "block",
+  "w-full",
+  "py-2",
+  "px-5",
+  "bg-indigo-600",
+  "disabled:bg-gray-400",
+  "hover:bg-indigo-900",
+  "text-white",
+  "disabled:text-gray-200",
+  "text-center",
+  "rounded",
+];
 
-  return <div className="flex items-center gap-2">
-    <span>{label}</span>
-    <label className={styles.switch}>
-      <input type="checkbox" checked={check} onChange={onChange} />
-      <span className={classNames(styles.slider, styles.round)} ></span>
-    </label>
-  </div>
+export const Button = ({ className, to, ...props }) => {
+  if (to != null) {
+    return <Link to={to} className={classNames(className, buttonClasses)} {...props} />;
+  }
+  return <button className={classNames(className, buttonClasses)} {...props} />;
 };

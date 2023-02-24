@@ -23,7 +23,9 @@ log = logging.getLogger(__name__)
 
 def npm_command(args, cwd):
     try:
-        subprocess.run([NPM_BIN, *args], cwd=cwd, capture_output=True, check=True)
+        args = [NPM_BIN, *args]
+        res = subprocess.run(args, cwd=cwd, capture_output=True, check=True)
+        log.debug(f"Call to {args} returned {res.stdout.decode('utf-8')}")
     except subprocess.CalledProcessError as err:
         log.error(
             f"Error while running [{args}] in [{cwd}]\n---STDOUT---\n{err.stdout.decode('utf-8')}\n---STDERR---\n{err.stderr.decode('utf-8')}"

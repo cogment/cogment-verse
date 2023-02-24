@@ -76,7 +76,7 @@ async def async_sample_producer_worker(trial_started_queue, sample_queue, impl, 
     )
     # Define a timeout for trial info retrieval
     # pylint: disable-next=protected-access
-    datastore._timeout = 40
+    datastore._timeout = 20
 
     sample_producer_tasks = []
     while True:

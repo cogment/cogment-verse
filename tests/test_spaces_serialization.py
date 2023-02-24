@@ -1,0 +1,62 @@
+# Copyright 2022 AI Redefined Inc. <dev+cogment@ai-r.com>
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import pytest
+import numpy as np
+from pettingzoo.classic import connect_four_v3
+import gym
+
+from cogment_verse.specs.spaces_serialization import deserialize_gym_space, serialize_gym_space
+
+# pylint: disable=no-member
+
+
+def test_serialize_connect4_observation_space():
+    env = connect_four_v3.env()
+    env.reset()
+
+    gym_space = env.observation_space("player_0")
+
+    pb_space = serialize_gym_space(gym_space)
+
+    assert len(pb_space.dict.spaces) == 2
+    assert pb_space.dict.spaces[0].key == "action_mask"
+    assert pb_space.dict.spaces[0].space.box.high.shape == [7]
+    assert pb_space.dict.spaces[0].space.box.low.shape == [7]
+    assert pb_space.dict.spaces[1].key == "observation"
+    assert pb_space.dict.spaces[1].space.box.high.shape == [6, 7, 2]
+    assert pb_space.dict.spaces[1].space.box.low.shape == [6, 7, 2]
+
+    deserialized_space = deserialize_gym_space(pb_space)
+
+    assert gym_space == deserialized_space
+
+
+def test_serialize_cartpole_observation_space():
+    env = gym.make("CartPole-v1")
+
+    gym_space = env.observation_space
+
+    pb_space = serialize_gym_space(gym_space)
+
+    assert pb_space.box.high.shape == [4]
+    assert pb_space.box.low.shape == [4]
+    assert pb_space.box.high.double_data[0] == pytest.approx(4.8)
+    assert pb_space.box.high.double_data[1] == np.finfo(np.float32).max
+
+    deserialized_space = deserialize_gym_space(pb_space)
+
+    assert gym_space.shape == deserialized_space.shape
+    assert gym_space.low == pytest.approx(deserialized_space.low)
+    assert gym_space.high == pytest.approx(deserialized_space.high)

@@ -2,9 +2,13 @@
 
 [![Apache 2 License](https://img.shields.io/badge/license-Apache%202-green?style=flat-square)](./LICENSE) [![Changelog](https://img.shields.io/badge/-Changelog%20-blueviolet?style=flat-square)](./CHANGELOG.md)
 
+<<<<<<< HEAD
 > 🚧 A new major version of Cogment Verse is under develelopment in the [`next`](https://github.com/cogment/cogment-verse/tree/next). Not all the algorithms and environments are available yet but it is fully operational. Do not hesitate to test it!
 >
 > Follow and discuss the development in this [Pull Request](https://github.com/cogment/cogment-verse/pull/71).
+=======
+> 🚧 Cogment-Verse is still under heavy development but has already been successfully used by several research teams, join the [Cogment community](https://cogment.ai/docs/community-channels) to get support and be notified of updates.
+>>>>>>> main
 
 [Cogment](https://cogment.ai) is an innovative open source AI platform designed to leverage the advent of AI to benefit humankind through human-AI collaboration developed by [AI Redefined](https://ai-r.com). Cogment enables AI researchers and engineers to build, train and operate AI agents in simulated or real environments shared with humans. For the full user documentation visit <https://docs.cogment.ai>
 

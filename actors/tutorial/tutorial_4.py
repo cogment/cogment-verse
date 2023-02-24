@@ -22,17 +22,16 @@ import numpy as np
 
 #########################################
 
+from gym.spaces import utils
+
 from cogment_verse import Model
 from cogment_verse.specs import (
     AgentConfig,
     cog_settings,
     EnvironmentConfig,
-    flatten,
-    flattened_dimensions,
+    EnvironmentSpecs,
     HUMAN_ACTOR_IMPL,
     PLAYER_ACTOR_CLASS,
-    PlayerAction,
-    SpaceValue,
     TEACHER_ACTOR_CLASS,
     WEB_ACTOR_NAME,
 )
@@ -119,7 +118,9 @@ class SimpleBCActor:
 
         config = actor_session.config
 
-        observation_space = config.environment_specs.observation_space
+        environment_specs = EnvironmentSpecs.deserialize(config.environment_specs)
+        observation_space = environment_specs.get_observation_space()
+        action_space = environment_specs.get_action_space(seed=config.seed)
 
         model, _model_info, version_info = await actor_session.model_registry.retrieve_version(
             SimpleBCModel, config.model_id, config.model_version
@@ -131,14 +132,13 @@ class SimpleBCActor:
 
         async for event in actor_session.all_events():
             if event.observation and event.type == cogment.EventType.ACTIVE:
-                observation_tensor = torch.tensor(
-                    flatten(observation_space, event.observation.observation.value), dtype=self._dtype
-                )
+                observation = observation_space.deserialize(event.observation.observation)
+                observation_tensor = torch.tensor(observation.flat_value, dtype=self._dtype)
                 scores = model.policy_network(observation_tensor.view(1, -1))
                 probs = torch.softmax(scores, dim=-1)
                 discrete_action_tensor = torch.distributions.Categorical(probs).sample()
-                action_value = SpaceValue(properties=[SpaceValue.PropertyValue(discrete=discrete_action_tensor.item())])
-                actor_session.do_action(PlayerAction(value=action_value))
+                action = action_space.create(value=discrete_action_tensor.item())
+                actor_session.do_action(action_space.serialize(action))
 
 
 class SimpleBCTraining:
@@ -178,25 +178,30 @@ class SimpleBCTraining:
         player_params = players_params[0]
         teacher_params = teachers_params[0]
 
-        environment_specs = player_params.config.environment_specs
+        environment_specs = EnvironmentSpecs.deserialize(player_params.config.environment_specs)
+        action_space = environment_specs.get_action_space()
+        observation_space = environment_specs.get_observation_space()
 
         async for sample in sample_producer_session.all_trial_samples():
             observation_tensor = torch.tensor(
-                flatten(environment_specs.observation_space, sample.actors_data[player_params.name].observation.value),
+                observation_space.deserialize(sample.actors_data[player_params.name].observation).flat_value,
                 dtype=self._dtype,
             )
 
-            teacher_action = sample.actors_data[teacher_params.name].action
-            if teacher_action.HasField("value"):
+            teacher_action = action_space.deserialize(sample.actors_data[teacher_params.name].action)
+
+            if teacher_action.flat_value is not None:
                 applied_action = teacher_action
                 demonstration = True
             else:
-                applied_action = sample.actors_data[player_params.name].action
+                applied_action = action_space.deserialize(sample.actors_data[player_params.name].action)
                 demonstration = False
 
-            action_tensor = torch.tensor(
-                flatten(environment_specs.action_space, applied_action.value), dtype=self._dtype
-            )
+            if applied_action.flat_value is None:
+                # TODO figure out why we get into this situation
+                continue
+
+            action_tensor = torch.tensor(applied_action.flat_value, dtype=self._dtype)
             sample_producer_session.produce_sample((demonstration, observation_tensor, action_tensor))
 
     async def impl(self, run_session):
@@ -208,8 +213,8 @@ class SimpleBCTraining:
         model = SimpleBCModel(
             model_id,
             environment_implementation=self._environment_specs.implementation,
-            num_input=flattened_dimensions(self._environment_specs.observation_space),
-            num_output=flattened_dimensions(self._environment_specs.action_space),
+            num_input=utils.flatdim(self._environment_specs.get_observation_space().gym_space),
+            num_output=utils.flatdim(self._environment_specs.get_action_space().gym_space),
             policy_network_num_hidden_nodes=self._cfg.policy_network.num_hidden_nodes,
         )
         _model_info, _version_info = await run_session.model_registry.publish_initial_version(model)
@@ -231,7 +236,7 @@ class SimpleBCTraining:
                 #########################################
                 config=AgentConfig(
                     run_id=run_session.run_id,
-                    environment_specs=self._environment_specs,
+                    environment_specs=self._environment_specs.serialize(),
                     model_id=model_id,
                     model_version=-1,
                 ),
@@ -244,7 +249,7 @@ class SimpleBCTraining:
                 implementation=HUMAN_ACTOR_IMPL,
                 config=AgentConfig(
                     run_id=run_session.run_id,
-                    environment_specs=self._environment_specs,
+                    environment_specs=self._environment_specs.serialize(),
                 ),
             )
 

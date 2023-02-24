@@ -18,30 +18,23 @@ import cogment
 import gym
 import numpy as np
 
-from cogment_verse.specs import (
-    encode_rendered_frame,
-    EnvironmentSpecs,
-    Observation,
-    space_from_gym_space,
-    gym_action_from_action,
-    observation_from_gym_observation,
-)
+from cogment_verse.specs import EnvironmentSpecs
 from cogment_verse.constants import PLAYER_ACTOR_CLASS, TEACHER_ACTOR_CLASS
 
 # configure pygame to use a dummy video server to be able to render headlessly
 os.environ["SDL_VIDEODRIVER"] = "dummy"
 
-# pylint: disable=E1101
 class Environment:
     def __init__(self, cfg):
         self.gym_env_name = cfg.env_name
 
         gym_env = gym.make(self.gym_env_name)
-        self.env_specs = EnvironmentSpecs(
+
+        self.env_specs = EnvironmentSpecs.create_homogeneous(
             num_players=1,
             turn_based=False,
-            observation_space=space_from_gym_space(gym_env.observation_space),
-            action_space=space_from_gym_space(gym_env.action_space),
+            observation_space=gym_env.observation_space,
+            action_space=gym_env.action_space,
         )
 
     def get_implementation_name(self):
@@ -74,51 +67,47 @@ class Environment:
         session_cfg = environment_session.config
 
         gym_env = gym.make(self.gym_env_name, render_mode="single_rgb_array" if session_cfg.render else None)
+        observation_space = self.env_specs.get_observation_space(session_cfg.render_width)
+        action_space = self.env_specs.get_action_space()
 
         gym_observation, _info = gym_env.reset(seed=session_cfg.seed, return_info=True)
-        observation_value = observation_from_gym_observation(gym_env.observation_space, gym_observation)
 
-        rendered_frame = None
-        if session_cfg.render:
-            rendered_frame = encode_rendered_frame(gym_env.render(), session_cfg.render_width)
+        observation = observation_space.create(
+            value=gym_observation,
+            rendered_frame=gym_env.render() if session_cfg.render else None,
+        )
 
-        environment_session.start([("*", Observation(value=observation_value, rendered_frame=rendered_frame))])
+        environment_session.start([("*", observation_space.serialize(observation))])
         async for event in environment_session.all_events():
             if event.actions:
-                player_action_value = event.actions[player_actor_idx].action.value
-                action_value = player_action_value
-                overridden_players = []
-                if has_teacher and event.actions[teacher_actor_idx].action.HasField("value"):
-                    teacher_action_value = event.actions[teacher_actor_idx].action.value
-                    action_value = teacher_action_value
-                    overridden_players = [player_actor_name]
-
-                gym_action = gym_action_from_action(
-                    self.env_specs.action_space, action_value  # pylint: disable=no-member
+                player_action = action_space.deserialize(
+                    event.actions[player_actor_idx].action,
                 )
-                # Clipped action and send to gym environment
-                if isinstance(self.env_specs.action_space, gym.spaces.Box):
-                    clipped_action = np.clip(gym_action, gym_env.action_space.low, gym_env.action_space.high)
-                else:
-                    clipped_action = gym_action
-
-                gym_observation, reward, done, _info = gym_env.step(clipped_action)
-                observation_value = observation_from_gym_observation(gym_env.observation_space, gym_observation)
-
-                rendered_frame = None
-                if session_cfg.render:
-                    rendered_frame = encode_rendered_frame(gym_env.render(), session_cfg.render_width)
-
-                observations = [
-                    (
-                        "*",
-                        Observation(
-                            value=observation_value,
-                            rendered_frame=rendered_frame,
-                            overridden_players=overridden_players,
-                        ),
+                action = player_action
+                overridden_players = []
+                if has_teacher:
+                    teacher_action = action_space.deserialize(
+                        event.actions[teacher_actor_idx].action,
                     )
-                ]
+                    if teacher_action.value is not None:
+                        action = teacher_action
+                        overridden_players = [player_actor_name]
+
+                action_value = action.value
+
+                # Clipped action and send to gym environment
+                if isinstance(gym_env.action_space, gym.spaces.Box):
+                    action_value = np.clip(action_value, gym_env.action_space.low, gym_env.action_space.high)
+
+                gym_observation, reward, done, _info = gym_env.step(action_value)
+
+                observation = observation_space.create(
+                    value=gym_observation,
+                    rendered_frame=gym_env.render() if session_cfg.render else None,
+                    overridden_players=overridden_players,
+                )
+
+                observations = [("*", observation_space.serialize(observation))]
 
                 if reward is not None:
                     environment_session.add_reward(

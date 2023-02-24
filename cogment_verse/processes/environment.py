@@ -38,7 +38,7 @@ def environment_main(
 ):
     # Importing 'specs' only in the subprocess (i.e. where generate has been properly executed)
     # pylint: disable-next=import-outside-toplevel
-    from cogment_verse.specs import cog_settings, save_environment_specs
+    from cogment_verse.specs import cog_settings
 
     environment_cls = import_class(environment_cfg.class_name)
     env = environment_cls(environment_cfg)
@@ -46,7 +46,7 @@ def environment_main(
     env_implementation_name = get_implementation_name(env)
 
     # Generate the environment specs if needed.
-    save_environment_specs(work_dir, env_implementation_name, env.get_environment_specs())
+    env.get_environment_specs().save(work_dir, env_implementation_name)
 
     async def environment_main_async():
         context = cogment.Context(cog_settings=cog_settings, user_id="cogment_verse_environment")

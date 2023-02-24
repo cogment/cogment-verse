@@ -13,14 +13,24 @@
 // limitations under the License.
 
 import { useCallback, useState } from "react";
-import { cogment_verse } from "../data_pb";
 import { useDocumentKeypressListener, usePressedKeys } from "../hooks/usePressedKeys";
 import { useRealTimeUpdate } from "../hooks/useRealTimeUpdate";
-import { TEACHER_ACTOR_CLASS, TEACHER_NOOP_ACTION } from "../utils/constants";
+import { TEACHER_ACTOR_CLASS } from "../utils/constants";
 import { Button } from "../components/Button";
 import { useJoystickState, Joystick } from "../components/Joystick";
 import { FpsCounter } from "../components/FpsCounter";
 import { KeyboardControlList } from "../components/KeyboardControlList";
+import { serializePlayerAction, TEACHER_NOOP_ACTION, DType, Space } from "../utils/spaceSerialization";
+
+const ACTION_SPACE = new Space({
+  box: {
+    low: {
+      // Only the dtype and shape of the lower bound are used to serialize the action
+      dtype: DType.DTYPE_FLOAT32,
+      shape: [2],
+    },
+  },
+});
 
 export const GymLunarLanderContinuousEnvironments = ["environments.gym_adapter.Environment/LunarLanderContinuous-v2"];
 export const GymLunarLanderContinuousControls = ({ sendAction, fps = 20, actorClass, ...props }) => {
@@ -37,11 +47,7 @@ export const GymLunarLanderContinuousControls = ({ sendAction, fps = 20, actorCl
   const computeAndSendAction = useCallback(
     (dt) => {
       if (isJoystickActive) {
-        sendAction(
-          new cogment_verse.PlayerAction({
-            value: { properties: [{ simpleBox: { values: [joystickPosition[1], -joystickPosition[0]] } }] },
-          })
-        );
+        sendAction(serializePlayerAction(ACTION_SPACE, [joystickPosition[1], -joystickPosition[0]]));
         setKeyboardActive(false);
         return;
       }
@@ -62,9 +68,7 @@ export const GymLunarLanderContinuousControls = ({ sendAction, fps = 20, actorCl
       }
 
       if (keyboardAction != null) {
-        sendAction(
-          new cogment_verse.PlayerAction({ value: { properties: [{ simpleBox: { values: keyboardAction } }] } })
-        );
+        sendAction(serializePlayerAction(ACTION_SPACE, keyboardAction));
         setKeyboardActive(true);
         setJoystickState([-keyboardAction[1], keyboardAction[0]], false);
         return;
@@ -73,7 +77,7 @@ export const GymLunarLanderContinuousControls = ({ sendAction, fps = 20, actorCl
       if (isTeacher) {
         sendAction(TEACHER_NOOP_ACTION);
       } else {
-        sendAction(new cogment_verse.PlayerAction({ value: { properties: [{ simpleBox: { values: [0, 0] } }] } }));
+        sendAction(serializePlayerAction(ACTION_SPACE, [0, 0]));
       }
       setKeyboardActive(false);
       setJoystickState([0, 0], false);

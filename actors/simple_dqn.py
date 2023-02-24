@@ -23,22 +23,11 @@ import numpy as np
 
 import cogment
 import torch
+from gym.spaces import Discrete, utils
 
+from cogment_verse.specs import AgentConfig, cog_settings, EnvironmentConfig, EnvironmentSpecs
 
-from cogment_verse.specs import (
-    AgentConfig,
-    cog_settings,
-    EnvironmentConfig,
-    flatten,
-    flattened_dimensions,
-    flatten_mask,
-    PLAYER_ACTOR_CLASS,
-    PlayerAction,
-    SpaceValue,
-    sample_space,
-    WEB_ACTOR_NAME,
-    HUMAN_ACTOR_IMPL,
-)
+from cogment_verse.constants import PLAYER_ACTOR_CLASS, WEB_ACTOR_NAME, HUMAN_ACTOR_IMPL
 
 from cogment_verse import Model, TorchReplayBuffer  # pylint: disable=abstract-class-instantiated
 
@@ -68,7 +57,7 @@ class SimpleDQNModel(Model):
         dtype=torch.float,
         version_number=0,
     ):
-        super().__init__(model_id=model_id, version_number=version_number)
+        super().__init__(model_id, version_number)
         self._dtype = dtype
         self._environment_implementation = environment_implementation
         self._num_input = num_input
@@ -142,13 +131,13 @@ class SimpleDQNActor:
 
         config = actor_session.config
 
-        assert len(config.environment_specs.action_space.properties) == 1
-        assert config.environment_specs.action_space.properties[0].WhichOneof("type") == "discrete"
-
-        observation_space = config.environment_specs.observation_space
-        action_space = config.environment_specs.action_space
-
         rng = np.random.default_rng(config.seed if config.seed is not None else 0)
+
+        environment_specs = EnvironmentSpecs.deserialize(config.environment_specs)
+        observation_space = environment_specs.get_observation_space()
+        action_space = environment_specs.get_action_space(seed=rng.integers(9999))
+
+        assert isinstance(action_space.gym_space, Discrete)
 
         model, _, _ = await actor_session.model_registry.retrieve_version(
             SimpleDQNModel, config.model_id, config.model_version
@@ -157,12 +146,10 @@ class SimpleDQNActor:
 
         async for event in actor_session.all_events():
             if event.observation and event.type == cogment.EventType.ACTIVE:
-                if (
-                    event.observation.observation.HasField("current_player")
-                    and event.observation.observation.current_player != actor_session.name
-                ):
+                observation = observation_space.deserialize(event.observation.observation)
+                if observation.current_player is not None and observation.current_player != actor_session.name:
                     # Not the turn of the agent
-                    actor_session.do_action(PlayerAction())
+                    actor_session.do_action(action_space.serialize(action_space.create()))
                     continue
 
                 if (
@@ -174,27 +161,23 @@ class SimpleDQNActor:
                         SimpleDQNModel, config.model_id, config.model_version
                     )
                     model.network.eval()
-                if rng.random() < model.epsilon:
-                    [action_value] = sample_space(action_space, rng=rng, mask=event.observation.observation.action_mask)
-                else:
-                    obs_tensor = torch.tensor(
-                        flatten(observation_space, event.observation.observation.value), dtype=self._dtype
-                    )
-                    action_probs = model.network(obs_tensor)
-                    if event.observation.observation.HasField("action_mask"):
-                        action_mask = torch.tensor(
-                            flatten_mask(action_space, event.observation.observation.action_mask), dtype=self._dtype
-                        )
-                        large = torch.finfo(self._dtype).max
-                        if torch.equal(action_mask, torch.zeros_like(action_mask)):
-                            log.info("no moves are available, this shouldn't be possible")
-                        action_probs = action_probs - large * (1 - action_mask)
-                    discrete_action_tensor = torch.argmax(action_probs)
-                    action_value = SpaceValue(
-                        properties=[SpaceValue.PropertyValue(discrete=discrete_action_tensor.item())]
-                    )
 
-                actor_session.do_action(PlayerAction(value=action_value))
+                if rng.random() < model.epsilon:
+                    action = action_space.sample(mask=observation.action_mask)
+                else:
+                    obs_tensor = torch.tensor(observation.flat_value, dtype=self._dtype)
+                    action_probs = model.network(obs_tensor)
+                    action_mask = observation.action_mask
+                    if action_mask is not None:
+                        action_mask_tensor = torch.tensor(action_mask, dtype=self._dtype)
+                        large = torch.finfo(self._dtype).max
+                        if torch.equal(action_mask_tensor, torch.zeros_like(action_mask_tensor)):
+                            log.info("no moves are available, this shouldn't be possible")
+                        action_probs = action_probs - large * (1 - action_mask_tensor)
+                    discrete_action_tensor = torch.argmax(action_probs)
+                    action = action_space.create(value=discrete_action_tensor.item())
+
+                actor_session.do_action(action_space.serialize(action))
 
 
 class SimpleDQNTraining:
@@ -227,7 +210,9 @@ class SimpleDQNTraining:
         player_actor_params = sample_producer_session.trial_info.parameters.actors[0]
 
         player_actor_name = player_actor_params.name
-        player_observation_space = player_actor_params.config.environment_specs.observation_space
+        player_environment_specs = EnvironmentSpecs.deserialize(player_actor_params.config.environment_specs)
+        player_observation_space = player_environment_specs.get_observation_space()
+        player_action_space = player_environment_specs.get_action_space()
 
         observation = None
         action = None
@@ -242,7 +227,7 @@ class SimpleDQNTraining:
                 continue
 
             next_observation = torch.tensor(
-                flatten(player_observation_space, actor_sample.observation.value), dtype=self._dtype
+                player_observation_space.deserialize(actor_sample.observation).flat_value, dtype=self._dtype
             )
 
             if observation is not None:
@@ -262,10 +247,8 @@ class SimpleDQNTraining:
                     break
 
             observation = next_observation
-            action_value = actor_sample.action.value
-            action = torch.tensor(
-                action_value.properties[0].discrete if len(action_value.properties) > 0 else 0, dtype=torch.int64
-            )
+            action_value = player_action_space.deserialize(actor_sample.action).value
+            action = torch.tensor(action_value, dtype=torch.int64)
             reward = torch.tensor(actor_sample.reward if actor_sample.reward is not None else 0, dtype=self._dtype)
             total_reward += reward.item()
 
@@ -274,8 +257,9 @@ class SimpleDQNTraining:
         model_id = f"{run_session.run_id}_model"
 
         assert self._environment_specs.num_players == 1
-        assert len(self._environment_specs.action_space.properties) == 1
-        assert self._environment_specs.action_space.properties[0].WhichOneof("type") == "discrete"
+        action_space = self._environment_specs.get_action_space()
+        observation_space = self._environment_specs.get_observation_space()
+        assert isinstance(action_space.gym_space, Discrete)
 
         epsilon_schedule = create_linear_schedule(
             self._cfg.epsilon_schedule_start,
@@ -286,8 +270,8 @@ class SimpleDQNTraining:
         model = SimpleDQNModel(
             model_id,
             environment_implementation=self._environment_specs.implementation,
-            num_input=flattened_dimensions(self._environment_specs.observation_space),
-            num_output=flattened_dimensions(self._environment_specs.action_space),
+            num_input=utils.flatdim(observation_space.gym_space),
+            num_output=utils.flatdim(action_space.gym_space),
             num_hidden_nodes=self._cfg.value_network.num_hidden_nodes,
             epsilon=epsilon_schedule(0),
             dtype=self._dtype,
@@ -311,7 +295,7 @@ class SimpleDQNTraining:
 
         replay_buffer = TorchReplayBuffer(
             capacity=self._cfg.buffer_size,
-            observation_shape=(flattened_dimensions(self._environment_specs.observation_space),),
+            observation_shape=(utils.flatdim(observation_space.gym_space),),
             observation_dtype=self._dtype,
             action_shape=(1,),
             action_dtype=torch.int64,
@@ -347,7 +331,7 @@ class SimpleDQNTraining:
                                     model_id=model_id,
                                     model_version=-1,
                                     model_update_frequency=self._cfg.model_update_frequency,
-                                    environment_specs=self._environment_specs,
+                                    environment_specs=self._environment_specs.serialize(),
                                 ),
                             )
                         ],
@@ -456,14 +440,20 @@ class SimpleDQNSelfPlayTraining:
 
     async def sample_producer_impl(self, sample_producer_session):
         players_params = {
-            actor_params.name: actor_params
+            actor_params.name: {
+                "params": actor_params,
+                "observation_space": EnvironmentSpecs.deserialize(
+                    actor_params.config.environment_specs
+                ).get_observation_space(),
+                "action_space": EnvironmentSpecs.deserialize(actor_params.config.environment_specs).get_action_space(),
+            }
             for actor_params in sample_producer_session.trial_info.parameters.actors
             if actor_params.class_name == PLAYER_ACTOR_CLASS
         }
 
         players_partial_sample = {
-            actor_params.name: {"observation": None, "action": None, "reward": None, "total_reward": 0}
-            for actor_params in players_params.values()
+            player_params["params"].name: {"observation": None, "action": None, "reward": None, "total_reward": 0}
+            for player_params in players_params.values()
         }
 
         # Let's start with any player actor
@@ -481,10 +471,7 @@ class SimpleDQNSelfPlayTraining:
             current_player_sample = sample.actors_data[current_player_actor]
 
             next_observation = torch.tensor(
-                flatten(
-                    current_player_params.config.environment_specs.observation_space,
-                    current_player_sample.observation.value,
-                ),
+                current_player_params["observation_space"].deserialize(current_player_sample.observation).flat_value,
                 dtype=self._dtype,
             )
 
@@ -509,9 +496,10 @@ class SimpleDQNSelfPlayTraining:
                     break
 
             current_player_partial_sample["observation"] = next_observation
-            action_value = current_player_sample.action.value
+            action_value = current_player_params["action_space"].deserialize(current_player_sample.action).value
             current_player_partial_sample["action"] = torch.tensor(
-                action_value.properties[0].discrete if len(action_value.properties) > 0 else 0, dtype=torch.int64
+                action_value,
+                dtype=torch.int64,
             )
             for player_actor in players_params.keys():
                 player_partial_sample = players_partial_sample[player_actor]
@@ -528,8 +516,9 @@ class SimpleDQNSelfPlayTraining:
         model_id = f"{run_session.run_id}_model"
 
         assert self._environment_specs.num_players == 2
-        assert len(self._environment_specs.action_space.properties) == 1
-        assert self._environment_specs.action_space.properties[0].WhichOneof("type") == "discrete"
+        action_space = self._environment_specs.get_action_space()
+        observation_space = self._environment_specs.get_observation_space()
+        assert isinstance(action_space.gym_space, Discrete)
 
         epsilon_schedule = create_linear_schedule(
             self._cfg.epsilon_schedule_start,
@@ -540,8 +529,8 @@ class SimpleDQNSelfPlayTraining:
         model = SimpleDQNModel(
             model_id,
             environment_implementation=self._environment_specs.implementation,
-            num_input=flattened_dimensions(self._environment_specs.observation_space),
-            num_output=flattened_dimensions(self._environment_specs.action_space),
+            num_input=utils.flatdim(observation_space.gym_space),
+            num_output=utils.flatdim(action_space.gym_space),
             num_hidden_nodes=self._cfg.value_network.num_hidden_nodes,
             epsilon=epsilon_schedule(0),
             dtype=self._dtype,
@@ -565,7 +554,7 @@ class SimpleDQNSelfPlayTraining:
 
         replay_buffer = TorchReplayBuffer(
             capacity=self._cfg.buffer_size,
-            observation_shape=(flattened_dimensions(self._environment_specs.observation_space),),
+            observation_shape=(utils.flatdim(observation_space.gym_space),),
             observation_dtype=self._dtype,
             action_shape=(1,),
             action_dtype=torch.int64,
@@ -582,7 +571,7 @@ class SimpleDQNSelfPlayTraining:
                     implementation=HUMAN_ACTOR_IMPL,
                     config=AgentConfig(
                         run_id=run_session.run_id,
-                        environment_specs=self._environment_specs,
+                        environment_specs=self._environment_specs.serialize(),
                     ),
                 )
             return cogment.ActorParameters(
@@ -598,7 +587,7 @@ class SimpleDQNSelfPlayTraining:
                     model_id=model_id,
                     model_version=version_number,
                     model_update_frequency=self._cfg.model_update_frequency,
-                    environment_specs=self._environment_specs,
+                    environment_specs=self._environment_specs.serialize(),
                 ),
             )
 

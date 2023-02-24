@@ -18,28 +18,12 @@ import logging
 import cogment
 
 from cogment_verse.specs import (
-    encode_rendered_frame,
     EnvironmentSpecs,
-    Observation,
-    SpaceMask,
-    space_from_gym_space,
-    gym_action_from_action,
-    observation_from_gym_observation,
 )
 from cogment_verse.constants import PLAYER_ACTOR_CLASS, TEACHER_ACTOR_CLASS
 from cogment_verse.utils import import_class
 
 log = logging.getLogger(__name__)
-
-
-def action_mask_from_pz_action_mask(pz_action_mask):
-    return SpaceMask(
-        properties=[
-            SpaceMask.PropertyMask(
-                discrete=[action_idx for action_idx, action in enumerate(pz_action_mask) if action == 1]
-            )
-        ]
-    )
 
 
 class PzEnvType(Enum):
@@ -73,11 +57,11 @@ class Environment:
 
         assert num_players >= 1
 
-        self.env_specs = EnvironmentSpecs(
+        self.env_specs = EnvironmentSpecs.create_homogeneous(
             num_players=num_players,
-            observation_space=space_from_gym_space(observation_space["observation"]),
-            action_space=space_from_gym_space(action_space),
             turn_based=self.env_type in [PzEnvType.CLASSIC],
+            observation_space=observation_space,
+            action_space=action_space,
         )
 
     def get_implementation_name(self):
@@ -106,6 +90,8 @@ class Environment:
         session_cfg = environment_session.config
 
         pz_env = self.env_class.env()
+        observation_space = self.env_specs.get_observation_space(session_cfg.render_width)
+        action_space = self.env_specs.get_action_space()
 
         pz_env.reset(seed=session_cfg.seed)
 
@@ -121,75 +107,47 @@ class Environment:
             )
             return (current_player_pz_agent, current_player_actor_idx, current_player_actor_name)
 
-        current_player_pz_agent, current_player_actor_idx, current_player_actor_name = next_player()
+        _current_player_pz_agent, current_player_actor_idx, current_player_actor_name = next_player()
 
         pz_observation, _pz_reward, _pz_done, _pz_info = pz_env.last()
-
-        observation_value = observation_from_gym_observation(
-            pz_env.observation_space(current_player_pz_agent)["observation"], pz_observation["observation"]
-        )
-        action_mask = action_mask_from_pz_action_mask(pz_observation["action_mask"])
 
         rendered_frame = None
         if session_cfg.render:
             if "rgb_array" not in pz_env.metadata["render_modes"]:
                 log.warning(f"Petting Zoo environment [{self.env_class_name}] doesn't support rendering to pixels")
                 return
-            rendered_frame = encode_rendered_frame(pz_env.render(mode="rgb_array"), session_cfg.render_width)
+            rendered_frame = pz_env.render(mode="rgb_array")
 
-        environment_session.start(
-            [
-                (
-                    "*",
-                    Observation(
-                        value=observation_value,  # TODO Should only be sent to the current player
-                        rendered_frame=rendered_frame,  # TODO Should only be sent to observers
-                        action_mask=action_mask,  # TODO Should only be sent to the current player
-                        current_player=current_player_actor_name,
-                    ),
-                )
-            ]
+        observation = observation_space.create(
+            value=pz_observation["observation"],  # TODO Should only be sent to the current player
+            action_mask=pz_observation["action_mask"],  # TODO Should only be sent to the current player
+            rendered_frame=rendered_frame,  # TODO Should only be sent to observers
+            current_player=current_player_actor_name,
         )
+
+        environment_session.start([("*", observation_space.serialize(observation))])
 
         async for event in environment_session.all_events():
             if event.actions:
-                player_action_value = event.actions[current_player_actor_idx].action.value
-                action_value = player_action_value
-                # overridden_players = []
-                # if has_teacher and event.actions[teacher_actor_idx].action.HasField("value"):
-                #     teacher_action_value = event.actions[teacher_actor_idx].action.value
-                #     action_value = teacher_action_value
-                #     overridden_players = [player_actor_name]
-
-                gym_action = gym_action_from_action(
-                    self.env_specs.action_space, action_value  # pylint: disable=no-member
+                action = action_space.deserialize(
+                    event.actions[current_player_actor_idx].action,
                 )
 
-                pz_env.step(gym_action)
+                pz_env.step(action.value)
 
-                current_player_pz_agent, current_player_actor_idx, current_player_actor_name = next_player()
+                _current_player_pz_agent, current_player_actor_idx, current_player_actor_name = next_player()
                 pz_observation, _pz_reward, _pz_done, _pz_info = pz_env.last()
 
-                observation_value = observation_from_gym_observation(
-                    pz_env.observation_space(current_player_pz_agent)["observation"], pz_observation["observation"]
+                observation = observation_space.create(
+                    value=pz_observation["observation"],  # TODO Should only be sent to the current player
+                    action_mask=pz_observation["action_mask"],  # TODO Should only be sent to the current player
+                    rendered_frame=pz_env.render(mode="rgb_array")
+                    if session_cfg.render
+                    else None,  # TODO Should only be sent to observers
+                    current_player=current_player_actor_name,
                 )
-                action_mask = action_mask_from_pz_action_mask(pz_observation["action_mask"])
 
-                rendered_frame = None
-                if session_cfg.render:
-                    rendered_frame = encode_rendered_frame(pz_env.render(mode="rgb_array"), session_cfg.render_width)
-
-                observations = [
-                    (
-                        "*",
-                        Observation(
-                            value=observation_value,
-                            rendered_frame=rendered_frame,
-                            action_mask=action_mask,
-                            current_player=current_player_actor_name,
-                        ),
-                    )
-                ]
+                observations = [("*", observation_space.serialize(observation))]
 
                 for (rewarded_player_pz_agent, pz_reward) in pz_env.rewards.items():
                     if pz_reward == 0:

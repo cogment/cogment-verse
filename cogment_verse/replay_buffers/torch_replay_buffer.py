@@ -49,7 +49,7 @@ class TorchReplayBuffer:
         self.next_observation = torch.zeros((self.capacity, *self.observation_shape), dtype=observation_dtype)
         self.action = torch.zeros((self.capacity, *self.action_shape), dtype=action_dtype)
         self.reward = torch.zeros((self.capacity,), dtype=reward_dtype)
-        self.done = torch.zeros((self.capacity,), dtype=torch.float32)
+        self.done = torch.zeros((self.capacity,), dtype=torch.int8)
 
         self._ptr = 0
         self.num_total = 0

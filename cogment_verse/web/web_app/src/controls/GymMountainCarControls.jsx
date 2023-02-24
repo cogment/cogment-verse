@@ -13,17 +13,22 @@
 // limitations under the License.
 
 import { useCallback, useState } from "react";
-import { cogment_verse } from "../data_pb";
 import { useDocumentKeypressListener, usePressedKeys } from "../hooks/usePressedKeys";
 import { useRealTimeUpdate } from "../hooks/useRealTimeUpdate";
-import { TEACHER_ACTOR_CLASS, TEACHER_NOOP_ACTION } from "../utils/constants";
+import { TEACHER_ACTOR_CLASS } from "../utils/constants";
 import { DPad, usePressedButtons, DPAD_BUTTONS } from "../components/DPad";
 import { Button } from "../components/Button";
 import { FpsCounter } from "../components/FpsCounter";
 import { KeyboardControlList } from "../components/KeyboardControlList";
+import { serializePlayerAction, TEACHER_NOOP_ACTION, Space } from "../utils/spaceSerialization";
 
 const DEACTIVATED_BUTTONS_TEACHER = [DPAD_BUTTONS.UP];
 const DEACTIVATED_BUTTONS_PLAYER = [DPAD_BUTTONS.UP, DPAD_BUTTONS.DOWN];
+const ACTION_SPACE = new Space({
+  discrete: {
+    n: 3,
+  },
+});
 
 export const GymMountainCarEnvironments = ["environments.gym_adapter.Environment/MountainCar-v0"];
 export const GymMountainCarControls = ({ sendAction, fps = 30, actorClass, ...props }) => {
@@ -40,21 +45,21 @@ export const GymMountainCarControls = ({ sendAction, fps = 30, actorClass, ...pr
     (dt) => {
       if (pressedKeys.has("ArrowLeft") || isButtonPressed(DPAD_BUTTONS.LEFT)) {
         setActiveButtons([DPAD_BUTTONS.LEFT]);
-        sendAction(new cogment_verse.PlayerAction({ value: { properties: [{ discrete: 0 }] } }));
+        sendAction(serializePlayerAction(ACTION_SPACE, 0));
       } else if (pressedKeys.has("ArrowRight") || isButtonPressed(DPAD_BUTTONS.RIGHT)) {
         setActiveButtons([DPAD_BUTTONS.RIGHT]);
-        sendAction(new cogment_verse.PlayerAction({ value: { properties: [{ discrete: 2 }] } }));
+        sendAction(serializePlayerAction(ACTION_SPACE, 2));
       } else if (isTeacher) {
         if (pressedKeys.has("ArrowDown") || isButtonPressed(DPAD_BUTTONS.DOWN)) {
           setActiveButtons([DPAD_BUTTONS.DOWN]);
-          sendAction(new cogment_verse.PlayerAction({ value: { properties: [{ discrete: 1 }] } }));
+          sendAction(serializePlayerAction(ACTION_SPACE, 1));
         } else {
           setActiveButtons([]);
           sendAction(TEACHER_NOOP_ACTION);
         }
       } else {
         setActiveButtons([]);
-        sendAction(new cogment_verse.PlayerAction({ value: { properties: [{ discrete: 1 }] } }));
+        sendAction(serializePlayerAction(ACTION_SPACE, 1));
       }
     },
     [isButtonPressed, isTeacher, pressedKeys, sendAction]

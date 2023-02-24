@@ -15,6 +15,7 @@
 import { useCallback } from "react";
 import { cogSettings } from "../CogSettings";
 import { Countdown } from "../components/Countdown";
+import { Inspector } from "../components/Inspector";
 import { Button } from "../components/Button";
 import { useJoinedTrial, TRIAL_STATUS } from "../hooks/useJoinTrial";
 import { RenderedScreen } from "../components/RenderedScreen";
@@ -53,20 +54,13 @@ const Play = () => {
 
   const environment = actorParams?.config?.environmentSpecs?.implementation || undefined;
   const turnBased = actorParams?.config?.environmentSpecs?.turnBased || false;
-  const runId = actorParams?.config?.runId;
   const actorClassName = actorParams?.className;
 
   const redirectToPlayAny = useCallback(() => navigate(".."), [navigate]);
 
   return (
-    <div className="max-w-screen-md mx-auto min-h-screen flex flex-col items-center">
-      <div className="p-2">
-        <h1 className="text-xl font-semibold">{environment}</h1>
-        <div className="text-base">
-          {runId}/{trialId}
-        </div>
-      </div>
-
+    <div className="max-w-screen-md mx-auto min-h-screen">
+      <Inspector trialId={trialId} event={event} actorParams={actorParams} className="my-2" />
       <RenderedScreen
         observation={event.observation}
         overlay={
@@ -79,7 +73,7 @@ const Play = () => {
           ) : null
         }
       />
-      <div className="p-2 flex flex-col gap-2 w-full">
+      <div className="p-2 flex flex-col gap-2">
         {trialStatus === TRIAL_STATUS.ONGOING ? (
           <Controls
             actorClass={actorClassName}

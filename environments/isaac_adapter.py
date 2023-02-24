@@ -21,14 +21,7 @@ import torch
 import cogment
 import numpy as np
 
-from cogment_verse.specs import (
-    encode_rendered_frame,
-    EnvironmentSpecs,
-    Observation,
-    space_from_gym_space,
-    gym_action_from_action,
-    observation_from_gym_observation,
-)
+from cogment_verse.specs import EnvironmentSpecs
 from cogment_verse.constants import PLAYER_ACTOR_CLASS, TEACHER_ACTOR_CLASS
 
 # configure pygame to use a dummy video server to be able to render headlessly
@@ -49,11 +42,11 @@ class Environment:
             sim_device="cuda:0",
             rl_device="cuda:0",
         )
-        self.env_specs = EnvironmentSpecs(
+        self.env_specs = EnvironmentSpecs.create_homogeneous(
             num_players=1,
             turn_based=False,
-            observation_space=space_from_gym_space(self.gym_env.observation_space),
-            action_space=space_from_gym_space(self.gym_env.action_space),
+            observation_space=self.gym_env.observation_space,
+            action_space=self.gym_env.action_space,
         )
 
     def get_implementation_name(self):
@@ -84,50 +77,47 @@ class Environment:
 
         session_cfg = environment_session.config
 
+        observation_space = self.env_specs.get_observation_space(session_cfg.render_width)
+        action_space = self.env_specs.get_action_space()
+
         gym_observation = self.gym_env.reset()
         obs = np.asarray(gym_observation["obs"].cpu())
-        observation_value = observation_from_gym_observation(self.gym_env.observation_space, obs)
 
-        rendered_frame = None
-        if session_cfg.render:
-            rendered_frame = encode_rendered_frame(self.gym_env.render(mode="rgb_array"), session_cfg.render_width)
+        observation = observation_space.create(
+            value=gym_observation,
+            rendered_frame=self.gym_env.render(mode="rgb_array") if session_cfg.render else None,
+        )
 
-        environment_session.start([("*", Observation(value=observation_value, rendered_frame=rendered_frame))])
+        environment_session.start([("*", observation_space.serialize(observation))])
 
         async for event in environment_session.all_events():
             if event.actions:
-                player_action_value = event.actions[player_actor_idx].action.value
-                action_value = player_action_value
-                overridden_players = []
-                if has_teacher and event.actions[teacher_actor_idx].action.HasField("value"):
-                    teacher_action_value = event.actions[teacher_actor_idx].action.value
-                    action_value = teacher_action_value
-                    overridden_players = [player_actor_name]
-
-                gym_action = gym_action_from_action(
-                    self.env_specs.action_space, action_value  # pylint: disable=no-member
+                player_action = action_space.deserialize(
+                    event.actions[player_actor_idx].action,
                 )
-                gym_action_tensor = torch.tensor(gym_action, device="cuda:0").view(-1, 8)
+                action = player_action
+                overridden_players = []
+                if has_teacher:
+                    teacher_action = action_space.deserialize(
+                        event.actions[teacher_actor_idx].action,
+                    )
+                    if teacher_action.value is not None:
+                        action = teacher_action
+                        overridden_players = [player_actor_name]
+
+                action_value = action.value
+
+                gym_action_tensor = torch.tensor(action_value, device="cuda:0").view(-1, 8)
                 gym_observation, reward, done, _info = self.gym_env.step(gym_action_tensor)
                 obs = np.asarray(gym_observation["obs"].cpu())
-                observation_value = observation_from_gym_observation(self.gym_env.observation_space, obs)
 
-                rendered_frame = None
-                if session_cfg.render:
-                    rendered_frame = encode_rendered_frame(
-                        self.gym_env.render(mode="rgb_array"), session_cfg.render_width
-                    )
+                observation = observation_space.create(
+                    value=obs,
+                    rendered_frame=self.gym_env.render(mode="rgb_array") if session_cfg.render else None,
+                    overridden_players=overridden_players,
+                )
 
-                observations = [
-                    (
-                        "*",
-                        Observation(
-                            value=observation_value,
-                            rendered_frame=rendered_frame,
-                            overridden_players=overridden_players,
-                        ),
-                    )
-                ]
+                observations = [("*", observation_space.serialize(observation))]
 
                 if reward is not None:
                     environment_session.add_reward(

@@ -15,7 +15,7 @@
 import { useCallback, useState } from "react";
 import { useDocumentKeypressListener } from "../hooks/usePressedKeys";
 import { useRealTimeUpdate } from "../hooks/useRealTimeUpdate";
-import { TEACHER_NOOP_ACTION } from "../utils/constants";
+import { TEACHER_NOOP_ACTION } from "../utils/spaceSerialization";
 import { Button } from "../components/Button";
 import { FpsCounter } from "../components/FpsCounter";
 import { KeyboardControlList } from "../components/KeyboardControlList";

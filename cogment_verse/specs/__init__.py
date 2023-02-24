@@ -15,14 +15,6 @@
 from data_pb2 import (  # pylint: disable=import-error
     AgentConfig,
     EnvironmentConfig,
-    EnvironmentSpecs,
-    Observation,
-    PlayerAction,
-    ObserverAction,
-    Space,
-    SpaceMask,
-    SpaceValue,
-    NDArray,
 )
 import cog_settings  # pylint: disable=import-error
 from cogment_verse.constants import (
@@ -33,14 +25,5 @@ from cogment_verse.constants import (
     OBSERVER_ACTOR_CLASS,
 )
 
-from .environment_specs import save_environment_specs, load_environment_specs
+from .environment_specs import EnvironmentSpecs
 from .encode_rendered_frame import encode_rendered_frame
-from .ndarray import deserialize_ndarray, serialize_ndarray
-from .sample_space import sample_space
-from .flatten import flattened_dimensions, flatten, unflatten, flatten_mask, get_action_bounds
-from .gym_spaces_adapter import (
-    gym_action_from_action,
-    gym_space_from_space,
-    observation_from_gym_observation,
-    space_from_gym_space,
-)

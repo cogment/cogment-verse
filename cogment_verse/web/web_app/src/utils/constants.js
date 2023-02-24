@@ -12,10 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { cogment_verse } from "../data_pb";
-
-export const TEACHER_NOOP_ACTION = new cogment_verse.TeacherAction({ value: null });
-
 export const WEB_ACTOR_NAME = "web_actor";
 
 export const TEACHER_ACTOR_CLASS = "teacher";

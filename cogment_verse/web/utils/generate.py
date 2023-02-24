@@ -27,6 +27,8 @@ def generate(specs_filename, web_dir, force=False):
     cog_generate_source_files = [
         specs_filename,
         os.path.join(os.path.dirname(specs_filename), "data.proto"),
+        os.path.join(os.path.dirname(specs_filename), "ndarray.proto"),
+        os.path.join(os.path.dirname(specs_filename), "spaces.proto"),
     ]  # TODO make that more generic
 
     do_generate = force

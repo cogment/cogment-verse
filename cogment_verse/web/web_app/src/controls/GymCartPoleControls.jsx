@@ -13,13 +13,19 @@
 // limitations under the License.
 
 import { useCallback, useState } from "react";
-import { cogment_verse } from "../data_pb";
 import { useDocumentKeypressListener, usePressedKeys } from "../hooks/usePressedKeys";
 import { useRealTimeUpdate } from "../hooks/useRealTimeUpdate";
-import { TEACHER_ACTOR_CLASS, TEACHER_NOOP_ACTION } from "../utils/constants";
+import { TEACHER_ACTOR_CLASS } from "../utils/constants";
 import { Button } from "../components/Button";
 import { FpsCounter } from "../components/FpsCounter";
 import { KeyboardControlList } from "../components/KeyboardControlList";
+import { serializePlayerAction, TEACHER_NOOP_ACTION, Space } from "../utils/spaceSerialization";
+
+const ACTION_SPACE = new Space({
+  discrete: {
+    n: 2,
+  },
+});
 
 export const GymCartPoleEnvironments = ["environments.gym_adapter.Environment/CartPole-v1"];
 export const GymCartPoleControls = ({ sendAction, fps = 30, actorClass, ...props }) => {
@@ -36,23 +42,16 @@ export const GymCartPoleControls = ({ sendAction, fps = 30, actorClass, ...props
         return;
       }
 
-      const action_params = {
-        value: {
-          properties: [
-            {
-              discrete: 0,
-            },
-          ],
-        },
-      };
-
       if (pressedKeys.has("ArrowLeft")) {
-        action_params.value.properties[0].discrete = 0;
+        sendAction(serializePlayerAction(ACTION_SPACE, 0));
+        return;
       } else if (pressedKeys.has("ArrowRight")) {
-        action_params.value.properties[0].discrete = 1;
+        sendAction(serializePlayerAction(ACTION_SPACE, 1));
+        return;
       }
 
-      sendAction(new cogment_verse.PlayerAction(action_params));
+      // Default action is left
+      sendAction(serializePlayerAction(ACTION_SPACE, 0));
     },
     [pressedKeys, sendAction, actorClass]
   );

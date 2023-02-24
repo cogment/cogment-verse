@@ -20,20 +20,17 @@ import cogment
 import numpy as np
 import torch
 from torch.distributions.normal import Normal
+from gym.spaces import Box, utils
 
 from cogment_verse import Model
 from cogment_verse.run.run_session import RunSession
 from cogment_verse.run.sample_producer_worker import SampleProducerSession
 from cogment_verse.specs import (
-    PLAYER_ACTOR_CLASS,
     AgentConfig,
+    cog_settings,
     EnvironmentConfig,
     EnvironmentSpecs,
-    PlayerAction,
-    cog_settings,
-    flatten,
-    flattened_dimensions,
-    unflatten,
+    PLAYER_ACTOR_CLASS,
 )
 
 torch.multiprocessing.set_sharing_strategy("file_system")
@@ -308,14 +305,15 @@ class PPOActor:
     async def impl(self, actor_session):
         # Start a session
         actor_session.start()
-        config = actor_session.config
-        assert config.environment_specs.num_players == 1
-        assert len(config.environment_specs.action_space.properties) == 1
-        assert config.environment_specs.action_space.properties[0].WhichOneof("type") == "box"
 
-        # Get observation and action space
-        observation_space = config.environment_specs.observation_space
-        action_space = config.environment_specs.action_space
+        config = actor_session.config
+
+        environment_specs = EnvironmentSpecs.deserialize(config.environment_specs)
+        observation_space = environment_specs.get_observation_space()
+        action_space = environment_specs.get_action_space()
+
+        assert isinstance(action_space.gym_space, Box)
+        assert config.environment_specs.num_players == 1
 
         # Get model
         model, _, _ = await actor_session.model_registry.retrieve_version(
@@ -324,9 +322,9 @@ class PPOActor:
 
         async for event in actor_session.all_events():
             if event.observation and event.type == cogment.EventType.ACTIVE:
-                obs_tensor = torch.tensor(
-                    flatten(observation_space, event.observation.observation.value), dtype=self._dtype
-                ).view(1, -1)
+                observation = observation_space.deserialize(event.observation.observation)
+
+                obs_tensor = torch.tensor(observation.flat_value, dtype=self._dtype).view(1, -1)
 
                 # Normalize the observation
                 if model.state_normalization is not None:
@@ -339,11 +337,11 @@ class PPOActor:
                 # Get action from policy network
                 with torch.no_grad():
                     dist, _ = model.policy_network(obs_tensor)
-                    action = dist.sample().cpu().numpy()[0]
+                    action_value = dist.sample().cpu().numpy()[0]
 
                 # Send action to environment
-                action_value = unflatten(action_space, action)
-                actor_session.do_action(PlayerAction(value=action_value))
+                action = action_space.create(value=action_value)
+                actor_session.do_action(action_space.serialize(action))
 
 
 class PPOTraining:
@@ -392,8 +390,8 @@ class PPOTraining:
         self.model = PPOModel(
             model_id="",
             environment_implementation=self._environment_specs.implementation,
-            num_input=flattened_dimensions(self._environment_specs.observation_space),
-            num_output=flattened_dimensions(self._environment_specs.action_space),
+            num_input=utils.flatdim(self._environment_specs.get_observation_space().gym_space),
+            num_output=utils.flatdim(self._environment_specs.get_action_space().gym_space),
             learning_rate=self._cfg.learning_rate,
             n_iter=self._cfg.num_epochs,
             policy_network_hidden_nodes=self._cfg.policy_network.num_hidden_nodes,
@@ -404,15 +402,20 @@ class PPOTraining:
 
     async def trial_sample_sequences_producer_impl(self, sample_producer_session: SampleProducerSession):
         """Collect sample from the trial"""
+
+        # Share with A2C
+
         observation = []
         action = []
         reward = []
         done = []
 
         player_actor_params = sample_producer_session.trial_info.parameters.actors[0]
+
         player_actor_name = player_actor_params.name
-        player_observation_space = player_actor_params.config.environment_specs.observation_space
-        player_action_space = player_actor_params.config.environment_specs.action_space
+        player_environment_specs = EnvironmentSpecs.deserialize(player_actor_params.config.environment_specs)
+        player_observation_space = player_environment_specs.get_observation_space()
+        player_action_space = player_environment_specs.get_action_space()
 
         async for sample in sample_producer_session.all_trial_samples():
             if sample.trial_state == cogment.TrialState.ENDED:
@@ -423,9 +426,10 @@ class PPOTraining:
 
             actor_sample = sample.actors_data[player_actor_name]
             observation.append(
-                torch.tensor(flatten(player_observation_space, actor_sample.observation.value), dtype=self._dtype)
+                torch.tensor(player_observation_space.deserialize(actor_sample.observation).value, dtype=self._dtype)
             )
-            action.append(torch.tensor(flatten(player_action_space, actor_sample.action.value), dtype=self._dtype))
+
+            action.append(torch.tensor(player_action_space.deserialize(actor_sample.action).value, dtype=self._dtype))
             reward.append(
                 torch.tensor(actor_sample.reward if actor_sample.reward is not None else 0, dtype=self._dtype)
             )
@@ -435,11 +439,12 @@ class PPOTraining:
         sample_producer_session.produce_sample((observation, action, reward, done))
 
     async def impl(self, run_session: RunSession) -> dict:
-        """Train and publish the model"""
+        """Train and publish model the model"""
 
         model_id = f"{run_session.run_id}_model"
+
         assert self._environment_specs.num_players == 1
-        assert len(self._environment_specs.action_space.properties) == 1
+        assert isinstance(self._environment_specs.get_action_space().gym_space, Box)
 
         # Initalize model
         self.model.model_id = model_id
@@ -462,7 +467,7 @@ class PPOTraining:
                 implementation="actors.ppo.PPOActor",
                 config=AgentConfig(
                     run_id=run_session.run_id,
-                    environment_specs=self._environment_specs,
+                    environment_specs=self._environment_specs.serialize(),
                     model_id=model_id,
                     model_version=version_info["version_number"],
                 ),
@@ -505,6 +510,7 @@ class PPOTraining:
                 episode_rewards.append(torch.vstack(trial_reward).sum())
 
                 # Publish the newly trained version every 100 steps
+                # print(f"Iter #{iter_idx}: step: {len(actions)}")
                 if len(actions) >= self._cfg.num_steps * self._cfg.epoch_num_trials + 1:
                     # Update model parameters
                     policy_loss, value_loss = await self.train_step(
