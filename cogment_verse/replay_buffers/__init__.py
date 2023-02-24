@@ -13,6 +13,4 @@
 # limitations under the License.
 
 
-from .torch_replay_buffer import TorchReplayBuffer, TorchReplayBufferSample
-
-
+from .torch_replay_buffer import TorchReplayBuffer, TorchReplayBufferSample, HumanDataBuffer

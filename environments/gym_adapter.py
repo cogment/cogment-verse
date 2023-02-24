@@ -24,6 +24,7 @@ from cogment_verse.constants import PLAYER_ACTOR_CLASS, TEACHER_ACTOR_CLASS
 # configure pygame to use a dummy video server to be able to render headlessly
 os.environ["SDL_VIDEODRIVER"] = "dummy"
 
+
 class Environment:
     def __init__(self, cfg):
         self.gym_env_name = cfg.env_name
