@@ -21,7 +21,8 @@ enum DType {
   DTYPE_FLOAT32 = 1;
   DTYPE_FLOAT64 = 2;
   DTYPE_INT8 = 3;
-  DTYPE_INT64 = 4;
+  DTYPE_INT32 = 4;
+  DTYPE_INT64 = 5;
 }
 
 message Array {
