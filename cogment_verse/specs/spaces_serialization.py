@@ -14,7 +14,6 @@
 
 import gym
 import numpy as np
-from ndarray_pb2 import DTYPE_INT8
 from spaces_pb2 import Box, Dict, Discrete, MultiBinary, MultiDiscrete, Space  # pylint: disable=import-error
 
 from .ndarray_serialization import SerializationFormat, deserialize_ndarray, serialize_ndarray
@@ -72,8 +71,7 @@ def deserialize_gym_space(pb_space):
         size = deserialize_ndarray(multi_binary_space_pb.n)
         if size.size > 1:
             return gym.spaces.MultiBinary(n=size)
-        else:
-            return gym.spaces.MultiBinary(n=size[0])
+        return gym.spaces.MultiBinary(n=size[0])
     if space_kind == "multi_discrete":
         multi_discrete_space_pb = pb_space.multi_discrete
         nvec = deserialize_ndarray(multi_discrete_space_pb.nvec)
