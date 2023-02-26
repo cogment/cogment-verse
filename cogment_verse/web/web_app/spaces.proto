@@ -28,6 +28,14 @@ message Box {
   nd_array.Array high = 3;
 }
 
+message MultiBinary {
+  nd_array.Array n = 1;
+}
+
+message MultiDiscrete {
+  nd_array.Array nvec = 1;
+}
+
 message Dict {
   message SubSpace {
     string key = 1;
@@ -41,5 +49,7 @@ message Space {
     Discrete discrete = 1;
     Box box = 2;
     Dict dict = 3;
+    MultiBinary multi_binary = 4;
+    MultiDiscrete multi_discrete = 5;
   }
 }
