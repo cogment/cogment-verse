@@ -62,9 +62,10 @@ def test_serialize_cartpole_observation_space():
     assert gym_space.low == pytest.approx(deserialized_space.low)
     assert gym_space.high == pytest.approx(deserialized_space.high)
 
+
 def test_serialize_custom_observation_space():
-    """ Test serialization of gym spaces of type:
-        Dict, Discrete, Box, MultiDiscrete, MultiBinary.
+    """Test serialization of gym spaces of type:
+    Dict, Discrete, Box, MultiDiscrete, MultiBinary.
     """
     gym_space = Dict(
         {
@@ -87,7 +88,7 @@ def test_serialize_custom_observation_space():
     )
 
     pb_space = serialize_gym_space(gym_space)
-    
+
     assert len(pb_space.dict.spaces) == 2
     assert pb_space.dict.spaces[0].key == "ext_controller"
     assert pb_space.dict.spaces[0].space.multi_discrete.nvec.shape == [3]
@@ -102,8 +103,12 @@ def test_serialize_custom_observation_space():
     assert len(pb_space.dict.spaces[1].space.dict.spaces[1].space.dict.spaces) == 2
 
     assert pb_space.dict.spaces[1].space.dict.spaces[1].space.dict.spaces[0].key == "progress"
-    assert pb_space.dict.spaces[1].space.dict.spaces[1].space.dict.spaces[0].space.box.low.double_data[0] == pytest.approx(0.0)
-    assert pb_space.dict.spaces[1].space.dict.spaces[1].space.dict.spaces[0].space.box.high.double_data[0] == pytest.approx(100.0)
+    assert pb_space.dict.spaces[1].space.dict.spaces[1].space.dict.spaces[0].space.box.low.double_data[
+        0
+    ] == pytest.approx(0.0)
+    assert pb_space.dict.spaces[1].space.dict.spaces[1].space.dict.spaces[0].space.box.high.double_data[
+        0
+    ] == pytest.approx(100.0)
 
     assert pb_space.dict.spaces[1].space.dict.spaces[1].space.dict.spaces[1].key == "task"
     assert pb_space.dict.spaces[1].space.dict.spaces[1].space.dict.spaces[1].space.discrete.n == 5

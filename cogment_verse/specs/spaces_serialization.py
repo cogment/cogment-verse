@@ -15,11 +15,9 @@
 import gym
 import numpy as np
 from ndarray_pb2 import DTYPE_INT8
-from spaces_pb2 import (Box, Dict, Discrete,  # pylint: disable=import-error
-                        MultiBinary, MultiDiscrete, Space)
+from spaces_pb2 import Box, Dict, Discrete, MultiBinary, MultiDiscrete, Space  # pylint: disable=import-error
 
-from .ndarray_serialization import (SerializationFormat, deserialize_ndarray,
-                                    serialize_ndarray)
+from .ndarray_serialization import SerializationFormat, deserialize_ndarray, serialize_ndarray
 
 
 def serialize_gym_space(gym_space, serilization_format=SerializationFormat.STRUCTURED):
@@ -38,21 +36,17 @@ def serialize_gym_space(gym_space, serilization_format=SerializationFormat.STRUC
 
     if isinstance(gym_space, gym.spaces.MultiBinary):
         if isinstance(gym_space.n, np.ndarray):
-            n = gym_space.n
+            size = gym_space.n
         elif isinstance(gym_space.n, int):
-            n = np.array([gym_space.n], dtype=np.dtype("int8"))
+            size = np.array([gym_space.n], dtype=np.dtype("int8"))
         else:
-            n = np.array(gym_space.n, dtype=np.dtype("int8"))
-        return Space(
-            multi_binary=MultiBinary(n=serialize_ndarray(n, serilization_format=serilization_format))
-        )
+            size = np.array(gym_space.n, dtype=np.dtype("int8"))
+        return Space(multi_binary=MultiBinary(n=serialize_ndarray(size, serilization_format=serilization_format)))
 
     if isinstance(gym_space, gym.spaces.MultiDiscrete):
         nvec = gym_space.nvec
         return Space(
-            multi_discrete=MultiDiscrete(
-                nvec=serialize_ndarray(nvec, serilization_format=serilization_format)
-            )
+            multi_discrete=MultiDiscrete(nvec=serialize_ndarray(nvec, serilization_format=serilization_format))
         )
 
     if isinstance(gym_space, gym.spaces.Dict):
@@ -75,11 +69,11 @@ def deserialize_gym_space(pb_space):
         return gym.spaces.Box(low=low, high=high, shape=low.shape, dtype=low.dtype)
     if space_kind == "multi_binary":
         multi_binary_space_pb = pb_space.multi_binary
-        n = deserialize_ndarray(multi_binary_space_pb.n)
-        if n.size > 1:
-            return gym.spaces.MultiBinary(n=n)
+        size = deserialize_ndarray(multi_binary_space_pb.n)
+        if size.size > 1:
+            return gym.spaces.MultiBinary(n=size)
         else:
-            return gym.spaces.MultiBinary(n=n[0])
+            return gym.spaces.MultiBinary(n=size[0])
     if space_kind == "multi_discrete":
         multi_discrete_space_pb = pb_space.multi_discrete
         nvec = deserialize_ndarray(multi_discrete_space_pb.nvec)
