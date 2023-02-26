@@ -75,7 +75,7 @@ def deserialize_gym_space(pb_space):
     if space_kind == "multi_discrete":
         multi_discrete_space_pb = pb_space.multi_discrete
         nvec = deserialize_ndarray(multi_discrete_space_pb.nvec)
-        return gym.spaces.MultiBinary(nvec=nvec)
+        return gym.spaces.MultiDiscrete(nvec=nvec)
     if space_kind == "dict":
         dict_space_pb = pb_space.dict
         spaces = []
