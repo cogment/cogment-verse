@@ -54,7 +54,8 @@ const deserializeNdArray = (serializedArray) => {
     case DType.DTYPE_INT8:
       typedArray = new Int8Array(rawData.buffer, rawData.byteOffset, length);
       break;
-    case DType.DTYPE_FLOAT32:
+      case DType.DTYPE_FLOAT64:
+      case DType.DTYPE_FLOAT32:
       if (rawData.byteOffset % 4 !== 0) {
         // original buffer is not aligne, we need to copy
         const alignedData = Uint8Array.from(rawData);
@@ -77,6 +78,14 @@ const flatdim = (space) => {
     const shape = space.box.low.shape;
     return shape.reduce((accFlatdim, dim) => dim * accFlatdim, 1);
   }
+  if (space.multiBinary) {
+    const shape = space.multiBinary.n.int32Data;
+    return shape.reduce((accFlatdim, dim) => dim * accFlatdim, 1);
+  }
+  if (space.multiDiscrete) {
+    const shape = space.multiDiscrete.nvec.shape;
+    return shape.reduce((accFlatdim, dim) => dim * accFlatdim, 1);
+  }
   if (space.dict) {
     return Object.values(space.dict.spaces).reduce((accFlatdim, subSpace) => accFlatdim + flatdim(subSpace.space), 0);
   }
@@ -89,6 +98,12 @@ const flattype = (space) => {
   }
   if (space.box) {
     return space.box.low.dtype;
+  }
+  if (space.multiBinary) {
+    return space.multiBinary.n.int32Data.dtype;
+  }
+  if (space.multiDiscrete) {
+    return space.multiDiscrete.nvec.int32Data.dtype;
   }
   if (space.dict) {
     // TODO look into that
@@ -115,7 +130,7 @@ const flatten = (space, value) => {
     flattenedValue[valueIndex] = 1;
     return flattenedValue;
   }
-  if (space.box) {
+  if (space.box || space.multiBinary || space.multiDiscrete) {
     return deepFlattenArray(value);
   }
   if (space.dict) {
@@ -158,6 +173,12 @@ const unflatten = (space, flattenedValue) => {
   if (space.box) {
     return deepUnflattenArray(space.box.low.shape, flattenedValue);
   }
+  if (space.multiBinary) {
+    return deepUnflattenArray(space.multiBinary.n.int32Data, flattenedValue);  
+  }
+  if (space.multiDiscrete) {
+    return deepUnflattenArray(space.multiDiscrete.nvec.shape, flattenedValue);
+  }
   if (space.dict) {
     const { value, currentIndex } = space.dict.spaces.reduce(
       ({ value, currentIndex }, subSpace) => {
@@ -187,6 +208,7 @@ const serializeSpaceValue = (space, value) => {
 };
 
 const deserializeSpaceValue = (space, serializedValue) => {
+
   const [, shape, flattenedValue] = deserializeNdArray(serializedValue);
   // TODO look into dtype checking
   // const [dtype, shape, flattenedValue] = deserializeNdArray(serializedValue);
