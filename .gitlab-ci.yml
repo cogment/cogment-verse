@@ -1,6 +1,23 @@
 stages:
   - lint
+  - build
   - test
+
+.base_docker_build:
+  image: docker:20.10.7
+  services:
+    - docker:20.10.7-dind
+  variables:
+    # Use TLS https://docs.gitlab.com/ee/ci/docker/using_docker_build.html#tls-enabled
+    DOCKER_HOST: tcp://docker:2376
+    DOCKER_TLS_CERTDIR: "/certs"
+
+build_docker:
+  stage: build
+  needs: []
+  extends: .base_docker_build
+  script:
+    - docker build .
 
 .base:
   image: python:3.9
