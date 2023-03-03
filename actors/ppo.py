@@ -316,7 +316,7 @@ class PPOActor:
         assert config.environment_specs.num_players == 1
 
         # Get model
-        model, _, _ = await actor_session.model_registry.retrieve_version(
+        model = await actor_session.model_registry.retrieve_version(
             PPOModel, config.model_id, config.model_version
         )
 
@@ -447,8 +447,8 @@ class PPOTraining:
         assert isinstance(self._environment_specs.get_action_space().gym_space, Box)
 
         # Initalize model
-        self.model.model_id = model_id
-        _, version_info = await run_session.model_registry.publish_initial_version(self.model)
+        self.model.id = model_id
+        version_info = await run_session.model_registry.store_initial_version(self.model)
 
         run_session.log_params(
             self._cfg,
@@ -469,7 +469,7 @@ class PPOTraining:
                     run_id=run_session.run_id,
                     environment_specs=self._environment_specs.serialize(),
                     model_id=model_id,
-                    model_version=version_info["version_number"],
+                    model_version=version_info.version_number,
                 ),
             )
 
@@ -530,7 +530,7 @@ class PPOTraining:
                         )
 
                         run_session.log_metrics(
-                            model_version_number=version_info["version_number"],
+                            model_version_number=version_info.version_number,
                             policy_loss=policy_loss.item(),
                             value_loss=value_loss.item(),
                             rewards=avg_rewards.item(),
@@ -538,7 +538,7 @@ class PPOTraining:
 
                     # Publish the newly updated model
                     self.model.iter_idx = iter_idx
-                    version_info = await run_session.model_registry.publish_version(self.model)
+                    version_info = await run_session.model_registry.store_version(self.model)
 
     async def train_step(
         self,

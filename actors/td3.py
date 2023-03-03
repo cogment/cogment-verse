@@ -194,7 +194,7 @@ class TD3Actor:
 
         assert isinstance(action_space.gym_space, Box)
 
-        model, _, _ = await actor_session.model_registry.retrieve_version(
+        model = await actor_session.model_registry.retrieve_version(
             TD3Model, config.model_id, config.model_version
         )
 
@@ -299,7 +299,7 @@ class TD3Training:
             time_steps=0,
             dtype=self._dtype,
         )
-        _model_info, _ = await run_session.model_registry.publish_initial_version(model)
+        version_info = await run_session.model_registry.store_initial_version(model)
 
         run_session.log_params(
             self._cfg,
@@ -434,15 +434,15 @@ class TD3Training:
                     )
 
             model.time_steps += 1
-            version_info = await run_session.model_registry.publish_version(model)
+            version_info = await run_session.model_registry.store_version(model)
 
             if step_idx % 100 == 0:
                 end_time = time.time()
                 steps_per_seconds = 100 / (end_time - start_time)
                 start_time = end_time
                 run_session.log_metrics(
-                    model_version_number=version_info["version_number"],
+                    model_version_number=version_info.version_number,
                     steps_per_seconds=steps_per_seconds,
                 )
 
-        version_info = await run_session.model_registry.publish_version(model, archived=True)
+        version_info = await run_session.model_registry.store_version(model, archived=True)

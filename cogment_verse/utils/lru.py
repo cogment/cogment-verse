@@ -32,5 +32,4 @@ class LRU(OrderedDict):
             self.move_to_end(key)
         super().__setitem__(key, value)
         if len(self) > self.maxsize:
-            oldest = next(iter(self))
-            del self[oldest]
+            self.pop(0)

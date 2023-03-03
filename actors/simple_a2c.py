@@ -130,7 +130,7 @@ class SimpleA2CActor:
         observation_space = environment_specs.get_observation_space()
         action_space = environment_specs.get_action_space(seed=config.seed)
 
-        model, _, _ = await actor_session.model_registry.retrieve_version(
+        model = await actor_session.model_registry.retrieve_version(
             SimpleA2CModel, config.model_id, config.model_version
         )
         model.actor_network.eval()
@@ -222,7 +222,7 @@ class SimpleA2CTraining:
             critic_network_num_hidden_nodes=self._cfg.critic_network.num_hidden_nodes,
             dtype=self._dtype,
         )
-        _model_info, version_info = await run_session.model_registry.publish_initial_version(model)
+        version_info = await run_session.model_registry.store_initial_version(model)
 
         run_session.log_params(
             self._cfg,
@@ -267,7 +267,7 @@ class SimpleA2CTraining:
                                     config=AgentConfig(
                                         run_id=run_session.run_id,
                                         model_id=model_id,
-                                        model_version=version_info["version_number"],
+                                        model_version=version_info.version_number,
                                         environment_specs=self._environment_specs.serialize(),
                                     ),
                                 )
@@ -338,9 +338,9 @@ class SimpleA2CTraining:
             model.epoch_idx = epoch_idx
             model.total_samples = total_samples
 
-            version_info = await run_session.model_registry.publish_version(model, archived=last_epoch)
+            version_info = await run_session.model_registry.store_version(model, archived=last_epoch)
             run_session.log_metrics(
-                model_version_number=version_info["version_number"],
+                model_version_number=version_info.version_number,
                 epoch_idx=epoch_idx,
                 entropy_loss=entropy_loss.item(),
                 value_loss=value_loss.item(),
