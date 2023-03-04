@@ -129,3 +129,21 @@ If you want to use Isaac Gym, use python3.8 (not python3.9)
 - Multi-Teacher Curriculum Design for Sparse Reward Environments [code](https://github.com/kharyal/cogment-verse/)
 
 (please open a pull request to add missing entries)
+
+
+## Docker
+To run cogment verse from docker containers:
+
+1. Build the cogment-verse image. From the project's root, run the command:
+    ```console
+    $ docker build --tag cogment_verse:local .
+    ```
+2. Launch the container services using docker compose using the command:
+    ```console
+    $ docker compose up
+    ```
+    To specify an experiment or change the orchestrator's web endpoint port, set the environment variables `EXP` or `ORCHESTRATOR_WEB_PORT`
+    ```console
+    $ EXP="+experiment=simple_bc/mountain_car" ORCHESTRATOR_WEB_PORT=9000 docker compose up
+    ```
+3. Open Chrome (other web browser might work but haven't tested) and navigate to http://localhost:8080

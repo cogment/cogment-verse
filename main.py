@@ -21,9 +21,12 @@ import cogment_verse
 
 log = logging.getLogger(__name__)
 
+
 @hydra.main(version_base=None, config_path="config", config_name="config")
 def main(cfg):
-    work_dir = os.environ.get("COGMENT_VERSE_WORK_DIR", os.path.abspath(os.path.join(os.path.dirname(__file__), ".cogment_verse")))
+    work_dir = os.environ.get(
+        "COGMENT_VERSE_WORK_DIR", os.path.abspath(os.path.join(os.path.dirname(__file__), ".cogment_verse"))
+    )
     app = cogment_verse.App(cfg, work_dir=work_dir)
 
     app.start()
