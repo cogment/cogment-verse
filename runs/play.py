@@ -73,6 +73,7 @@ class PlayRun:
             )
 
         players_cfg = self._cfg.players[: self._environment_specs.num_players]
+        log.info(f"Before first mlflow call")
         run_session.log_params(
             **{
                 f"actor_{actor_idx}_implementation": actor_params.implementation
@@ -88,6 +89,7 @@ class PlayRun:
             },
             environment=self._environment_specs.implementation,
         )
+        log.info(f"After first mlflow call")
 
         def create_trial_params(trial_idx):
             actors_params = []

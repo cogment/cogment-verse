@@ -1,0 +1,19 @@
+services:
+  mlflow:
+    image: cogment_verse:local
+    expose:
+      - "3000"
+    ports: 
+      - "3000:3000/tcp"
+    entrypoint: python -m simple_mlflow
+    
+
+  cogment-verse:
+    image: cogment_verse:local
+    expose:
+      - "8080"
+    ports: 
+      - "8080:8080/tcp"
+    depends_on:
+      - mlflow
+    entrypoint: python -m main +experiment=simple_bc/mountain_car

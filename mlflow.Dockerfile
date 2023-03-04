@@ -3,8 +3,6 @@ FROM python:3.9
 
 ENV DEBIAN_FRONTEND=noninteractive 
 RUN apt-get update && apt-get install -y swig python3-opencv python3-pip
-RUN apt install -y nodejs
-RUN apt-get install -y npm
 
 WORKDIR /cogment-verse
 
@@ -13,7 +11,9 @@ RUN pip install -r requirements.txt --timeout 1000
 
 COPY . .
 
+EXPOSE 3000
+
 ENV COGMENT_VERSE_WORK_DIR /cogment_verse_work_dir
 VOLUME ${COGMENT_VERSE_WORK_DIR}
 
-ENTRYPOINT python3 -m main
+ENTRYPOINT python3 -m simple_mlflow
