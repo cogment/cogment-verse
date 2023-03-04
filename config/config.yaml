@@ -12,4 +12,4 @@ hydra:
     num: 0
 run:
   run_id: ${generate_name:run_id}_${hydra:job.num}
-  mlflow_tracking_uri: http://mlflow:3000
+  mlflow_tracking_uri: http://localhost:3000
