@@ -4,7 +4,7 @@ services:
     expose:
       - "3000"
     ports: 
-      - "3000:3000/tcp"
+      - "3000:3000"
     entrypoint: python -m simple_mlflow
     
 
@@ -12,8 +12,10 @@ services:
     image: cogment_verse:local
     expose:
       - "8080"
+      - "${ORCHESTRATOR_WEB_PORT:-9000}"
     ports: 
-      - "8080:8080/tcp"
+      - "8080:8080"
+      - ${ORCHESTRATOR_WEB_PORT:-9000}:${ORCHESTRATOR_WEB_PORT:-9000}
     depends_on:
       - mlflow
-    entrypoint: python -m main +experiment=simple_bc/mountain_car
+    entrypoint: python -m main services.orchestrator.web_port=${ORCHESTRATOR_WEB_PORT:-9000} services.orchestrator.web_endpoint=http://localhost:${ORCHESTRATOR_WEB_PORT:-9000} ${EXP}
