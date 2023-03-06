@@ -1,15 +1,13 @@
-#FROM nvidia/cuda:11.8.0-base-ubuntu22.04
-FROM python:3.9
+ARG BASE_IMAGE=python:3.9
+FROM $BASE_IMAGE
 
 ENV DEBIAN_FRONTEND=noninteractive 
-RUN apt-get update && apt-get install -y swig python3-opencv python3-pip
-RUN apt install -y nodejs
-RUN apt-get install -y npm
+RUN apt-get update && apt-get install -y swig python3-opencv python3-pip nodejs npm
 
 WORKDIR /cogment-verse
 
 COPY requirements.txt .
-RUN pip install -r requirements.txt --timeout 1000
+RUN pip install -r requirements.txt --timeout 5000
 
 COPY . .
 

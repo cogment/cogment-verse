@@ -134,22 +134,35 @@ If you want to use Isaac Gym, use python3.8 (not python3.9)
 ## Docker
 To run cogment verse from docker containers:
 
-1. Build the cogment-verse image. From the project's root, run the command:
+1. Build the `cogment_verse` service's image. From the project's root, run the command:
     ```console
-    $ docker build --tag cogment_verse:local .
+    $ docker compose build
     ```
+    By default, the base image will be `python:3.9`. Pass the BASE_IMAGE build argument to modify it.
+    ```console
+    $ docker compose build --build-arg BASE_IMAGE=python:3.9 
+    ```
+    
 2. Launch the container services using docker compose using the command:
     ```console
-    $ docker compose up
+    $ docker compose run --service-ports cogment_verse [ARGS...]
     ```
-    To specify an experiment or change the orchestrator's web endpoint port, set the environment variables `EXP` or `ORCHESTRATOR_WEB_PORT`
+    This is equivalent to running `python -m main` locally.
+
+    The same way it is done locally, you can add specific config arguments for hydra. Example:
     ```console
-    $ EXP="+experiment=simple_bc/mountain_car" ORCHESTRATOR_WEB_PORT=9000 docker compose up
+    $ docker compose run --service-ports cogment_verse +experiment=simple_bc/mountain_car
+    ```
+
+    To specify the orchestrator's web endpoint port, set the environment variables `ORCHESTRATOR_WEB_PORT`
+    ```console
+    $ ORCHESTRATOR_WEB_PORT=9000 docker compose run --service-ports cogment_verse
     ```
 3. Open Chrome (other web browser might work but haven't tested) and navigate to http://localhost:8080
 
 
 ### Troubleshooting
+
 If facing docker build issues on Mac OS, try setting the docker default platform, using command:
   ```console
   $ DOCKER_DEFAULT_PLATFORM=linux/amd64  docker build --tag cogment_verse:local .

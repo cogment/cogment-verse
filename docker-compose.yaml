@@ -1,14 +1,20 @@
 services:
+  
   mlflow:
+    build:
+        context: .
+        dockerfile: Dockerfile
     image: cogment_verse:local
     expose:
       - "3000"
     ports: 
       - "3000:3000"
     entrypoint: python -m simple_mlflow
-    
 
-  cogment-verse:
+  cogment_verse:
+    build:
+        context: .
+        dockerfile: Dockerfile
     image: cogment_verse:local
     expose:
       - "8080"
@@ -18,4 +24,4 @@ services:
       - ${ORCHESTRATOR_WEB_PORT:-9000}:${ORCHESTRATOR_WEB_PORT:-9000}
     depends_on:
       - mlflow
-    entrypoint: python -m main run.mlflow_tracking_uri=http://mlflow:3000 services.orchestrator.web_port=${ORCHESTRATOR_WEB_PORT:-9000} services.orchestrator.web_endpoint=http://localhost:${ORCHESTRATOR_WEB_PORT:-9000} ${EXP}
+    entrypoint: python -m main run.mlflow_tracking_uri=http://mlflow:3000 services.orchestrator.web_port=${ORCHESTRATOR_WEB_PORT:-9000} services.orchestrator.web_endpoint=http://localhost:${ORCHESTRATOR_WEB_PORT:-9000}
