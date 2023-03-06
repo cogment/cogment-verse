@@ -147,3 +147,10 @@ To run cogment verse from docker containers:
     $ EXP="+experiment=simple_bc/mountain_car" ORCHESTRATOR_WEB_PORT=9000 docker compose up
     ```
 3. Open Chrome (other web browser might work but haven't tested) and navigate to http://localhost:8080
+
+
+### Troubleshooting
+If facing docker build issues on Mac OS, try setting the docker default platform, using command:
+  ```console
+  $ DOCKER_DEFAULT_PLATFORM=linux/amd64  docker build --tag cogment_verse:local .
+  ```
