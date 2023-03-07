@@ -1,0 +1,4 @@
+.cogment_verse
+.venv
+.pytest_cache
+Dockerfile
