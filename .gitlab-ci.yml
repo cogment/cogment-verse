@@ -17,7 +17,7 @@ build_docker:
   needs: []
   extends: .base_docker_build
   script:
-    - docker build .
+    - docker compose build
 
 .base:
   image: python:3.9
