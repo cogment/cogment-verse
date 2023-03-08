@@ -125,8 +125,8 @@ def download_cogment(output_dir=None, desired_version=None, desired_arch=None, d
             if current_version == desired_version:
                 # The current version of cogment matches the desired version
                 return cogment_filename
-        except FileNotFoundError:
-            # Unable to execute cogment let's continue to download
+        except OSError:
+            # Unable to execute cogment, maybe it's missing or maybe it's corrupted let's just override it with a new one
             pass
 
     try:
