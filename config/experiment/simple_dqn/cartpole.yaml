@@ -4,7 +4,7 @@ defaults:
       - simple_dqn
   - override /services/environment: cartpole
 run:
-  class_name: actors.simple_dqn.SimpleDQNTraining
+  class_name: actors.dqn.SimpleDQNTraining
   seed: 618
 
   # Archiving
@@ -29,5 +29,5 @@ run:
   epsilon_schedule_start: 1
   epsilon_schedule_end: 0.05
   epsilon_schedule_duration_ratio: 0.75
-  
-  
+
+
