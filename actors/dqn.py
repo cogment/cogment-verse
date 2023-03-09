@@ -21,8 +21,10 @@ import json
 import math
 import numpy as np
 
+from typing import List, Tuple, Union
 import cogment
 import torch
+from torch import nn
 from gym.spaces import Discrete, utils
 
 from cogment_verse.specs import AgentConfig, cog_settings, EnvironmentConfig, EnvironmentSpecs
@@ -43,6 +45,104 @@ def create_linear_schedule(start, end, duration):
         return max(slope * t + start, end)
 
     return compute_value
+
+# Acknowledgements: The networks and associated utils are adapted from RLHive
+
+def calculate_output_dim(net, input_shape):
+    if isinstance(input_shape, int):
+        input_shape = (input_shape,)
+    placeholder = torch.zeros((0,) + tuple(input_shape))
+    output = net(placeholder)
+    return output.size()[1:]
+
+class MLPNetwork(nn.Module):
+    def __init__(
+        self,
+        in_dim: Tuple[int],
+        hidden_units: Union[int, List[int]] = 256,
+        noisy: bool = False,
+        std_init: float = 0.5,
+    ):
+        super().__init__()
+        if isinstance(hidden_units, int):
+            hidden_units = [hidden_units]
+        modules = [nn.Linear(np.prod(in_dim), hidden_units[0]), torch.nn.ReLU()]
+        for i in range(len(hidden_units) - 1):
+            modules.append(nn.Linear(hidden_units[i], hidden_units[i + 1]))
+            modules.append(torch.nn.ReLU())
+        self.network = torch.nn.Sequential(*modules)
+
+    def forward(self, x):
+        x = x.float()
+        x = torch.flatten(x, start_dim=1)
+        return self.network(x)
+
+
+class ConvNetwork(nn.Module):
+    def __init__(
+        self,
+        in_dim,
+        channels=None,
+        mlp_layers=None,
+        kernel_sizes=1,
+        strides=1,
+        paddings=0,
+        normalization_factor=255,
+        noisy=False,
+        std_init=0.5,
+    ):
+        super().__init__()
+        self._normalization_factor = normalization_factor
+        if channels is not None:
+            if isinstance(kernel_sizes, int):
+                kernel_sizes = [kernel_sizes] * len(channels)
+            if isinstance(strides, int):
+                strides = [strides] * len(channels)
+            if isinstance(paddings, int):
+                paddings = [paddings] * len(channels)
+
+            if not all(
+                len(x) == len(channels) for x in [kernel_sizes, strides, paddings]
+            ):
+                raise ValueError("The lengths of the parameter lists must be the same")
+
+            # Convolutional Layers
+            channels.insert(0, in_dim[0])
+            conv_seq = []
+            for i in range(0, len(channels) - 1):
+                conv_seq.append(
+                    torch.nn.Conv2d(
+                        in_channels=channels[i],
+                        out_channels=channels[i + 1],
+                        kernel_size=kernel_sizes[i],
+                        stride=strides[i],
+                        padding=paddings[i],
+                    )
+                )
+                conv_seq.append(torch.nn.ReLU())
+            self.conv = torch.nn.Sequential(*conv_seq)
+        else:
+            self.conv = torch.nn.Identity()
+
+        if mlp_layers is not None:
+            # MLP Layers
+            conv_output_size = calculate_output_dim(self.conv, in_dim)
+            self.mlp = MLPNetwork(
+                conv_output_size, mlp_layers, noisy=noisy, std_init=std_init
+            )
+        else:
+            self.mlp = torch.nn.Identity()
+
+    def forward(self, x):
+        if len(x.shape) == 3:
+            x = x.unsqueeze(0)
+        elif len(x.shape) == 5:
+            x = x.reshape(x.size(0), -1, x.size(-2), x.size(-1))
+        x = x.float()
+        x = x / self._normalization_factor
+        x = self.conv(x)
+        x = self.mlp(x)
+        return x
 
 
 class DQNModel(Model):
