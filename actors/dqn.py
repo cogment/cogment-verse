@@ -145,6 +145,23 @@ class ConvNetwork(nn.Module):
         return x
 
 
+class DQNNetwork(nn.Module):
+    def __init__(
+        self,
+        base_network: nn.Module,
+        hidden_dim: int,
+        out_dim: int,
+    ):
+        super().__init__()
+        self.base_network = base_network
+        self.output_layer = nn.Linear(hidden_dim, out_dim)
+
+    def forward(self, x):
+        x = self.base_network(x)
+        x = x.flatten(start_dim=1)
+        return self.output_layer(x)
+
+
 class DQNModel(Model):
     def __init__(
         self,
@@ -165,19 +182,8 @@ class DQNModel(Model):
         self._num_hidden_nodes = list(num_hidden_nodes)
 
         self.epsilon = epsilon
-        self.network = torch.nn.Sequential(
-            torch.nn.Linear(self._num_input, self._num_hidden_nodes[0]),
-            torch.nn.ReLU(),
-            *[
-                layer
-                for hidden_node_idx in range(len(self._num_hidden_nodes) - 1)
-                for layer in [
-                    torch.nn.Linear(self._num_hidden_nodes[hidden_node_idx], self._num_hidden_nodes[-1]),
-                    torch.nn.ReLU(),
-                ]
-            ],
-            torch.nn.Linear(self._num_hidden_nodes[-1], self._num_output),
-        )
+        self.base_network = MLPNetwork(num_input, self._num_hidden_nodes)
+        self.network = DQNNetwork(self.base_network, self._num_hidden_nodes[-1], self._num_output)
 
         # version user data
         self.num_samples_seen = 0
@@ -219,7 +225,7 @@ class DQNModel(Model):
         return model
 
 
-class SimpleDQNActor:
+class DQNActor:
     def __init__(self, _cfg):
         self._dtype = torch.float
         self.samples_since_update = 0
@@ -283,7 +289,7 @@ class SimpleDQNActor:
                 actor_session.do_action(action_space.serialize(action))
 
 
-class SimpleDQNTraining:
+class DQNTraining:
     default_cfg = {
         "seed": 10,
         "num_trials": 5000,
@@ -427,7 +433,7 @@ class SimpleDQNTraining:
                                 cog_settings,
                                 name="player",
                                 class_name=PLAYER_ACTOR_CLASS,
-                                implementation="actors.simple_dqn.SimpleDQNActor",
+                                implementation="actors.dqn.DQNActor",
                                 config=AgentConfig(
                                     run_id=run_session.run_id,
                                     seed=self._cfg.seed + trial_idx,
@@ -460,7 +466,7 @@ class SimpleDQNTraining:
                     run_session.log_metrics(total_reward_avg=total_reward_avg)
                     total_reward_cum = 0
                     log.info(
-                        f"[SimpleDQN/{run_session.run_id}] trial #{trial_idx + 1}/{self._cfg.num_trials} done (average total reward = {total_reward_avg})."
+                        f"[DQN/{run_session.run_id}] trial #{trial_idx + 1}/{self._cfg.num_trials} done (average total reward = {total_reward_avg})."
                     )
 
             if (
