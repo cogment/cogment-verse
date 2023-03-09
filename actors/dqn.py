@@ -74,7 +74,9 @@ class MLPNetwork(nn.Module):
 
     def forward(self, x):
         x = x.float()
-        x = torch.flatten(x, start_dim=1)
+        # print("x shape = ", x.shape)
+        if len(x.shape) > 1:
+            x = torch.flatten(x, start_dim=1)
         return self.network(x)
 
 
@@ -158,7 +160,9 @@ class DQNNetwork(nn.Module):
 
     def forward(self, x):
         x = self.base_network(x)
-        x = x.flatten(start_dim=1)
+        # print("in DQN x shape = ", x.shape)
+        if len(x.shape) > 1:
+            x = x.flatten(start_dim=1)
         return self.output_layer(x)
 
 
@@ -182,8 +186,13 @@ class DQNModel(Model):
         self._num_hidden_nodes = list(num_hidden_nodes)
 
         self.epsilon = epsilon
+        # print("num_input = ", num_input)
+        # print("num_hidden_nodes = ", self._num_hidden_nodes)
+        # print("num_output = ", num_output)
         self.base_network = MLPNetwork(num_input, self._num_hidden_nodes)
+        # print("self.base_network = ", self.base_network)
         self.network = DQNNetwork(self.base_network, self._num_hidden_nodes[-1], self._num_output)
+        # print("self.network = ", self.network)
 
         # version user data
         self.num_samples_seen = 0
