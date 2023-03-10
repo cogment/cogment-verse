@@ -34,14 +34,8 @@ from cogment_verse.specs import (
     AgentConfig,
     EnvironmentConfig,
     EnvironmentSpecs,
-    PlayerAction,
-    SpaceValue,
     cog_settings,
-    flatten,
-    flattened_dimensions,
-    unflatten,
 )
-from debug.mp_pdb import ForkedPdb
 
 torch.multiprocessing.set_sharing_strategy("file_system")
 
@@ -52,6 +46,7 @@ log = logging.getLogger(__name__)
 # pylint: disable=W0223
 # pylint: disable=W0613
 # pylint: disable=W0612
+# pylint: disable=C0302
 def initialize_layer(layer: torch.nn.Module, std: float = np.sqrt(2), bias_const: float = 0.0):
     """Layer initialization"""
     torch.nn.init.orthogonal_(layer.weight, std)
@@ -209,13 +204,10 @@ class PPOActor:
                     event.observation.observation.HasField("current_player")
                     and event.observation.observation.current_player != actor_session.name
                 ):
-                    # # Not the turn of the agent
-                    if event.observation.observation.current_player == WEB_ACTOR_NAME:
-                        actor_session.do_action(PlayerAction())
-                    else:
-                        actor_session.do_action(PlayerAction())
+                    # Not the turn of the agent
+                    actor_session.do_action(action_space.serialize(action_space.create()))
                     continue
-                obs = observation_space.deserialize(event.observation.observation.value)
+                obs = observation_space.deserialize(event.observation.observation)
                 obs_tensor = torch.tensor(obs.flat_value, dtype=self._dtype).reshape(obs_shape)
                 obs_tensor = torch.unsqueeze(obs_tensor.permute((2, 0, 1)), dim=0).to(torch.device(model.device))
 
@@ -225,7 +217,7 @@ class PPOActor:
                     action = dist.sample().cpu().numpy()[0]
 
                 # Send action to environment
-                if config.environment_specs.action_space.properties[0].WhichOneof("type") == "discrete":
+                if isinstance(action_space.gym_space, Discrete):
                     action_value = action_space.create(value=action)
                     actor_session.do_action(action_space.serialize(action_value))
                 else:
@@ -500,50 +492,40 @@ class PPOSelfTraining(BasePPOTraining):
         reward = []
         done = []
         steps = []
-
         player_actor_params = sample_producer_session.trial_info.parameters.actors[0]
         player_actor_name = player_actor_params.name
         player_environment_specs = EnvironmentSpecs.deserialize(player_actor_params.config.environment_specs)
         player_observation_space = player_environment_specs.get_observation_space()
         player_action_space = player_environment_specs.get_action_space()
         obs_shape = tuple(self._cfg.image_size)[::-1]
-
         async for sample in sample_producer_session.all_trial_samples():
             previous_actor_sample = sample.actors_data[player_actor_name]
             player_actor_name = previous_actor_sample.observation.current_player
             actor_sample = sample.actors_data[player_actor_name]
-            obs_flat = player_observation_space.deserialize(actor_sample.observation.value)
+            obs_flat = player_observation_space.deserialize(actor_sample.observation).flat_value
             observation_value = torch.unsqueeze(
                 torch.permute(torch.tensor(obs_flat, dtype=self._dtype).reshape(obs_shape), (2, 0, 1)), dim=0
-            )
-            action_value = torch.tensor(
-                torch.tensor(player_action_space.deserialize(actor_sample.action).value, dtype=self._dtype)
-                # actor_sample.action.value.properties[0].discrete
-                if len(actor_sample.action.value.properties) > 0
-                else 0,
-                dtype=torch.int64,
-            )
-            reward_value = torch.tensor(
-                actor_sample.reward if actor_sample.reward is not None else 0, dtype=self._dtype
             )
             observation.append(observation_value)
             steps.append(actor_sample.observation.step)
             if sample.trial_state == cogment.TrialState.ENDED:
                 done.append(torch.ones(1, dtype=self._dtype))
                 break
-            else:
-                action.append(action_value)
-                reward.append(reward_value)
-                done.append(torch.zeros(1, dtype=self._dtype))
+            action_value = player_action_space.deserialize(actor_sample.action).value
+            action_value = torch.tensor(action_value, dtype=self._dtype)
+            reward_value = torch.tensor(
+                actor_sample.reward if actor_sample.reward is not None else 0, dtype=self._dtype
+            )
+            action.append(action_value)
+            reward.append(reward_value)
+            done.append(torch.zeros(1, dtype=self._dtype))
 
         # Keeping the samples grouped by trial by emitting only one grouped sample at the end of the trial
         sample_producer_session.produce_sample((observation, action, reward, done))
 
     async def impl(self, run_session: RunSession) -> dict:
         """Train and publish the model"""
-
         model_id = f"{run_session.run_id}_model"
-        assert len(self._environment_specs.action_space.properties) == 1
 
         # Initalize model
         self.model.model_id = model_id
@@ -566,7 +548,7 @@ class PPOSelfTraining(BasePPOTraining):
                 implementation="actors.ppo_atari_pz.PPOActor",
                 config=AgentConfig(
                     run_id=run_session.run_id,
-                    environment_specs=self._environment_specs,
+                    environment_specs=self._environment_specs.serialize(),
                     model_id=model_id,
                     model_version=version_info["version_number"],
                 ),
@@ -681,38 +663,29 @@ class HillPPOTraining(BasePPOTraining):
             previous_actor_sample = sample.actors_data[player_actor_name]
             player_actor_name = previous_actor_sample.observation.current_player
             actor_sample = sample.actors_data[player_actor_name]
-            obs_flat = player_observation_space.deserialize(actor_sample.observation.value)
+            obs_flat = player_observation_space.deserialize(actor_sample.observation).flat_value
             observation_value = torch.unsqueeze(
                 torch.permute(torch.tensor(obs_flat, dtype=self._dtype).reshape(obs_shape), (2, 0, 1)), dim=0
-            )
-            action_value = torch.tensor(
-                torch.tensor(player_action_space.deserialize(actor_sample.action).value, dtype=self._dtype)
-                # actor_sample.action.value.properties[0].discrete
-                if len(actor_sample.action.value.properties) > 0
-                else 0,
-                dtype=torch.int64,
-            )
-            reward_value = torch.tensor(
-                actor_sample.reward if actor_sample.reward is not None else 0, dtype=self._dtype
             )
             observation.append(observation_value)
             steps.append(actor_sample.observation.step)
             if sample.trial_state == cogment.TrialState.ENDED:
                 done.append(torch.ones(1, dtype=self._dtype))
-                break
-            else:
-                action.append(action_value)
-                reward.append(reward_value)
-                done.append(torch.zeros(1, dtype=self._dtype))
+
+            action_value = torch.tensor(player_action_space.deserialize(actor_sample.action).value, dtype=self._dtype)
+            reward_value = torch.tensor(
+                actor_sample.reward if actor_sample.reward is not None else 0, dtype=self._dtype
+            )
+            action.append(action_value)
+            reward.append(reward_value)
+            done.append(torch.zeros(1, dtype=self._dtype))
 
         # Keeping the samples grouped by trial by emitting only one grouped sample at the end of the trial
         sample_producer_session.produce_sample((observation, action, reward, done, actors))
 
     async def impl(self, run_session: RunSession) -> dict:
         """Train and publish the model"""
-
         model_id = f"{run_session.run_id}_model"
-        assert len(self._environment_specs.action_space.properties) == 1
 
         # Initalize model
         self.model.model_id = model_id
@@ -751,7 +724,9 @@ class HillPPOTraining(BasePPOTraining):
                         name=WEB_ACTOR_NAME,
                         class_name=PLAYER_ACTOR_CLASS,
                         implementation=HUMAN_ACTOR_IMPL,
-                        config=AgentConfig(run_id=run_session.run_id, environment_specs=self._environment_specs),
+                        config=AgentConfig(
+                            run_id=run_session.run_id, environment_specs=self._environment_specs.serialize()
+                        ),
                     )
                 else:
                     actor = cogment.ActorParameters(
@@ -761,7 +736,7 @@ class HillPPOTraining(BasePPOTraining):
                         implementation="actors.ppo_atari_pz.PPOActor",
                         config=AgentConfig(
                             run_id=run_session.run_id,
-                            environment_specs=self._environment_specs,
+                            environment_specs=self._environment_specs.serialize(),
                             model_id=model_id,
                             model_version=version_number,
                         ),
@@ -905,7 +880,7 @@ class HumanFeedbackPPOTraining(BasePPOTraining):
 
         async for sample in sample_producer_session.all_trial_samples():
             if sample.trial_state == cogment.TrialState.ENDED:
-                obs_flat = player_observation_space.deserialize(actor_sample.observation.value)
+                obs_flat = player_observation_space.deserialize(actor_sample.observation).flat_value
                 observation_value = torch.unsqueeze(
                     torch.permute(torch.tensor(obs_flat, dtype=self._dtype).reshape(obs_shape), (2, 0, 1)), dim=0
                 )
@@ -916,17 +891,14 @@ class HumanFeedbackPPOTraining(BasePPOTraining):
             player_actor_name = previous_actor_sample.observation.current_player
             actor_sample = sample.actors_data[player_actor_name]
             if player_actor_name != WEB_ACTOR_NAME:
-                obs_flat = player_observation_space.deserialize(actor_sample.observation.value)
+                obs_flat = player_observation_space.deserialize(actor_sample.observation).flat_value
                 observation_value = torch.unsqueeze(
                     torch.permute(torch.tensor(obs_flat, dtype=self._dtype).reshape(obs_shape), (2, 0, 1)), dim=0
                 )
                 action_value = torch.tensor(
-                    torch.tensor(player_action_space.deserialize(actor_sample.action).value, dtype=self._dtype)
-                    # actor_sample.action.value.properties[0].discrete
-                    if len(actor_sample.action.value.properties) > 0
-                    else 0,
-                    dtype=torch.int64,
+                    player_action_space.deserialize(actor_sample.action).value, dtype=self._dtype
                 )
+
                 reward_value = torch.tensor(
                     actor_sample.reward if actor_sample.reward is not None else 0, dtype=self._dtype
                 )
@@ -936,7 +908,7 @@ class HumanFeedbackPPOTraining(BasePPOTraining):
                 reward.append(reward_value)
                 done.append(torch.zeros(1, dtype=self._dtype))
             else:
-                player_observation_space.deserialize(actor_sample.observation.value)
+                obs_flat = player_observation_space.deserialize(actor_sample.observation).flat_value
                 observation_value = torch.unsqueeze(
                     torch.permute(torch.tensor(obs_flat, dtype=self._dtype).reshape(obs_shape), (2, 0, 1)), dim=0
                 )
@@ -952,9 +924,7 @@ class HumanFeedbackPPOTraining(BasePPOTraining):
 
     async def impl(self, run_session: RunSession) -> dict:
         """Train and publish the model"""
-
         model_id = f"{run_session.run_id}_model"
-        assert len(self._environment_specs.action_space.properties) == 1
 
         # Initalize model
         self.model.model_id = model_id
@@ -992,7 +962,7 @@ class HumanFeedbackPPOTraining(BasePPOTraining):
                     implementation="actors.ppo_atari_pz.PPOActor",
                     config=AgentConfig(
                         run_id=run_session.run_id,
-                        environment_specs=self._environment_specs,
+                        environment_specs=self._environment_specs.serialize(),
                         model_id=model_id,
                         model_version=version_number,
                     ),
@@ -1004,7 +974,7 @@ class HumanFeedbackPPOTraining(BasePPOTraining):
                 name=WEB_ACTOR_NAME,
                 class_name=PLAYER_ACTOR_CLASS,
                 implementation=HUMAN_ACTOR_IMPL,
-                config=AgentConfig(run_id=run_session.run_id, environment_specs=self._environment_specs),
+                config=AgentConfig(run_id=run_session.run_id, environment_specs=self._environment_specs.serialize()),
             )
             actors.append(actor)
 

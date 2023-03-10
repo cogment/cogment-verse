@@ -24,6 +24,7 @@ from .observation_space import ObservationSpace
 from .action_space import ActionSpace
 
 from ..constants import PLAYER_ACTOR_CLASS
+from .ndarray_serialization import SerializationFormat
 
 
 class EnvironmentSpecs:
@@ -86,7 +87,14 @@ class EnvironmentSpecs:
         return ActionSpace(deserialize_gym_space(self._pb.action_space), actor_class, seed)
 
     @classmethod
-    def create_homogeneous(cls, num_players, turn_based, observation_space, action_space):
+    def create_homogeneous(
+        cls,
+        num_players,
+        turn_based,
+        observation_space,
+        action_space,
+        serilization_format=SerializationFormat.STRUCTURED,
+    ):
         """
         Factory function building an homogenous EnvironmentSpecs, ie  with all actors having the same action and observation spaces.
         """
@@ -94,8 +102,8 @@ class EnvironmentSpecs:
             PbEnvironmentSpecs(
                 num_players=num_players,
                 turn_based=turn_based,
-                observation_space=serialize_gym_space(observation_space),
-                action_space=serialize_gym_space(action_space),
+                observation_space=serialize_gym_space(observation_space, serilization_format),
+                action_space=serialize_gym_space(action_space, serilization_format),
             )
         )
 

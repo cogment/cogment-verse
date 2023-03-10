@@ -25,6 +25,7 @@ from ndarray_pb2 import (
     DTYPE_FLOAT64,
     DTYPE_INT8,
     DTYPE_INT64,
+    DTYPE_UINT8,
 )
 
 PB_DTYPE_FROM_DTYPE = {
@@ -32,6 +33,7 @@ PB_DTYPE_FROM_DTYPE = {
     "float64": DTYPE_FLOAT64,
     "int8": DTYPE_INT8,
     "int64": DTYPE_INT64,
+    "uint8": DTYPE_UINT8,
 }
 
 DTYPE_FROM_PB_DTYPE = {
@@ -39,6 +41,7 @@ DTYPE_FROM_PB_DTYPE = {
     DTYPE_FLOAT64: np.dtype("float64"),
     DTYPE_INT8: np.dtype("int8"),
     DTYPE_INT64: np.dtype("int64"),
+    DTYPE_UINT8: np.dtype("uint8"),
 }
 
 DOUBLE_DTYPES = frozenset(["float32", "float64"])

@@ -217,9 +217,7 @@ class SimpleDQNTraining:
         observation = None
         action = None
         reward = None
-
         total_reward = 0
-
         async for sample in sample_producer_session.all_trial_samples():
             actor_sample = sample.actors_data[player_actor_name]
             if actor_sample.observation is None:

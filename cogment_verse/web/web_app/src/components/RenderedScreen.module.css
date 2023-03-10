@@ -1,6 +1,7 @@
 .container {
   position: relative;
   display: grid;
+  justify-content: center;
 }
 
 .canvas,
@@ -19,4 +20,3 @@
   justify-content: center;
   align-items: center;
 }
-

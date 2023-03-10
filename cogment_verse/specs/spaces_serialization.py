@@ -13,17 +13,17 @@
 # limitations under the License.
 
 import gym
+import gymnasium
 
 from spaces_pb2 import Space, Discrete, Box, Dict  # pylint: disable=import-error
 
 from .ndarray_serialization import deserialize_ndarray, serialize_ndarray, SerializationFormat
 
 
-def serialize_gym_space(gym_space, serilization_format=SerializationFormat.STRUCTURED):
-    if isinstance(gym_space, gym.spaces.Discrete):
+def serialize_gym_space(gym_space, serilization_format=SerializationFormat.NPY):
+    if isinstance(gym_space, (gym.spaces.Discrete, gymnasium.spaces.Discrete)):
         return Space(discrete=Discrete(n=gym_space.n, start=gym_space.start))
-
-    if isinstance(gym_space, gym.spaces.Box):
+    if isinstance(gym_space, (gym.spaces.Box, gymnasium.spaces.Box)):
         low = gym_space.low
         high = gym_space.high
         return Space(
@@ -33,7 +33,7 @@ def serialize_gym_space(gym_space, serilization_format=SerializationFormat.STRUC
             )
         )
 
-    if isinstance(gym_space, gym.spaces.Dict):
+    if isinstance(gym_space, (gym.spaces.Dict, gymnasium.spaces.Dict)):
         spaces = []
         for key, gym_sub_space in gym_space.spaces.items():
             spaces.append(Dict.SubSpace(key=key, space=serialize_gym_space(gym_sub_space)))

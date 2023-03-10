@@ -24,28 +24,13 @@ import supersuit as ss
 from cogment.environment import EnvironmentSession
 
 from cogment_verse.constants import PLAYER_ACTOR_CLASS, WEB_ACTOR_NAME
-from cogment_verse.specs import (
-    EnvironmentSpecs,
-    Observation,
-    SpaceMask,
-    encode_rendered_frame,
-    gym_action_from_action,
-    observation_from_gym_observation,
-    space_from_gym_space,
-)
+from cogment_verse.specs import EnvironmentSpecs
+from cogment_verse.specs.ndarray_serialization import deserialize_ndarray
+from cogment_verse.specs.ndarray_serialization import SerializationFormat
+
 from cogment_verse.utils import import_class
 
 log = logging.getLogger(__name__)
-
-
-def action_mask_from_pz_action_mask(pz_action_mask):
-    return SpaceMask(
-        properties=[
-            SpaceMask.PropertyMask(
-                discrete=[action_idx for action_idx, action in enumerate(pz_action_mask) if action == 1]
-            )
-        ]
-    )
 
 
 def get_pz_player(observation: np.ndarray, actor_names: list) -> Tuple[str, int]:
@@ -117,6 +102,7 @@ class Environment(ABC):
             observation_space=observation_space,
             action_space=action_space,
             turn_based=self.env_type in [PzEnvType.CLASSIC],
+            serilization_format=SerializationFormat.NPY,
         )
 
     def get_implementation_name(self):
@@ -148,7 +134,7 @@ class RlEnvironment(Environment):
         action_space = self.env_specs.get_action_space()
 
         # Reset environment
-        pz_env.reset()
+        pz_env.reset(seed=session_cfg.seed)
         pz_agent_iterator = iter(pz_env.agent_iter())
         pz_observation, _, _, _, _ = pz_env.last()
 
@@ -164,11 +150,18 @@ class RlEnvironment(Environment):
         human_player_name = ""
         if len(web_actor_idx) > 0:
             human_player_name = pz_env.agents[web_actor_idx[0]]
-
         pz_player_name = next(pz_agent_iterator)
         rl_actor_idx = pz_player_names[pz_player_name]
         actor_name = actor_names[rl_actor_idx]
-        # observation_value = observation_from_gym_observation(pz_env.observation_space(pz_player_name), pz_observation)
+
+        # Render the pixel for UI
+        rendered_frame = None
+        if session_cfg.render:
+            if "rgb_array" not in pz_env.metadata["render_modes"]:
+                log.warning(f"Petting Zoo environment [{self.env_class_name}] doesn't support rendering to pixels")
+                return
+            rendered_frame = pz_env.render()
+
         observation = observation_space.create(
             value=pz_observation,
             rendered_frame=rendered_frame,
@@ -177,26 +170,17 @@ class RlEnvironment(Environment):
             step=0,
         )
 
-        # Render the pixel for UI
-        rendered_frame = None
-        if session_cfg.render:
-            if "rgb_array" not in pz_env.metadata["render_modes"]:
-                log.warning(f"Petting Zoo environment [{self.env_class_name}] doesn't support rendering to pixels")
-                return
-            rendered_frame = encode_rendered_frame(pz_env.render(), session_cfg.render_width)
-
         environment_session.start([("*", observation_space.serialize(observation))])
         step = 0
 
         async for event in environment_session.all_events():
             if event.actions:
                 # Action
-                player_action_value = event.actions[rl_actor_idx].action.value
-                action_value = player_action_value
+                action_value = event.actions[rl_actor_idx].action
 
                 # Observation
                 gym_action = action_space.deserialize(action_value)
-                pz_env.step(gym_action)
+                pz_env.step(gym_action.value)
                 pz_observation, pz_reward, done, _, _ = pz_env.last()
 
                 # Actor names
@@ -204,10 +188,6 @@ class RlEnvironment(Environment):
                 rl_actor_idx = pz_player_names[pz_player_name]
                 actor_name = actor_names[rl_actor_idx]
 
-                # Send data
-                # observation_value = observation_from_gym_observation(
-                #     pz_env.observation_space(pz_player_name), pz_observation
-                # )
                 step += 1
                 observation = observation_space.create(
                     value=pz_observation,
@@ -218,7 +198,7 @@ class RlEnvironment(Environment):
                 )
                 rendered_frame = None
                 if session_cfg.render:
-                    rendered_frame = encode_rendered_frame(pz_env.render(), session_cfg.render_width)
+                    rendered_frame = pz_env.render()
 
                 observations = [("*", observation_space.serialize(observation))]
                 # TODO: need to revise the actor name received the reward
@@ -241,7 +221,7 @@ class HumanFeedbackEnvironment(Environment):
         actor_names = [actor.actor_name for actor in actors if actor.actor_class_name == PLAYER_ACTOR_CLASS]
         session_cfg = environment_session.config
 
-        # Initialize environment.
+        # Initialize environment
         if session_cfg.render:
             pz_env = self.env_class.env(render_mode="rgb_array")
         else:
@@ -262,16 +242,6 @@ class HumanFeedbackEnvironment(Environment):
         pz_player_name = next(pz_agent_iterator)
         rl_actor_idx = pz_player_names[pz_player_name]
         actor_name = actor_names[rl_actor_idx]
-        # observation_value = observation_from_gym_observation(pz_env.observation_space(pz_player_name), pz_observation)
-        observation = observation_space.create(
-            value=pz_observation,
-            rendered_frame=rendered_frame,
-            current_player=actor_name,
-            game_player_name=actor_name,
-            feedback_required=True,
-            action=0,
-            step=0,
-        )
 
         # Render the pixel for UI
         rendered_frame = None
@@ -279,8 +249,16 @@ class HumanFeedbackEnvironment(Environment):
             if "rgb_array" not in pz_env.metadata["render_modes"]:
                 log.warning(f"Petting Zoo environment [{self.env_class_name}] doesn't support rendering to pixels")
                 return
-            img = pz_env.render()
-            rendered_frame = encode_rendered_frame(img, session_cfg.render_width)
+            rendered_frame = pz_env.render()
+        observation = observation_space.create(
+            value=pz_observation,
+            rendered_frame=rendered_frame,
+            current_player=actor_name,
+            game_player_name=actor_name,
+            feedback_required=True,
+            action_value=0,
+            step=0,
+        )
 
         environment_session.start([("*", observation_space.serialize(observation))])
 
@@ -291,12 +269,11 @@ class HumanFeedbackEnvironment(Environment):
         async for event in environment_session.all_events():
             if event.actions:
                 # Action
-                player_action_value = event.actions[rl_actor_idx].action.value
-                action_value = player_action_value
+                action_value = event.actions[rl_actor_idx].action
                 if is_rl_agent:
                     # Observation
                     gym_action = action_space.deserialize(action_value)
-                    pz_env.step(gym_action)
+                    pz_env.step(gym_action.value)
                     pz_observation, pz_reward, done, _, _ = pz_env.last()
 
                     # Actor names for evaluator
@@ -304,22 +281,17 @@ class HumanFeedbackEnvironment(Environment):
                     rl_actor_idx = -1
                     actor_name = actor_names[rl_actor_idx]
 
-                    # # Send data
-                    # observation_value = observation_from_gym_observation(
-                    #     pz_env.observation_space(pz_player_name), pz_observation
-                    # )
-
                     # Pixel frame display on UI
                     rendered_frame = None
                     if session_cfg.render:
-                        img = pz_env.render()
-                        rendered_frame = encode_rendered_frame(img, session_cfg.render_width)
+                        rendered_frame = pz_env.render()
                     is_rl_agent = False
                     eval_done = False
                     step += 1
 
                 else:
-                    pz_reward = action_value.properties[0].simple_box.values[0]
+                    pz_reward = deserialize_ndarray(action_value.value)[0]
+                    print(f"feedback: {pz_reward}")
                     pz_player_name = next(pz_agent_iterator)
                     rl_actor_idx = pz_player_names[pz_player_name]
                     actor_name = actor_names[rl_actor_idx]
@@ -332,7 +304,7 @@ class HumanFeedbackEnvironment(Environment):
                     current_player=actor_name,
                     game_player_name=rewarded_actor_name,
                     feedback_required=not is_rl_agent,
-                    action=gym_action,
+                    action_value=gym_action.value,
                     step=step,
                 )
 

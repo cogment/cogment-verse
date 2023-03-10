@@ -17,19 +17,26 @@ import { cogment_verse } from "../data_pb";
 import { useDocumentKeypressListener, usePressedKeys } from "../hooks/usePressedKeys";
 import { useRealTimeUpdate } from "../hooks/useRealTimeUpdate";
 import { createLookup } from "../utils/controlLookup";
-import { TEACHER_ACTOR_CLASS, TEACHER_NOOP_ACTION } from "../utils/constants";
+import { TEACHER_ACTOR_CLASS } from "../utils/constants";
 import { Button } from "../components/Button";
 import { FpsCounter } from "../components/FpsCounter";
 import { KeyboardControlList } from "../components/KeyboardControlList";
+import { serializePlayerAction, TEACHER_NOOP_ACTION, Space } from "../utils/spaceSerialization";
+
+const ACTION_SPACE = new Space({
+  discrete: {
+    n: 6,
+  },
+});
 
 // cf. https://www.gymlibrary.ml/environments/atari/#action-space
 const ATARI_LOOKUP = createLookup();
-ATARI_LOOKUP.setAction([], new cogment_verse.PlayerAction({ value: { properties: [{ discrete: 0 }] } }));
-ATARI_LOOKUP.setAction(["FIRE"], new cogment_verse.PlayerAction({ value: { properties: [{ discrete: 1 }] } }));
-ATARI_LOOKUP.setAction(["UP"], new cogment_verse.PlayerAction({ value: { properties: [{ discrete: 2 }] } }));
-ATARI_LOOKUP.setAction(["DOWN"], new cogment_verse.PlayerAction({ value: { properties: [{ discrete: 3 }] } }));
-ATARI_LOOKUP.setAction(["RIGHT"], new cogment_verse.PlayerAction({ value: { properties: [{ discrete: 4 }] } }));
-ATARI_LOOKUP.setAction(["LEFT"], new cogment_verse.PlayerAction({ value: { properties: [{ discrete: 5 }] } }));
+ATARI_LOOKUP.setAction([], serializePlayerAction(ACTION_SPACE, 0));
+ATARI_LOOKUP.setAction(["FIRE"], serializePlayerAction(ACTION_SPACE, 1));
+ATARI_LOOKUP.setAction(["UP"], serializePlayerAction(ACTION_SPACE, 2));
+ATARI_LOOKUP.setAction(["DOWN"], serializePlayerAction(ACTION_SPACE, 3));
+ATARI_LOOKUP.setAction(["RIGHT"], serializePlayerAction(ACTION_SPACE, 4));
+ATARI_LOOKUP.setAction(["LEFT"], serializePlayerAction(ACTION_SPACE, 5));
 
 export const AtariPongPzEnvironments = ["environments.pettingzoo_atari_adapter.RlEnvironment/pettingzoo.atari.pong_v3"];
 export const AtariPongPzControls = ({ sendAction, fps = 40, actorClass, observation, ...props }) => {

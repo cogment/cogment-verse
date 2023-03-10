@@ -22,6 +22,17 @@ import { KeyboardControlList } from "../components/KeyboardControlList";
 import { Switch } from "../components/Switch"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faThumbsUp, faThumbsDown, faMeh } from "@fortawesome/free-solid-svg-icons";
+import { serializePlayerAction, DType, Space } from "../utils/spaceSerialization";
+
+const ACTION_SPACE = new Space({
+    box: {
+        low: {
+            // Only the dtype and shape of the lower bound are used to serialize the action
+            dtype: DType.DTYPE_FLOAT32,
+            shape: [1],
+        },
+    },
+});
 
 export const AtariPongPzHfbEnvironments = ["environments.pettingzoo_atari_adapter.HumanFeedbackEnvironment/pettingzoo.atari.pong_v3"];
 export const AtariPongPzFeedback = ({ sendAction, fps = 30, actorClass, observation, ...props }) => {
@@ -34,7 +45,7 @@ export const AtariPongPzFeedback = ({ sendAction, fps = 30, actorClass, observat
     const playerName = observation?.gamePlayerName;
     const timeStep = observation?.step;
     const feedbackRequired = observation?.feedbackRequired;
-    const gymAction = observation?.action
+    const gymAction = observation?.actionValue
     const actionList = ['NONE', 'FIRE', "UP", 'DOWN', "FIRE UP", " FIRE DOWN"]
 
 
@@ -73,7 +84,7 @@ export const AtariPongPzFeedback = ({ sendAction, fps = 30, actorClass, observat
 
     if (!humanMode || !humanTurn || timeStep % 3 != 0) {
         // Neural action 
-        const action = new cogment_verse.PlayerAction({ value: { properties: [{ simpleBox: { values: [0.0] } }] } });
+        const action = serializePlayerAction(ACTION_SPACE, [0.0]);
         sendAction(action);
     }
     const sendFeedback = (feedback) => {
@@ -81,13 +92,13 @@ export const AtariPongPzFeedback = ({ sendAction, fps = 30, actorClass, observat
         let action;
         if (feedback == "LIKE") {
             setFeedback(1);
-            action = new cogment_verse.PlayerAction({ value: { properties: [{ simpleBox: { values: [0.0] } }] } });
+            action = serializePlayerAction(ACTION_SPACE, [1.0]);
         } else if (feedback == "DISLIKE") {
             setFeedback(-1);
-            action = new cogment_verse.PlayerAction({ value: { properties: [{ simpleBox: { values: [-1.0] } }] } });
+            action = serializePlayerAction(ACTION_SPACE, [-1.0]);
         } else {
             setFeedback(0);
-            action = new cogment_verse.PlayerAction({ value: { properties: [{ simpleBox: { values: [0.0] } }] } });
+            action = serializePlayerAction(ACTION_SPACE, [0.0]);
         }
         setTimeout(() => { setFeedback(2) }, 150);
         sendAction(action);

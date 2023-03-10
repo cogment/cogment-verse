@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import numpy as np
-from data_pb2 import NDArray  # pylint: disable=import-error
+from data_pb2 import NDArray  # pylint: disable=E0611
 
 
 def deserialize_ndarray(nd_array):
