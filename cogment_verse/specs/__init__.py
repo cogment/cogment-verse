@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 import cog_settings  # pylint: disable=import-error
 from data_pb2 import AgentConfig, EnvironmentConfig  # pylint: disable=import-error
 
