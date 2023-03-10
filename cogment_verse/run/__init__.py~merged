@@ -12,19 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import numpy as np
-from data_pb2 import NDArray  # pylint: disable=E0611
-
-
-def deserialize_ndarray(nd_array):
-    return np.frombuffer(nd_array.data, dtype=nd_array.dtype).reshape(*nd_array.shape)
-
-
-def serialize_ndarray(nd_array):
-    return NDArray(shape=nd_array.shape, dtype=str(nd_array.dtype), data=nd_array.tobytes())
-
-
-def create_one_hot_ndarray(values, size):
-    nd_array = np.zeros(size)
-    nd_array[values] = 1
-    return nd_array
+<<<<<<< HEAD
+from .run_session import RunSession
+=======
+<<<<<<< HEAD:cogment_verse/replay_buffers/__init__.py
+from .torch_replay_buffer import TorchReplayBuffer
+=======
+from .run_session import RunSession
+>>>>>>> Single python entry point & hydra based configuration:cogment_verse/run/__init__.py
+>>>>>>> Single python entry point & hydra based configuration

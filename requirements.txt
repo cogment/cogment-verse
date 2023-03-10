@@ -25,3 +25,8 @@ numpy>=1.21.5,<1.22
 black~=22.3.0
 pylint~=2.14
 pytest~=6.2.5
+pytest-benchmark~=4.0.0
+
+# For Mlflow
+alembic==1.9.3
+SQLAlchemy<2
