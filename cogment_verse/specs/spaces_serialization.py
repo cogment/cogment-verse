@@ -15,7 +15,7 @@
 import gym
 import gymnasium
 import numpy as np
-from spaces_pb2 import Box, Dict, Discrete, MultiBinary, MultiDiscrete, Space  # pylint: disable=import-error
+from spaces_pb2 import Box, Dict, Discrete, MultiBinary, MultiDiscrete, Space  # pylint: disable=E0611
 
 from .ndarray_serialization import SerializationFormat, deserialize_ndarray, serialize_ndarray
 
@@ -33,10 +33,7 @@ def serialize_gym_space(gym_space, serilization_format=SerializationFormat.NPY):
             )
         )
 
-<<<<<<< HEAD
-    if isinstance(gym_space, (gym.spaces.Dict, gymnasium.spaces.Dict)):
-=======
-    if isinstance(gym_space, gym.spaces.MultiBinary):
+    if isinstance(gym_space, (gym.spaces.MultiBinary, gymnasium.spaces.MultiBinary)):
         if isinstance(gym_space.n, np.ndarray):
             size = gym_space.n
         elif isinstance(gym_space.n, int):
@@ -45,14 +42,13 @@ def serialize_gym_space(gym_space, serilization_format=SerializationFormat.NPY):
             size = np.array(gym_space.n, dtype=np.dtype("int8"))
         return Space(multi_binary=MultiBinary(n=serialize_ndarray(size, serilization_format=serilization_format)))
 
-    if isinstance(gym_space, gym.spaces.MultiDiscrete):
+    if isinstance(gym_space, (gym.spaces.MultiDiscrete, gymnasium.spaces.MultiDiscrete)):
         nvec = gym_space.nvec
         return Space(
             multi_discrete=MultiDiscrete(nvec=serialize_ndarray(nvec, serilization_format=serilization_format))
         )
 
-    if isinstance(gym_space, gym.spaces.Dict):
->>>>>>> main
+    if isinstance(gym_space, (gym.spaces.Dict, gymnasium.spaces.Dict)):
         spaces = []
         for key, gym_sub_space in gym_space.spaces.items():
             spaces.append(Dict.SubSpace(key=key, space=serialize_gym_space(gym_sub_space)))
