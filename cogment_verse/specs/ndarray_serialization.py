@@ -17,7 +17,7 @@ import io
 
 import numpy as np
 
-# pylint: disable=E0611
+# pylint: disable=E0401
 from ndarray_pb2 import (
     Array,
     DTYPE_UNKNOWN,
