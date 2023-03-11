@@ -54,8 +54,8 @@ def test_serialize_cartpole_observation_space():
 
     assert pb_space.box.high.shape == [4]
     assert pb_space.box.low.shape == [4]
-    # assert pb_space.box.high.double_data[0] == pytest.approx(4.8)
-    # assert pb_space.box.high.double_data[1] == np.finfo(np.float32).max
+    assert pb_space.box.high.double_data[0] == pytest.approx(4.8)
+    assert pb_space.box.high.double_data[1] == np.finfo(np.float32).max
 
     deserialized_space = deserialize_gym_space(pb_space)
 
@@ -104,12 +104,12 @@ def test_serialize_custom_observation_space():
     assert len(pb_space.dict.spaces[1].space.dict.spaces[1].space.dict.spaces) == 2
 
     assert pb_space.dict.spaces[1].space.dict.spaces[1].space.dict.spaces[0].key == "progress"
-    # assert pb_space.dict.spaces[1].space.dict.spaces[1].space.dict.spaces[0].space.box.low.double_data[
-    #     0
-    # ] == pytest.approx(0.0)
-    # assert pb_space.dict.spaces[1].space.dict.spaces[1].space.dict.spaces[0].space.box.high.double_data[
-    #     0
-    # ] == pytest.approx(100.0)
+    assert pb_space.dict.spaces[1].space.dict.spaces[1].space.dict.spaces[0].space.box.low.double_data[
+        0
+    ] == pytest.approx(0.0)
+    assert pb_space.dict.spaces[1].space.dict.spaces[1].space.dict.spaces[0].space.box.high.double_data[
+        0
+    ] == pytest.approx(100.0)
 
     assert pb_space.dict.spaces[1].space.dict.spaces[1].space.dict.spaces[1].key == "task"
     assert pb_space.dict.spaces[1].space.dict.spaces[1].space.dict.spaces[1].space.discrete.n == 5

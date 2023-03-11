@@ -19,7 +19,7 @@ from spaces_pb2 import Box, Dict, Discrete, MultiBinary, MultiDiscrete, Space  #
 from .ndarray_serialization import SerializationFormat, deserialize_ndarray, serialize_ndarray
 
 
-def serialize_gym_space(gym_space, serilization_format=SerializationFormat.NPY):
+def serialize_gym_space(gym_space, serilization_format=SerializationFormat.STRUCTURED):
     if isinstance(gym_space, (gym.spaces.Discrete, gymnasium.spaces.Discrete)):
         return Space(discrete=Discrete(n=gym_space.n, start=gym_space.start))
     if isinstance(gym_space, (gym.spaces.Box, gymnasium.spaces.Box)):
