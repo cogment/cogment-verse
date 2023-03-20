@@ -6,18 +6,28 @@ defaults:
 run:
   class_name: actors.simple_dqn.SimpleDQNTraining
   seed: 618
-  num_trials: 10000
-  num_parallel_trials: 10
-  learning_starts: ${run.batch_size}
+
+  # Archiving
+  archive_model: True
+  archive_frequency: 20000                    # Unit: steps
+
+  # Training Params
+  num_trials: 10000                           # Unit: trials
+  num_parallel_trials: 10                     # Unit: trials
+  learning_starts: ${run.batch_size}          # Unit: steps
+  target_update_frequency: 2000               # Unit: steps
+  buffer_size: 10000                          # Unit: steps
+  train_frequency: 10                         # Unit: steps
+  model_update_frequency: 10                  # Unit: steps
+
+  # Network Params
+  value_network:
+    num_hidden_nodes: [128, 64]
   learning_rate: 0.000125
   discount_factor: 0.95
-  target_update_frequency: 2000
   batch_size: 64
-  buffer_size: 10000
   epsilon_schedule_start: 1
   epsilon_schedule_end: 0.05
   epsilon_schedule_duration_ratio: 0.75
-  train_frequency: 10
-  model_update_frequency: 10
-  value_network:
-    num_hidden_nodes: [128, 64]
+  
+  

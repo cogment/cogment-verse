@@ -161,6 +161,7 @@ class SimpleDQNActor:
                         SimpleDQNModel, config.model_id, config.model_version
                     )
                     model.network.eval()
+
                 if rng.random() < model.epsilon:
                     action = action_space.sample(mask=observation.action_mask)
                 else:

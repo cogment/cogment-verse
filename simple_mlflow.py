@@ -22,7 +22,11 @@ def main():
     parser.add_argument("port", type=int, default=3000, nargs="?", help="TCP port (optional, default is 3000)")
     args = parser.parse_args()
 
-    mlflow_data_dir = os.path.join(os.path.dirname(__file__), ".cogment_verse/mlflow")
+    work_dir = os.environ.get(
+        "COGMENT_VERSE_WORK_DIR", os.path.abspath(os.path.join(os.path.dirname(__file__), ".cogment_verse"))
+    )
+
+    mlflow_data_dir = os.path.join(work_dir, "mlflow")
     os.makedirs(mlflow_data_dir, exist_ok=True)
     check_call(
         args=[

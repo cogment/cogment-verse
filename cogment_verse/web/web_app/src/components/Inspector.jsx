@@ -58,13 +58,52 @@ const TensorValue = ({ value, shape }) => {
 };
 
 const SpaceValue = ({ value, space, className, ...props }) => (
+  
   <div className={classNames(className, "block font-mono")} {...props}>
     {space.discrete ? (
-      <SingleValue value={value} />
+      <>
+        <h3 className={classNames(className, "font-mono")} {...props}>
+            type: {space.kind}(n={space.discrete.n}, start={space.discrete.start})
+        </h3>
+        value: <SingleValue value={value} />
+      </>
     ) : space.box ? (
-      <TensorValue value={value} shape={space.box.low.shape} />
+      <>
+        <h3 className={classNames(className, "font-mono")} {...props}>
+            type: {space.kind}(low.shape={space.box.low.shape}, high.shape={space.box.high.shape})
+        </h3>
+        value: <TensorValue value={value} shape={space.box.low.shape} />
+      </>
+    ) : space.multiBinary ? (
+      <>
+        <h3 className={classNames(className, "font-mono")} {...props}>
+        type: {space.kind}(n={space.multiBinary.n.int32Data})
+        </h3>
+        value: <TensorValue value={value} shape={space.multiBinary.n.int32Data} />
+      </>
+    ) : space.multiDiscrete ? (
+      <>
+        <h3 className={classNames(className, "font-mono")} {...props}>
+        type: {space.kind}(nvec={space.multiDiscrete.nvec.int32Data})
+        </h3>
+        value: <TensorValue value={value} shape={space.multiDiscrete.nvec.shape} />
+      </>
+    ) : space.dict ? (
+      <div>
+        {
+          space.dict.spaces.map( ({key, space}) => (
+              <>
+                <h3 className={classNames(className, "font-semibold lowercase mt-1")} {...props}>
+                  {key}:
+                </h3>
+                <SpaceValue value={value[key]} space={space} />
+              </>
+          )
+          )
+        }
+      </div>
     ) : (
-      `Unsupported space [${JSON.stringify(space)}]`
+      `Unsupported space [${JSON.stringify(space, null, `\t`)}]`
     )}
   </div>
 );
