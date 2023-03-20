@@ -12,8 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import asyncio
 import abc
+import asyncio
 import copy
 import io
 import logging
@@ -21,33 +21,16 @@ import time
 from urllib.parse import urlparse
 
 import grpc.aio
-from google.protobuf.json_format import MessageToDict
-from cogment.api.model_registry_pb2 import (
-    CreateOrUpdateModelRequest,
-    CreateVersionRequestChunk,
-    ModelInfo,
-    ModelVersionInfo,
-    RetrieveModelsRequest,
-    RetrieveVersionDataRequest,
-    RetrieveVersionInfosRequest,
-)
+from cogment.api.model_registry_pb2 import (CreateOrUpdateModelRequest, CreateVersionRequestChunk, ModelInfo,
+                                            ModelVersionInfo, RetrieveModelsRequest, RetrieveVersionDataRequest,
+                                            RetrieveVersionInfosRequest)
 from cogment.api.model_registry_pb2_grpc import ModelRegistrySPStub
-from prometheus_client import Summary
+from cogment.model_registry import (GRPC_BYTE_SIZE_LIMIT, MODEL_REGISTRY_RETRIEVE_VERSION_TIME,
+                                    MODEL_REGISTRY_STORE_VERSION_TIME)
+from google.protobuf.json_format import MessageToDict
 
 from cogment_verse.services_directory import ServiceType
 from cogment_verse.utils import LRU
-
-
-MODEL_REGISTRY_PUBLISH_VERSION_TIME = Summary(
-    "model_registry_publish_version_seconds",
-    "Time spent serializing and sending the model to the registry",
-    ["model_id"],
-)
-MODEL_REGISTRY_RETRIEVE_VERSION_TIME = Summary(
-    "model_registry_retrieve_version_seconds",
-    "Time spent retrieving and deserializing the agent model version from the registry",
-    ["model_id", "cached"],
-)
 
 log = logging.getLogger(__name__)
 
@@ -180,7 +163,7 @@ class ModelRegistry:
 
                 yield CreateVersionRequestChunk(header=CreateVersionRequestChunk.Header(version_info=version_info))
 
-                chunksize = 2 * 1024 * 1024  # 2MB to keep under well under the GRPC 4MB limit
+                chunksize = GRPC_BYTE_SIZE_LIMIT  # 2MB to keep under well under the GRPC 4MB limit
                 sent_chunk_num = 0
                 while version_data:
                     yield CreateVersionRequestChunk(
@@ -193,7 +176,7 @@ class ModelRegistry:
                 log.error("Error while generating model version chunk", exc_info=error)
                 raise error
 
-        with MODEL_REGISTRY_PUBLISH_VERSION_TIME.labels(model_id=model.model_id).time():
+        with MODEL_REGISTRY_STORE_VERSION_TIME.labels(model_id=model.model_id).time():
             rep = await self._get_grpc_stub().CreateVersion(generate_chunks())
 
         cache_key = self._build_model_version_data_cache_key(rep.version_info.data_hash)
