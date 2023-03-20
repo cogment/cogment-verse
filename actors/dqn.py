@@ -33,6 +33,8 @@ from cogment_verse.constants import PLAYER_ACTOR_CLASS, WEB_ACTOR_NAME, HUMAN_AC
 
 from cogment_verse import Model, TorchReplayBuffer  # pylint: disable=abstract-class-instantiated
 
+torch.manual_seed(0)
+np.random.seed(0)
 torch.multiprocessing.set_sharing_strategy("file_system")
 
 log = logging.getLogger(__name__)
@@ -74,7 +76,6 @@ class MLPNetwork(nn.Module):
 
     def forward(self, x):
         x = x.float()
-        # print("x shape = ", x.shape)
         if len(x.shape) > 1:
             x = torch.flatten(x, start_dim=1)
         return self.network(x)
@@ -160,7 +161,6 @@ class DQNNetwork(nn.Module):
 
     def forward(self, x):
         x = self.base_network(x)
-        # print("in DQN x shape = ", x.shape)
         if len(x.shape) > 1:
             x = x.flatten(start_dim=1)
         return self.output_layer(x)
@@ -186,13 +186,8 @@ class DQNModel(Model):
         self._num_hidden_nodes = list(num_hidden_nodes)
 
         self.epsilon = epsilon
-        # print("num_input = ", num_input)
-        # print("num_hidden_nodes = ", self._num_hidden_nodes)
-        # print("num_output = ", num_output)
         self.base_network = MLPNetwork(num_input, self._num_hidden_nodes)
-        # print("self.base_network = ", self.base_network)
         self.network = DQNNetwork(self.base_network, self._num_hidden_nodes[-1], self._num_output)
-        # print("self.network = ", self.network)
 
         # version user data
         self.num_samples_seen = 0
