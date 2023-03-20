@@ -21,12 +21,21 @@ import time
 from urllib.parse import urlparse
 
 import grpc.aio
-from cogment.api.model_registry_pb2 import (CreateOrUpdateModelRequest, CreateVersionRequestChunk, ModelInfo,
-                                            ModelVersionInfo, RetrieveModelsRequest, RetrieveVersionDataRequest,
-                                            RetrieveVersionInfosRequest)
+from cogment.api.model_registry_pb2 import (
+    CreateOrUpdateModelRequest,
+    CreateVersionRequestChunk,
+    ModelInfo,
+    ModelVersionInfo,
+    RetrieveModelsRequest,
+    RetrieveVersionDataRequest,
+    RetrieveVersionInfosRequest,
+)
 from cogment.api.model_registry_pb2_grpc import ModelRegistrySPStub
-from cogment.model_registry import (GRPC_BYTE_SIZE_LIMIT, MODEL_REGISTRY_RETRIEVE_VERSION_TIME,
-                                    MODEL_REGISTRY_STORE_VERSION_TIME)
+from cogment.model_registry import (
+    GRPC_BYTE_SIZE_LIMIT,
+    MODEL_REGISTRY_RETRIEVE_VERSION_TIME,
+    MODEL_REGISTRY_STORE_VERSION_TIME,
+)
 from google.protobuf.json_format import MessageToDict
 
 from cogment_verse.services_directory import ServiceType
