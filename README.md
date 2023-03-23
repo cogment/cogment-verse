@@ -132,6 +132,9 @@ If you want to use Isaac Gym, use python3.8 (not python3.9)
 
 ## Docker
 
+1. Install Docker 23.0.1
+2. Install docker compose plugin v2.16.0. Docker Compose commands may not work with earlier versions.
+
 To run cogment verse from docker containers:
 
 1. Build the `cogment_verse` service's image. From the project's root, run the command:
@@ -160,13 +163,29 @@ To run cogment verse from docker containers:
    $ docker compose run --service-ports cogment_verse +experiment=simple_bc/mountain_car
    ```
 
-   To specify the orchestrator's web endpoint port, set the environment variables `ORCHESTRATOR_WEB_PORT`
+3.
+   In case the default ports to access the web app, the orchestrator's web endpoint as well as mlflow are not available, you can specify alternates using the following environment variables. The default port values are the following:
+   - `WEB_PORT=8080`
+   - `ORCHESTRATOR_WEB_PORT=9000`
+   - `MLFLOW_PORT=3000`
+
+   For example, to use a different port for the web app and mlflow, use the command:
 
    ```console
-   $ ORCHESTRATOR_WEB_PORT=9000 docker compose run --service-ports cogment_verse
+   $ WEB_PORT=8081 MLFLOW_PORT=5000 docker compose run --service-ports cogment_verse
    ```
 
-3. Open Chrome (other web browser might work but haven't tested) and navigate to http://localhost:8080
+4. Open Chrome (other web browser might work but haven't tested) and navigate to http://localhost:8080
+
+### Docker on Remote Instance
+To run the docker version on a remote instance, make sure that the default ports are available. See the section above to pass a different combination of ports. Additionally, in order to connect to the remotly hosted web app from your browser, you must pass the public address of the host instance through the `WEB_HOST` environment variable.
+
+For example, from the remote instance, run the command:
+```console
+$ WEB_HOST=[public ip address] docker compose run --service-ports cogment_verse
+```
+
+Open Chrome (other web browser might work but haven't tested) and navigate to http://[public ip address]:8080
 
 ### Troubleshooting
 
