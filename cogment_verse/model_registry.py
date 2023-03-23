@@ -25,26 +25,13 @@ from urllib.parse import urlparse
 
 import cogment.api.model_registry_pb2 as model_registry_api
 import grpc.aio
+from cogment.api.model_registry_pb2 import ModelInfo
 from cogment.api.model_registry_pb2_grpc import ModelRegistrySPStub
-from cogment.errors import CogmentError
-from cogment.utils import logger
-from prometheus_client import Summary
+from cogment.model_registry import (GRPC_BYTE_SIZE_LIMIT, MODEL_REGISTRY_RETRIEVE_VERSION_TIME,
+                                    MODEL_REGISTRY_STORE_VERSION_TIME)
 
 from cogment_verse.services_directory import ServiceType
 from cogment_verse.utils import LRU
-
-# MODEL_REGISTRY_PUBLISH_VERSION_TIME = Summary(
-#     "model_registry_publish_version_seconds",
-#     "Time spent serializing and sending the model to the registry",
-#     ["model_id"],
-# )
-# MODEL_REGISTRY_RETRIEVE_VERSION_TIME = Summary(
-#     "model_registry_retrieve_version_seconds",
-#     "Time spent retrieving and deserializing the agent model version from the registry",
-#     ["model_id", "cached"],
-# )
-
-GRPC_BYTE_SIZE_LIMIT = 4 * 1024 * 1024
 
 log = logging.getLogger(__name__)
 
@@ -141,18 +128,11 @@ class ModelRegistry:
         registry_model_info = model_registry_api.ModelInfo(model_id=model.id, user_data=model_user_data_str)
         cached_model_info = ModelInfo(model.id, model_user_data_str)
 
-        print(f"INITIAL MODEL INFO: {cached_model_info}")
-
         req = model_registry_api.CreateOrUpdateModelRequest(model_info=registry_model_info)
         await self._get_grpc_stub().CreateOrUpdateModel(req)
 
         self._info_cache[model.id] = cached_model_info
-
         version_info = await self.store_version(model)
-        print(f"INITIAL VERSION INFO (store_version): {version_info}")
-        print(f"info_cache size: {len(self._info_cache)}")
-        print(f"data_cache size: {len(self._data_cache)}")
-
         return version_info
 
     async def retrieve_model_info(self, model_id: str) -> Optional[ModelInfo]:
@@ -169,7 +149,7 @@ class ModelRegistry:
             try:
                 rep = await self._get_grpc_stub().RetrieveModels(req)
             except Exception:
-                logger.error(f"Error retrieving model version with id [{model_id}]")
+                log.error(f"Error retrieving model version with id [{model_id}]")
                 return None
 
             registry_model_info = rep.model_infos[0]
@@ -214,10 +194,11 @@ class ModelRegistry:
                     yield model_registry_api.CreateVersionRequestChunk(body=chunk_body)
 
             except Exception as error:
-                raise CogmentError(f"Failure while generating model version chunk [{error}]")
+                log.error("Error while generating model version chunk", exc_info=error)
+                raise error
 
-        # with MODEL_REGISTRY_PUBLISH_VERSION_TIME.labels(model_id=model.id).time():
-        rep = await self._get_grpc_stub().CreateVersion(generate_chunks())
+        with MODEL_REGISTRY_STORE_VERSION_TIME.labels(model_id=model.id).time():
+            rep = await self._get_grpc_stub().CreateVersion(generate_chunks())
 
         self._data_cache[rep.version_info.data_hash] = copy.deepcopy(model)
 
@@ -242,7 +223,7 @@ class ModelRegistry:
             try:
                 rep = await self._get_grpc_stub().RetrieveVersionInfos(req)
             except Exception:
-                logger.error(
+                log.error(
                     f"Failed to retrieve model version with id [{model_id}] and version number [{version_number}]"
                 )
                 return None
@@ -269,14 +250,12 @@ class ModelRegistry:
             async for chunk in self._get_grpc_stub().RetrieveVersionData(req):
                 data += chunk.data_chunk
 
-            print(f"LENGTH DATA: {len(data)}")
-
             model = model_cls.load(
                 model_id, version_number, model_info.user_data, version_info.user_data, io.BytesIO(data)
             )
             assert model.id == model_id
             self._data_cache[version_info.data_hash] = model
 
-        # MODEL_REGISTRY_RETRIEVE_VERSION_TIME.labels(model_id=model_id, cached=cached).observe(time.time() - start_time)
+        MODEL_REGISTRY_RETRIEVE_VERSION_TIME.labels(model_id=model_id, cached=cached).observe(time.time() - start_time)
 
         return model

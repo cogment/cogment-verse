@@ -45,8 +45,8 @@ def run_main(
         if hasattr(run_cls, "default_cfg"):
             _run_cfg = OmegaConf.merge(run_cls.default_cfg, _run_cfg)
 
-        registered_enviroment_impl_names = services_directory.get_service_names(ServiceType.ENVIRONMENT)
-        enviroment_impl_name = _run_cfg.get("environment", registered_enviroment_impl_names[0])
+        registered_environment_impl_names = services_directory.get_service_names(ServiceType.ENVIRONMENT)
+        enviroment_impl_name = _run_cfg.get("environment", registered_environment_impl_names[0])
 
         try:
             environment_specs = EnvironmentSpecs.load(work_dir, enviroment_impl_name)

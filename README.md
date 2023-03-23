@@ -129,3 +129,49 @@ If you want to use Isaac Gym, use python3.8 (not python3.9)
 - Multi-Teacher Curriculum Design for Sparse Reward Environments [code](https://github.com/kharyal/cogment-verse/)
 
 (please open a pull request to add missing entries)
+
+## Docker
+
+To run cogment verse from docker containers:
+
+1. Build the `cogment_verse` service's image. From the project's root, run the command:
+
+   ```console
+   $ docker compose build
+   ```
+
+   By default, the base image will be `python:3.9`. Pass the BASE_IMAGE build argument to modify it.
+
+   ```console
+   $ docker compose build --build-arg BASE_IMAGE=python:3.9
+   ```
+
+2. Launch the container services using docker compose using the command:
+
+   ```console
+   $ docker compose run --service-ports cogment_verse [ARGS...]
+   ```
+
+   This is equivalent to running `python -m main` locally.
+
+   The same way it is done locally, you can add specific config arguments for hydra. Example:
+
+   ```console
+   $ docker compose run --service-ports cogment_verse +experiment=simple_bc/mountain_car
+   ```
+
+   To specify the orchestrator's web endpoint port, set the environment variables `ORCHESTRATOR_WEB_PORT`
+
+   ```console
+   $ ORCHESTRATOR_WEB_PORT=9000 docker compose run --service-ports cogment_verse
+   ```
+
+3. Open Chrome (other web browser might work but haven't tested) and navigate to http://localhost:8080
+
+### Troubleshooting
+
+On M1/M2 Macs you'll need to force Docker to use the `linux/amd64` platform as a few dependencies are not availabe for `linux/arm64`. The environment variable `DOCKER_DEFAULT_PLATFORM` needs to be set to `linux/amd64`, e.g:
+
+```console
+$ DOCKER_DEFAULT_PLATFORM=linux/amd64 docker compose build
+```
