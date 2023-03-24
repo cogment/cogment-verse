@@ -769,8 +769,6 @@ class HillPPOTraining(BasePPOTraining):
 
                 episode_rewards.append(torch.vstack(trial_reward).sum())
                 episode_lens.append(torch.tensor(len(trial_action), dtype=torch.float32))
-
-                # Publish the newly trained version every 100 steps
                 if len(actions) >= self._cfg.num_steps * self._cfg.epoch_num_trials + 1:
                     num_updates += 1
                     # Update model parameters
@@ -999,8 +997,6 @@ class HumanFeedbackPPOTraining(BasePPOTraining):
 
                 episode_rewards.append(torch.tensor(len(trial_action), dtype=torch.float32))
                 episode_lens.append(torch.tensor(len(trial_action), dtype=torch.float32))
-
-                # Publish the newly trained version every 100 steps
                 if len(actions) >= self._cfg.num_steps * self._cfg.epoch_num_trials + 1:
                     num_updates += 1
                     # Update model parameters
