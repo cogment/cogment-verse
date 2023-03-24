@@ -14,8 +14,8 @@
 
 import os
 
-from .cogment_cli_process import CogmentCliProcess
 from ..services_directory import ServiceType
+from .cogment_cli_process import CogmentCliProcess
 
 
 def create_model_registry_service(work_dir, model_registry_cfg, services_directory):

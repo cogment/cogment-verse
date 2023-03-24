@@ -23,11 +23,9 @@ import numpy as np
 import supersuit as ss
 from cogment.environment import EnvironmentSession
 
-from cogment_verse.constants import PLAYER_ACTOR_CLASS, WEB_ACTOR_NAME, TEACHER_ACTOR_CLASS
+from cogment_verse.constants import PLAYER_ACTOR_CLASS, TEACHER_ACTOR_CLASS, WEB_ACTOR_NAME
 from cogment_verse.specs import EnvironmentSpecs
-from cogment_verse.specs.ndarray_serialization import deserialize_ndarray
-from cogment_verse.specs.ndarray_serialization import SerializationFormat
-
+from cogment_verse.specs.ndarray_serialization import SerializationFormat, deserialize_ndarray
 from cogment_verse.utils import import_class
 
 log = logging.getLogger(__name__)

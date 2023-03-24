@@ -18,8 +18,8 @@ import pytest
 from gym.spaces import Box, Dict, Discrete, MultiBinary, MultiDiscrete
 from pettingzoo.classic import connect_four_v3
 
-from cogment_verse.specs.spaces_serialization import deserialize_gym_space, serialize_gym_space
 from cogment_verse.specs.ndarray_serialization import SerializationFormat
+from cogment_verse.specs.spaces_serialization import deserialize_gym_space, serialize_gym_space
 
 # pylint: disable=no-member
 

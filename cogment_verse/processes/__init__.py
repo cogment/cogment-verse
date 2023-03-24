@@ -12,11 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .cogment_verse_process import CogmentVerseProcess
-from .orchestrator import create_orchestrator_service
-from .environment import create_environment_service
 from .actor import create_actor_service
+from .cogment_verse_process import CogmentVerseProcess
+from .environment import create_environment_service
+from .model_registry import create_model_registry_service
+from .orchestrator import create_orchestrator_service
 from .run import create_run_process
 from .trial_datastore import create_trial_datastore_service
-from .model_registry import create_model_registry_service
 from .web import create_web_service

@@ -19,19 +19,13 @@ from typing import List, Tuple, Union
 import cogment
 import numpy as np
 import torch
-from torch.distributions.normal import Normal
 from gym.spaces import Box, utils
+from torch.distributions.normal import Normal
 
 from cogment_verse import Model
 from cogment_verse.run.run_session import RunSession
 from cogment_verse.run.sample_producer_worker import SampleProducerSession
-from cogment_verse.specs import (
-    AgentConfig,
-    cog_settings,
-    EnvironmentConfig,
-    EnvironmentSpecs,
-    PLAYER_ACTOR_CLASS,
-)
+from cogment_verse.specs import PLAYER_ACTOR_CLASS, AgentConfig, EnvironmentConfig, EnvironmentSpecs, cog_settings
 
 torch.multiprocessing.set_sharing_strategy("file_system")
 

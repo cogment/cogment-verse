@@ -12,8 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .cogment_verse_process import CogmentVerseProcess
 from ..utils.generate import generate
+from .cogment_verse_process import CogmentVerseProcess
 
 
 class CogmentPySdkProcess(CogmentVerseProcess):

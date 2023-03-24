@@ -12,12 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from gym.spaces import utils, Dict
-
 from data_pb2 import Observation as PbObservation  # pylint: disable=import-error
+from gym.spaces import Dict, utils
 
 from .encode_rendered_frame import encode_rendered_frame
-from .ndarray_serialization import serialize_ndarray, deserialize_ndarray
+from .ndarray_serialization import deserialize_ndarray, serialize_ndarray
+
 
 # pylint: disable=attribute-defined-outside-init
 class Observation:

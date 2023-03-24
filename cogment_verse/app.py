@@ -15,9 +15,11 @@
 import logging
 import os
 
-from omegaconf import OmegaConf
 from names_generator import generate_name
+from omegaconf import OmegaConf
 
+from .constants import HUMAN_ACTOR_IMPL
+from .model_registry import ModelRegistry
 from .processes import (
     create_actor_service,
     create_environment_service,
@@ -28,8 +30,6 @@ from .processes import (
     create_web_service,
 )
 from .services_directory import ServiceDirectory, ServiceType
-from .model_registry import ModelRegistry
-from .constants import HUMAN_ACTOR_IMPL
 from .utils.find_free_port import find_free_port
 
 log = logging.getLogger(__name__)

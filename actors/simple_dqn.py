@@ -14,22 +14,20 @@
 
 # pylint: disable=E0611
 
-import logging
 import copy
-import time
 import json
+import logging
 import math
-import numpy as np
+import time
 
 import cogment
+import numpy as np
 import torch
 from gym.spaces import Discrete, utils
 
-from cogment_verse.specs import AgentConfig, cog_settings, EnvironmentConfig, EnvironmentSpecs
-
-from cogment_verse.constants import PLAYER_ACTOR_CLASS, WEB_ACTOR_NAME, HUMAN_ACTOR_IMPL
-
 from cogment_verse import Model, TorchReplayBuffer  # pylint: disable=abstract-class-instantiated
+from cogment_verse.constants import HUMAN_ACTOR_IMPL, PLAYER_ACTOR_CLASS, WEB_ACTOR_NAME
+from cogment_verse.specs import AgentConfig, EnvironmentConfig, EnvironmentSpecs, cog_settings
 
 torch.multiprocessing.set_sharing_strategy("file_system")
 

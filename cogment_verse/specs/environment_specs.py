@@ -14,17 +14,15 @@
 
 import os
 
-from google.protobuf.json_format import MessageToDict, ParseDict
 import yaml
-
 from data_pb2 import EnvironmentSpecs as PbEnvironmentSpecs  # pylint: disable=import-error
-
-from .spaces_serialization import serialize_gym_space, deserialize_gym_space
-from .observation_space import ObservationSpace
-from .action_space import ActionSpace
+from google.protobuf.json_format import MessageToDict, ParseDict
 
 from ..constants import PLAYER_ACTOR_CLASS
+from .action_space import ActionSpace
 from .ndarray_serialization import SerializationFormat
+from .observation_space import ObservationSpace
+from .spaces_serialization import deserialize_gym_space, serialize_gym_space
 
 
 class EnvironmentSpecs:

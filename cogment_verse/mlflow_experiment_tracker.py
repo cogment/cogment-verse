@@ -18,11 +18,10 @@ import numbers
 
 from google.protobuf.json_format import MessageToDict
 from google.protobuf.message import Message
-from prometheus_client import Counter, Summary
-from omegaconf import OmegaConf
-
 from mlflow.entities import Metric, Param, RunStatus
 from mlflow.tracking import MlflowClient
+from omegaconf import OmegaConf
+from prometheus_client import Counter, Summary
 
 # from mlflow.utils.mlflow_tags import MLFLOW_RUN_NAME
 

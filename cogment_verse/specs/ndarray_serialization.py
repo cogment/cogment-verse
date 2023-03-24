@@ -12,21 +12,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from enum import Enum
 import io
+from enum import Enum
 
 import numpy as np
 
 # pylint: disable=import-error
 from ndarray_pb2 import (
-    Array,
-    DTYPE_UNKNOWN,
     DTYPE_FLOAT32,
     DTYPE_FLOAT64,
     DTYPE_INT8,
     DTYPE_INT32,
     DTYPE_INT64,
     DTYPE_UINT8,
+    DTYPE_UNKNOWN,
+    Array,
 )
 
 PB_DTYPE_FROM_DTYPE = {
