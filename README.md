@@ -49,17 +49,17 @@ Cogment verse includes environments from:
    - `python3-opencv`, which is required on ubuntu systems, it can be installed using `apt-get install python3-opencv`
 
 4. Create and activate a virtual environment
-   ```console
+   ```sh
    python -m venv .venv
    source .venv/bin/activate
    ```
 
-5. Install the python dependencies. For petting zoo's Atari games, [additional installation](/docs/development_setup.md#petting-zoo-atari-games) are required after this step
-   ```console
+5. Install the python dependencies. For petting zoo's Atari games, [additional installation](/docs/development_setup.md#petting-zoo-atari-games) is required after this step
+   ```sh
    pip install -r requirements.txt
    ```
 6. In another terminal, launch a mlflow server on port 3000
-   ```console
+   ```sh
    source .venv/bin/activate
    python -m simple_mlflow
    ```
@@ -78,35 +78,35 @@ The configuration files are located in the `config` directory, with defaults def
 Here are a few examples:
 
 - Launch a Simple Behavior Cloning run with the [Mountain Car Gym environment](https://www.gymlibrary.ml/environments/classic_control/mountain_car/) (which is the default environment)
-  ```console
-  $ python -m main +experiment=simple_bc/mountain_car
+  ```sh
+  python -m main +experiment=simple_bc/mountain_car
   ```
 - Launch a Simple Behavior Cloning run with the [Lunar Lander Gym environment](https://www.gymlibrary.ml/environments/box2d/lunar_lander/)
-  ```console
-  $ python -m main +experiment=simple_bc/mountain_car services/environment=lunar_lander
+  ```sh
+  python -m main +experiment=simple_bc/mountain_car services/environment=lunar_lander
   ```
 - Launch and play a single trial of the Lunar Lander Gym environment with continuous controls
-  ```console
-  $ python -m main services/environment=lunar_lander_continuous
+  ```sh
+  python -m main services/environment=lunar_lander_continuous
   ```
 - Launch an A2C training run with the [Cartpole Gym environment](https://www.gymlibrary.ml/environments/classic_control/cartpole/)
 
-  ```console
-  $ python -m main +experiment=simple_a2c/cartpole
+  ```sh
+  python -m main +experiment=simple_a2c/cartpole
   ```
 
   This one is completely _headless_ (training doens't involve interaction with a human player). It will take a little while to run, you can monitor the progress using mlflow at <http://localhost:3000>
 
 - Launch an DQN self training run with the [Connect Four Petting Zoo environment](https://www.pettingzoo.ml/classic/connect_four)
 
-  ```console
-  $ python -m main +experiment=simple_dqn/connect_four
+  ```sh
+  python -m main +experiment=simple_dqn/connect_four
   ```
 
   The same experiment can be launched with a ratio of human-in-the-loop training trials (that are playable on in the web client)
 
-  ```console
-  $ python -m main +experiment=simple_dqn/connect_four +run.hill_training_trials_ratio=0.05
+  ```sh
+  python -m main +experiment=simple_dqn/connect_four +run.hill_training_trials_ratio=0.05
   ```
 - Petting Zoo's  [Atari Pong Environment](https://pettingzoo.farama.org/environments/atari/pong/)
 
