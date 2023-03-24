@@ -1,4 +1,4 @@
-cogment[generate]==2.2.2
+cogment[generate]==2.7.0
 grpcio==1.43.0
 hydra-core==1.2.0
 mlflow==1.30.0
