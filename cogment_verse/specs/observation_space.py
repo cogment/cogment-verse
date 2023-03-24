@@ -54,7 +54,6 @@ class Observation:
         game_player_name=None,
         feedback_required=None,
         action_value=None,
-        step=None,
     ):
         """
         Observation constructor.
@@ -73,7 +72,6 @@ class Observation:
             assert game_player_name is None
             assert feedback_required is None
             assert action_value is None
-            assert step is None
             self._pb_observation = pb_observation
             return
 
@@ -87,7 +85,6 @@ class Observation:
             game_player_name=game_player_name,
             feedback_required=feedback_required,
             action_value=action_value,
-            step=step,
         )
 
     def _compute_flat_value(self):
@@ -183,13 +180,6 @@ class Observation:
 
         return self._pb_observation.action_value
 
-    @property
-    def step(self):
-        if not self._pb_observation.HasField("step"):
-            return None
-
-        return self._pb_observation.step
-
 
 class ObservationSpace:
     """
@@ -234,7 +224,6 @@ class ObservationSpace:
         game_player_name=None,
         feedback_required=None,
         action_value=None,
-        step=None,
     ):
         """
         Create an Observation
@@ -250,7 +239,6 @@ class ObservationSpace:
             game_player_name=game_player_name,
             feedback_required=feedback_required,
             action_value=action_value,
-            step=step,
         )
 
     def serialize(
@@ -281,7 +269,6 @@ class ObservationSpace:
             game_player_name=observation.game_player_name,
             feedback_required=observation.feedback_required,
             action_value=observation.action_value,
-            step=observation.step,
         )
 
     def deserialize(self, pb_observation):

@@ -48,21 +48,20 @@ Cogment verse includes environments from:
    - `swig`, which is required for the Box2d gym environments, it can be installed using `apt-get install swig` on ubuntu or `brew install swig` on macOS
    - `python3-opencv`, which is required on ubuntu systems, it can be installed using `apt-get install python3-opencv`
 
-4. Create and activate a virtual environment by runnning
-
+4. Create and activate a virtual environment
    ```console
-   $ python -m venv .venv
-   $ source .venv/bin/activate
+   python -m venv .venv
+   source .venv/bin/activate
    ```
 
-5. Install the python dependencies by running
+5. Install the python dependencies. For petting zoo's Atari games, [additional installation](/docs/development_setup.md#petting-zoo-atari-games) are required after this step
    ```console
-   $ pip install -r requirements.txt
+   pip install -r requirements.txt
    ```
-6. In another terminal, launch a mlflow server on port 3000 by running
+6. In another terminal, launch a mlflow server on port 3000
    ```console
-   $ source .venv/bin/activate
-   $ python -m simple_mlflow
+   source .venv/bin/activate
+   python -m simple_mlflow
    ```
 7. Start the default Cogment Verse run using `python -m main`
 8. Open Chrome (other web browser might work but haven't tested) and navigate to http://localhost:8080/
@@ -109,6 +108,21 @@ Here are a few examples:
   ```console
   $ python -m main +experiment=simple_dqn/connect_four +run.hill_training_trials_ratio=0.05
   ```
+- Petting Zoo's  [Atari Pong Environment](https://pettingzoo.farama.org/environments/atari/pong/)
+
+  Example #1: Self-training
+  ```sh
+  python -m main +experiment=ppo_atari_pz/pong_pz
+  ```
+  Example #2: Training with human's demonstrations
+  ```sh
+  python -m main +experiment=ppo_atari_pz/hill_pong_pz
+  ```
+  Example #3: Training with human's feedback
+  ```sh
+  python -m main +experiment=ppo_atari_pz/hfb_pong_pz
+  ```
+  NOTE: Example 2&3 require users to open Chrome and navigate to http://localhost:8080 in order to provide either demonstrations or feedback.
 
 ## Isaac gym
 
@@ -122,54 +136,6 @@ If you want to use Isaac Gym, use python3.8 (not python3.9)
 4. (Assuming you already installed requirements.txt), run `pip install -r isaac_requirements.txt`.
 5. nvidia-smi` to check that you have NVIDIA drivers and proper cuda installations.
 6. (Assuming you already have mlflow running in a different terminal), Run `python -m main services/environment=ant`
-
-## Petting Zoo
-### Installation
-  1. Clone this repository
-      ```sh
-      git clone https://github.com/cogment/cogment-verse.git
-      ```
-  2. Create and activate the virtual python environment
-      ```sh
-      python -m venv .venv
-      source .venv/bin/activate
-      ```
-  3. This step is only required for Apple silicon-based computers (e.g., M1&2 chips). Clone [Multi-Agent-ALE](https://github.com/Farama-Foundation/Multi-Agent-ALE) repository
-      ```sh
-      git clone https://github.com/Farama-Foundation/Multi-Agent-ALE.git
-      cd Multi-Agent-ALE
-      pip install .
-      ```
-
-  4. Install requirements
-      ```sh
-      pip install -r requirements.txt
-      ```
-  5. Activate [AutoROM](https://github.com/Farama-Foundation/AutoROM) license relating to Atari games
-      ```sh
-      AutoROM --accept-license
-      ```
-
-### Examples on [Atari Pong](https://pettingzoo.farama.org/environments/atari/pong/)
-  1. Run mlflow on the terminal
-      ```sh
-      python -m simple_mlflow
-      ```
-  2. Run one of these examples on a separate terminal
-      * Example #1: Self-training
-        ```sh
-        python -m main +experiment=ppo_atari_pz/pong_pz
-        ```
-      * Example #2: Training with human's demonstrations
-        ```sh
-        python -m main +experiment=ppo_atari_pz/hill_pong_pz
-        ```
-      * Example #3: Training with human's feedback
-        ```sh
-        python -m main +experiment=ppo_atari_pz/hfb_pong_pz
-        ```
-  *NOTE: Example 2&3 require users to open Chrome and navigate to http://localhost:8080 in order to provide either demonstrations or feedback.
-  
 
 ## List of publications and submissions using Cogment and/or Cogment Verse
 

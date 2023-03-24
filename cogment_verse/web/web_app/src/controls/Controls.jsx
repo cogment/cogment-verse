@@ -41,7 +41,7 @@ const CONTROLS = [
   { environments: AtariPongPzHfbEnvironments, component: AtariPongPzFeedback },
 ];
 
-export const Controls = ({ environment, actorClass, sendAction, fps, turnBased, observation }) => {
+export const Controls = ({ environment, actorClass, sendAction, fps, turnBased, observation, tickId }) => {
   const ControlsComponent = useMemo(() => {
     if (OBSERVER_ACTOR_CLASS === actorClass) {
       if (turnBased) {
@@ -66,6 +66,7 @@ export const Controls = ({ environment, actorClass, sendAction, fps, turnBased, 
       actorClass={actorClass}
       environment={environment}
       observation={observation}
+      tickId={tickId}
     />
   );
 };

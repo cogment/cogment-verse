@@ -81,6 +81,7 @@ const Play = () => {
             sendAction={sendAction}
             turnBased={turnBased}
             observation={event.observation}
+            tickId={event.tickId}
           />
         ) : null}
       </div>

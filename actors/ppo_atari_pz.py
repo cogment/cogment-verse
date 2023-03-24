@@ -41,12 +41,11 @@ torch.multiprocessing.set_sharing_strategy("file_system")
 
 log = logging.getLogger(__name__)
 
-# pylint: disable=E1102
-# pylint: disable=W0212
-# pylint: disable=W0223
-# pylint: disable=W0613
-# pylint: disable=W0612
-# pylint: disable=C0302
+# pylint: disable=protected-access
+# pylint: disable=abstract-method
+# pylint: disable=unused-argument
+# pylint: disable=unused-variable
+# pylint: disable=too-many-lines
 def initialize_layer(layer: torch.nn.Module, std: float = np.sqrt(2), bias_const: float = 0.0):
     """Layer initialization"""
     torch.nn.init.orthogonal_(layer.weight, std)
@@ -102,7 +101,6 @@ class PPOModel(Model):
         num_actions: int,
         input_shape: tuple,
         num_policy_outputs: int,
-        learning_rate: float = 0.01,
         n_iter: int = 1000,
         dtype=torch.float32,
         device: str = "cpu",
@@ -119,12 +117,6 @@ class PPOModel(Model):
         self._n_iter = n_iter
         self.network = PolicyValueNetwork(num_actions=self._num_actions).to(self._dtype)
         self.network.to(torch.device(self.device))
-
-        # Get optimizer for two models
-        self.network_optimizer = torch.optim.Adam(self.network.parameters(), lr=learning_rate, eps=1e-5)
-        # lambda1 = lambda epoch: 0.98 ** epoch
-        # self.scheduler = torch.optim.lr_scheduler.LambdaLR(self.network_optimizer, lr_lambda=lambda1)
-        self.scheduler = torch.optim.lr_scheduler.StepLR(self.network_optimizer, step_size=1000, gamma=0.1)
 
         # version user data
         self.iter_idx = 0
@@ -195,7 +187,7 @@ class PPOActor:
         model, _, version_info = await actor_session.model_registry.retrieve_version(
             PPOModel, config.model_id, config.model_version
         )
-        # log.info(f"Actor - retreved model number: {version_info['version_number']}")
+        log.info(f"Actor - retreved model number: {version_info['version_number']}")
         obs_shape = model.input_shape[::-1]
 
         async for event in actor_session.all_events():
@@ -217,13 +209,9 @@ class PPOActor:
                     action = dist.sample().cpu().numpy()[0]
 
                 # Send action to environment
-                if isinstance(action_space.gym_space, Discrete):
-                    action_value = action_space.create(value=action)
-                    actor_session.do_action(action_space.serialize(action_value))
-                else:
-                    # TODO: to be tested with continuous actions
-                    action_value = action_space.create(value=action)
-                    actor_session.do_action(action_space.serialize(action_value))
+                assert isinstance(action_space.gym_space, Discrete)  # TODO: test with other action space types
+                action_value = action_space.create(value=action)
+                actor_session.do_action(action_space.serialize(action_value))
 
 
 class BasePPOTraining(ABC):
@@ -242,7 +230,7 @@ class BasePPOTraining(ABC):
         "clipping_coef": 0.1,
         "learning_rate": 3e-4,
         "batch_size": 64,
-        "num_steps": 2048,
+        "num_steps": -1,  # End of trial
         "lambda_gae": 0.95,
         "device": "cpu",
         "grad_norm": 0.5,
@@ -258,21 +246,69 @@ class BasePPOTraining(ABC):
         self._cfg = cfg
         self._device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.returns = 0
+
+        # Set random seed
+        torch.manual_seed(self._cfg.seed)
+        np.random.default_rng(self._cfg.seed)
         self.model = PPOModel(
             model_id="",
             environment_implementation=self._environment_specs.implementation,
             num_actions=utils.flatdim(self._environment_specs.get_action_space().gym_space),
             input_shape=tuple(self._cfg.image_size),
             num_policy_outputs=1,
-            learning_rate=self._cfg.learning_rate,
             n_iter=self._cfg.num_epochs,
             device=self._cfg.device,
             dtype=self._dtype,
         )
 
-    @abstractmethod
+        # Get optimizer for two models
+        self.network_optimizer = torch.optim.Adam(self.model.network.parameters(), lr=self._cfg.learning_rate, eps=1e-5)
+        self.scheduler = torch.optim.lr_scheduler.StepLR(self.network_optimizer, step_size=1000, gamma=0.1)
+
     async def trial_sample_sequences_producer_impl(self, sample_producer_session: SampleProducerSession):
-        raise NotImplementedError
+        """Collect sample from the trial"""
+        observation = []
+        action = []
+        reward = []
+        done = []
+        current_players = []
+
+        actor_params = {
+            actor_params.name: actor_params
+            for actor_params in sample_producer_session.trial_info.parameters.actors
+            if actor_params.class_name == PLAYER_ACTOR_CLASS
+        }
+        actor_names = list(actor_params.keys())
+        player_environment_specs = EnvironmentSpecs.deserialize(actor_params[actor_names[0]].config.environment_specs)
+        player_observation_space = player_environment_specs.get_observation_space()
+        player_action_space = player_environment_specs.get_action_space()
+        obs_shape = tuple(self._cfg.image_size)[::-1]
+        player_actor_name = actor_names[0]
+
+        async for sample in sample_producer_session.all_trial_samples():
+            previous_actor_sample = sample.actors_data[player_actor_name]
+            player_actor_name = previous_actor_sample.observation.current_player
+            actor_sample = sample.actors_data[player_actor_name]
+            obs_flat = player_observation_space.deserialize(actor_sample.observation).flat_value
+            observation_value = torch.unsqueeze(
+                torch.permute(torch.tensor(obs_flat, dtype=self._dtype).reshape(obs_shape), (2, 0, 1)), dim=0
+            )
+            observation.append(observation_value)
+            if sample.trial_state == cogment.TrialState.ENDED:
+                done.append(torch.ones(1, dtype=self._dtype))
+                break
+
+            action_value = torch.tensor(player_action_space.deserialize(actor_sample.action).value, dtype=self._dtype)
+            reward_value = torch.tensor(
+                actor_sample.reward if actor_sample.reward is not None else 0, dtype=self._dtype
+            )
+            action.append(action_value)
+            reward.append(reward_value)
+            done.append(torch.zeros(1, dtype=self._dtype))
+            current_players.append(player_actor_name)
+
+        # Keeping the samples grouped by trial by emitting only one grouped sample at the end of the trial
+        sample_producer_session.produce_sample((observation, action, reward, done, current_players))
 
     @abstractmethod
     async def impl(self, run_session: RunSession) -> dict:
@@ -286,39 +322,42 @@ class BasePPOTraining(ABC):
         dones: List[torch.Tensor],
     ):
         """Train the model after collecting the data from the trial"""
-
         # Take n steps from the rollout
-        observations = torch.vstack(observations).to(self._device)
-        actions = torch.vstack(actions).to(self._device)
-        rewards = torch.vstack(rewards).to(self._device)
-        dones = torch.vstack(dones).to(self._device)
+        _observations = torch.vstack(observations).to(self._device)
+        _actions = torch.vstack(actions).to(self._device)
+        _rewards = torch.vstack(rewards).to(self._device)
+        _dones = torch.vstack(dones).to(self._device)
+
+        # Mask to remove values and observations from done samples.
+        mask = torch.squeeze(_dones) == 0
+        masked_observations = _observations[mask]
 
         # Make a dataloader in order to process data in batch
-        batch_state = self.make_dataloader(observations[:-1], self._cfg.batch_size, self.model.input_shape)
-        batch_action = self.make_dataloader(actions, self._cfg.batch_size, (self.model.num_policy_outputs,))
-
-        values = self.compute_value(batch_state)
-        with torch.no_grad():
-            next_value = self.model.network.get_value(observations[-1:])
-        next_value = next_value * (1 - dones[-1])
-        values = torch.cat((values, next_value), dim=0)
-        log_probs = self.compute_batch_log_lik(batch_state, batch_action)
+        adv_batch_state = self.make_dataloader(_observations, self._cfg.batch_size, self.model.input_shape)
+        values = self.compute_value(adv_batch_state)
+        next_values = values * (1 - _dones)
 
         # Compute the generalized advantage estimation
         advs = self.compute_gae(
-            rewards=rewards, values=values, dones=dones, gamma=self._cfg.discount_factor, lam=self._cfg.lambda_gae
+            rewards=_rewards,
+            values=next_values,
+            dones=_dones,
+            gamma=self._cfg.discount_factor,
+            lam=self._cfg.lambda_gae,
         )
+        batch_state = self.make_dataloader(masked_observations, self._cfg.batch_size, self.model.input_shape)
+        batch_action = self.make_dataloader(_actions, self._cfg.batch_size, (self.model.num_policy_outputs,))
+        log_probs = self.compute_batch_log_lik(batch_state, batch_action)
 
         # Update parameters for policy and value networks
         policy_loss, value_loss = self.update_parameters(
-            observations=observations[:-1],
-            actions=actions,
+            observations=masked_observations,
+            actions=_actions,
             advs=advs,
-            values=values[:-1],
+            values=values[mask],
             log_probs=log_probs,
             num_epochs=self._cfg.num_epochs,
         )
-
         return policy_loss, value_loss
 
     def update_parameters(
@@ -379,16 +418,16 @@ class BasePPOTraining(ABC):
                 loss = policy_loss - self._cfg.entropy_loss_coef * entropy_loss + value_loss
 
                 # Update value network
-                self.model.network_optimizer.zero_grad()
+                self.network_optimizer.zero_grad()
                 loss.backward()
                 torch.nn.utils.clip_grad_norm_(self.model.network.parameters(), self._cfg.grad_norm)
-                self.model.network_optimizer.step()
+                self.network_optimizer.step()
 
         # Decaying learning rate after each update
         self._cfg.learning_rate = max(self._cfg.lr_decay_factor * self._cfg.learning_rate, 0.000001)
-        self.model.network_optimizer.param_groups[0]["lr"] = self._cfg.learning_rate
+        self.network_optimizer.param_groups[0]["lr"] = self._cfg.learning_rate
         self._cfg.clipping_coef = max(self._cfg.lr_decay_factor * self._cfg.clipping_coef, 0.05)
-        # log.info(f"learning rate {self.model.network_optimizer.param_groups[0]['lr']}")
+        # log.info(f"learning rate {self.network_optimizer.param_groups[0]['lr']}")
         # self.model.scheduler.step()
 
         return policy_loss, value_loss
@@ -485,44 +524,6 @@ class BasePPOTraining(ABC):
 class PPOSelfTraining(BasePPOTraining):
     """Train PPO agent"""
 
-    async def trial_sample_sequences_producer_impl(self, sample_producer_session: SampleProducerSession):
-        """Collect sample from the trial"""
-        observation = []
-        action = []
-        reward = []
-        done = []
-        steps = []
-        player_actor_params = sample_producer_session.trial_info.parameters.actors[0]
-        player_actor_name = player_actor_params.name
-        player_environment_specs = EnvironmentSpecs.deserialize(player_actor_params.config.environment_specs)
-        player_observation_space = player_environment_specs.get_observation_space()
-        player_action_space = player_environment_specs.get_action_space()
-        obs_shape = tuple(self._cfg.image_size)[::-1]
-        async for sample in sample_producer_session.all_trial_samples():
-            previous_actor_sample = sample.actors_data[player_actor_name]
-            player_actor_name = previous_actor_sample.observation.current_player
-            actor_sample = sample.actors_data[player_actor_name]
-            obs_flat = player_observation_space.deserialize(actor_sample.observation).flat_value
-            observation_value = torch.unsqueeze(
-                torch.permute(torch.tensor(obs_flat, dtype=self._dtype).reshape(obs_shape), (2, 0, 1)), dim=0
-            )
-            observation.append(observation_value)
-            steps.append(actor_sample.observation.step)
-            if sample.trial_state == cogment.TrialState.ENDED:
-                done.append(torch.ones(1, dtype=self._dtype))
-                break
-            action_value = player_action_space.deserialize(actor_sample.action).value
-            action_value = torch.tensor(action_value, dtype=self._dtype)
-            reward_value = torch.tensor(
-                actor_sample.reward if actor_sample.reward is not None else 0, dtype=self._dtype
-            )
-            action.append(action_value)
-            reward.append(reward_value)
-            done.append(torch.zeros(1, dtype=self._dtype))
-
-        # Keeping the samples grouped by trial by emitting only one grouped sample at the end of the trial
-        sample_producer_session.produce_sample((observation, action, reward, done))
-
     async def impl(self, run_session: RunSession) -> dict:
         """Train and publish the model"""
         model_id = f"{run_session.run_id}_model"
@@ -551,6 +552,7 @@ class PPOSelfTraining(BasePPOTraining):
                     environment_specs=self._environment_specs.serialize(),
                     model_id=model_id,
                     model_version=version_info["version_number"],
+                    seed=self._cfg.seed,
                 ),
             )
 
@@ -586,7 +588,7 @@ class PPOSelfTraining(BasePPOTraining):
                 num_parallel_trials=self._cfg.num_parallel_trials,
             ):
                 # Collect the rollout
-                (trial_observation, trial_action, trial_reward, trial_done) = sample
+                (trial_observation, trial_action, trial_reward, trial_done, _) = sample
 
                 observations.extend(trial_observation)
                 actions.extend(trial_action)
@@ -595,8 +597,6 @@ class PPOSelfTraining(BasePPOTraining):
 
                 episode_rewards.append(torch.vstack(trial_reward).sum())
                 episode_lens.append(torch.tensor(len(trial_action), dtype=torch.float32))
-
-                # Publish the newly trained version every 100 steps
                 if len(actions) >= self._cfg.num_steps * self._cfg.epoch_num_trials + 1:
                     num_updates += 1
                     total_steps += self._cfg.num_steps * self._cfg.epoch_num_trials
@@ -610,7 +610,7 @@ class PPOSelfTraining(BasePPOTraining):
                     actions = []
                     rewards = []
                     dones = []
-                    if iter_idx % 1 == 0:
+                    if iter_idx % 100 == 0:
                         # Compute average rewards for last 100 episodes
                         avg_rewards = await self.compute_average_reward(episode_rewards)
                         avg_lens = await self.compute_average_reward(episode_lens) / self._environment_specs.num_players
@@ -628,60 +628,14 @@ class PPOSelfTraining(BasePPOTraining):
 
                     # Publish the newly updated model
                     self.model.iter_idx = iter_idx
-                    if num_updates % 50 == 0:
-                        version_info = await run_session.model_registry.publish_version(self.model, archived=True)
-                    else:
-                        version_info = await run_session.model_registry.publish_version(self.model)
+                    version_info = await run_session.model_registry.publish_version(
+                        self.model, archived=num_updates % 50 == 0
+                    )
                     self.model.network.to(self._device)
 
 
 class HillPPOTraining(BasePPOTraining):
     """Train PPO agent using human's actions"""
-
-    async def trial_sample_sequences_producer_impl(self, sample_producer_session: SampleProducerSession):
-        """Collect sample from the trial"""
-        observation = []
-        action = []
-        reward = []
-        done = []
-        actors = []
-        steps = []
-
-        actor_params = {
-            actor_params.name: actor_params
-            for actor_params in sample_producer_session.trial_info.parameters.actors
-            if actor_params.class_name == PLAYER_ACTOR_CLASS
-        }
-        actor_names = list(actor_params.keys())
-        player_environment_specs = EnvironmentSpecs.deserialize(actor_params[actor_names[0]].config.environment_specs)
-        player_observation_space = player_environment_specs.get_observation_space()
-        player_action_space = player_environment_specs.get_action_space()
-        obs_shape = tuple(self._cfg.image_size)[::-1]
-        player_actor_name = actor_names[0]
-
-        async for sample in sample_producer_session.all_trial_samples():
-            previous_actor_sample = sample.actors_data[player_actor_name]
-            player_actor_name = previous_actor_sample.observation.current_player
-            actor_sample = sample.actors_data[player_actor_name]
-            obs_flat = player_observation_space.deserialize(actor_sample.observation).flat_value
-            observation_value = torch.unsqueeze(
-                torch.permute(torch.tensor(obs_flat, dtype=self._dtype).reshape(obs_shape), (2, 0, 1)), dim=0
-            )
-            observation.append(observation_value)
-            steps.append(actor_sample.observation.step)
-            if sample.trial_state == cogment.TrialState.ENDED:
-                done.append(torch.ones(1, dtype=self._dtype))
-
-            action_value = torch.tensor(player_action_space.deserialize(actor_sample.action).value, dtype=self._dtype)
-            reward_value = torch.tensor(
-                actor_sample.reward if actor_sample.reward is not None else 0, dtype=self._dtype
-            )
-            action.append(action_value)
-            reward.append(reward_value)
-            done.append(torch.zeros(1, dtype=self._dtype))
-
-        # Keeping the samples grouped by trial by emitting only one grouped sample at the end of the trial
-        sample_producer_session.produce_sample((observation, action, reward, done, actors))
 
     async def impl(self, run_session: RunSession) -> dict:
         """Train and publish the model"""
@@ -725,7 +679,9 @@ class HillPPOTraining(BasePPOTraining):
                         class_name=PLAYER_ACTOR_CLASS,
                         implementation=HUMAN_ACTOR_IMPL,
                         config=AgentConfig(
-                            run_id=run_session.run_id, environment_specs=self._environment_specs.serialize()
+                            run_id=run_session.run_id,
+                            environment_specs=self._environment_specs.serialize(),
+                            seed=self._cfg.seed,
                         ),
                     )
                 else:
@@ -827,7 +783,7 @@ class HillPPOTraining(BasePPOTraining):
                     actions = []
                     rewards = []
                     dones = []
-                    if iter_idx % 1 == 0:
+                    if iter_idx % 100 == 0:
                         # Compute average rewards for last 100 episodes
                         avg_rewards = await self.compute_average_reward(episode_rewards)
                         avg_lens = await self.compute_average_reward(episode_lens) / self._environment_specs.num_players
@@ -845,10 +801,9 @@ class HillPPOTraining(BasePPOTraining):
 
                     # Publish the newly updated model
                     self.model.iter_idx = iter_idx
-                    if num_updates % 10 == 0:
-                        version_info = await run_session.model_registry.publish_version(self.model, archived=True)
-                    else:
-                        version_info = await run_session.model_registry.publish_version(self.model)
+                    version_info = await run_session.model_registry.publish_version(
+                        self.model, archived=num_updates % 50 == 0
+                    )
                     self.model.network.to(self._device)
 
 
@@ -864,7 +819,6 @@ class HumanFeedbackPPOTraining(BasePPOTraining):
         steps = []
         human_observation = []
         human_reward = []
-        human_steps = []
 
         actor_params = {
             actor_params.name: actor_params
@@ -917,7 +871,6 @@ class HumanFeedbackPPOTraining(BasePPOTraining):
                 )
                 human_observation.append(observation_value)
                 human_reward.append(reward_value)
-                human_steps.append(actor_sample.observation.step)
 
         # Keeping the samples grouped by trial by emitting only one grouped sample at the end of the trial
         sample_producer_session.produce_sample((observation, action, reward, done, human_reward))
@@ -965,6 +918,7 @@ class HumanFeedbackPPOTraining(BasePPOTraining):
                         environment_specs=self._environment_specs.serialize(),
                         model_id=model_id,
                         model_version=version_number,
+                        seed=self._cfg.seed,
                     ),
                 )
                 actors.append(actor)
@@ -1060,7 +1014,7 @@ class HumanFeedbackPPOTraining(BasePPOTraining):
                     actions = []
                     rewards = []
                     dones = []
-                    if iter_idx % 1 == 0:
+                    if iter_idx % 100 == 0:
                         # Compute average rewards for last 100 episodes
                         avg_rewards = await self.compute_average_reward(episode_rewards)
                         avg_lens = await self.compute_average_reward(episode_lens) / self._environment_specs.num_players
@@ -1078,8 +1032,7 @@ class HumanFeedbackPPOTraining(BasePPOTraining):
 
                     # Publish the newly updated model
                     self.model.iter_idx = iter_idx
-                    if num_updates % 10 == 0:
-                        version_info = await run_session.model_registry.publish_version(self.model, archived=True)
-                    else:
-                        version_info = await run_session.model_registry.publish_version(self.model)
+                    version_info = await run_session.model_registry.publish_version(
+                        self.model, archived=num_updates % 50 == 0
+                    )
                     self.model.network.to(self._device)

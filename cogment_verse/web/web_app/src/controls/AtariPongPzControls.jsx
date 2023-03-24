@@ -38,7 +38,7 @@ ATARI_LOOKUP.setAction(["DOWN"], serializePlayerAction(ACTION_SPACE, 3));
 ATARI_LOOKUP.setAction(["RIGHT"], serializePlayerAction(ACTION_SPACE, 4));
 ATARI_LOOKUP.setAction(["LEFT"], serializePlayerAction(ACTION_SPACE, 5));
 
-export const AtariPongPzEnvironments = ["environments.pettingzoo_atari_adapter.RlEnvironment/pettingzoo.atari.pong_v3"];
+export const AtariPongPzEnvironments = ["environments.pettingzoo_adapter.AtariEnvironment/pettingzoo.atari.pong_v3"];
 export const AtariPongPzControls = ({ sendAction, fps = 40, actorClass, observation, ...props }) => {
   const [paused, setPaused] = useState(false);
   const [playerPos, setPlayerPos] = useState('left');
@@ -77,23 +77,9 @@ export const AtariPongPzControls = ({ sendAction, fps = 40, actorClass, observat
     [pressedKeys, sendAction, actorClass]
   );
   const { currentFps } = useRealTimeUpdate(computeAndSendAction, fps, paused);
-  // useEffect(() => {
-  //   if (playerName) {
-  //     if (playerName.includes('first')) {
-  //       setPlayerPos('right');
-  //     } else {
-  //       setPlayerPos('left');
-  //     }
-  //   }
-  // }, [playerName]);
 
   return (
     <div {...props}>
-      {/* <div className={playerPos == "right" ? "flex flex-row-reverse" : "flex flex-row"}>
-        <div className={playerPos == "right" ? player1 : player2}>
-          {playerName}
-        </div>
-      </div> */}
       <div className="flex flex-row py-4 gap-1">
         <Button className="flex-1" onClick={togglePause}>
           {paused ? "Resume" : "Pause"}
@@ -102,9 +88,9 @@ export const AtariPongPzControls = ({ sendAction, fps = 40, actorClass, observat
       </div>
       <KeyboardControlList
         items={[
-          ["Left/Right Arrows", "MOVE UP/DOWN"],
+          ["Left/Right Arrows", "FIRE and MOVE UP/DOWN"],
           ["Up/Down Arrows", "MOVE UP/DOWN"],
-          ["Space", "Jump"],
+          ["Enter", "Fire"],
           ["p", "Pause/Unpause"],
         ]}
       />
