@@ -122,7 +122,6 @@ class SimpleDQNModel(Model):
 class SimpleDQNActor:
     def __init__(self, _cfg):
         self._dtype = torch.float
-        self.samples_since_update = 0
 
     def get_actor_classes(self):
         return [PLAYER_ACTOR_CLASS]
@@ -154,15 +153,14 @@ class SimpleDQNActor:
                     continue
 
                 if (
-                    config.model_update_frequency > 0
-                    and self.samples_since_update > 0
-                    and self.samples_since_update % config.model_update_frequency == 0
+                    config.model_version == -1
+                    and config.model_update_frequency > 0
+                    and actor_session.get_tick_id() % config.model_update_frequency == 0
                 ):
                     model, _, _ = await actor_session.model_registry.retrieve_version(
                         SimpleDQNModel, config.model_id, config.model_version
                     )
                     model.network.eval()
-                    self.samples_since_update = 0
 
                 if rng.random() < model.epsilon:
                     action = action_space.sample(mask=observation.action_mask)
@@ -179,7 +177,6 @@ class SimpleDQNActor:
                     discrete_action_tensor = torch.argmax(action_probs)
                     action = action_space.create(value=discrete_action_tensor.item())
 
-                self.samples_since_update += 1
                 actor_session.do_action(action_space.serialize(action))
 
 
