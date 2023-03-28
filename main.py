@@ -13,20 +13,20 @@
 # limitations under the License.
 
 import logging
-import os
 import multiprocessing as mp
+import os
+
 import hydra
 
 import cogment_verse
+from cogment_verse.constants import CONFIG_DIR, DEFAULT_CONFIG_NAME, DEFAULT_WORK_DIR
 
 log = logging.getLogger(__name__)
 
 
-@hydra.main(version_base=None, config_path="config", config_name="config")
+@hydra.main(version_base=None, config_path=CONFIG_DIR, config_name=DEFAULT_CONFIG_NAME)
 def main(cfg):
-    work_dir = os.environ.get(
-        "COGMENT_VERSE_WORK_DIR", os.path.abspath(os.path.join(os.path.dirname(__file__), ".cogment_verse"))
-    )
+    work_dir = os.environ.get("COGMENT_VERSE_WORK_DIR", DEFAULT_WORK_DIR)
     app = cogment_verse.App(cfg, work_dir=work_dir)
 
     app.start()
