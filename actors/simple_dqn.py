@@ -139,7 +139,7 @@ class SimpleDQNActor:
 
         assert isinstance(action_space.gym_space, Discrete)
 
-        model = await actor_session.model_registry.retrieve_version(
+        model = await actor_session.model_registry.retrieve_model(
             SimpleDQNModel, config.model_id, config.model_version
         )
         model.network.eval()
@@ -157,7 +157,7 @@ class SimpleDQNActor:
                     and config.model_update_frequency > 0
                     and actor_session.get_tick_id() % config.model_update_frequency == 0
                 ):
-                    model = await actor_session.model_registry.retrieve_version(
+                    model = await actor_session.model_registry.retrieve_model(
                         SimpleDQNModel, config.model_id, config.model_version
                     )
                     model.network.eval()
@@ -276,7 +276,7 @@ class SimpleDQNTraining:
             epsilon=epsilon_schedule(0),
             dtype=self._dtype,
         )
-        version_info = await run_session.model_registry.store_initial_version(model)
+        iteration_info = await run_session.model_registry.publish_model(model_id, model)
 
         run_session.log_params(
             self._cfg,
@@ -390,14 +390,14 @@ class SimpleDQNTraining:
                 if step_idx % self._cfg.target_update_frequency == 0:
                     target_network.load_state_dict(model.network.state_dict())
 
-                version_info = await run_session.model_registry.store_version(model)
+                iteration_info = await run_session.model_registry.publish_model(model_id, model)
 
                 if step_idx % 100 == 0:
                     end_time = time.time()
                     steps_per_seconds = 100 / (end_time - start_time)
                     start_time = end_time
                     run_session.log_metrics(
-                        model_version_number=version_info.version_number,
+                        model_version_number=iteration_info.iteration,
                         loss=loss.item(),
                         q_values=action_values.mean().item(),
                         batch_avg_reward=data.reward.mean().item(),
@@ -405,7 +405,7 @@ class SimpleDQNTraining:
                         steps_per_seconds=steps_per_seconds,
                     )
 
-        version_info = await run_session.model_registry.store_version(model, archived=True)
+        iteration_info = await run_session.model_registry.store_model(model_id, model)
 
 
 class SimpleDQNSelfPlayTraining:
@@ -535,7 +535,7 @@ class SimpleDQNSelfPlayTraining:
             epsilon=epsilon_schedule(0),
             dtype=self._dtype,
         )
-        version_info = await run_session.model_registry.store_initial_version(model)
+        iteration_info = await run_session.model_registry.publish_model(model_id, model)
 
         run_session.log_params(
             self._cfg,
@@ -681,21 +681,21 @@ class SimpleDQNSelfPlayTraining:
                     if step_idx % self._cfg.target_update_frequency == 0:
                         target_network.load_state_dict(model.network.state_dict())
 
-                    version_info = await run_session.model_registry.store_version(model)
+                    iteration_info = await run_session.model_registry.publish_model(model_id, model)
 
                     if step_idx % 100 == 0:
                         end_time = time.time()
                         steps_per_seconds = 100 / (end_time - start_time)
                         start_time = end_time
                         run_session.log_metrics(
-                            model_version_number=version_info.version_number,
+                            model_version_number=iteration_info.iteration,
                             loss=loss.item(),
                             q_values=action_values.mean().item(),
                             epsilon=model.epsilon,
                             steps_per_seconds=steps_per_seconds,
                         )
 
-            version_info = await run_session.model_registry.store_version(model, archived=True)
+            iteration_info = await run_session.model_registry.store_model(model_id, model)
 
             # Validation trials
             cum_total_reward = 0
@@ -707,10 +707,10 @@ class SimpleDQNSelfPlayTraining:
                         create_trials_params(
                             p1_params=create_actor_params("reference", previous_epoch_version_number)
                             if trial_idx % 2 == 0
-                            else create_actor_params("validated", version_info.version_number),
+                            else create_actor_params("validated", iteration_info.iteration),
                             p2_params=create_actor_params("reference", previous_epoch_version_number)
                             if trial_idx % 2 == 1
-                            else create_actor_params("validated", version_info.version_number),
+                            else create_actor_params("validated", iteration_info.iteration),
                         ),
                     )
                     for trial_idx in range(self._cfg.epoch_num_validation_trials)
@@ -729,7 +729,7 @@ class SimpleDQNSelfPlayTraining:
 
             avg_total_reward = cum_total_reward / self._cfg.epoch_num_validation_trials
             ties_ratio = num_ties / self._cfg.epoch_num_validation_trials
-            validation_version_number = version_info.version_number
+            validation_version_number = iteration_info.iteration
             run_session.log_metrics(
                 validation_avg_total_reward=avg_total_reward,
                 validation_ties_ratio=ties_ratio,

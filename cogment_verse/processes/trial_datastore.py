@@ -27,11 +27,11 @@ def create_trial_datastore_service(work_dir, trial_datastore_cfg, services_direc
     )
 
     return CogmentCliProcess(
-        name="trial_datastore",
+        name=ServiceType.TRIAL_DATASTORE.value,
         work_dir=work_dir,
         cli_args=[
             "services",
-            "trial_datastore",
+            ServiceType.TRIAL_DATASTORE.value,
             "--log_format=json",
             f"--log_level={trial_datastore_cfg.log_level}",
             f"--port={port}",

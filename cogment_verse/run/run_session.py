@@ -16,7 +16,7 @@ import logging
 import time
 from multiprocessing import Queue
 
-from cogment_verse.model_registry import ModelRegistry
+from cogment_verse.model_registry_v2 import ModelRegistry
 
 from ..mlflow_experiment_tracker import MlflowExperimentTracker
 from .sample_producer_worker import start_sample_producer_worker

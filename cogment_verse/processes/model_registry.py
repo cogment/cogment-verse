@@ -19,7 +19,7 @@ from ..services_directory import ServiceType
 
 
 def create_model_registry_service(work_dir, model_registry_cfg, services_directory):
-    model_registry_data_dir = os.path.join(work_dir, "model_registry")
+    model_registry_data_dir = os.path.join(work_dir, ServiceType.MODEL_REGISTRY.value)
     os.makedirs(model_registry_data_dir, exist_ok=True)
 
     port = model_registry_cfg.port
@@ -30,11 +30,11 @@ def create_model_registry_service(work_dir, model_registry_cfg, services_directo
     )
 
     return CogmentCliProcess(
-        name="model_registry",
+        name=ServiceType.MODEL_REGISTRY.value,
         work_dir=work_dir,
         cli_args=[
             "services",
-            "model_registry",
+            ServiceType.MODEL_REGISTRY.value,
             "--log_format=json",
             f"--log_level={model_registry_cfg.log_level}",
             f"--archive_dir={model_registry_data_dir}",

@@ -14,11 +14,11 @@
 
 import os
 
+from cogment_verse.constants import DEFAULT_WORK_DIR, ROOT_DIR
 from cogment_verse.utils.generate import generate
 
-ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
 generate(
-    work_dir=os.path.join(ROOT_DIR, ".cogment_verse"),
+    work_dir=os.path.join(ROOT_DIR, DEFAULT_WORK_DIR),
     specs_filename=os.path.join(ROOT_DIR, "cogment_verse/specs/cogment.yaml"),
 )
