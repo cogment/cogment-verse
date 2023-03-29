@@ -3,6 +3,7 @@ import multiprocessing as mp
 import os
 import subprocess
 import shutil
+import signal
 
 import hydra
 import pytest
@@ -26,6 +27,8 @@ CONFIG_REL_PATH = os.path.relpath(CONFIG_DIR, os.path.abspath(os.path.dirname(__
 TEST_CONFIG_PATH = os.path.join(os.path.dirname(__file__), ".config")
 TEST_CONFIG_REL_PATH = os.path.relpath(TEST_CONFIG_PATH, os.path.abspath(os.path.dirname(__file__)))
 
+DEFAULT_TEST_TIMEOUT = 60  # seconds
+
 
 @pytest.fixture(scope="module")
 def prepare_config():
@@ -41,17 +44,33 @@ def prepare_config():
         os.path.join(FT_DIR, "test_config"), os.path.join(TEST_CONFIG_PATH, "experiment"), dirs_exist_ok=True
     )
 
+    # Start mlflow
+    mlflow_process = subprocess.Popen(args=["python", "-m", "simple_mlflow"])
+
+    log.info(f"MLFLOW PROCESS PID: {mlflow_process.pid}")
+
     yield
+
+    mlflow_process.terminate()  # not working
+    mlflow_process.kill()  # not working
+
+    os.kill(mlflow_process.pid, signal.SIGKILL)  # not working
+    # To manually kill the server: pkill -f gunicorn
+
+    # mlflow must be starting several child processes.
 
     shutil.rmtree(TEST_CONFIG_PATH, ignore_errors=True)
 
 
+@pytest.mark.timeout(DEFAULT_TEST_TIMEOUT)
 def test_simple_dqn_cartpole(prepare_config):
 
     args = ["python", "-m", "tests.functional.test_platform", "+experiment=simple_dqn/cartpole_ft"]
     proc = subprocess.Popen(args=args)
     proc.communicate()  # Wait for subprocess to complete
     assert proc.returncode == 0
+
+
 
 
 @hydra.main(version_base=None, config_path=TEST_CONFIG_REL_PATH, config_name=DEFAULT_CONFIG_NAME)
