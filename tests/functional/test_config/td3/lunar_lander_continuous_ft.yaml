@@ -1,0 +1,24 @@
+# @package _global_
+defaults:
+  - override /services/actor:
+      - td3
+  - override /services/environment: lunar_lander_continuous
+  - override /services/experiment_tracker@run.experiment_tracker: simple
+
+run:
+  class_name: actors.td3.TD3Training
+  seed: 0
+  num_trials: 1
+  num_parallel_trials: 1
+  discount: 0.99
+  tau: 0.005
+  expl_noise: 0.1
+  random_steps: 200
+  policy_noise: 0.2
+  noise_clip: 0.5
+  policy_freq: 2
+  batch_size: 256
+  buffer_size: 100000
+  learning_starts: 2
+
+

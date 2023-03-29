@@ -65,3 +65,9 @@ pytest:
   extends: .base
   script:
     - python -m pytest
+
+functional_tests:
+  stage: test
+  extends: .base
+  script:
+    - python -m pytest --durations=0 --no-header -v tests/functional/test_experiments.py
