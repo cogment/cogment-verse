@@ -46,17 +46,21 @@ def make_dict(ignore_non_numbers, *args, **kwargs):
 
 
 class SimpleExperimentTracker:
-    def __init__(self, experiment_id, run_id, mlflow_tracking_uri, flush_frequency=5):
+    def __init__(self, exp_tracker_cfg, experiment_id, run_id):
         self._experiment_id = experiment_id
         self._run_id = run_id
+        self._log_params = exp_tracker_cfg.log_params
+        self._log_metrics = exp_tracker_cfg.log_metrics
 
     def log_params(self, *args, **kwargs):
-        params_dict = make_dict(False, *args, **kwargs)
-        log.info(f"[{self._experiment_id}/{self._run_id}] log params [{json.dumps(params_dict)}]")
+        if self._log_params:
+            params_dict = make_dict(False, *args, **kwargs)
+            log.info(f"[{self._experiment_id}/{self._run_id}] log params [{json.dumps(params_dict)}]")
 
     def log_metrics(self, step_timestamp, step_idx, **kwargs):
-        metrics_dict = make_dict(True, **kwargs)
-        log.info(f"[{self._experiment_id}/{self._run_id}] log metrics at step #{step_idx} [{json.dumps(metrics_dict)}]")
+        if self._log_metrics:
+            metrics_dict = make_dict(True, **kwargs)
+            log.info(f"[{self._experiment_id}/{self._run_id}] log metrics at step #{step_idx} [{json.dumps(metrics_dict)}]")
 
     def terminate_failure(self):
         pass
