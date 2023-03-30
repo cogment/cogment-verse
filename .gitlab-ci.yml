@@ -26,7 +26,8 @@ build_docker:
   before_script:
     - mkdir -p ${PIP_CACHE_DIR}
     - apt-get update
-    - apt-get install -y swig python3-opencv python3-dev
+    - apt-get install -y swig python3-opencv
+    - apt-get install -y build-essential curl libbz2-dev libffi-dev liblzma-dev libncursesw5-dev libreadline-dev libsqlite3-dev libssl-dev libxml2-dev libxmlsec1-dev llvm make tk-dev wget xz-utils zlib1g-dev
     - python -m venv .venv
     - source .venv/bin/activate
     - pip install -r requirements.txt
