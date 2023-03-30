@@ -64,10 +64,10 @@ pytest:
   stage: test
   extends: .base
   script:
-    - python -m pytest
+    - python -m pytest -m "not functional"
 
 functional_tests:
   stage: test
   extends: .base
   script:
-    - python -m pytest -m functional -v
+    - python -m pytest -m functional --durations=0 -v
