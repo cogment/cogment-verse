@@ -224,8 +224,8 @@ class _TrackedModel:
 
 
 async def _tracked_models_removal():
-    global _tracked_models_removal_task
-    global _tracked_models_thread_id
+    global _tracked_models_removal_task  # pylint: disable=invalid-name
+    global _tracked_models_thread_id  # pylint: disable=invalid-name
 
     _tracked_models_thread_id = threading.get_ident()
 
@@ -507,7 +507,7 @@ class ModelRegistry:
     async def track_latest_model(
         self, name: str, deserialize_func: Callable[[bytes], Any] = None, initial_wait: int = 0
     ) -> LatestModel:
-        global _tracked_models_removal_task
+        global _tracked_models_removal_task  # pylint: disable=invalid-name
 
         if name not in _tracked_models:
             _tracked_models[name] = None
