@@ -34,7 +34,7 @@ TEST_EXPERIMENTS = [
     "ppo/hopper_ft",
     "ppo/lunar_lander_continuous_ft",
     "simple_dqn/cartpole_ft",
-    "simple_a2c/ant_ft",
+    #"simple_a2c/ant_ft", # isaacgymenvs
     "simple_a2c/cartpole_ft",
     "td3/lunar_lander_continuous_ft",
 ]
@@ -59,7 +59,7 @@ def prepare_config():
 
 @pytest.mark.timeout(DEFAULT_TEST_TIMEOUT)
 def test_default_experiment(prepare_config):
-    proc = subprocess.Popen(args=["python", "-m", "tests.functional.test_experiments"])
+    proc = subprocess.Popen(args=["python", "-m", "tests.functional.test_experiments", "run=headless_play", "services/experiment_tracker@run.experiment_tracker=simple"])
     proc.communicate()
     assert proc.returncode == 0
 

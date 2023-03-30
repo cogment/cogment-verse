@@ -3,7 +3,7 @@ defaults:
   - services/environment: lunar_lander_continuous
   - services/actor: random
   - run: play
-  - services/experiment_tracker@run.experiment_tracker: simple
+  - services/experiment_tracker@run.experiment_tracker: mlflow
   - _self_
 
 hydra:
