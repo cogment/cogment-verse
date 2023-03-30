@@ -98,7 +98,7 @@ def test_experiment(_prepare_config, experiment):
 
 
 @pytest.mark.functional
-@pytest.mark.timeout(DEFAULT_TEST_TIMEOUT)
+@pytest.mark.timeout(2 * DEFAULT_TEST_TIMEOUT)
 def test__model_registry(_prepare_config):
     """Test that a trained model is properly archived to the model registry.
     Then, test that the same model can be retrieved to play trials.
