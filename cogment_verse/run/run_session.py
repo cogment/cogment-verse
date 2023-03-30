@@ -19,7 +19,6 @@ from multiprocessing import Queue
 from cogment_verse.model_registry import ModelRegistry
 from cogment_verse.utils.import_class import import_class
 
-from ..experiment_tracker.mlflow_experiment_tracker import MlflowExperimentTracker
 from .sample_producer_worker import start_sample_producer_worker
 from .trial_runner_worker import start_trial_runner_worker
 
