@@ -1,3 +1,19 @@
+# Copyright 2022 AI Redefined Inc. <dev+cogment@ai-r.com>
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# pylint: disable=consider-using-with
+
 import logging
 import multiprocessing as mp
 import os
@@ -34,16 +50,18 @@ TEST_EXPERIMENTS = [
 
 @pytest.fixture(name="_prepare_config", scope="module")
 def fixture_prepare_config():
-    """ Fixture used to setup hydra configs for functional tests.
-        Copies original configs together with functional test configs in a tmp folder.
-        The teardown removes the configs and the tmp work directory.
+    """Fixture used to setup hydra configs for functional tests.
+    Copies original configs together with functional test configs in a tmp folder.
+    The teardown removes the configs and the tmp work directory.
     """
 
     # Copy config content to .tmp_config
     shutil.copytree(DEFAULT_CONFIG_DIR, TEST_CONFIG_PATH, dirs_exist_ok=True)
     # Copy smoke test experiment config to .tmp_config
     shutil.copytree(
-        os.path.join(FUNCTIONAL_TEST_DIR, "test_config"), os.path.join(TEST_CONFIG_PATH, "experiment"), dirs_exist_ok=True
+        os.path.join(FUNCTIONAL_TEST_DIR, "test_config"),
+        os.path.join(TEST_CONFIG_PATH, "experiment"),
+        dirs_exist_ok=True,
     )
 
     yield
@@ -55,7 +73,7 @@ def fixture_prepare_config():
 @pytest.mark.functional
 @pytest.mark.timeout(DEFAULT_TEST_TIMEOUT)
 def test_default_experiment(_prepare_config):
-    """ Test the default config."""
+    """Test the default config."""
     proc = subprocess.Popen(
         args=[
             "python",
@@ -73,7 +91,7 @@ def test_default_experiment(_prepare_config):
 @pytest.mark.parametrize("experiment", TEST_EXPERIMENTS)
 @pytest.mark.timeout(DEFAULT_TEST_TIMEOUT)
 def test_experiment(_prepare_config, experiment):
-    """ Test individual experiments."""
+    """Test individual experiments."""
     proc = subprocess.Popen(args=["python", "-m", "tests.functional.test_experiments", f"+experiment={experiment}"])
     proc.communicate()
     assert proc.returncode == 0
@@ -82,8 +100,8 @@ def test_experiment(_prepare_config, experiment):
 @pytest.mark.functional
 @pytest.mark.timeout(DEFAULT_TEST_TIMEOUT)
 def test__model_registry(_prepare_config):
-    """ Test that a trained model is properly archived to the model registry. 
-        Then, test that the same model can be retrieved to play trials.
+    """Test that a trained model is properly archived to the model registry.
+    Then, test that the same model can be retrieved to play trials.
     """
     proc = subprocess.Popen(
         args=["python", "-m", "tests.functional.test_experiments", "+experiment=simple_dqn/connect_four_ft"]
