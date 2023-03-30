@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# pylint: disable=broad-exception-caught
+# pylint: disable=broad-except
 
 import abc
 import asyncio
