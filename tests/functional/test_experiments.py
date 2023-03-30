@@ -1,22 +1,14 @@
 import logging
 import multiprocessing as mp
 import os
-import subprocess
 import shutil
-import signal
+import subprocess
 
 import hydra
 import pytest
-from hydra import compose, initialize
-from hydra.core.global_hydra import GlobalHydra
-from hydra.core.hydra_config import HydraConfig
-from omegaconf import OmegaConf
 
 import cogment_verse
-from cogment_verse.constants import CONFIG_DIR, DEFAULT_CONFIG_NAME, DEFAULT_WORK_DIR, FT_DIR, TEST_DIR
-from cogment_verse.processes.popen_process import PopenProcess
-from cogment_verse.services_directory import ServiceType
-from local_services import launch_local_services
+from cogment_verse.constants import CONFIG_DIR, DEFAULT_CONFIG_NAME, FT_DIR
 
 log = logging.getLogger(__name__)
 
@@ -40,8 +32,8 @@ TEST_EXPERIMENTS = [
 ]
 
 
-@pytest.fixture(scope="module")
-def prepare_config():
+@pytest.fixture(name="_prepare_config", scope="module")
+def fixture_prepare_config():
 
     # Copy config content to .tmp_config
     shutil.copytree(CONFIG_DIR, TEST_CONFIG_PATH, dirs_exist_ok=True)
@@ -56,8 +48,9 @@ def prepare_config():
     shutil.rmtree(TEST_WORK_DIR, ignore_errors=True)
 
 
+@pytest.mark.functional
 @pytest.mark.timeout(DEFAULT_TEST_TIMEOUT)
-def test_default_experiment(prepare_config):
+def test_default_experiment(_prepare_config):
     proc = subprocess.Popen(
         args=[
             "python",
@@ -71,24 +64,26 @@ def test_default_experiment(prepare_config):
     assert proc.returncode == 0
 
 
+@pytest.mark.functional
 @pytest.mark.parametrize("experiment", TEST_EXPERIMENTS)
 @pytest.mark.timeout(DEFAULT_TEST_TIMEOUT)
-def test_experiment(prepare_config, experiment):
+def test_experiment(_prepare_config, experiment):
     proc = subprocess.Popen(args=["python", "-m", "tests.functional.test_experiments", f"+experiment={experiment}"])
     proc.communicate()
     assert proc.returncode == 0
 
 
+@pytest.mark.functional
 @pytest.mark.timeout(DEFAULT_TEST_TIMEOUT)
-def test__model_registry(prepare_config):
+def test__model_registry(_prepare_config):
     proc = subprocess.Popen(
-        args=["python", "-m", "tests.functional.test_experiments", f"+experiment=simple_dqn/connect_four_ft"]
+        args=["python", "-m", "tests.functional.test_experiments", "+experiment=simple_dqn/connect_four_ft"]
     )
     proc.communicate()
     assert proc.returncode == 0
 
     proc = subprocess.Popen(
-        args=["python", "-m", "tests.functional.test_experiments", f"+experiment=simple_dqn/observe_connect_four_ft"]
+        args=["python", "-m", "tests.functional.test_experiments", "+experiment=simple_dqn/observe_connect_four_ft"]
     )
     proc.communicate()
     assert proc.returncode == 0
