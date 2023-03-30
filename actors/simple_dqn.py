@@ -278,13 +278,11 @@ class SimpleDQNTraining:
         )
         _model_info, version_info = await run_session.model_registry.publish_initial_version(model)
 
-        print(f"BEFORE RUN_SESSION.LOG_PARAMS")
         run_session.log_params(
             self._cfg,
             model_id=model_id,
             environment_implementation=self._environment_specs.implementation,
         )
-        print(f"AFTER RUN_SESSION.LOG_PARAMS")
 
         # Configure the optimizer
         optimizer = torch.optim.Adam(

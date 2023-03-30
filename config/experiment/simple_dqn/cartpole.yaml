@@ -30,5 +30,3 @@ run:
   epsilon_schedule_start: 1
   epsilon_schedule_end: 0.05
   epsilon_schedule_duration_ratio: 0.75
-
-

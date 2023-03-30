@@ -46,4 +46,3 @@ addopts = "-rfs --ignore=_old"
 markers = [
   "functional: mark test as functional."
 ]
-

@@ -29,8 +29,9 @@ DEFAULT_WORK_DIR = os.path.join(ROOT_DIR, ".cogment_verse")
 DATASTORE_DIR = os.path.join(DEFAULT_WORK_DIR, ServiceType.TRIAL_DATASTORE.value)
 MODEL_REGISTRY_DIR = os.path.join(DEFAULT_WORK_DIR, ServiceType.MODEL_REGISTRY.value)
 
-TEST_DIR = os.path.join(ROOT_DIR, "tests")
-FT_DIR = os.path.join(TEST_DIR, "functional")
-
-CONFIG_DIR = os.path.join(ROOT_DIR, "config")
+DEFAULT_CONFIG_DIR = os.path.join(ROOT_DIR, "config")
 DEFAULT_CONFIG_NAME = "config"
+
+TEST_DIR = os.path.join(ROOT_DIR, "tests")
+FUNCTIONAL_TEST_DIR = os.path.join(TEST_DIR, "functional")
+

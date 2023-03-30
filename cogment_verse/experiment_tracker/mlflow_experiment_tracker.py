@@ -72,7 +72,7 @@ class MlflowExperimentTracker:
                 experiment = client.get_experiment_by_name(mlflow_experiment_name)
             except MlflowException:
                 raise CogmentVerseError(
-                    "mlflow server is not responding. Make sure it is launched in a separate terminal."
+                    "Mlflow server is not responding. Make sure it is launched in a separate terminal."
                 ) from None
 
             if experiment is not None:
@@ -125,8 +125,7 @@ class MlflowExperimentTracker:
             self._flush_metrics_worker = None
 
     def log_params(self, *args, **kwargs):
-        client = self._get_mlflow_client()
-        client.log_batch(
+        self._get_mlflow_client().log_batch(
             run_id=self._mlflow_run_id,
             params=[Param(key, str(value)) for key, value in make_dict(False, *args, **kwargs).items()],
         )
