@@ -59,7 +59,6 @@ class MlflowExperimentTracker:
         os.environ["MLFLOW_HTTP_REQUEST_MAX_RETRIES"] = str(exp_tracker_cfg.request_max_retries)
         os.environ["MLFLOW_HTTP_REQUEST_TIMEOUT"] = str(exp_tracker_cfg.request_timeout)
 
-
     def __del__(self):
         self._stop_flush_metrics_worker()
 
@@ -72,7 +71,9 @@ class MlflowExperimentTracker:
             try:
                 experiment = client.get_experiment_by_name(mlflow_experiment_name)
             except MlflowException:
-                raise CogmentVerseError("mlflow server is not responding. Make sure it is launched in a separate terminal.") from None
+                raise CogmentVerseError(
+                    "mlflow server is not responding. Make sure it is launched in a separate terminal."
+                ) from None
 
             if experiment is not None:
                 self._mlflow_exp_id = experiment.experiment_id
@@ -129,7 +130,6 @@ class MlflowExperimentTracker:
             run_id=self._mlflow_run_id,
             params=[Param(key, str(value)) for key, value in make_dict(False, *args, **kwargs).items()],
         )
-
 
     def log_metrics(self, step_timestamp, step_idx, **kwargs):
         EXPERIMENT_TRACKER_METRICS_LOGGED_COUNTER.inc(len(kwargs))

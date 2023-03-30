@@ -60,7 +60,9 @@ class SimpleExperimentTracker:
     def log_metrics(self, step_timestamp, step_idx, **kwargs):
         if self._log_metrics:
             metrics_dict = make_dict(True, **kwargs)
-            log.info(f"[{self._experiment_id}/{self._run_id}] log metrics at step #{step_idx} [{json.dumps(metrics_dict)}]")
+            log.info(
+                f"[{self._experiment_id}/{self._run_id}] log metrics at step #{step_idx} [{json.dumps(metrics_dict)}]"
+            )
 
     def terminate_failure(self):
         pass

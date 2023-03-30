@@ -32,7 +32,9 @@ class RunSession:
         self._services_directory = services_directory
         self._step_idx = 0
         _xp_tracker_cls = import_class(run_cfg.experiment_tracker.class_name)
-        self._xp_tracker = _xp_tracker_cls(exp_tracker_cfg=run_cfg.experiment_tracker, experiment_id=run_cfg.class_name, run_id=run_id)
+        self._xp_tracker = _xp_tracker_cls(
+            exp_tracker_cfg=run_cfg.experiment_tracker, experiment_id=run_cfg.class_name, run_id=run_id
+        )
         self.model_registry = model_registry
 
     def start_and_await_trials(self, trials_id_and_params, sample_producer_impl, num_parallel_trials=10):

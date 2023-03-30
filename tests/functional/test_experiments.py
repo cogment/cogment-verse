@@ -34,7 +34,7 @@ TEST_EXPERIMENTS = [
     "ppo/hopper_ft",
     "ppo/lunar_lander_continuous_ft",
     "simple_dqn/cartpole_ft",
-    #"simple_a2c/ant_ft", # isaacgymenvs
+    # "simple_a2c/ant_ft", # isaacgymenvs
     "simple_a2c/cartpole_ft",
     "td3/lunar_lander_continuous_ft",
 ]
@@ -45,7 +45,6 @@ def prepare_config():
 
     # Copy config content to .tmp_config
     shutil.copytree(CONFIG_DIR, TEST_CONFIG_PATH, dirs_exist_ok=True)
-
     # Copy smoke test experiment config to .tmp_config
     shutil.copytree(
         os.path.join(FT_DIR, "test_config"), os.path.join(TEST_CONFIG_PATH, "experiment"), dirs_exist_ok=True
@@ -59,7 +58,15 @@ def prepare_config():
 
 @pytest.mark.timeout(DEFAULT_TEST_TIMEOUT)
 def test_default_experiment(prepare_config):
-    proc = subprocess.Popen(args=["python", "-m", "tests.functional.test_experiments", "run=headless_play", "services/experiment_tracker@run.experiment_tracker=simple"])
+    proc = subprocess.Popen(
+        args=[
+            "python",
+            "-m",
+            "tests.functional.test_experiments",
+            "run=headless_play",
+            "services/experiment_tracker@run.experiment_tracker=simple",
+        ]
+    )
     proc.communicate()
     assert proc.returncode == 0
 
@@ -74,11 +81,15 @@ def test_experiment(prepare_config, experiment):
 
 @pytest.mark.timeout(DEFAULT_TEST_TIMEOUT)
 def test__model_registry(prepare_config):
-    proc = subprocess.Popen(args=["python", "-m", "tests.functional.test_experiments", f"+experiment=simple_dqn/connect_four_ft"])
+    proc = subprocess.Popen(
+        args=["python", "-m", "tests.functional.test_experiments", f"+experiment=simple_dqn/connect_four_ft"]
+    )
     proc.communicate()
     assert proc.returncode == 0
 
-    proc = subprocess.Popen(args=["python", "-m", "tests.functional.test_experiments", f"+experiment=simple_dqn/observe_connect_four_ft"])
+    proc = subprocess.Popen(
+        args=["python", "-m", "tests.functional.test_experiments", f"+experiment=simple_dqn/observe_connect_four_ft"]
+    )
     proc.communicate()
     assert proc.returncode == 0
 
