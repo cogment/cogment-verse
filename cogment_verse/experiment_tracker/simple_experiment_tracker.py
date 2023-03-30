@@ -12,10 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import asyncio
+import json
 import logging
 import numbers
-import json
 
 from google.protobuf.json_format import MessageToDict
 from google.protobuf.message import Message
