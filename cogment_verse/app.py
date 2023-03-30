@@ -75,7 +75,6 @@ class App:
         OmegaConf.resolve(
             cfg
         )  # The configuration (or sub configurations) will be passed to other processes let's avoid surprises
-
         self.services_directory = ServiceDirectory()
         self.model_registry = ModelRegistry(self.services_directory)
         self.services_process = []
