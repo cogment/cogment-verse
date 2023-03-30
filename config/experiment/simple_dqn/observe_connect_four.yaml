@@ -9,7 +9,7 @@ run:
     - name: player_1
       implementation: actors.simple_dqn.SimpleDQNActor
       agent_config:
-        model_id: elegant_galileo_0_model
+        model_id: ???
         model_version: -1
     - name: player_2
       implementation: actors.simple_dqn.SimpleDQNActor

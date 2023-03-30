@@ -11,5 +11,5 @@ model_registry:
   log_level: warning
 web:
   port: 8080
-  build: False
+  build: True
   dev: False
