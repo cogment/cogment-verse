@@ -194,9 +194,7 @@ class TD3Actor:
 
         assert isinstance(action_space.gym_space, Box)
 
-        model = await actor_session.model_registry.retrieve_version(
-            TD3Model, config.model_id, config.model_version
-        )
+        model = await actor_session.model_registry.retrieve_version(TD3Model, config.model_id, config.model_version)
 
         async for event in actor_session.all_events():
             if event.observation and event.type == cogment.EventType.ACTIVE:

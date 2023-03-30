@@ -139,9 +139,7 @@ class SimpleDQNActor:
 
         assert isinstance(action_space.gym_space, Discrete)
 
-        model = await actor_session.model_registry.retrieve_model(
-            SimpleDQNModel, config.model_id, config.model_version
-        )
+        model = await actor_session.model_registry.retrieve_model(SimpleDQNModel, config.model_id, config.model_version)
         model.network.eval()
 
         async for event in actor_session.all_events():

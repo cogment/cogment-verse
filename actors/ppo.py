@@ -316,9 +316,7 @@ class PPOActor:
         assert config.environment_specs.num_players == 1
 
         # Get model
-        model = await actor_session.model_registry.retrieve_version(
-            PPOModel, config.model_id, config.model_version
-        )
+        model = await actor_session.model_registry.retrieve_version(PPOModel, config.model_id, config.model_version)
 
         async for event in actor_session.all_events():
             if event.observation and event.type == cogment.EventType.ACTIVE:

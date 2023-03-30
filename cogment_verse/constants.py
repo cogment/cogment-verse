@@ -34,6 +34,3 @@ FT_DIR = os.path.join(TEST_DIR, "functional")
 
 CONFIG_DIR = os.path.join(ROOT_DIR, "config")
 DEFAULT_CONFIG_NAME = "config"
-
-
-

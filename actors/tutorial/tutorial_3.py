@@ -221,7 +221,7 @@ class SimpleBCTraining:
             num_output=utils.flatdim(self._environment_specs.get_action_space().gym_space),
             policy_network_num_hidden_nodes=self._cfg.policy_network.num_hidden_nodes,
         )
-        version_info = await run_session.model_registry.store_initial_version(model)
+        _ = await run_session.model_registry.store_initial_version(model)
         ##########################################
 
         run_session.log_params(

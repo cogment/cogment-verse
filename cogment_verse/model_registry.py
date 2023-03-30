@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# pylint: disable=broad-exception-caught
+
 import abc
 import asyncio
 import copy
@@ -19,16 +21,17 @@ import io
 import logging
 import math
 import time
-from collections import OrderedDict
-from typing import Any, Callable, Dict, Optional
+from typing import Dict, Optional
 from urllib.parse import urlparse
 
 import cogment.api.model_registry_pb2 as model_registry_api
 import grpc.aio
-from cogment.api.model_registry_pb2 import ModelInfo
 from cogment.api.model_registry_pb2_grpc import ModelRegistrySPStub
-from cogment.model_registry import (GRPC_BYTE_SIZE_LIMIT, MODEL_REGISTRY_RETRIEVE_VERSION_TIME,
-                                    MODEL_REGISTRY_STORE_VERSION_TIME)
+from cogment.model_registry import (
+    GRPC_BYTE_SIZE_LIMIT,
+    MODEL_REGISTRY_RETRIEVE_VERSION_TIME,
+    MODEL_REGISTRY_STORE_VERSION_TIME,
+)
 
 from cogment_verse.services_directory import ServiceType
 from cogment_verse.utils import LRU
@@ -103,8 +106,11 @@ class ModelRegistry:
         self._info_cache: Dict[str, ModelInfo] = LRU()
         self._data_cache: Dict[str, Model] = LRU()
 
+    def _get_endpoint_url(self):
+        return self._service_directory.get(ServiceType.MODEL_REGISTRY)
+
     def _get_grpc_stub(self):
-        endpoint = self._service_directory.get(ServiceType.MODEL_REGISTRY)
+        endpoint = self._get_endpoint_url()
         endpoint_components = urlparse(endpoint)
         if endpoint_components.scheme != "grpc":
             raise RuntimeError(f"Unsupported scheme for [{endpoint}], expected 'grpc'")
@@ -177,7 +183,9 @@ class ModelRegistry:
                     version_user_data = model.save(model_data_io)
                     version_data = model_data_io.getvalue()
 
-                version_info = model_registry_api.ModelVersionInfo(model_id=model.id, archived=archived, data_size=len(version_data))
+                version_info = model_registry_api.ModelVersionInfo(
+                    model_id=model.id, archived=archived, data_size=len(version_data)
+                )
                 for key, value in version_user_data.items():
                     version_info.user_data[key] = str(value)  # pylint: disable=no-member
 
@@ -187,7 +195,7 @@ class ModelRegistry:
                 chunksize = math.trunc(GRPC_BYTE_SIZE_LIMIT / 2)
 
                 chunked_version_data = [
-                    version_data[index:index + chunksize] for index in range(0, len(version_data), chunksize)
+                    version_data[index : index + chunksize] for index in range(0, len(version_data), chunksize)
                 ]
                 for data_chunk in chunked_version_data:
                     chunk_body = model_registry_api.CreateVersionRequestChunk.Body(data_chunk=data_chunk)
@@ -245,7 +253,8 @@ class ModelRegistry:
             model = self._data_cache[version_info.data_hash]
         if not cached:
             req = model_registry_api.RetrieveVersionDataRequest(
-                model_id=model_id, version_number=version_info.version_number)
+                model_id=model_id, version_number=version_info.version_number
+            )
             data = b""
             async for chunk in self._get_grpc_stub().RetrieveVersionData(req):
                 data += chunk.data_chunk

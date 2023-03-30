@@ -12,22 +12,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# pylint: disable=broad-exception-caught
+# pylint: disable=global-statement
+
 import abc
 import asyncio
-import copy
 import inspect
 import io
 import logging
-import math
 import threading
 import time
-from collections import OrderedDict
 from typing import Any, Callable, Dict, List, Optional, Tuple
 from urllib.parse import urlparse
 
 import cogment.api.model_registry_pb2 as model_registry_api
 import grpc.aio  # type: ignore
-from cogment.api.model_registry_pb2 import ModelInfo
 from cogment.api.model_registry_pb2_grpc import ModelRegistrySPStub
 from cogment.model_registry_v2 import _RETRIEVAL_COUNT, GRPC_BYTE_SIZE_LIMIT
 
@@ -39,8 +38,8 @@ log = logging.getLogger(__name__)
 # Asyncio based: Not thread safe.
 # These could be made thread local, but that would introduce a different set of use-case problems.
 _tracked_models = {}  # type: Dict[str, _TrackedModel]
-_tracked_models_removal_task = None
-_tracked_models_thread_id = None
+_tracked_models_removal_task = None  # pylint: disable=invalid-name
+_tracked_models_thread_id = None  # pylint: disable=invalid-name
 
 
 class ModelIterationInfo:
@@ -123,7 +122,7 @@ class LatestModel:
         self._model.decrement_reference()
 
     def is_deserialized(self) -> bool:
-        return (self._model.deserialized_func is not None)
+        return self._model.deserialized_func is not None
 
     async def get(self) -> Tuple[Any, ModelIterationInfo]:
         await self.wait_for_available()
@@ -243,7 +242,7 @@ async def _tracked_models_removal():
                 self_task.cancel()
 
             for name in list(_tracked_models):
-                if _tracked_models[name].ref_count == 0 and (now - _tracked_models[name].last_ref) > 300 :
+                if _tracked_models[name].ref_count == 0 and (now - _tracked_models[name].last_ref) > 300:
                     _tracked_models[name].terminate()
                     del _tracked_models[name]
                     log.debug(f"Stopped tracking model [{name}]. [{len(_tracked_models)}] tracked models left.")
@@ -259,8 +258,11 @@ class ModelRegistry:
     def __init__(self, services_directory):
         self._service_directory = services_directory
 
+    def _get_endpoint_url(self):
+        return self._service_directory.get(ServiceType.MODEL_REGISTRY)
+
     def _get_grpc_stub(self):
-        endpoint = self._service_directory.get(ServiceType.MODEL_REGISTRY)
+        endpoint = self._get_endpoint_url()
         endpoint_components = urlparse(endpoint)
         if endpoint_components.scheme != "grpc":
             raise RuntimeError(f"Unsupported scheme for [{endpoint}], expected 'grpc'")
@@ -270,20 +272,22 @@ class ModelRegistry:
     def __str__(self):
         return "ModelRegistry"
 
-    async def store_model(self,
-            name: str, model: Model, iteration_properties: Dict[str, str] = None) -> ModelIterationInfo:
+    async def store_model(
+        self, name: str, model: Model, iteration_properties: Dict[str, str] = None
+    ) -> ModelIterationInfo:
         return await self._send_model(name, model, iteration_properties, True)
 
-    async def publish_model(self,
-            name: str, model: Model, iteration_properties: Dict[str, str] = None) -> ModelIterationInfo:
+    async def publish_model(
+        self, name: str, model: Model, iteration_properties: Dict[str, str] = None
+    ) -> ModelIterationInfo:
         return await self._send_model(name, model, iteration_properties, False)
 
     async def _send_model(self, name, model, iteration_properties, store) -> ModelIterationInfo:
         if model is None and iteration_properties is not None:
-            raise log.error(f"Cannot send iteration properties with no model iteration")
+            raise log.error("Cannot send iteration properties with no model iteration")
 
         model_info = await self._get_model_info(name)
-        new_model = (model_info is None)
+        new_model = model_info is None
 
         if new_model:
             model_user_data_str = {}
@@ -293,62 +297,45 @@ class ModelRegistry:
             registry_model_info = model_registry_api.ModelInfo(model_id=model.id, user_data=model_user_data_str)
 
             req = model_registry_api.CreateOrUpdateModelRequest(model_info=registry_model_info)
-            # req.model_info.model_id = name
-            # req.model_info.user_data = model_user_data_str
             _ = await self._get_grpc_stub().CreateOrUpdateModel(req)
 
         if model is None:
             return None
 
         def generate_chunks():
-            # try:
-            with io.BytesIO() as model_data_io:
-                user_data = model.save(model_data_io)
-                serialized_model = model_data_io.getvalue()
+            try:
+                with io.BytesIO() as model_data_io:
+                    user_data = model.save(model_data_io)
+                    serialized_model = model_data_io.getvalue()
 
-            #print(f"MODEL SERIALIZED")
+                version_info = model_registry_api.ModelVersionInfo()
+                version_info.model_id = name
+                version_info.archived = store
+                version_info.data_size = len(serialized_model)
 
-            version_info = model_registry_api.ModelVersionInfo()
+                if user_data is not None:
+                    for key, value in user_data.items():
+                        version_info.user_data[key] = str(value)  # pylint: disable=no-member
+                if iteration_properties is not None:
+                    version_info.user_data.update(iteration_properties)  # pylint: disable=no-member
 
-            #print(f"INITIALIZED MODEL VERSION INFO")
-            version_info.model_id = name
-            version_info.archived = store
-            version_info.data_size = len(serialized_model)
+                header = model_registry_api.CreateVersionRequestChunk.Header(version_info=version_info)
+                header_chunk = model_registry_api.CreateVersionRequestChunk(header=header)
+                yield header_chunk
 
-            #print(f"DATA SIZE PROPERTY")
+                max_size = GRPC_BYTE_SIZE_LIMIT // 2
+                for index in range(0, len(serialized_model), max_size):
+                    body = model_registry_api.CreateVersionRequestChunk.Body()
+                    body.data_chunk = serialized_model[index : index + max_size]
+                    body_chunk = model_registry_api.CreateVersionRequestChunk(body=body)
+                    yield body_chunk
 
-            if user_data is not None:
-                #print(f"USER_DATA: {user_data}")
-                #version_info.user_data.update(user_data) ## PROBLEM
-                for key, value in user_data.items():
-                    version_info.user_data[key] = str(value)  # pylint: disable=no-member
-                #print("USER_DATA ADDED")
-            if iteration_properties is not None:
-                #print(f"ITERATION_PROPERTIES: {iteration_properties}")
-                version_info.user_data.update(iteration_properties)
-
-            #print(f"MODEL VERSION INFO")
-            header = model_registry_api.CreateVersionRequestChunk.Header(version_info=version_info)
-            header_chunk = model_registry_api.CreateVersionRequestChunk(header=header)
-            yield header_chunk
-
-            max_size = GRPC_BYTE_SIZE_LIMIT // 2
-            for index in range(0, len(serialized_model), max_size):
-                body = model_registry_api.CreateVersionRequestChunk.Body()
-                body.data_chunk = serialized_model[index : index + max_size]
-                body_chunk = model_registry_api.CreateVersionRequestChunk(body=body)
-                yield body_chunk
-
-            # except Exception as exc:
-            #     raise log.error(f"Failure to generate model data for sending [{exc}]")
+            except Exception as exc:
+                raise log.error(f"Failure to generate model data for sending [{exc}]")
 
         reply = await self._get_grpc_stub().CreateVersion(generate_chunks())
 
         model_info = await self.get_model_info(name)
-        #print(f"SENDING MODEL INFO: {model_info.properties}")
-
-
-
         return ModelIterationInfo(reply.version_info)
 
     async def retrieve_model(self, model_cls, name: str, iteration: int = -1) -> Optional[Model]:
@@ -384,12 +371,11 @@ class ModelRegistry:
             model_info = await self._get_model_info(name)
             if model_info is None:
                 raise log.error(f"Unknown model [{name}]")
-            else:
-                return None  # Model exists, but not the iteration (probably)
+            return None  # Model exists, but not the iteration (probably)
 
         deserialized_model = model_cls.load(
-                name, iteration, model_info.properties, iteration_info.properties, io.BytesIO(data)
-            )
+            name, iteration, model_info.properties, iteration_info.properties, io.BytesIO(data)
+        )
         assert deserialized_model.id == name
         return deserialized_model
 
@@ -451,8 +437,7 @@ class ModelRegistry:
             model_info = await self._get_model_info(name)
             if model_info is None:
                 raise log.error(f"Unknown model [{name}]")
-            else:
-                return None  # Model exists, but not the iteration (probably)
+            return None  # Model exists, but not the iteration (probably)
 
         if len(reply.version_infos) == 0:
             return None
@@ -463,8 +448,8 @@ class ModelRegistry:
 
     async def update_model_info(self, name: str, properties: Dict[str, str]) -> None:
         req = model_registry_api.CreateOrUpdateModelRequest()
-        req.model_info.model_id = name
-        req.model_info.user_data.update(properties)
+        req.model_info.model_id = name  # pylint: disable=no-member
+        req.model_info.user_data.update(properties)  # pylint: disable=no-member
         try:
             _ = await self._get_grpc_stub().CreateOrUpdateModel(req)
         except Exception as exc:
@@ -519,10 +504,9 @@ class ModelRegistry:
 
     # Utility function for simple use cases. More complex cases must use 'iteration_update' explicitly.
     # This may fail if called in different threads or with different async loops.
-    async def track_latest_model(self,
-                                 name: str,
-                                 deserialize_func: Callable[[bytes], Any] = None,
-                                 initial_wait: int = 0) -> LatestModel:
+    async def track_latest_model(
+        self, name: str, deserialize_func: Callable[[bytes], Any] = None, initial_wait: int = 0
+    ) -> LatestModel:
         global _tracked_models_removal_task
 
         if name not in _tracked_models:
@@ -556,10 +540,12 @@ class ModelRegistry:
 
         tracked_model = _tracked_models[name]
         if deserialize_func is not None and tracked_model.deserialize_func != deserialize_func:
-            raise log.error(f"Deserialize function mismatch with already set function")
-        if tracked_model.registry._endpoint_url != self._endpoint_url:
-            raise log.error(f"Different model registry to track the same model [{name}]"
-                               f": [{tracked_model.registry._endpoint_url}] vs [{self._endpoint_url}]")
+            raise log.error("Deserialize function mismatch with already set function")
+        if tracked_model.registry._get_endpoint_url() != self._get_endpoint_url():  # pylint: disable=protected-access
+            raise log.error(
+                f"Different model registry to track the same model [{name}]"
+                f": [{tracked_model.registry._get_endpoint_url()}] vs [{self._get_endpoint_url()}]"  # pylint: disable=protected-access
+            )
 
         if _tracked_models_removal_task is None:
             _tracked_models_removal_task = asyncio.create_task(_tracked_models_removal())
