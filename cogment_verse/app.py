@@ -18,8 +18,6 @@ import os
 from omegaconf import OmegaConf
 from names_generator import generate_name
 
-from cogment_verse.constants import DEFAULT_WORK_DIR
-
 from .processes import (
     create_actor_service,
     create_environment_service,
@@ -72,7 +70,7 @@ register_generate_name_resolver()
 
 
 class App:
-    def __init__(self, cfg, work_dir=DEFAULT_WORK_DIR):
+    def __init__(self, cfg, work_dir=".cogment_verse"):
         self.cfg = OmegaConf.create(cfg)
         OmegaConf.resolve(
             cfg

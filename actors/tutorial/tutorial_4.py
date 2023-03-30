@@ -217,9 +217,7 @@ class SimpleBCTraining:
             num_output=utils.flatdim(self._environment_specs.get_action_space().gym_space),
             policy_network_num_hidden_nodes=self._cfg.policy_network.num_hidden_nodes,
         )
-        version_info = await run_session.model_registry.store_initial_version(model)
-
-        print(f"INITIAL VERSION INFO: {version_info}")
+        iteration_info = await run_session.model_registry.store_initial_version(model)
 
         run_session.log_params(
             self._cfg,
@@ -315,10 +313,9 @@ class SimpleBCTraining:
 
             # Publish the newly trained version every 100 steps
             if step_idx % 100 == 0:
-                version_info = await run_session.model_registry.store_version(model, archived=True)
-                print(f"VERSION INFO (step {step_idx}): {version_info}")
+                iteration_info = await run_session.model_registry.store_version(model, archived=True)
                 run_session.log_metrics(
-                    model_version_number=version_info.version_number,
+                    model_version_number=iteration_info.version_number,
                     loss=loss.item(),
                     total_samples=len(observations),
                 )

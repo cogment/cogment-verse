@@ -222,7 +222,7 @@ class SimpleA2CTraining:
             critic_network_num_hidden_nodes=self._cfg.critic_network.num_hidden_nodes,
             dtype=self._dtype,
         )
-        version_info = await run_session.model_registry.store_initial_version(model)
+        iteration_info = await run_session.model_registry.store_initial_version(model)
 
         run_session.log_params(
             self._cfg,
@@ -267,7 +267,7 @@ class SimpleA2CTraining:
                                     config=AgentConfig(
                                         run_id=run_session.run_id,
                                         model_id=model_id,
-                                        model_version=version_info.version_number,
+                                        model_version=iteration_info.version_number,
                                         environment_specs=self._environment_specs.serialize(),
                                     ),
                                 )
@@ -338,9 +338,9 @@ class SimpleA2CTraining:
             model.epoch_idx = epoch_idx
             model.total_samples = total_samples
 
-            version_info = await run_session.model_registry.store_version(model, archived=last_epoch)
+            iteration_info = await run_session.model_registry.store_version(model, archived=last_epoch)
             run_session.log_metrics(
-                model_version_number=version_info.version_number,
+                model_version_number=iteration_info.version_number,
                 epoch_idx=epoch_idx,
                 entropy_loss=entropy_loss.item(),
                 value_loss=value_loss.item(),

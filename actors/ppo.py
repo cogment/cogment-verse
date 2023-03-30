@@ -446,7 +446,7 @@ class PPOTraining:
 
         # Initalize model
         self.model.id = model_id
-        version_info = await run_session.model_registry.store_initial_version(self.model)
+        iteration_info = await run_session.model_registry.store_initial_version(self.model)
 
         run_session.log_params(
             self._cfg,
@@ -467,7 +467,7 @@ class PPOTraining:
                     run_id=run_session.run_id,
                     environment_specs=self._environment_specs.serialize(),
                     model_id=model_id,
-                    model_version=version_info.version_number,
+                    model_version=iteration_info.version_number,
                 ),
             )
 
@@ -528,7 +528,7 @@ class PPOTraining:
                         )
 
                         run_session.log_metrics(
-                            model_version_number=version_info.version_number,
+                            model_version_number=iteration_info.version_number,
                             policy_loss=policy_loss.item(),
                             value_loss=value_loss.item(),
                             rewards=avg_rewards.item(),
@@ -536,7 +536,7 @@ class PPOTraining:
 
                     # Publish the newly updated model
                     self.model.iter_idx = iter_idx
-                    version_info = await run_session.model_registry.store_version(self.model)
+                    iteration_info = await run_session.model_registry.store_version(self.model)
 
     async def train_step(
         self,
