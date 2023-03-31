@@ -59,9 +59,7 @@ message Observation {
   optional bytes rendered_frame = 4;
   repeated string overridden_players = 5;  // list of players that provided an action that was overriden during the last tick
   optional string game_player_name = 6;
-  optional bool feedback_required = 7;
-  optional int32 action_value = 8;
-  optional int32 step = 9;
+  optional int32 action_value = 7;
 }
 
 message PlayerAction {
@@ -74,4 +72,8 @@ message TeacherAction {
 
 message ObserverAction {
   // NOTHING
+}
+
+message EvaluatorAction{
+  nd_array.Array value = 1;
 }

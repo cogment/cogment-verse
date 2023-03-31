@@ -52,7 +52,6 @@ class Observation:
         current_player=None,
         overridden_players=None,
         game_player_name=None,
-        feedback_required=None,
         action_value=None,
     ):
         """
@@ -70,7 +69,6 @@ class Observation:
             assert current_player is None
             assert overridden_players is None
             assert game_player_name is None
-            assert feedback_required is None
             assert action_value is None
             self._pb_observation = pb_observation
             return
@@ -83,7 +81,6 @@ class Observation:
             current_player=current_player,
             overridden_players=overridden_players,
             game_player_name=game_player_name,
-            feedback_required=feedback_required,
             action_value=action_value,
         )
 
@@ -167,13 +164,6 @@ class Observation:
         return self._pb_observation.game_player_name
 
     @property
-    def feedback_required(self):
-        if not self._pb_observation.HasField("feedback_required"):
-            return None
-
-        return self._pb_observation.feedback_required
-
-    @property
     def action_value(self):
         if not self._pb_observation.HasField("action_value"):
             return None
@@ -222,7 +212,6 @@ class ObservationSpace:
         current_player=None,
         overridden_players=None,
         game_player_name=None,
-        feedback_required=None,
         action_value=None,
     ):
         """
@@ -237,7 +226,6 @@ class ObservationSpace:
             current_player=current_player,
             overridden_players=overridden_players,
             game_player_name=game_player_name,
-            feedback_required=feedback_required,
             action_value=action_value,
         )
 
@@ -267,7 +255,6 @@ class ObservationSpace:
             overridden_players=observation.overridden_players,
             current_player=observation.current_player,
             game_player_name=observation.game_player_name,
-            feedback_required=observation.feedback_required,
             action_value=observation.action_value,
         )
 

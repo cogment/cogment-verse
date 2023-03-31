@@ -21,6 +21,7 @@ from typing import List, Tuple
 import cogment
 import numpy as np
 import torch
+import torch.distributed as dist
 from gym.spaces import Discrete, utils
 from torch.distributions.distribution import Distribution
 
@@ -28,6 +29,7 @@ from cogment_verse import HumanDataBuffer, Model
 from cogment_verse.run.run_session import RunSession
 from cogment_verse.run.sample_producer_worker import SampleProducerSession
 from cogment_verse.specs import (
+    EVALUATOR_ACTOR_CLASS,
     HUMAN_ACTOR_IMPL,
     PLAYER_ACTOR_CLASS,
     WEB_ACTOR_NAME,
@@ -178,6 +180,9 @@ class PPOActor:
         actor_session.start()
         config = actor_session.config
 
+        # Setup random seed
+        torch.manual_seed(config.seed)
+
         # Get observation and action space
         environment_specs = EnvironmentSpecs.deserialize(config.environment_specs)
         observation_space = environment_specs.get_observation_space()
@@ -247,9 +252,8 @@ class BasePPOTraining(ABC):
         self._device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.returns = 0
 
-        # Set random seed
+        # Set random seed for initializing neural network parameters
         torch.manual_seed(self._cfg.seed)
-        np.random.default_rng(self._cfg.seed)
         self.model = PPOModel(
             model_id="",
             environment_implementation=self._environment_specs.implementation,
@@ -552,7 +556,7 @@ class PPOSelfTraining(BasePPOTraining):
                     environment_specs=self._environment_specs.serialize(),
                     model_id=model_id,
                     model_version=version_info["version_number"],
-                    seed=self._cfg.seed,
+                    seed=self._cfg.seed + trial_idx + iter_idx * self._cfg.epoch_num_trials,
                 ),
             )
 
@@ -662,12 +666,18 @@ class HillPPOTraining(BasePPOTraining):
             capacity=self._cfg.buffer_capacity,
             action_dtype=np.int32,
             file_name=f"{human_data_category}_{run_session.run_id}",
+            seed=self._cfg.seed,
         )
 
         # Create actor parameters
         def create_actor_params(
-            actor_names: List[str], trial_idx: int, hill_training_trial_period: int, version_number: int = -1
+            actor_names: List[str],
+            trial_idx: int,
+            iter_idx: int,
+            hill_training_trial_period: int,
+            version_number: int = -1,
         ):
+            np.random.default_rng(self._cfg.seed + trial_idx + iter_idx * self._cfg.epoch_num_trials)
             human_actor_idx = np.random.choice(len(actor_names), 1, replace=False)
             human = True
             actors = []
@@ -681,7 +691,7 @@ class HillPPOTraining(BasePPOTraining):
                         config=AgentConfig(
                             run_id=run_session.run_id,
                             environment_specs=self._environment_specs.serialize(),
-                            seed=self._cfg.seed,
+                            seed=self._cfg.seed + trial_idx + iter_idx * self._cfg.epoch_num_trials,
                         ),
                     )
                 else:
@@ -695,6 +705,7 @@ class HillPPOTraining(BasePPOTraining):
                             environment_specs=self._environment_specs.serialize(),
                             model_id=model_id,
                             model_version=version_number,
+                            seed=self._cfg.seed + trial_idx + iter_idx * self._cfg.epoch_num_trials,
                         ),
                     )
                 actors.append(actor)
@@ -742,6 +753,7 @@ class HillPPOTraining(BasePPOTraining):
                             actors=create_actor_params(
                                 actor_names=["first_0", "second_0"],
                                 trial_idx=trial_idx,
+                                iter_idx=iter_idx,
                                 hill_training_trial_period=hill_training_trial_period,
                             ),
                         ),
@@ -814,7 +826,6 @@ class HumanFeedbackPPOTraining(BasePPOTraining):
         action = []
         reward = []
         done = []
-        steps = []
         human_observation = []
         human_reward = []
 
@@ -855,7 +866,6 @@ class HumanFeedbackPPOTraining(BasePPOTraining):
                     actor_sample.reward if actor_sample.reward is not None else 0, dtype=self._dtype
                 )
                 observation.append(observation_value)
-                steps.append(actor_sample.observation.step)
                 action.append(action_value)
                 reward.append(reward_value)
                 done.append(torch.zeros(1, dtype=self._dtype))
@@ -898,6 +908,7 @@ class HumanFeedbackPPOTraining(BasePPOTraining):
             capacity=self._cfg.buffer_capacity,
             action_dtype=np.int32,
             file_name=f"{human_data_category}_{run_session.run_id}",
+            seed=self._cfg.seed,
         )
 
         # Create actor parameters
@@ -924,7 +935,7 @@ class HumanFeedbackPPOTraining(BasePPOTraining):
             actor = cogment.ActorParameters(
                 cog_settings,
                 name=WEB_ACTOR_NAME,
-                class_name=PLAYER_ACTOR_CLASS,
+                class_name=EVALUATOR_ACTOR_CLASS,
                 implementation=HUMAN_ACTOR_IMPL,
                 config=AgentConfig(run_id=run_session.run_id, environment_specs=self._environment_specs.serialize()),
             )

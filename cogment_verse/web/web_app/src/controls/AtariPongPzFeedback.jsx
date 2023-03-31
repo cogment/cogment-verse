@@ -23,6 +23,7 @@ import { Switch } from "../components/Switch"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faThumbsUp, faThumbsDown, faMeh } from "@fortawesome/free-solid-svg-icons";
 import { serializePlayerAction, DType, Space } from "../utils/spaceSerialization";
+import { EVALUATOR_ACTOR_CLASS, WEB_ACTOR_NAME } from "../utils/constants";
 
 const ACTION_SPACE = new Space({
   box: {
@@ -43,10 +44,9 @@ export const AtariPongPzFeedback = ({ sendAction, fps = 30, actorClass, observat
   const [playerPos, setPlayerPos] = useState('');
   const [playerNameDisplay, setPlayerNameDisplay] = useState(false);
   const playerName = observation?.gamePlayerName;
-  const feedbackRequired = observation?.feedbackRequired;
+  const currentPlayer = observation?.currentPlayer;
   const gymAction = observation?.actionValue
   const actionList = ['NONE', 'FIRE', "UP", 'DOWN', "FIRE UP", " FIRE DOWN"]
-
 
   useEffect(() => {
     if (playerName) {
@@ -59,12 +59,12 @@ export const AtariPongPzFeedback = ({ sendAction, fps = 30, actorClass, observat
   }, [playerName]);
 
   useEffect(() => {
-    if (feedbackRequired) {
+    if (currentPlayer == WEB_ACTOR_NAME) {
       setHumanTurn(true);
     } else {
       setHumanTurn(false);
     }
-  }, [feedbackRequired]);
+  }, [currentPlayer]);
 
   useEffect(() => {
     if (!humanMode || !humanTurn || tickId % 3 != 0) {

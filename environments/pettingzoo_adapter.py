@@ -23,7 +23,7 @@ import numpy as np
 import supersuit as ss
 from cogment.environment import EnvironmentSession
 
-from cogment_verse.constants import PLAYER_ACTOR_CLASS, TEACHER_ACTOR_CLASS, WEB_ACTOR_NAME
+from cogment_verse.constants import EVALUATOR_ACTOR_CLASS, PLAYER_ACTOR_CLASS, TEACHER_ACTOR_CLASS, WEB_ACTOR_NAME
 from cogment_verse.specs import EnvironmentSpecs
 from cogment_verse.specs.ndarray_serialization import SerializationFormat, deserialize_ndarray
 from cogment_verse.utils import import_class
@@ -240,12 +240,8 @@ class AtariEnvironment(Environment):
         session_cfg = environment_session.config
 
         # Initialize environment
-        if session_cfg.render:
-            pz_env = self.env_class.env(render_mode="rgb_array")
-        else:
-            pz_env = self.env_class.env()
-        if self.env_type_str == "atari":
-            pz_env = atari_env_wrapper(pz_env)
+        pz_env = self.env_class.env(render_mode="rgb_array") if session_cfg.render else self.env_class.env()
+        pz_env = atari_env_wrapper(pz_env) if self.env_type_str == "atari" else pz_env
         observation_space = self.env_specs.get_observation_space(session_cfg.render_width)
         action_space = self.env_specs.get_action_space()
 
@@ -257,18 +253,17 @@ class AtariEnvironment(Environment):
         if len(pz_env.agents) != len(actor_names) and len(actor_names) > 1:
             raise ValueError(f"Number of actors does not match environments requirement ({len(pz_env.agents)} actors)")
 
-        if len(actor_names) == 1 and len(pz_env.agents) > len(actor_names):
-            pz_player_names = {agent_name: 0 for agent_name in pz_env.agents}
-        else:
-            pz_player_names = {agent_name: count for (count, agent_name) in enumerate(pz_env.agents)}
+        pz_player_names = (
+            {agent_name: 0 for agent_name in pz_env.agents}
+            if len(actor_names) == 1 and len(pz_env.agents) > len(actor_names)
+            else {agent_name: count for (count, agent_name) in enumerate(pz_env.agents)}
+        )
 
         assert len(web_actor_idx) < 2
-        human_player_name = ""
-        if len(web_actor_idx) > 0:
-            human_player_name = pz_env.agents[web_actor_idx[0]]
+        human_player_name = pz_env.agents[web_actor_idx[0]] if web_actor_idx else ""
         pz_player_name = next(pz_agent_iterator)
-        rl_actor_idx = pz_player_names[pz_player_name]
-        actor_name = actor_names[rl_actor_idx]
+        actor_idx = pz_player_names[pz_player_name]
+        actor_name = actor_names[actor_idx]
 
         # Render the pixel for UI
         rendered_frame = None
@@ -287,58 +282,56 @@ class AtariEnvironment(Environment):
 
         environment_session.start([("*", observation_space.serialize(observation))])
         async for event in environment_session.all_events():
-            if event.actions:
-                # Action
-                action_value = event.actions[rl_actor_idx].action
+            if not event.actions:
+                continue
+            # Action
+            action_value = event.actions[actor_idx].action
 
-                # Observation
-                gym_action = action_space.deserialize(action_value)
-                pz_env.step(gym_action.value)
-                pz_observation, pz_reward, done, _, _ = pz_env.last()
+            # Observation
+            gym_action = action_space.deserialize(action_value)
+            pz_env.step(gym_action.value)
+            pz_observation, pz_reward, done, _, _ = pz_env.last()
 
-                # Actor names
-                pz_player_name = next(pz_agent_iterator)
-                rl_actor_idx = pz_player_names[pz_player_name]
-                actor_name = actor_names[rl_actor_idx]
+            # Actor names
+            pz_player_name = next(pz_agent_iterator)
+            actor_idx = pz_player_names[pz_player_name]
+            actor_name = actor_names[actor_idx]
 
-                observation = observation_space.create(
-                    value=pz_observation,
-                    rendered_frame=rendered_frame,
-                    current_player=actor_name,
-                    game_player_name=human_player_name,
-                )
-                rendered_frame = None
-                if session_cfg.render:
-                    rendered_frame = pz_env.render()
+            observation = observation_space.create(
+                value=pz_observation,
+                rendered_frame=rendered_frame,
+                current_player=actor_name,
+                game_player_name=human_player_name,
+            )
+            rendered_frame = None
+            if session_cfg.render:
+                rendered_frame = pz_env.render()
 
-                observations = [("*", observation_space.serialize(observation))]
-                # TODO: need to revise the actor name received the reward
-                environment_session.add_reward(value=pz_reward, confidence=1.0, to=[actor_name])
-                if done:
-                    # The trial ended
-                    environment_session.end(observations)
-                elif event.type != cogment.EventType.ACTIVE:
-                    # The trial termination has been requested
-                    environment_session.end(observations)
-                else:
-                    # The trial is active
-                    environment_session.produce_observations(observations)
+            observations = [("*", observation_space.serialize(observation))]
+            # TODO: need to revise the actor name received the reward
+            environment_session.add_reward(value=pz_reward, confidence=1.0, to=[actor_name])
+            if done:
+                # The trial ended
+                environment_session.end(observations)
+            elif event.type != cogment.EventType.ACTIVE:
+                # The trial termination has been requested
+                environment_session.end(observations)
+            else:
+                # The trial is active
+                environment_session.produce_observations(observations)
         pz_env.close()
 
 
 class HumanFeedbackAtariEnvironment(Environment):
     async def impl(self, environment_session: EnvironmentSession):
-        actors = environment_session.get_active_actors()
-        actor_names = [actor.actor_name for actor in actors if actor.actor_class_name == PLAYER_ACTOR_CLASS]
         session_cfg = environment_session.config
+        actors = environment_session.get_active_actors()
+        valid_actor_class_names = {PLAYER_ACTOR_CLASS, EVALUATOR_ACTOR_CLASS}
+        actor_names = [actor.actor_name for actor in actors if actor.actor_class_name in valid_actor_class_names]
 
         # Initialize environment
-        if session_cfg.render:
-            pz_env = self.env_class.env(render_mode="rgb_array")
-        else:
-            pz_env = self.env_class.env()
-        if self.env_type_str == "atari":
-            pz_env = atari_env_wrapper(pz_env)
+        pz_env = self.env_class.env(render_mode="rgb_array") if session_cfg.render else self.env_class.env()
+        pz_env = atari_env_wrapper(pz_env) if self.env_type_str == "atari" else pz_env
         observation_space = self.env_specs.get_observation_space(session_cfg.render_width)
         action_space = self.env_specs.get_action_space()
 
@@ -349,80 +342,77 @@ class HumanFeedbackAtariEnvironment(Environment):
 
         if (len(actor_names) != len(pz_env.agents) + 1) and len(actor_names) > 1:
             raise ValueError(f"Number of actors does not match environments requirement ({len(pz_env.agents)} actors)")
-        pz_player_names = {agent_name: count for (count, agent_name) in enumerate(pz_env.agents)}
+        pz_player_names = {agent_name: count for count, agent_name in enumerate(pz_env.agents)}
         pz_player_name = next(pz_agent_iterator)
-        rl_actor_idx = pz_player_names[pz_player_name]
-        actor_name = actor_names[rl_actor_idx]
+        actor_idx = pz_player_names[pz_player_name]
+        actor_name = actor_names[actor_idx]
 
         # Render the pixel for UI
         rendered_frame = None
-        if session_cfg.render:
-            if "rgb_array" not in pz_env.metadata["render_modes"]:
-                log.warning(f"Petting Zoo environment [{self.env_class_name}] doesn't support rendering to pixels")
-                return
-            rendered_frame = pz_env.render()
+        if session_cfg.render and "rgb_array" not in pz_env.metadata["render_modes"]:
+            log.warning(f"Petting Zoo environment [{self.env_class_name}] doesn't support rendering to pixels")
+            return
+        rendered_frame = pz_env.render()
+
+        # Initial observation
         observation = observation_space.create(
             value=pz_observation,
             rendered_frame=rendered_frame,
             current_player=actor_name,
             game_player_name=actor_name,
-            feedback_required=True,
             action_value=0,
         )
-
         environment_session.start([("*", observation_space.serialize(observation))])
 
-        is_rl_agent = True
-        eval_done = False
         rewarded_actor_name = actor_name
         async for event in environment_session.all_events():
-            if event.actions:
-                # Action
-                action_value = event.actions[rl_actor_idx].action
-                if is_rl_agent:
-                    # Observation
-                    gym_action = action_space.deserialize(action_value)
-                    pz_env.step(gym_action.value)
-                    pz_observation, pz_reward, done, _, _ = pz_env.last()
+            if not event.actions:
+                continue
 
-                    # Actor names for evaluator
-                    rewarded_actor_name = actor_name
-                    rl_actor_idx = -1
-                    actor_name = actor_names[rl_actor_idx]
+            action_value = event.actions[actor_idx].action
+            if actors[actor_idx].actor_class_name == PLAYER_ACTOR_CLASS:
+                # Observation
+                gym_action = action_space.deserialize(action_value)
+                pz_env.step(gym_action.value)
+                pz_observation, pz_reward, done, _, _ = pz_env.last()
 
-                    # Pixel frame display on UI
-                    rendered_frame = None
-                    if session_cfg.render:
-                        rendered_frame = pz_env.render()
-                    is_rl_agent = False
-                    eval_done = False
-                else:
-                    pz_reward = deserialize_ndarray(action_value.value)[0]
-                    pz_player_name = next(pz_agent_iterator)
-                    rl_actor_idx = pz_player_names[pz_player_name]
-                    actor_name = actor_names[rl_actor_idx]
-                    eval_done = True
-                    is_rl_agent = True
+                # Actor names for evaluator
+                rewarded_actor_name = actor_name
+                actor_idx = -1
+                actor_name = actor_names[actor_idx]
 
-                observation = observation_space.create(
-                    value=pz_observation,
-                    rendered_frame=rendered_frame,
-                    current_player=actor_name,
-                    game_player_name=rewarded_actor_name,
-                    feedback_required=not is_rl_agent,
-                    action_value=gym_action.value,
-                )
+                # Pixel frame display on UI
+                rendered_frame = None
+                if session_cfg.render:
+                    rendered_frame = pz_env.render()
+            elif actors[actor_idx].actor_class_name == EVALUATOR_ACTOR_CLASS:
+                # TODO: To be modified when sending-UI-reward is added
+                pz_reward = deserialize_ndarray(action_value.value)[0]
+                pz_player_name = next(pz_agent_iterator)
+                actor_idx = pz_player_names[pz_player_name]
+                actor_name = actor_names[actor_idx]
+            else:
+                # Raise an error if the actor class is invalid
+                raise ValueError("Actor class is invalid")
 
-                observations = [("*", observation_space.serialize(observation))]
-                environment_session.add_reward(value=pz_reward, confidence=1.0, to=[rewarded_actor_name])
-                if done and eval_done:
-                    # The trial ended
-                    environment_session.end(observations)
-                elif event.type != cogment.EventType.ACTIVE:
-                    # The trial termination has been requested
-                    environment_session.end(observations)
-                else:
-                    # The trial is active
-                    environment_session.produce_observations(observations)
+            observation = observation_space.create(
+                value=pz_observation,
+                rendered_frame=rendered_frame,
+                current_player=actor_name,
+                game_player_name=rewarded_actor_name,
+                action_value=gym_action.value,
+            )
+
+            observations = [("*", observation_space.serialize(observation))]
+            environment_session.add_reward(value=pz_reward, confidence=1.0, to=[rewarded_actor_name])
+            if done:
+                # The trial ended
+                environment_session.end(observations)
+            elif event.type != cogment.EventType.ACTIVE:
+                # The trial termination has been requested
+                environment_session.end(observations)
+            else:
+                # The trial is active
+                environment_session.produce_observations(observations)
 
         pz_env.close()

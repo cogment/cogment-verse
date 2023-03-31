@@ -20,10 +20,9 @@ from google.protobuf.json_format import MessageToDict
 from google.protobuf.message import Message
 from mlflow.entities import Metric, Param, RunStatus
 from mlflow.tracking import MlflowClient
+from mlflow.utils.mlflow_tags import MLFLOW_RUN_NAME
 from omegaconf import OmegaConf
 from prometheus_client import Counter, Summary
-
-# from mlflow.utils.mlflow_tags import MLFLOW_RUN_NAME
 
 log = logging.getLogger(__name__)
 
@@ -84,8 +83,8 @@ class MlflowExperimentTracker:
                 self._mlflow_exp_id = client.create_experiment(mlflow_experiment_name)
 
         if not self._mlflow_run_id:
-            # run = client.create_run(self._mlflow_exp_id, tags={MLFLOW_RUN_NAME: self._run_id})
-            run = client.create_run(self._mlflow_exp_id)
+            run = client.create_run(self._mlflow_exp_id, tags={MLFLOW_RUN_NAME: self._run_id})
+            # run = client.create_run(self._mlflow_exp_id)
             self._mlflow_run_id = run.info.run_id
 
         return client
