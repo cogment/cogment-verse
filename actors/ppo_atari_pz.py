@@ -21,7 +21,6 @@ from typing import List, Tuple
 import cogment
 import numpy as np
 import torch
-import torch.distributed as dist
 from gym.spaces import Discrete, utils
 from torch.distributions.distribution import Distribution
 
