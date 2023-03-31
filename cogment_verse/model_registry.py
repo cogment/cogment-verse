@@ -17,6 +17,7 @@ import asyncio
 import copy
 import io
 import logging
+import math
 import time
 from urllib.parse import urlparse
 
@@ -172,7 +173,7 @@ class ModelRegistry:
 
                 yield CreateVersionRequestChunk(header=CreateVersionRequestChunk.Header(version_info=version_info))
 
-                chunksize = GRPC_BYTE_SIZE_LIMIT  # 2MB to keep under well under the GRPC 4MB limit
+                chunksize = math.trunc(GRPC_BYTE_SIZE_LIMIT / 2)  # 2MB to keep under well under the GRPC 4MB limit
                 sent_chunk_num = 0
                 while version_data:
                     yield CreateVersionRequestChunk(
