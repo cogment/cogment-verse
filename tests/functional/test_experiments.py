@@ -19,6 +19,7 @@ import multiprocessing as mp
 import os
 import shutil
 import subprocess
+import sys
 
 import hydra
 import pytest
@@ -29,12 +30,9 @@ from cogment_verse.constants import DEFAULT_CONFIG_DIR, DEFAULT_CONFIG_NAME, FUN
 log = logging.getLogger(__name__)
 
 TEST_WORK_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".tmp_cogment_verse"))
-
 CONFIG_REL_PATH = os.path.relpath(DEFAULT_CONFIG_DIR, os.path.abspath(os.path.dirname(__file__)))
-
 TEST_CONFIG_PATH = os.path.join(os.path.dirname(__file__), ".tmp_config")
 TEST_CONFIG_REL_PATH = os.path.relpath(TEST_CONFIG_PATH, os.path.abspath(os.path.dirname(__file__)))
-
 DEFAULT_TEST_TIMEOUT = 500  # seconds
 
 TEST_EXPERIMENTS = [
@@ -76,7 +74,7 @@ def test_default_experiment(_prepare_config):
     """Test the default config."""
     proc = subprocess.Popen(
         args=[
-            "python",
+            sys.executable,
             "-m",
             "tests.functional.test_experiments",
             "run=headless_play",
@@ -92,7 +90,9 @@ def test_default_experiment(_prepare_config):
 @pytest.mark.timeout(DEFAULT_TEST_TIMEOUT)
 def test_experiment(_prepare_config, experiment):
     """Test individual experiments."""
-    proc = subprocess.Popen(args=["python", "-m", "tests.functional.test_experiments", f"+experiment={experiment}"])
+    proc = subprocess.Popen(
+        args=[sys.executable, "-m", "tests.functional.test_experiments", f"+experiment={experiment}"]
+    )
     proc.communicate()
     assert proc.returncode == 0
 
@@ -104,13 +104,18 @@ def test__model_registry(_prepare_config):
     Then, test that the same model can be retrieved to play trials.
     """
     proc = subprocess.Popen(
-        args=["python", "-m", "tests.functional.test_experiments", "+experiment=simple_dqn/connect_four_ft"]
+        args=[sys.executable, "-m", "tests.functional.test_experiments", "+experiment=simple_dqn/connect_four_ft"]
     )
     proc.communicate()
     assert proc.returncode == 0
 
     proc = subprocess.Popen(
-        args=["python", "-m", "tests.functional.test_experiments", "+experiment=simple_dqn/observe_connect_four_ft"]
+        args=[
+            sys.executable,
+            "-m",
+            "tests.functional.test_experiments",
+            "+experiment=simple_dqn/observe_connect_four_ft",
+        ]
     )
     proc.communicate()
     assert proc.returncode == 0

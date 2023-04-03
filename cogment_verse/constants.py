@@ -26,8 +26,8 @@ OBSERVER_ACTOR_CLASS = "observer"
 
 ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 DEFAULT_WORK_DIR = os.path.join(ROOT_DIR, ".cogment_verse")
-DATASTORE_DIR = os.path.join(DEFAULT_WORK_DIR, ServiceType.TRIAL_DATASTORE.value)
-MODEL_REGISTRY_DIR = os.path.join(DEFAULT_WORK_DIR, ServiceType.MODEL_REGISTRY.value)
+DATASTORE_DIR = "trial_datastore"
+MODEL_REGISTRY_DIR = "model_registry"
 
 DEFAULT_CONFIG_DIR = os.path.join(ROOT_DIR, "config")
 DEFAULT_CONFIG_NAME = "config"
