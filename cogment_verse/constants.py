@@ -14,8 +14,6 @@
 
 import os
 
-from cogment_verse.services_directory import ServiceType
-
 COGMENT_VERSION = "v2.8.0"
 WEB_ACTOR_NAME = "web_actor"  # At the moment the web client can only join the trial using the actor name which means a unique name is required
 HUMAN_ACTOR_IMPL = "client"
