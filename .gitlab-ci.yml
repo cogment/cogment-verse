@@ -64,5 +64,5 @@ pytest:
   stage: test
   extends: .base
   script:
-    - python -m pytest -m --durations=0 -v
+    - python -m pytest --durations=0 -v
 
