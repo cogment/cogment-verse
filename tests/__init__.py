@@ -12,17 +12,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-<<<<<<< HEAD
-from .lru import LRU
-from .sizeof_fmt import sizeof_fmt
-from .import_class import import_class
-=======
-<<<<<<< HEAD:cogment_verse/__init__.py
-from .app import App
-from .model_registry import Model
-from .replay_buffers import TorchReplayBuffer
-=======
-from .lru import LRU
-from .sizeof_fmt import sizeof_fmt
->>>>>>> Single python entry point & hydra based configuration:cogment_verse/utils/__init__.py
->>>>>>> Single python entry point & hydra based configuration
+# no import

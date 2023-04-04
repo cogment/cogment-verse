@@ -14,6 +14,7 @@ htmlcov/
 .coverage
 .venv
 *.egg-info
+.python_version
 
 # Atari roms
 .atari_roms/

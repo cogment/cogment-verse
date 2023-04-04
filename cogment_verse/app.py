@@ -18,7 +18,7 @@ import os
 from names_generator import generate_name
 from omegaconf import OmegaConf
 
-from .constants import HUMAN_ACTOR_IMPL
+from .constants import DEFAULT_WORK_DIR, HUMAN_ACTOR_IMPL
 from .model_registry import ModelRegistry
 from .processes import (
     create_actor_service,
@@ -70,7 +70,7 @@ register_generate_name_resolver()
 
 
 class App:
-    def __init__(self, cfg, work_dir=".cogment_verse"):
+    def __init__(self, cfg, work_dir=DEFAULT_WORK_DIR):
         self.cfg = OmegaConf.create(cfg)
         OmegaConf.resolve(
             cfg

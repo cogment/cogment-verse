@@ -47,6 +47,7 @@ Cogment verse includes environments from:
 
    - `swig`, which is required for the Box2d gym environments, it can be installed using `apt-get install swig` on ubuntu or `brew install swig` on macOS
    - `python3-opencv`, which is required on ubuntu systems, it can be installed using `apt-get install python3-opencv`
+   - `libosmesa6-dev` and `patchelf` are required to run the environment libraries using `mujoco`. They can be installed using `apt-get install libosmesa6-dev patchelf`.
 
 4. Create and activate a virtual environment
    ```console

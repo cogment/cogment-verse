@@ -17,8 +17,8 @@ import time
 from multiprocessing import Queue
 
 from cogment_verse.model_registry import ModelRegistry
+from cogment_verse.utils.import_class import import_class
 
-from ..mlflow_experiment_tracker import MlflowExperimentTracker
 from .sample_producer_worker import start_sample_producer_worker
 from .trial_runner_worker import start_trial_runner_worker
 
@@ -28,14 +28,12 @@ log = logging.getLogger(__name__)
 class RunSession:
     def __init__(self, run_cfg, run_id, services_directory, model_registry: ModelRegistry):
         self.run_id = run_id
-
         self._services_directory = services_directory
         self._step_idx = 0
-
-        self._xp_tracker = MlflowExperimentTracker(
-            experiment_id=run_cfg.class_name, run_id=run_id, mlflow_tracking_uri=run_cfg.mlflow_tracking_uri
+        _xp_tracker_cls = import_class(run_cfg.experiment_tracker.class_name)
+        self._xp_tracker = _xp_tracker_cls(
+            exp_tracker_cfg=run_cfg.experiment_tracker, experiment_id=run_cfg.class_name, run_id=run_id
         )
-
         self.model_registry = model_registry
 
     def start_and_await_trials(self, trials_id_and_params, sample_producer_impl, num_parallel_trials=10):

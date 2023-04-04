@@ -3,6 +3,7 @@ defaults:
   - override /services/actor:
       - simple_dqn
   - override /services/environment: cartpole
+  - override /services/experiment_tracker@run.experiment_tracker: simple
 
 run:
   class_name: actors.simple_dqn.SimpleDQNTraining
@@ -13,8 +14,8 @@ run:
   archive_frequency: 20000                    # Unit: steps
 
   # Training Params
-  num_trials: 10000                           # Unit: trials
-  num_parallel_trials: 10                     # Unit: trials
+  num_trials: 10                           # Unit: trials
+  num_parallel_trials: 2                     # Unit: trials
   learning_starts: ${run.batch_size}          # Unit: steps
   target_update_frequency: 2000               # Unit: steps
   buffer_size: 10000                          # Unit: steps

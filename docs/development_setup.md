@@ -119,3 +119,9 @@ Activate [AutoROM](https://github.com/Farama-Foundation/AutoROM) license relatin
   ```sh
   AutoROM --accept-license
   ```
+
+### Functional Tests
+To only run functional tests
+```console
+$ python -m pytest -m functional --durations=0 --no-header -v
+```

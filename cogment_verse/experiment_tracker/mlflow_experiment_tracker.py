@@ -14,15 +14,15 @@
 
 import asyncio
 import logging
-import numbers
+import os
 
-from google.protobuf.json_format import MessageToDict
-from google.protobuf.message import Message
 from mlflow.entities import Metric, Param, RunStatus
+from mlflow.exceptions import MlflowException
 from mlflow.tracking import MlflowClient
-from mlflow.utils.mlflow_tags import MLFLOW_RUN_NAME
-from omegaconf import OmegaConf
 from prometheus_client import Counter, Summary
+
+from cogment_verse.experiment_tracker.simple_experiment_tracker import make_dict
+from cogment_verse.utils.errors import CogmentVerseError
 
 log = logging.getLogger(__name__)
 
@@ -36,46 +36,37 @@ EXPERIMENT_TRACKER_METRICS_LOGGED_COUNTER = Counter(
 MAX_METRICS_BATCH_SIZE = 1000  # MLFlow only accepts at most 1000 metrics per batch
 
 
-def make_dict(ignore_non_numbers, *args, **kwargs):
-    res = dict(kwargs)
-    for arg in args:
-        if isinstance(arg, Message):
-            arg = MessageToDict(arg, preserving_proto_field_name=True, including_default_value_fields=False)
-        if OmegaConf.is_config(arg):
-            arg = OmegaConf.to_container(arg, resolve=True)
-        if isinstance(arg, dict):
-            for key, value in arg.items():
-                if ignore_non_numbers and not isinstance(value, numbers.Number):
-                    break
-                if key in res:
-                    raise RuntimeError(
-                        f"Trying to set duplicate key [{key}] to [{value}], while already set to [{res[key]}]"
-                    )
-                res[key] = value
-        else:
-            raise RuntimeError(f"Unsupported argument of type [{type(arg)}]")
-    return res
-
-
 class MlflowExperimentTracker:
-    def __init__(self, experiment_id, run_id, mlflow_tracking_uri, flush_frequency=5):
+    def __init__(self, exp_tracker_cfg, experiment_id, run_id):
         self._experiment_id = experiment_id
         self._run_id = run_id
-        self._mlflow_tracking_uri = mlflow_tracking_uri
+        self._mlflow_tracking_uri = exp_tracker_cfg.mlflow_tracking_uri
         self._mlflow_exp_id = None
         self._mlflow_run_id = None
         self._metrics_buffer = []
-        self._flush_metrics_worker_frequency = flush_frequency
+        self._flush_metrics_worker_frequency = exp_tracker_cfg.flush_frequency
         self._flush_metrics_worker = None
+
+        os.environ["MLFLOW_HTTP_REQUEST_BACKOFF_FACTOR"] = str(exp_tracker_cfg.request_backoff_factor)
+        os.environ["MLFLOW_HTTP_REQUEST_MAX_RETRIES"] = str(exp_tracker_cfg.request_max_retries)
+        os.environ["MLFLOW_HTTP_REQUEST_TIMEOUT"] = str(exp_tracker_cfg.request_timeout)
 
     def __del__(self):
         self._stop_flush_metrics_worker()
 
     def _get_mlflow_client(self):
+
         client = MlflowClient(tracking_uri=self._mlflow_tracking_uri)
+
         if not self._mlflow_exp_id:
             mlflow_experiment_name = f"/{self._experiment_id}"
-            experiment = client.get_experiment_by_name(mlflow_experiment_name)
+            try:
+                experiment = client.get_experiment_by_name(mlflow_experiment_name)
+            except MlflowException:
+                raise CogmentVerseError(
+                    "Mlflow server is not responding. Make sure it is launched in a separate terminal."
+                ) from None
+
             if experiment is not None:
                 self._mlflow_exp_id = experiment.experiment_id
             else:
@@ -83,8 +74,7 @@ class MlflowExperimentTracker:
                 self._mlflow_exp_id = client.create_experiment(mlflow_experiment_name)
 
         if not self._mlflow_run_id:
-            run = client.create_run(self._mlflow_exp_id, tags={MLFLOW_RUN_NAME: self._run_id})
-            # run = client.create_run(self._mlflow_exp_id)
+            run = client.create_run(experiment_id=self._mlflow_exp_id, run_name=self._run_id)
             self._mlflow_run_id = run.info.run_id
 
         return client
@@ -127,7 +117,6 @@ class MlflowExperimentTracker:
             self._flush_metrics_worker = None
 
     def log_params(self, *args, **kwargs):
-
         self._get_mlflow_client().log_batch(
             run_id=self._mlflow_run_id,
             params=[Param(key, str(value)) for key, value in make_dict(False, *args, **kwargs).items()],
