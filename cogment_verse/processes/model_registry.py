@@ -14,12 +14,14 @@
 
 import os
 
+from cogment_verse.constants import MODEL_REGISTRY_DIR
+
 from .cogment_cli_process import CogmentCliProcess
 from ..services_directory import ServiceType
 
 
 def create_model_registry_service(work_dir, model_registry_cfg, services_directory):
-    model_registry_data_dir = os.path.join(work_dir, "model_registry")
+    model_registry_data_dir = os.path.join(work_dir, MODEL_REGISTRY_DIR)
     os.makedirs(model_registry_data_dir, exist_ok=True)
 
     port = model_registry_cfg.port

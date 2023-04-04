@@ -1,0 +1,3 @@
+class_name: cogment_verse.experiment_tracker.simple_experiment_tracker.SimpleExperimentTracker
+log_params: True
+log_metrics: False
