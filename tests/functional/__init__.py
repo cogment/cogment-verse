@@ -12,13 +12,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
-
-from cogment_verse.constants import DEFAULT_WORK_DIR, ROOT_DIR
-from cogment_verse.utils.generate import generate
-
-
-generate(
-    work_dir=os.path.join(ROOT_DIR, DEFAULT_WORK_DIR),
-    specs_filename=os.path.join(ROOT_DIR, "cogment_verse/specs/cogment.yaml"),
-)
+# no import

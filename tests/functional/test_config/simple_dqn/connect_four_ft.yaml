@@ -4,21 +4,24 @@ defaults:
       - simple_dqn
       - random
   - override /services/environment: connect_four
+  - override /services/experiment_tracker@run.experiment_tracker: simple
+
 run:
+  run_id: connect_four_self_training
   class_name: actors.simple_dqn.SimpleDQNSelfPlayTraining
   seed: 618
 
   # Archiving
   archive_model: True
-  archive_frequency: 20000                  # Unit: steps
+  archive_frequency: 100                    # Unit: steps
 
   # Training Params
-  num_epochs: 75
-  epoch_num_training_trials: 200            # Unit: trials
-  epoch_num_validation_trials: 20           # Unit: trials
-  num_parallel_trials: 10                   # Unit: trials
+  num_epochs: 1
+  epoch_num_training_trials: 10             # Unit: trials
+  epoch_num_validation_trials: 2            # Unit: trials
+  num_parallel_trials: 2                    # Unit: trials
   learning_starts: ${run.batch_size}        # Unit: steps
-  target_update_frequency: 4000             # Unit: steps
+  target_update_frequency: 20               # Unit: steps
   buffer_size: 10000                        # Unit: steps
   train_frequency: 10                       # Unit: steps
   model_update_frequency: 10                # Unit: steps
