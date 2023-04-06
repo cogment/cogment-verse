@@ -161,7 +161,7 @@ class ClassicEnvironment(Environment):
 
         _current_player_pz_agent, current_player_actor_idx, current_player_actor_name = next_player()
 
-        pz_observation, _pz_reward, _pz_done, _, _ = pz_env.last()
+        pz_observation, _pz_reward, done, _, _ = pz_env.last()
 
         rendered_frame = None
         if session_cfg.render:
@@ -188,7 +188,7 @@ class ClassicEnvironment(Environment):
                 pz_env.step(action.value)
 
                 _current_player_pz_agent, current_player_actor_idx, current_player_actor_name = next_player()
-                pz_observation, _pz_reward, _pz_done, _, _ = pz_env.last()
+                pz_observation, _pz_reward, done, _, _ = pz_env.last()
 
                 observation = observation_space.create(
                     value=pz_observation["observation"],  # TODO Should only be sent to the current player
@@ -216,8 +216,6 @@ class ClassicEnvironment(Environment):
                         confidence=1.0,
                         to=[rewarded_player_actor_name],
                     )
-
-                done = all(pz_env.dones[pz_agent] for pz_agent in pz_env.agents)
 
                 if done:
                     # The trial ended

@@ -17,7 +17,7 @@ run:
 
   # Training Params
   num_epochs: 1
-  epoch_num_training_trials: 10             # Unit: trials
+  epoch_num_training_trials: 2             # Unit: trials
   epoch_num_validation_trials: 2            # Unit: trials
   num_parallel_trials: 2                    # Unit: trials
   learning_starts: ${run.batch_size}        # Unit: steps
@@ -28,10 +28,10 @@ run:
 
   # Network Params
   value_network:
-    num_hidden_nodes: [128, 64]
+    num_hidden_nodes: [64, 64]
   learning_rate: 0.0005
   discount_factor: 0.99
-  batch_size: 256
+  batch_size: 64
   epsilon_schedule_start: 1
   epsilon_schedule_end: 0.05
   epsilon_schedule_duration_ratio: 0.75
