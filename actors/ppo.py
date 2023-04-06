@@ -439,6 +439,7 @@ class PPOTraining:
 
         assert self._environment_specs.num_players == 1
         assert isinstance(self._environment_specs.get_action_space().gym_space, Box)
+        assert self._cfg.num_steps >= self._cfg.batch_size
 
         # Initalize model
         self.model.model_id = model_id
