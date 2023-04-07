@@ -3,10 +3,11 @@ defaults:
   - override /services/actor:
       - sac
   - override /services/environment: hopper
+  - override /services/experiment_tracker@run.experiment_tracker: simple
 
 run:
   class_name: actors.sac.SACTraining
-  seed: 1
+  seed: 0
   num_trials: 100_000
   num_parallel_trials: 1
   discount_factor: 0.99

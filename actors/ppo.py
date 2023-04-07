@@ -69,7 +69,7 @@ class ValueNetwork(torch.nn.Module):
         self.fully_connected = torch.nn.Linear(num_hidden, num_hidden)
         self.output = torch.nn.Linear(num_hidden, 1)
 
-    def forward(self, x: torch.Tensor):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         # Input layer
         x = self.input(x)
         x = torch.tanh(x)
@@ -505,7 +505,6 @@ class PPOTraining:
                 episode_rewards.append(torch.vstack(trial_reward).sum())
 
                 # Publish the newly trained version every 100 steps
-                # print(f"Iter #{iter_idx}: step: {len(actions)}")
                 if len(actions) >= self._cfg.num_steps * self._cfg.epoch_num_trials + 1:
                     # Update model parameters
                     policy_loss, value_loss = await self.train_step(
@@ -517,7 +516,7 @@ class PPOTraining:
                     actions = []
                     rewards = []
                     dones = []
-                    if iter_idx % 1 == 0:
+                    if iter_idx % 100 == 0:
                         # Compute average rewards for last 100 episodes
                         avg_rewards = await self.compute_average_reward(episode_rewards)
                         log.info(

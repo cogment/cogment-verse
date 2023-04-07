@@ -18,6 +18,7 @@ from enum import Enum
 import numpy as np
 
 # pylint: disable=import-error
+<<<<<<< HEAD
 from ndarray_pb2 import (
     DTYPE_FLOAT32,
     DTYPE_FLOAT64,
@@ -28,6 +29,9 @@ from ndarray_pb2 import (
     DTYPE_UNKNOWN,
     Array,
 )
+=======
+from ndarray_pb2 import DTYPE_FLOAT32, DTYPE_FLOAT64, DTYPE_INT8, DTYPE_INT32, DTYPE_INT64, DTYPE_UNKNOWN, Array
+>>>>>>> feat: add SAC for mujoco environments
 
 PB_DTYPE_FROM_DTYPE = {
     "float32": DTYPE_FLOAT32,
