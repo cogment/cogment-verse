@@ -100,3 +100,9 @@ Run the test suite on the python codebase using `pytest` by running the followin
 ```console
 $ python -m pytest
 ```
+
+### Functional Tests
+To only run functional tests
+```console
+$ python -m pytest -m functional --durations=0 --no-header -v
+```

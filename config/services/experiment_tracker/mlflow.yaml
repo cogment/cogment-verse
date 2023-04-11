@@ -1,0 +1,7 @@
+class_name: cogment_verse.experiment_tracker.mlflow_experiment_tracker.MlflowExperimentTracker
+port: 3000
+mlflow_tracking_uri: http://localhost:${run.experiment_tracker.port}
+flush_frequency: 5
+request_backoff_factor: 1
+request_max_retries: 2
+request_timeout: 10

@@ -37,3 +37,6 @@ multirun
 
 # Local ngrok configuration
 ngrok.yaml
+
+#pyenv
+.python-version
