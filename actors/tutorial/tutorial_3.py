@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import io
 import logging
 
 import cogment
@@ -51,7 +52,6 @@ class SimpleBCModel(Model):
         version_number=0,
     ):
         super().__init__(model_id, version_number)
-
         self._dtype = torch.float
         self._environment_implementation = environment_implementation
         self._num_input = num_input
@@ -76,7 +76,38 @@ class SimpleBCModel(Model):
             "num_input": self._num_input,
             "num_output": self._num_output,
             "policy_network_num_hidden_nodes": self._policy_network_num_hidden_nodes,
+            "total_samples": self.total_samples,
         }
+
+    @staticmethod
+    def serialize_model(model):
+        stream = io.BytesIO()
+        torch.save(
+            (
+                model.policy_network.state_dict(),
+                model.get_model_user_data(),
+            ),
+            stream,
+        )
+        return stream.getvalue()
+
+    @classmethod
+    def deserialize_model(cls, serialized_model, model_id, version_number):
+        stream = io.BytesIO(serialized_model)
+        (policy_network_state_dict, model_user_data) = torch.load(stream)
+
+        model = SimpleBCModel(
+            model_id=model_id,
+            version_number=version_number,
+            environment_implementation=model_user_data["environment_implementation"],
+            num_input=int(model_user_data["num_input"]),
+            num_output=int(model_user_data["num_output"]),
+            policy_network_num_hidden_nodes=int(model_user_data["policy_network_num_hidden_nodes"]),
+        )
+        model.policy_network.load_state_dict(policy_network_state_dict)
+        model.total_samples = model_user_data["total_samples"]
+
+        return model
 
     def save(self, model_data_f):
         torch.save(self.policy_network.state_dict(), model_data_f)
@@ -127,9 +158,9 @@ class SimpleBCActor:
         action_space = environment_specs.get_action_space(seed=config.seed)
         observation_space = environment_specs.get_observation_space()
 
-        model = await actor_session.model_registry.retrieve_version(
-            SimpleBCModel, config.model_id, config.model_version
-        )
+        serialized_model = await actor_session.model_registry.retrieve_model(config.model_id, config.model_version)
+        model = SimpleBCModel.deserialize_model(serialized_model, config.model_id, config.model_version)
+
         log.info(f"Starting trial with model v{model.version_number}")
 
         model.policy_network.eval()
@@ -221,7 +252,11 @@ class SimpleBCTraining:
             num_output=utils.flatdim(self._environment_specs.get_action_space().gym_space),
             policy_network_num_hidden_nodes=self._cfg.policy_network.num_hidden_nodes,
         )
-        _ = await run_session.model_registry.store_initial_version(model)
+        serialized_model = SimpleBCModel.serialize_model(model)
+        _ = await run_session.model_registry.publish_model(
+            name=model_id,
+            model=serialized_model,
+        )
         ##########################################
 
         run_session.log_params(

@@ -13,5 +13,5 @@
 # limitations under the License.
 
 from .app import App
-from .model_registry import Model
+from .model import Model
 from .replay_buffers import TorchReplayBuffer

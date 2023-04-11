@@ -14,22 +14,21 @@
 
 # pylint: disable=E0611
 
-import logging
 import copy
-import time
+import io
 import json
+import logging
 import math
-import numpy as np
+import time
 
 import cogment
+import numpy as np
 import torch
 from gym.spaces import Discrete, utils
 
-from cogment_verse.specs import AgentConfig, cog_settings, EnvironmentConfig, EnvironmentSpecs
-
-from cogment_verse.constants import PLAYER_ACTOR_CLASS, WEB_ACTOR_NAME, HUMAN_ACTOR_IMPL
-
 from cogment_verse import Model, TorchReplayBuffer  # pylint: disable=abstract-class-instantiated
+from cogment_verse.constants import HUMAN_ACTOR_IMPL, PLAYER_ACTOR_CLASS, WEB_ACTOR_NAME
+from cogment_verse.specs import AgentConfig, EnvironmentConfig, EnvironmentSpecs, cog_settings
 
 torch.multiprocessing.set_sharing_strategy("file_system")
 
@@ -88,17 +87,28 @@ class SimpleDQNModel(Model):
             "num_input": self._num_input,
             "num_output": self._num_output,
             "num_hidden_nodes": json.dumps(self._num_hidden_nodes),
+            "num_samples_seen": self.num_samples_seen,
         }
 
-    def save(self, model_data_f):
-        torch.save((self.network.state_dict(), self.epsilon), model_data_f)
-
-        return {"num_samples_seen": self.num_samples_seen}
+    @staticmethod
+    def serialize_model(model):
+        stream = io.BytesIO()
+        torch.save(
+            (
+                model.network.state_dict(),
+                model.epsilon,
+                model.get_model_user_data(),
+            ),
+            stream,
+        )
+        return stream.getvalue()
 
     @classmethod
-    def load(cls, model_id, version_number, model_user_data, version_user_data, model_data_f):
-        # Create the model instance
-        model = SimpleDQNModel(
+    def deserialize_model(cls, serialized_model, model_id, version_number):
+        stream = io.BytesIO(serialized_model)
+        (network_state_dict, epsilon, model_user_data) = torch.load(stream)
+
+        model = cls(
             model_id=model_id,
             version_number=version_number,
             environment_implementation=model_user_data["environment_implementation"],
@@ -107,14 +117,9 @@ class SimpleDQNModel(Model):
             num_hidden_nodes=json.loads(model_user_data["num_hidden_nodes"]),
             epsilon=0,
         )
-
-        # Load the saved states
-        (network_state_dict, epsilon) = torch.load(model_data_f)
         model.network.load_state_dict(network_state_dict)
         model.epsilon = epsilon
-
-        # Load version data
-        model.num_samples_seen = int(version_user_data["num_samples_seen"])
+        model.num_samples_seen = int(model_user_data["num_samples_seen"])
 
         return model
 
@@ -139,7 +144,8 @@ class SimpleDQNActor:
 
         assert isinstance(action_space.gym_space, Discrete)
 
-        model = await actor_session.model_registry.retrieve_model(SimpleDQNModel, config.model_id, config.model_version)
+        serialized_model = await actor_session.model_registry.retrieve_model(config.model_id, config.model_version)
+        model = SimpleDQNModel.deserialize_model(serialized_model, config.model_id, config.model_version)
         model.network.eval()
 
         async for event in actor_session.all_events():
@@ -155,9 +161,10 @@ class SimpleDQNActor:
                     and config.model_update_frequency > 0
                     and actor_session.get_tick_id() % config.model_update_frequency == 0
                 ):
-                    model = await actor_session.model_registry.retrieve_model(
-                        SimpleDQNModel, config.model_id, config.model_version
+                    serialized_model = await actor_session.model_registry.retrieve_model(
+                        config.model_id, config.model_version
                     )
+                    model = SimpleDQNModel.deserialize_model(serialized_model, config.model_id, config.model_version)
                     model.network.eval()
 
                 if rng.random() < model.epsilon:
@@ -274,7 +281,12 @@ class SimpleDQNTraining:
             epsilon=epsilon_schedule(0),
             dtype=self._dtype,
         )
-        iteration_info = await run_session.model_registry.publish_model(model_id, model)
+
+        serialized_model = SimpleDQNModel.serialize_model(model)
+        iteration_info = await run_session.model_registry.publish_model(
+            name=model_id,
+            model=serialized_model,
+        )
 
         run_session.log_params(
             self._cfg,
@@ -388,7 +400,11 @@ class SimpleDQNTraining:
                 if step_idx % self._cfg.target_update_frequency == 0:
                     target_network.load_state_dict(model.network.state_dict())
 
-                iteration_info = await run_session.model_registry.publish_model(model_id, model)
+                serialized_model = SimpleDQNModel.serialize_model(model)
+                iteration_info = await run_session.model_registry.publish_model(
+                    name=model_id,
+                    model=serialized_model,
+                )
 
                 if step_idx % 100 == 0:
                     end_time = time.time()
@@ -403,7 +419,11 @@ class SimpleDQNTraining:
                         steps_per_seconds=steps_per_seconds,
                     )
 
-        iteration_info = await run_session.model_registry.store_model(model_id, model)
+        serialized_model = SimpleDQNModel.serialize_model(model)
+        iteration_info = await run_session.model_registry.store_model(
+            name=model_id,
+            model=serialized_model,
+        )
 
 
 class SimpleDQNSelfPlayTraining:
@@ -533,7 +553,12 @@ class SimpleDQNSelfPlayTraining:
             epsilon=epsilon_schedule(0),
             dtype=self._dtype,
         )
-        iteration_info = await run_session.model_registry.publish_model(model_id, model)
+
+        serialized_model = SimpleDQNModel.serialize_model(model)
+        iteration_info = await run_session.model_registry.publish_model(
+            name=model_id,
+            model=serialized_model,
+        )
 
         run_session.log_params(
             self._cfg,
@@ -679,7 +704,11 @@ class SimpleDQNSelfPlayTraining:
                     if step_idx % self._cfg.target_update_frequency == 0:
                         target_network.load_state_dict(model.network.state_dict())
 
-                    iteration_info = await run_session.model_registry.publish_model(model_id, model)
+                    serialized_model = SimpleDQNModel.serialize_model(model)
+                    iteration_info = await run_session.model_registry.publish_model(
+                        name=model_id,
+                        model=serialized_model,
+                    )
 
                     if step_idx % 100 == 0:
                         end_time = time.time()
@@ -693,7 +722,11 @@ class SimpleDQNSelfPlayTraining:
                             steps_per_seconds=steps_per_seconds,
                         )
 
-            iteration_info = await run_session.model_registry.store_model(model_id, model)
+            serialized_model = SimpleDQNModel.serialize_model(model)
+            iteration_info = await run_session.model_registry.store_model(
+                name=model_id,
+                model=serialized_model,
+            )
 
             # Validation trials
             cum_total_reward = 0
@@ -739,6 +772,6 @@ class SimpleDQNSelfPlayTraining:
                 )
             log.info(
                 f"[SimpleDQN/{run_session.run_id}] epoch #{epoch_idx + 1}/{self._cfg.num_epochs} done - "
-                + f"[{model.id}@v{validation_version_number}] avg total reward = {avg_total_reward}, ties ratio = {ties_ratio}"
+                + f"[{model.model_id}@v{validation_version_number}] avg total reward = {avg_total_reward}, ties ratio = {ties_ratio}"
             )
             previous_epoch_version_number = validation_version_number

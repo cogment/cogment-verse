@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import io
 import logging
 from dataclasses import dataclass
 from typing import List, Tuple, Union
@@ -259,7 +260,43 @@ class PPOModel(Model):
             "num_output": self._num_output,
             "policy_network_hidden_nodes": self._policy_network_hidden_nodes,
             "value_network_hidden_nodes": self._value_network_hidden_nodes,
+            "iter_idx": self.iter_idx,
+            "total_samples": self.total_samples,
         }
+
+    @staticmethod
+    def serialize_model(model):
+        stream = io.BytesIO()
+        torch.save(
+            (
+                model.policy_network.state_dict(),
+                model.value_network.state_dict(),
+                model.get_model_user_data(),
+            ),
+            stream,
+        )
+        return stream.getvalue()
+
+    @classmethod
+    def deserialize_model(cls, serialized_model, model_id, version_number):
+        stream = io.BytesIO(serialized_model)
+        (policy_network_state_dict, value_network_state_dict, model_user_data) = torch.load(stream)
+
+        model = cls(
+            model_id=model_id,
+            version_number=version_number,
+            environment_implementation=model_user_data["environment_implementation"],
+            num_input=int(model_user_data["num_input"]),
+            num_output=int(model_user_data["num_output"]),
+            policy_network_hidden_nodes=int(model_user_data["policy_network_hidden_nodes"]),
+            value_network_hidden_nodes=int(model_user_data["value_network_hidden_nodes"]),
+        )
+        model.policy_network.load_state_dict(policy_network_state_dict)
+        model.value_network.load_state_dict(value_network_state_dict)
+        model.iter_idx = model_user_data["iter_idx"]
+        model.total_samples = model_user_data["total_samples"]
+
+        return model
 
     def save(self, model_data_f: str) -> dict:
         """Save the model"""
@@ -316,7 +353,8 @@ class PPOActor:
         assert config.environment_specs.num_players == 1
 
         # Get model
-        model = await actor_session.model_registry.retrieve_version(PPOModel, config.model_id, config.model_version)
+        serialized_model = await actor_session.model_registry.retrieve_model(config.model_id, config.model_version)
+        model = PPOModel.deserialize_model(serialized_model, config.model_id, config.model_version)
 
         async for event in actor_session.all_events():
             if event.observation and event.type == cogment.EventType.ACTIVE:
@@ -445,8 +483,12 @@ class PPOTraining:
         assert isinstance(self._environment_specs.get_action_space().gym_space, Box)
 
         # Initalize model
-        self.model.id = model_id
-        iteration_info = await run_session.model_registry.store_initial_version(self.model)
+        self.model.model_id = model_id
+        serialized_model = PPOModel.serialize_model(self.model)
+        iteration_info = await run_session.model_registry.publish_model(
+            name=model_id,
+            model=serialized_model,
+        )
 
         run_session.log_params(
             self._cfg,
@@ -536,7 +578,11 @@ class PPOTraining:
 
                     # Publish the newly updated model
                     self.model.iter_idx = iter_idx
-                    iteration_info = await run_session.model_registry.store_version(self.model)
+                    serialized_model = PPOModel.serialize_model(self.model)
+                    iteration_info = await run_session.model_registry.store_model(
+                        name=model_id,
+                        model=serialized_model,
+                    )
 
     async def train_step(
         self,
