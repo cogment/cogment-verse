@@ -12,42 +12,27 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import logging
-import os
-
 from .cogment_cli_process import CogmentCliProcess
 from ..services_directory import ServiceType
 
-log = logging.getLogger(__name__)
 
-
-def create_trial_datastore_service(work_dir, trial_datastore_cfg, services_directory):
-
-    data_dir = os.path.join(work_dir, ServiceType.TRIAL_DATASTORE.value)
-    os.makedirs(data_dir, exist_ok=True)
-
-    port = trial_datastore_cfg.port
+def create_directory_service(work_dir, directory_cfg, services_directory):
+    port = directory_cfg.port
 
     services_directory.add(
-        service_type=ServiceType.TRIAL_DATASTORE,
+        service_type=ServiceType.DIRECTORY,
         service_endpoint=f"grpc://localhost:{port}",
     )
 
-    cli_args = [
-        "services",
-        "trial_datastore",
-        "--log_format=json",
-        f"--log_level={trial_datastore_cfg.log_level}",
-        f"--port={port}",
-    ]
-
-    if trial_datastore_cfg.local_file_storage:
-        cli_args.append(f"--file_storage=.cogment_verse/{ServiceType.TRIAL_DATASTORE.value}/trial_datastore.db")
-
-    log.info(f"Trial Datastore starting on port [{port}]...")
-
     return CogmentCliProcess(
-        name="trial_datastore",
+        name="directory",
         work_dir=work_dir,
-        cli_args=cli_args,
+        cli_args=[
+            "services",
+            "directory",
+            "--log_format=json",
+            f"--log_level={directory_cfg.log_level}",
+            f"--port={port}",
+            f"--registration_lag={directory_cfg.registration_lag}"
+        ],
     )

@@ -17,6 +17,9 @@ import os
 
 from names_generator import generate_name
 from omegaconf import OmegaConf
+from cogment_verse.processes.directory import create_directory_service
+
+from cogment_verse.processes.launch import create_launch_process
 
 from .constants import DEFAULT_WORK_DIR, HUMAN_ACTOR_IMPL
 from .model_registry import ModelRegistry
@@ -78,6 +81,16 @@ class App:
         self.services_directory = ServiceDirectory()
         self.model_registry = ModelRegistry(self.services_directory)
         self.services_process = []
+
+        # TODO: use command: cogment launch
+        # create_launch_process()
+
+
+        # TODO: Directory Service
+        directory_cfg = cfg.services["directory"]
+        self.services_process.append(
+            create_directory_service(work_dir, directory_cfg, self.services_directory)
+        )
 
         for service_type, services_cfg in cfg.services.items():
             if service_type not in [service_type.value for service_type in ServiceType]:

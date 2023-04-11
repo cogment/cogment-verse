@@ -17,6 +17,7 @@ from random import choice
 
 
 class ServiceType(Enum):
+    DIRECTORY = "directory"
     ORCHESTRATOR = "orchestrator"
     ORCHESTRATOR_WEB_ENDPOINT = "orchestrator_web_endpoint"
     ENVIRONMENT = "environment"

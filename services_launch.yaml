@@ -1,0 +1,51 @@
+scripts:
+  # directory:
+  #   environment:
+  #     COGMENT_DIRECTORY_PORT: "{{.NAVCAN_DIRECTORY_PORT}}"
+  #     # COGMENT_LOG_LEVEL: debug
+  #   commands:
+  #     - [".cogment/cogment", "services", "directory"]
+  orchestrator:
+    environment:
+      COGMENT_DIRECTORY_ENDPOINT: "{{.NAVCAN_DIRECTORY_URL}}"
+      COGMENT_LIFECYCLE_PORT: "{{.NAVCAN_ORCHESTRATOR_PORT}}"
+      COGMENT_ACTOR_PORT: "{{.NAVCAN_ORCHESTRATOR_PORT}}"
+      COGMENT_WEB_PROXY_PORT: "{{.NAVCAN_ORCHESTRATOR_WEB_PORT}}"
+      COGMENT_PRE_TRIAL_HOOKS: "{{.NAVCAN_ENVIRONMENT_URL}}"
+      COGMENT_ORCHESTRATOR_DIRECTORY_REGISTRATION_HOST: localhost
+    commands:
+      # - ["sleep", "5"] # Waiting to make sure the pretrial hook is registered as the orchestrator is trying to get it from the get go
+      - [".cogment/cogment", "services", "orchestrator"]
+  trial_datastore:
+    environment:
+      COGMENT_DIRECTORY_ENDPOINT: "{{.NAVCAN_DIRECTORY_URL}}"
+      COGMENT_TRIAL_DATASTORE_PORT: "{{.NAVCAN_TRIAL_DATASTORE_PORT}}"
+      COGMENT_TRIAL_DATASTORE_MEMORY_STORAGE_MAX_SAMPLE_SIZE: 207374182
+      COGMENT_TRIAL_DATASTORE_FILE_STORAGE_PATH: ".cogment/trial_datastore.db"
+      # COGMENT_LOG_LEVEL: debug
+      COGMENT_TRIAL_DATASTORE_DIRECTORY_REGISTRATION_HOST: localhost
+    commands:
+      - [".cogment/cogment", "services", "trial_datastore"]
+  model_registry:
+    environment:
+      COGMENT_DIRECTORY_ENDPOINT: "{{.NAVCAN_DIRECTORY_URL}}"
+      COGMENT_MODEL_REGISTRY_PORT: "{{.NAVCAN_MODEL_REGISTRY_PORT}}"
+      COGMENT_MODEL_REGISTRY_ARCHIVE_DIR: ".cogment/model_registry"
+      COGMENT_MODEL_REGISTRY_DIRECTORY_REGISTRATION_HOST: localhost
+    commands:
+      - [".cogment/cogment", "services", "model_registry"]
+  environment:
+    environment:
+      COGMENT_DIRECTORY_ENDPOINT: "{{.NAVCAN_DIRECTORY_URL}}"
+    commands:
+      - ["{{.NAVCAN_PYTHON_EXEC}}", "-m", "atc_training_services.environment.main"]
+  actors:
+    environment:
+      COGMENT_DIRECTORY_ENDPOINT: "{{.NAVCAN_DIRECTORY_URL}}"
+    commands:
+      - ["{{.NAVCAN_PYTHON_EXEC}}", "-m", "atc_training_services.actors.main"]
+  rest_server:
+    environment:
+      COGMENT_DIRECTORY_ENDPOINT: "{{.NAVCAN_DIRECTORY_URL}}"
+    commands:
+      - ["{{.NAVCAN_PYTHON_EXEC}}", "-m", "server-flask.rest_server"]

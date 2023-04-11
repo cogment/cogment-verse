@@ -1,10 +1,11 @@
+directory:
+  port: ${generate_port:directory}
+  log_level: warning
+  registration_lag: 0
 orchestrator:
   port: ${generate_port:orchestrator}
   web_port: ${generate_port:orchestrator_web}
   web_endpoint: http://localhost:${generate_port:orchestrator_web}
-  log_level: warning
-trial_datastore:
-  port: ${generate_port:trial_datastore}
   log_level: warning
 model_registry:
   port: ${generate_port:model_registry}
