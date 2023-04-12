@@ -159,7 +159,7 @@ class TD3Model(Model):
             model_user_data,
         ) = torch.load(stream)
 
-        model = TD3Model(
+        model = cls(
             model_id=model_id,
             version_number=version_number,
             environment_implementation=model_user_data["environment_implementation"],

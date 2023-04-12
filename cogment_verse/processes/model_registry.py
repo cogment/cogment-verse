@@ -32,11 +32,11 @@ def create_model_registry_service(work_dir, model_registry_cfg, services_directo
     )
 
     return CogmentCliProcess(
-        name=ServiceType.MODEL_REGISTRY.value,
+        name="model_registry",
         work_dir=work_dir,
         cli_args=[
             "services",
-            ServiceType.MODEL_REGISTRY.value,
+            "model_registry",
             "--log_format=json",
             f"--log_level={model_registry_cfg.log_level}",
             f"--archive_dir={model_registry_data_dir}",
