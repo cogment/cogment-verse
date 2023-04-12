@@ -281,7 +281,7 @@ class SimpleA2CTraining:
                                     config=AgentConfig(
                                         run_id=run_session.run_id,
                                         model_id=model_id,
-                                        model_version=iteration_info.version_number,
+                                        model_version=iteration_info.iteration,
                                         environment_specs=self._environment_specs.serialize(),
                                     ),
                                 )
@@ -356,7 +356,7 @@ class SimpleA2CTraining:
             )
 
             run_session.log_metrics(
-                model_version_number=iteration_info.version_number,
+                model_version_number=iteration_info.iteration,
                 epoch_idx=epoch_idx,
                 entropy_loss=entropy_loss.item(),
                 value_loss=value_loss.item(),

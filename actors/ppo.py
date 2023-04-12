@@ -479,7 +479,7 @@ class PPOTraining:
                     run_id=run_session.run_id,
                     environment_specs=self._environment_specs.serialize(),
                     model_id=model_id,
-                    model_version=iteration_info.version_number,
+                    model_version=iteration_info.iteration,
                 ),
             )
 
@@ -540,7 +540,7 @@ class PPOTraining:
                         )
 
                         run_session.log_metrics(
-                            model_version_number=iteration_info.version_number,
+                            model_version_number=iteration_info.iteration,
                             policy_loss=policy_loss.item(),
                             value_loss=value_loss.item(),
                             rewards=avg_rewards.item(),
