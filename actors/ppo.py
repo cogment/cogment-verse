@@ -298,36 +298,6 @@ class PPOModel(Model):
 
         return model
 
-    def save(self, model_data_f: str) -> dict:
-        """Save the model"""
-        torch.save((self.policy_network.state_dict(), self.value_network.state_dict()), model_data_f)
-        return {"iter_idx": self.iter_idx, "total_samples": self.total_samples}
-
-    @classmethod
-    def load(
-        cls, model_id: int, version_number: int, model_user_data: dict, version_user_data: dict, model_data_f: str
-    ) -> Model:
-        """Load the model"""
-        model = PPOModel(
-            model_id=model_id,
-            version_number=version_number,
-            environment_implementation=model_user_data["environment_implementation"],
-            num_input=int(model_user_data["num_input"]),
-            num_output=int(model_user_data["num_output"]),
-            policy_network_hidden_nodes=int(model_user_data["policy_network_hidden_nodes"]),
-            value_network_hidden_nodes=int(model_user_data["value_network_hidden_nodes"]),
-        )
-
-        # Load the model parameters
-        (policy_network_state_dict, value_network_state_dict) = torch.load(model_data_f)
-        model.policy_network.load_state_dict(policy_network_state_dict)
-        model.value_network.load_state_dict(value_network_state_dict)
-
-        # Load version data
-        model.iter_idx = version_user_data["iter_idx"]
-        model.total_samples = version_user_data["total_samples"]
-        return model
-
 
 class PPOActor:
     """PPO actor"""

@@ -123,33 +123,6 @@ class SimpleA2CModel(Model):
 
         return model
 
-    def save(self, model_data_f):
-        torch.save((self.actor_network.state_dict(), self.critic_network.state_dict()), model_data_f)
-        return {"epoch_idx": self.epoch_idx, "total_samples": self.total_samples}
-
-    @classmethod
-    def load(cls, model_id, version_number, model_user_data, version_user_data, model_data_f):
-        # Create the model instance
-        model = SimpleA2CModel(
-            model_id=model_id,
-            version_number=version_number,
-            environment_implementation=model_user_data["environment_implementation"],
-            num_input=int(model_user_data["num_input"]),
-            num_output=int(model_user_data["num_output"]),
-            actor_network_num_hidden_nodes=int(model_user_data["actor_network_num_hidden_nodes"]),
-            critic_network_num_hidden_nodes=int(model_user_data["critic_network_num_hidden_nodes"]),
-        )
-
-        # Load the saved states
-        (actor_network_state_dict, critic_network_state_dict) = torch.load(model_data_f)
-        model.actor_network.load_state_dict(actor_network_state_dict)
-        model.critic_network.load_state_dict(critic_network_state_dict)
-
-        # Load version data
-        model.epoch_idx = version_user_data["epoch_idx"]
-        model.total_samples = version_user_data["total_samples"]
-        return model
-
 
 class SimpleA2CActor:
     def __init__(self, _cfg):
