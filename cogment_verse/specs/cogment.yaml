@@ -32,3 +32,10 @@ actor_classes:
     observation:
       space: cogment_verse.Observation
     config_type: cogment_verse.AgentConfig
+
+  - name: evaluator
+    action:
+      space: cogment_verse.EvaluatorAction
+    observation:
+      space: cogment_verse.Observation
+    config_type: cogment_verse.AgentConfig

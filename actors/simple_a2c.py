@@ -16,17 +16,11 @@ import logging
 
 import cogment
 import torch
-
-from gym.spaces import utils, Discrete
+from gym.spaces import Discrete, utils
 
 from cogment_verse import Model
-from cogment_verse.specs import (
-    AgentConfig,
-    cog_settings,
-    EnvironmentConfig,
-    EnvironmentSpecs,
-)
 from cogment_verse.constants import PLAYER_ACTOR_CLASS
+from cogment_verse.specs import AgentConfig, EnvironmentConfig, EnvironmentSpecs, cog_settings
 
 torch.multiprocessing.set_sharing_strategy("file_system")
 

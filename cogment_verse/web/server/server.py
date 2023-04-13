@@ -16,11 +16,11 @@ import json
 import logging
 import os
 
+import uvicorn
 from starlette.applications import Starlette
 from starlette.responses import HTMLResponse
 from starlette.routing import Mount, Route
 from starlette.staticfiles import StaticFiles
-import uvicorn
 
 log = logging.getLogger(__name__)
 

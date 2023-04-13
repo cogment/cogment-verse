@@ -21,19 +21,19 @@ import torch
 from gym.spaces import utils
 
 from cogment_verse import Model
-
-#########################################
-
 from cogment_verse.specs import (
-    AgentConfig,
-    cog_settings,
-    EnvironmentConfig,
-    EnvironmentSpecs,
     HUMAN_ACTOR_IMPL,
     PLAYER_ACTOR_CLASS,
     TEACHER_ACTOR_CLASS,
     WEB_ACTOR_NAME,
+    AgentConfig,
+    EnvironmentConfig,
+    EnvironmentSpecs,
+    cog_settings,
 )
+
+#########################################
+
 
 torch.multiprocessing.set_sharing_strategy("file_system")
 

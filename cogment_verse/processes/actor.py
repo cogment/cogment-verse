@@ -18,10 +18,10 @@ import sys
 
 import cogment
 
-from .cogment_py_sdk_process import CogmentPySdkProcess
-from ..utils.import_class import import_class
-from ..utils.get_implementation_name import get_implementation_name
 from ..services_directory import ServiceType
+from ..utils.get_implementation_name import get_implementation_name
+from ..utils.import_class import import_class
+from .cogment_py_sdk_process import CogmentPySdkProcess
 
 log = logging.getLogger(__name__)
 

@@ -12,20 +12,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from enum import Enum
 import io
+from enum import Enum
 
 import numpy as np
 
 # pylint: disable=import-error
 from ndarray_pb2 import (
-    Array,
-    DTYPE_UNKNOWN,
     DTYPE_FLOAT32,
     DTYPE_FLOAT64,
     DTYPE_INT8,
     DTYPE_INT32,
     DTYPE_INT64,
+    DTYPE_UINT8,
+    DTYPE_UNKNOWN,
+    Array,
 )
 
 PB_DTYPE_FROM_DTYPE = {
@@ -34,6 +35,7 @@ PB_DTYPE_FROM_DTYPE = {
     "int8": DTYPE_INT8,
     "int32": DTYPE_INT32,
     "int64": DTYPE_INT64,
+    "uint8": DTYPE_UINT8,
 }
 
 DTYPE_FROM_PB_DTYPE = {
@@ -42,6 +44,7 @@ DTYPE_FROM_PB_DTYPE = {
     DTYPE_INT8: np.dtype("int8"),
     DTYPE_INT32: np.dtype("int32"),
     DTYPE_INT64: np.dtype("int64"),
+    DTYPE_UINT8: np.dtype("uint8"),
 }
 
 DOUBLE_DTYPES = frozenset(["float32", "float64"])

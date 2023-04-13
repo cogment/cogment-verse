@@ -21,6 +21,7 @@ HUMAN_ACTOR_IMPL = "client"
 TEACHER_ACTOR_CLASS = "teacher"
 PLAYER_ACTOR_CLASS = "player"
 OBSERVER_ACTOR_CLASS = "observer"
+EVALUATOR_ACTOR_CLASS = "evaluator"
 
 ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 DEFAULT_WORK_DIR = os.path.join(ROOT_DIR, ".cogment_verse")

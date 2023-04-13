@@ -12,8 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .cogment_cli_process import CogmentCliProcess
 from ..services_directory import ServiceType
+from .cogment_cli_process import CogmentCliProcess
 
 
 def create_orchestrator_service(work_dir, orchestrator_cfg, services_directory):

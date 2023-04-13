@@ -9,11 +9,12 @@ run:
   class_name: actors.ppo.PPOTraining
   seed: 0
   num_epochs: 2
+  num_iter: 2
   epoch_num_trials: 2
   num_parallel_trials: 2
   learning_rate: 0.0005
   batch_size: 64
-  num_steps: 2
+  num_steps: 64
   policy_network:
     num_hidden_nodes: 64
   value_network:
@@ -23,3 +24,4 @@ run:
   value_loss_coef: 0.5
   action_loss_coef: 0.1
   clipping_coef: 0.2
+  state_norm: False

@@ -19,6 +19,7 @@ import logging
 import sys
 
 import cogment
+from hydra.core.hydra_config import HydraConfig
 
 from ..services_directory import ServiceType
 from ..utils.get_implementation_name import get_implementation_name
