@@ -17,6 +17,7 @@ export const WEB_ACTOR_NAME = "web_actor";
 export const TEACHER_ACTOR_CLASS = "teacher";
 export const PLAYER_ACTOR_CLASS = "player";
 export const OBSERVER_ACTOR_CLASS = "observer";
+export const EVALUATOR_ACTOR_CLASS = "evaluator";
 
 export const ORCHESTRATOR_WEB_ENDPOINT =
   window.ORCHESTRATOR_WEB_ENDPOINT !== ""

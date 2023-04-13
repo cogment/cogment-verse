@@ -12,10 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from multiprocessing import Process
 import asyncio
 import logging
 import sys
+from multiprocessing import Process
 
 import cogment
 

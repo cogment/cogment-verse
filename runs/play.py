@@ -18,13 +18,13 @@ import cogment
 from google.protobuf.json_format import ParseDict
 
 from cogment_verse.specs import (
-    AgentConfig,
-    cog_settings,
-    EnvironmentConfig,
     HUMAN_ACTOR_IMPL,
     OBSERVER_ACTOR_CLASS,
     PLAYER_ACTOR_CLASS,
     WEB_ACTOR_NAME,
+    AgentConfig,
+    EnvironmentConfig,
+    cog_settings,
 )
 
 log = logging.getLogger(__name__)

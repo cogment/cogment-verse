@@ -12,8 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from enum import Enum
-from tempfile import mkdtemp
 import json
 import logging
 import os
@@ -21,7 +19,9 @@ import platform
 import re
 import stat
 import subprocess
-from urllib.request import urlretrieve, urlopen
+from enum import Enum
+from tempfile import mkdtemp
+from urllib.request import urlopen, urlretrieve
 
 from cogment.errors import CogmentError
 

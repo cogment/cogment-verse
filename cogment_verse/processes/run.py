@@ -16,14 +16,13 @@ import asyncio
 import logging
 import sys
 
+import cogment
 from omegaconf import OmegaConf
 
-import cogment
-
-from .cogment_py_sdk_process import CogmentPySdkProcess
-from ..utils.import_class import import_class
-from ..services_directory import ServiceType
 from ..run import RunSession
+from ..services_directory import ServiceType
+from ..utils.import_class import import_class
+from .cogment_py_sdk_process import CogmentPySdkProcess
 
 log = logging.getLogger(__name__)
 

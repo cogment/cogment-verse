@@ -1,0 +1,9 @@
+class_name: runs.play.PlayRun
+observer: True
+num_trials: 10
+seed: 12
+players:
+  - name: player_1
+    implementation: actors.ppo_atari_pz.PPOActor
+  - name: player_2
+    implementation: actors.ppo_atari_pz.PPOActor

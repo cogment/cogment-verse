@@ -14,20 +14,20 @@
 
 # pylint: disable=invalid-name
 
+import copy
 import io
 import logging
-import copy
 import time
-import numpy as np
+
 import cogment
+import numpy as np
 import torch
-from torch import nn
 import torch.nn.functional as F
+from gym.spaces import Box, utils
+from torch import nn
 
-from gym.spaces import utils, Box
-
-from cogment_verse.specs import AgentConfig, cog_settings, EnvironmentConfig, EnvironmentSpecs, PLAYER_ACTOR_CLASS
 from cogment_verse import Model, TorchReplayBuffer
+from cogment_verse.specs import PLAYER_ACTOR_CLASS, AgentConfig, EnvironmentConfig, EnvironmentSpecs, cog_settings
 
 torch.multiprocessing.set_sharing_strategy("file_system")
 
