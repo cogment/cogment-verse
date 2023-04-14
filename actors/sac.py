@@ -17,8 +17,8 @@ import time
 from typing import Tuple
 
 import cogment
-import numpy as np
 import torch
+import torch.nn.functional as F
 from gym.spaces import Box, utils
 from torch.distributions.normal import Normal
 
@@ -27,8 +27,7 @@ from cogment_verse.run.run_session import RunSession
 from cogment_verse.run.sample_producer_worker import SampleProducerSession
 from cogment_verse.specs import PLAYER_ACTOR_CLASS, AgentConfig, EnvironmentConfig, EnvironmentSpecs, cog_settings
 
-# torch.multiprocessing.set_sharing_strategy("file_system")
-torch.set_num_threads(1)
+torch.multiprocessing.set_sharing_strategy("file_system")
 
 log = logging.getLogger(__name__)
 LOG_STD_MAX = 2
@@ -40,20 +39,17 @@ class PolicyNetwork(torch.nn.Module):
 
     def __init__(self, num_input: int, num_output: int, num_hidden: int) -> None:
         super().__init__()
-        self.input = torch.nn.Linear(num_input, num_hidden)
-        self.fully_connected = torch.nn.Linear(num_hidden, num_hidden)
+        self.linear_0 = torch.nn.Linear(num_input, num_hidden)
+        self.linear_1 = torch.nn.Linear(num_hidden, num_hidden)
         self.mean = torch.nn.Linear(num_hidden, num_output)
         self.log_std = torch.nn.Linear(num_hidden, num_output)
-        # self.log_std = torch.nn.Parameter(torch.zeros(1, num_output))
 
     def forward(self, x: torch.Tensor) -> Tuple[Normal, torch.Tensor]:
         # Input layer
-        x = self.input(x)
-        x = torch.nn.functional.relu(x)
+        x = F.relu(self.linear_0(x))
 
         # Hidden layer
-        x = self.fully_connected(x)
-        x = torch.nn.functional.relu(x)
+        x = F.relu(self.linear_1(x))
 
         # Output layer
         mean = self.mean(x)
@@ -67,18 +63,14 @@ class ValueNetwork(torch.nn.Module):
 
     def __init__(self, num_input: int, num_hidden: int):
         super().__init__()
-        # Value network
-        self.input = torch.nn.Linear(num_input, num_hidden)
-        self.fully_connected = torch.nn.Linear(num_hidden, num_hidden)
-        self.output = torch.nn.Linear(num_hidden, 1)
+        self.linear_0 = torch.nn.Linear(num_input, num_hidden)
+        self.linear_1 = torch.nn.Linear(num_hidden, num_hidden)
+        self.linear_2 = torch.nn.Linear(num_hidden, 1)
 
     def forward(self, observation_action: torch.Tensor) -> torch.Tensor:
-        # Value network
-        x_v = self.input(observation_action)
-        x_v = torch.nn.functional.relu(x_v)
-        x_v = self.fully_connected(x_v)
-        x_v = torch.nn.functional.relu(x_v)
-        value = self.output(x_v)
+        x_v = F.relu(self.linear_0(observation_action))
+        x_v = F.relu(self.linear_1(x_v))
+        value = self.linear_2(x_v)
         return value
 
 
@@ -321,11 +313,13 @@ class SACTraining:
         "learning_starts": 1000,
         "device": "cpu",
         "delay_steps": 2,
+        "logging_interval": 100,
         "policy_network": {"num_hidden_nodes": 256},
         "value_network": {"num_hidden_nodes": 256},
     }
     action_scale: torch.Tensor
     action_bias: torch.Tensor
+    replay_buffer: TorchReplayBuffer
 
     def __init__(self, environment_specs: EnvironmentSpecs, cfg: EnvironmentConfig) -> None:
         super().__init__()
@@ -333,7 +327,6 @@ class SACTraining:
         self._environment_specs = environment_specs
         self._cfg = cfg
         self._device = torch.device(self._cfg.device)
-        self._rng = np.random.default_rng(self._cfg.seed)
         self.returns = 0
 
         # Model
@@ -375,6 +368,17 @@ class SACTraining:
         self.policy_scheduler = torch.optim.lr_scheduler.ExponentialLR(self.policy_optimizer, gamma=0.99)
         self.value_scheduler = torch.optim.lr_scheduler.ExponentialLR(self.value_optimizer, gamma=0.99)
 
+        # Replay buffer
+        self.replay_buffer = TorchReplayBuffer(
+            capacity=self._cfg.buffer_size,
+            observation_shape=(utils.flatdim(self._environment_specs.get_observation_space().gym_space),),
+            observation_dtype=self._dtype,
+            action_shape=(utils.flatdim(self._environment_specs.get_action_space().gym_space),),
+            action_dtype=self._dtype,
+            reward_dtype=self._dtype,
+            seed=self._cfg.seed,
+        )
+
     async def sample_producer_impl(self, sample_producer_session: SampleProducerSession):
         """Collect sample from the trial"""
         observation = []
@@ -409,7 +413,7 @@ class SACTraining:
                         next_observation,
                         action,
                         reward,
-                        torch.ones(1, dtype=torch.float32) if done else torch.zeros(1, dtype=torch.float32),
+                        torch.ones(1, dtype=torch.int8) if done else torch.zeros(1, dtype=torch.int8),
                         total_reward,
                     )
                 )
@@ -433,17 +437,6 @@ class SACTraining:
 
         run_session.log_params(
             self._cfg, model_id=model_id, environment_implementation=self._environment_specs.implementation
-        )
-
-        # Initalizing replay buffer
-        replay_buffer = TorchReplayBuffer(
-            capacity=self._cfg.buffer_size,
-            observation_shape=(utils.flatdim(self._environment_specs.get_observation_space().gym_space),),
-            observation_dtype=self._dtype,
-            action_shape=(utils.flatdim(self._environment_specs.get_action_space().gym_space),),
-            action_dtype=self._dtype,
-            reward_dtype=self._dtype,
-            seed=self._cfg.seed,
         )
 
         start_time = time.time()
@@ -488,14 +481,14 @@ class SACTraining:
         ):
             # Collect the rollout
             (observation, next_observation, action, reward, done, total_reward) = sample
-            replay_buffer.add(
+            self.replay_buffer.add(
                 observation=observation, next_observation=next_observation, action=action, reward=reward, done=done
             )
             trial_done = done.item() == 1
             if trial_done:
                 run_session.log_metrics(trial_idx=trial_idx, total_reward=total_reward)
                 total_reward_acc += total_reward
-                if (trial_idx + 1) % 100 == 0:
+                if (trial_idx + 1) % self._cfg.logging_interval == 0:
                     total_reward_avg = total_reward_acc / 100
                     run_session.log_metrics(total_reward_avg=total_reward_avg)
                     total_reward_acc = 0
@@ -504,8 +497,12 @@ class SACTraining:
                     )
 
             # Training steps
-            if step_idx > self._cfg.learning_starts and replay_buffer.size() > self._cfg.batch_size:
-                data = replay_buffer.sample(self._cfg.batch_size)
+            if (
+                step_idx > self._cfg.learning_starts
+                and self.replay_buffer.size() > self._cfg.batch_size
+                and step_idx % self._cfg.update_freq == 0
+            ):
+                data = self.replay_buffer.sample(self._cfg.batch_size)
                 self.model.iter_idx = step_idx
                 policy_loss, value_loss, log_alpha = await self.train_step(
                     data=data, num_steps=step_idx, trial_idx=trial_idx
@@ -513,7 +510,7 @@ class SACTraining:
 
                 # Publish model
                 version_info = await run_session.model_registry.publish_version(self.model)
-                if step_idx % 100 == 0:
+                if step_idx % self._cfg.logging_interval == 0:
                     end_time = time.time()
                     steps_per_seconds = 100 / (end_time - start_time)
                     start_time = end_time

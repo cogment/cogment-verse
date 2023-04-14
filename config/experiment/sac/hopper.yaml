@@ -22,8 +22,10 @@ run:
   tau: 0.005
   buffer_size: 1_000_000
   learning_starts: 10000
+  update_freq: 10
   device: cpu
   delay_steps: 1
+  logging_interval: 100
   policy_network:
     num_hidden_nodes: 256
   value_network:
