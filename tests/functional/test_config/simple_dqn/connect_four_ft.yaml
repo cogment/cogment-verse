@@ -13,18 +13,18 @@ run:
 
   # Archiving
   archive_model: True
-  archive_frequency: 100                    # Unit: steps
+  archive_frequency: 100 # Unit: steps
 
   # Training Params
   num_epochs: 1
-  epoch_num_training_trials: 2             # Unit: trials
-  epoch_num_validation_trials: 2            # Unit: trials
-  num_parallel_trials: 2                    # Unit: trials
-  learning_starts: ${run.batch_size}        # Unit: steps
-  target_update_frequency: 20               # Unit: steps
-  buffer_size: 10000                        # Unit: steps
-  train_frequency: 10                       # Unit: steps
-  model_update_frequency: 10                # Unit: steps
+  epoch_num_training_trials: 2 # Unit: trials
+  epoch_num_validation_trials: 2 # Unit: trials
+  num_parallel_trials: 2 # Unit: trials
+  learning_starts: ${run.batch_size} # Unit: steps
+  target_update_frequency: 20 # Unit: steps
+  buffer_size: 10000 # Unit: steps
+  train_frequency: 10 # Unit: steps
+  model_update_frequency: 10 # Unit: steps
 
   # Network Params
   value_network:
