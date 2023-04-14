@@ -30,8 +30,16 @@ from torch.distributions.distribution import Distribution
 from cogment_verse import HumanDataBuffer, Model
 from cogment_verse.run.run_session import RunSession
 from cogment_verse.run.sample_producer_worker import SampleProducerSession
-from cogment_verse.specs import (EVALUATOR_ACTOR_CLASS, HUMAN_ACTOR_IMPL, PLAYER_ACTOR_CLASS, WEB_ACTOR_NAME,
-                                 AgentConfig, EnvironmentConfig, EnvironmentSpecs, cog_settings)
+from cogment_verse.specs import (
+    EVALUATOR_ACTOR_CLASS,
+    HUMAN_ACTOR_IMPL,
+    PLAYER_ACTOR_CLASS,
+    WEB_ACTOR_NAME,
+    AgentConfig,
+    EnvironmentConfig,
+    EnvironmentSpecs,
+    cog_settings,
+)
 
 torch.multiprocessing.set_sharing_strategy("file_system")
 
@@ -916,6 +924,7 @@ class HumanFeedbackPPOTraining(BasePPOTraining):
 
         # Initalize model
         self.model.model_id = model_id  # pylint: disable=attribute-defined-outside-init
+        serialized_model = PPOModel.serialize_model(self.model)
         iteration_info = await run_session.model_registry.publish_model(
             name=model_id,
             model=serialized_model,

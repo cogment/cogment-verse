@@ -19,12 +19,21 @@ import logging
 
 import cogment
 import torch
+
 ############ TUTORIAL STEP 3 ############
 from gym.spaces import utils
 
 from cogment_verse import Model
-from cogment_verse.specs import (HUMAN_ACTOR_IMPL, PLAYER_ACTOR_CLASS, TEACHER_ACTOR_CLASS, WEB_ACTOR_NAME, AgentConfig,
-                                 EnvironmentConfig, EnvironmentSpecs, cog_settings)
+from cogment_verse.specs import (
+    HUMAN_ACTOR_IMPL,
+    PLAYER_ACTOR_CLASS,
+    TEACHER_ACTOR_CLASS,
+    WEB_ACTOR_NAME,
+    AgentConfig,
+    EnvironmentConfig,
+    EnvironmentSpecs,
+    cog_settings,
+)
 
 #########################################
 
