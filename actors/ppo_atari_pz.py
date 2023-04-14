@@ -18,7 +18,6 @@ import io
 import logging
 import math
 from abc import ABC, abstractmethod
-from ast import literal_eval
 from typing import List, Tuple
 
 import cogment
@@ -159,9 +158,9 @@ class PPOModel(Model):
             model_id=model_id,
             version_number=version_number,
             environment_implementation=model_user_data["environment_implementation"],
-            num_actions=int(model_user_data["num_actions"]),
-            input_shape=literal_eval(model_user_data["input_shape"]),
-            num_policy_outputs=int(model_user_data["num_policy_outputs"]),
+            num_actions=model_user_data["num_actions"],
+            input_shape=model_user_data["input_shape"],
+            num_policy_outputs=model_user_data["num_policy_outputs"],
             device=model_user_data["device"],
         )
         model.network.load_state_dict(network_state_dict)
