@@ -16,10 +16,7 @@ import cog_settings  # pylint: disable=import-error
 from data_pb2 import AgentConfig, EnvironmentConfig  # pylint: disable=import-error
 
 from cogment_verse.constants import (
-<<<<<<< HEAD
     EVALUATOR_ACTOR_CLASS,
-=======
->>>>>>> feat: add SAC for mujoco environments
     HUMAN_ACTOR_IMPL,
     OBSERVER_ACTOR_CLASS,
     PLAYER_ACTOR_CLASS,
