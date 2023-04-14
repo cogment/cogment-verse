@@ -12,6 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
+import io
 import logging
 import math
 from abc import ABC, abstractmethod
@@ -27,16 +30,8 @@ from torch.distributions.distribution import Distribution
 from cogment_verse import HumanDataBuffer, Model
 from cogment_verse.run.run_session import RunSession
 from cogment_verse.run.sample_producer_worker import SampleProducerSession
-from cogment_verse.specs import (
-    EVALUATOR_ACTOR_CLASS,
-    HUMAN_ACTOR_IMPL,
-    PLAYER_ACTOR_CLASS,
-    WEB_ACTOR_NAME,
-    AgentConfig,
-    EnvironmentConfig,
-    EnvironmentSpecs,
-    cog_settings,
-)
+from cogment_verse.specs import (EVALUATOR_ACTOR_CLASS, HUMAN_ACTOR_IMPL, PLAYER_ACTOR_CLASS, WEB_ACTOR_NAME,
+                                 AgentConfig, EnvironmentConfig, EnvironmentSpecs, cog_settings)
 
 torch.multiprocessing.set_sharing_strategy("file_system")
 
@@ -131,19 +126,27 @@ class PPOModel(Model):
             "input_shape": self.input_shape,
             "num_policy_outputs": self.num_policy_outputs,
             "device": self.device,
+            "iter_idx": self.iter_idx,
+            "total_samples": self.total_samples,
         }
 
-    def save(self, model_data_f: str) -> dict:
-        """Save the model"""
-        self.network.to(torch.device("cpu"))
-        torch.save(self.network.state_dict(), model_data_f)
-        return {"iter_idx": self.iter_idx, "total_samples": self.total_samples}
+    @staticmethod
+    def serialize_model(model) -> bytes:
+        stream = io.BytesIO()
+        torch.save(
+            (
+                model.network.to(torch.device("cpu")).state_dict(),
+                model.get_model_user_data(),
+            ),
+            stream,
+        )
+        return stream.getvalue()
 
     @classmethod
-    def load(
-        cls, model_id: int, version_number: int, model_user_data: dict, version_user_data: dict, model_data_f: str
-    ) -> Model:
-        """Load the model"""
+    def deserialize_model(cls, serialized_model, model_id, version_number) -> PPOModel:
+        stream = io.BytesIO(serialized_model)
+        (network_state_dict, model_user_data) = torch.load(stream)
+
         model = PPOModel(
             model_id=model_id,
             version_number=version_number,
@@ -153,14 +156,10 @@ class PPOModel(Model):
             num_policy_outputs=int(model_user_data["num_policy_outputs"]),
             device=model_user_data["device"],
         )
-
-        # Load the model parameters
-        network_state_dict = torch.load(model_data_f)
         model.network.load_state_dict(network_state_dict)
+        model.iter_idx = model_user_data["iter_idx"]
+        model.total_samples = model_user_data["total_samples"]
 
-        # Load version data
-        model.iter_idx = version_user_data["iter_idx"]
-        model.total_samples = version_user_data["total_samples"]
         return model
 
 
@@ -188,10 +187,10 @@ class PPOActor:
         action_space = environment_specs.get_action_space(seed=config.seed)
 
         # Get model
-        model, _, version_info = await actor_session.model_registry.retrieve_version(
-            PPOModel, config.model_id, config.model_version
-        )
-        log.info(f"Actor - retreved model number: {version_info['version_number']}")
+        serialized_model = await actor_session.model_registry.retrieve_model(config.model_id, config.model_version)
+        model = PPOModel.deserialize_model(serialized_model, config.model_id, config.model_version)
+
+        log.info(f"Actor - retreved model number: {model.version_number}")
         obs_shape = model.input_shape[::-1]
 
         async for event in actor_session.all_events():
@@ -532,8 +531,12 @@ class PPOSelfTraining(BasePPOTraining):
         model_id = f"{run_session.run_id}_model"
 
         # Initalize model
-        self.model.model_id = model_id
-        _, version_info = await run_session.model_registry.publish_initial_version(self.model)
+        self.model.model_id = model_id  # pylint: disable=attribute-defined-outside-init
+        serialized_model = PPOModel.serialize_model(self.model)
+        iteration_info = await run_session.model_registry.publish_model(
+            name=model_id,
+            model=serialized_model,
+        )
         self.model.network.to(self._device)
 
         run_session.log_params(
@@ -554,7 +557,7 @@ class PPOSelfTraining(BasePPOTraining):
                     run_id=run_session.run_id,
                     environment_specs=self._environment_specs.serialize(),
                     model_id=model_id,
-                    model_version=version_info["version_number"],
+                    model_version=iteration_info.iteration,
                     seed=self._cfg.seed + trial_idx + iter_idx * self._cfg.epoch_num_trials,
                 ),
             )
@@ -620,7 +623,7 @@ class PPOSelfTraining(BasePPOTraining):
                         log.info(f"epoch #{iter_idx + 1}/{self._cfg.num_iter}| avg. len: {avg_lens:0.2f}]")
 
                         run_session.log_metrics(
-                            model_version_number=version_info["version_number"],
+                            model_version_number=iteration_info.iteration,
                             policy_loss=policy_loss.item(),
                             value_loss=value_loss.item(),
                             avg_rewards=avg_rewards.item(),
@@ -631,9 +634,20 @@ class PPOSelfTraining(BasePPOTraining):
 
                     # Publish the newly updated model
                     self.model.iter_idx = iter_idx
-                    version_info = await run_session.model_registry.publish_version(
-                        self.model, archived=num_updates % 50 == 0
-                    )
+                    serialized_model = PPOModel.serialize_model(self.model)
+
+                    archived = num_updates % 50 == 0
+                    if archived:
+                        iteration_info = await run_session.model_registry.store_model(
+                            name=model_id,
+                            model=serialized_model,
+                        )
+                    else:
+                        iteration_info = await run_session.model_registry.publish_model(
+                            name=model_id,
+                            model=serialized_model,
+                        )
+
                     self.model.network.to(self._device)
 
 
@@ -645,8 +659,12 @@ class HillPPOTraining(BasePPOTraining):
         model_id = f"{run_session.run_id}_model"
 
         # Initalize model
-        self.model.model_id = model_id
-        _, version_info = await run_session.model_registry.publish_initial_version(self.model)
+        self.model.model_id = model_id  # pylint: disable=attribute-defined-outside-init
+        serialized_model = PPOModel.serialize_model(self.model)
+        iteration_info = await run_session.model_registry.publish_model(
+            name=model_id,
+            model=serialized_model,
+        )
         self.model.network.to(self._device)
 
         run_session.log_params(
@@ -799,7 +817,7 @@ class HillPPOTraining(BasePPOTraining):
                         log.info(f"epoch #{iter_idx + 1}/{self._cfg.num_iter}| avg. len: {avg_lens:0.2f}")
 
                         run_session.log_metrics(
-                            model_version_number=version_info["version_number"],
+                            model_version_number=iteration_info.iteration,
                             policy_loss=policy_loss.item(),
                             value_loss=value_loss.item(),
                             avg_rewards=avg_rewards.item(),
@@ -810,9 +828,19 @@ class HillPPOTraining(BasePPOTraining):
 
                     # Publish the newly updated model
                     self.model.iter_idx = iter_idx
-                    version_info = await run_session.model_registry.publish_version(
-                        self.model, archived=num_updates % 50 == 0
-                    )
+                    serialized_model = PPOModel.serialize_model(self.model)
+
+                    archived = num_updates % 50 == 0
+                    if archived:
+                        iteration_info = await run_session.model_registry.store_model(
+                            name=model_id,
+                            model=serialized_model,
+                        )
+                    else:
+                        iteration_info = await run_session.model_registry.publish_model(
+                            name=model_id,
+                            model=serialized_model,
+                        )
                     self.model.network.to(self._device)
 
 
@@ -887,8 +915,11 @@ class HumanFeedbackPPOTraining(BasePPOTraining):
         model_id = f"{run_session.run_id}_model"
 
         # Initalize model
-        self.model.model_id = model_id
-        _, version_info = await run_session.model_registry.publish_initial_version(self.model)
+        self.model.model_id = model_id  # pylint: disable=attribute-defined-outside-init
+        iteration_info = await run_session.model_registry.publish_model(
+            name=model_id,
+            model=serialized_model,
+        )
         self.model.network.to(self._device)
 
         run_session.log_params(
@@ -1027,7 +1058,7 @@ class HumanFeedbackPPOTraining(BasePPOTraining):
                         log.info(f"epoch #{iter_idx + 1}/{self._cfg.num_iter}| avg. len: {avg_lens:0.2f}")
 
                         run_session.log_metrics(
-                            model_version_number=version_info["version_number"],
+                            model_version_number=iteration_info.iteration,
                             policy_loss=policy_loss.item(),
                             value_loss=value_loss.item(),
                             avg_rewards=avg_rewards.item(),
@@ -1038,7 +1069,17 @@ class HumanFeedbackPPOTraining(BasePPOTraining):
 
                     # Publish the newly updated model
                     self.model.iter_idx = iter_idx
-                    version_info = await run_session.model_registry.publish_version(
-                        self.model, archived=num_updates % 50 == 0
-                    )
+                    serialized_model = PPOModel.serialize_model(self.model)
+
+                    archived = num_updates % 50 == 0
+                    if archived:
+                        iteration_info = await run_session.model_registry.store_model(
+                            name=model_id,
+                            model=serialized_model,
+                        )
+                    else:
+                        iteration_info = await run_session.model_registry.publish_model(
+                            name=model_id,
+                            model=serialized_model,
+                        )
                     self.model.network.to(self._device)

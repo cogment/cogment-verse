@@ -12,6 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
+import io
 import logging
 import time
 from typing import Tuple
@@ -159,27 +162,38 @@ class SACModel(Model):
             "policy_network_hidden_nodes": self.policy_network_hidden_nodes,
             "value_network_hidden_nodes": self.value_network_hidden_nodes,
             "alpha": self.alpha,
+            "iter_idx": self.iter_idx,
+            "total_samples": self.total_samples,
         }
 
-    def save(self, model_data_f: str) -> dict:
-        """Save the model"""
+    @staticmethod
+    def serialize_model(model) -> bytes:
+        stream = io.BytesIO()
         torch.save(
             (
-                self.policy_network.state_dict(),
-                self.value_network_1.state_dict(),
-                self.value_network_2.state_dict(),
-                self.target_network_1.state_dict(),
-                self.target_network_2.state_dict(),
+                model.policy_network.state_dict(),
+                model.value_network_1.state_dict(),
+                model.value_network_2.state_dict(),
+                model.target_network_1.state_dict(),
+                model.target_network_2.state_dict(),
+                model.get_model_user_data(),
             ),
-            model_data_f,
+            stream,
         )
-        return {"iter_idx": self.iter_idx, "total_samples": self.total_samples}
+        return stream.getvalue()
 
     @classmethod
-    def load(
-        cls, model_id: int, version_number: int, model_user_data: dict, version_user_data: dict, model_data_f: str
-    ) -> Model:
-        """Load the model"""
+    def deserialize_model(cls, serialized_model, model_id, version_number) -> SACModel:
+        stream = io.BytesIO(serialized_model)
+        (
+            policy_network_state_dict,
+            value_network_1_state_dict,
+            value_network_2_state_dict,
+            target_network_1_state_dict,
+            target_network_2_state_dict,
+            model_user_data,
+        ) = torch.load(stream)
+
         model = SACModel(
             model_id=model_id,
             version_number=version_number,
@@ -190,24 +204,14 @@ class SACModel(Model):
             value_network_hidden_nodes=int(model_user_data["value_network_hidden_nodes"]),
             alpha=model_user_data["alpha"],
         )
-
-        # Load the model parameters
-        (
-            policy_network_state_dict,
-            value_network_1_state_dict,
-            value_network_2_state_dict,
-            target_network_1_state_dict,
-            target_network_2_state_dict,
-        ) = torch.load(model_data_f)
         model.policy_network.load_state_dict(policy_network_state_dict)
         model.value_network_1.load_state_dict(value_network_1_state_dict)
         model.value_network_2.load_state_dict(value_network_2_state_dict)
         model.target_network_1.load_state_dict(target_network_1_state_dict)
         model.target_network_2.load_state_dict(target_network_2_state_dict)
+        model.iter_idx = model_user_data["iter_idx"]
+        model.total_samples = model_user_data["total_samples"]
 
-        # Load version data
-        model.iter_idx = version_user_data["iter_idx"]
-        model.total_samples = version_user_data["total_samples"]
         return model
 
     def policy_sampler(

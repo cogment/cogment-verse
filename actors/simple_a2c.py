@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import io
 import logging
 
@@ -84,7 +86,7 @@ class SimpleA2CModel(Model):
         }
 
     @staticmethod
-    def serialize_model(model):
+    def serialize_model(model) -> bytes:
         stream = io.BytesIO()
         torch.save(
             (
@@ -97,7 +99,7 @@ class SimpleA2CModel(Model):
         return stream.getvalue()
 
     @classmethod
-    def deserialize_model(cls, serialized_model, model_id, version_number):
+    def deserialize_model(cls, serialized_model, model_id, version_number) -> SimpleA2CModel:
         stream = io.BytesIO(serialized_model)
         (actor_network_state_dict, critic_network_state_dict, model_user_data) = torch.load(stream)
 

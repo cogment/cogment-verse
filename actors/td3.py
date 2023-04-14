@@ -14,6 +14,8 @@
 
 # pylint: disable=invalid-name
 
+from __future__ import annotations
+
 import copy
 import io
 import logging
@@ -132,7 +134,7 @@ class TD3Model(Model):
         }
 
     @staticmethod
-    def serialize_model(model):
+    def serialize_model(model) -> bytes:
         stream = io.BytesIO()
         torch.save(
             (
@@ -148,7 +150,7 @@ class TD3Model(Model):
         return stream.getvalue()
 
     @classmethod
-    def deserialize_model(cls, serialized_model, model_id, version_number):
+    def deserialize_model(cls, serialized_model, model_id, version_number) -> TD3Model:
         stream = io.BytesIO(serialized_model)
         (
             actor_state_dict,

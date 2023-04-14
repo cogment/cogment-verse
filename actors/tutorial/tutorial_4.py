@@ -12,27 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import io
 import logging
 
 import cogment
-
 ############ TUTORIAL STEP 4 ############
 import numpy as np
 import torch
 from gym.spaces import utils
 
 from cogment_verse import Model
-from cogment_verse.specs import (
-    HUMAN_ACTOR_IMPL,
-    PLAYER_ACTOR_CLASS,
-    TEACHER_ACTOR_CLASS,
-    WEB_ACTOR_NAME,
-    AgentConfig,
-    EnvironmentConfig,
-    EnvironmentSpecs,
-    cog_settings,
-)
+from cogment_verse.specs import (HUMAN_ACTOR_IMPL, PLAYER_ACTOR_CLASS, TEACHER_ACTOR_CLASS, WEB_ACTOR_NAME, AgentConfig,
+                                 EnvironmentConfig, EnvironmentSpecs, cog_settings)
 
 #########################################
 
@@ -82,7 +75,7 @@ class SimpleBCModel(Model):
         }
 
     @staticmethod
-    def serialize_model(model):
+    def serialize_model(model) -> bytes:
         stream = io.BytesIO()
         torch.save(
             (
@@ -94,7 +87,7 @@ class SimpleBCModel(Model):
         return stream.getvalue()
 
     @classmethod
-    def deserialize_model(cls, serialized_model, model_id, version_number):
+    def deserialize_model(cls, serialized_model, model_id, version_number) -> SimpleBCModel:
         stream = io.BytesIO(serialized_model)
         (policy_network_state_dict, model_user_data) = torch.load(stream)
 

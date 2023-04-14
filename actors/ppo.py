@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import io
 import logging
 from dataclasses import dataclass
@@ -259,7 +261,7 @@ class PPOModel(Model):
         }
 
     @staticmethod
-    def serialize_model(model):
+    def serialize_model(model) -> bytes:
         stream = io.BytesIO()
         torch.save(
             (
@@ -272,7 +274,7 @@ class PPOModel(Model):
         return stream.getvalue()
 
     @classmethod
-    def deserialize_model(cls, serialized_model, model_id, version_number):
+    def deserialize_model(cls, serialized_model, model_id, version_number) -> PPOModel:
         stream = io.BytesIO(serialized_model)
         (policy_network_state_dict, value_network_state_dict, model_user_data) = torch.load(stream)
 

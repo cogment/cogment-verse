@@ -14,6 +14,8 @@
 
 # pylint: disable=E0611
 
+from __future__ import annotations
+
 import copy
 import io
 import json
@@ -91,7 +93,7 @@ class SimpleDQNModel(Model):
         }
 
     @staticmethod
-    def serialize_model(model):
+    def serialize_model(model) -> bytes:
         stream = io.BytesIO()
         torch.save(
             (
@@ -104,7 +106,7 @@ class SimpleDQNModel(Model):
         return stream.getvalue()
 
     @classmethod
-    def deserialize_model(cls, serialized_model, model_id, version_number):
+    def deserialize_model(cls, serialized_model, model_id, version_number) -> SimpleDQNModel:
         stream = io.BytesIO(serialized_model)
         (network_state_dict, epsilon, model_user_data) = torch.load(stream)
 
