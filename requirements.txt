@@ -15,7 +15,8 @@ SuperSuit~=3.7.0
 tinyscaler~=1.2.4
 Gymnasium~=0.26.3
 AutoROM~=0.4.2
--e ./overcooked_ai
+# git+https://github.com/wduguay-air/overcooked_ai.git
+-e ../overcooked/overcooked_ai_fork
 
 # actors
 torch==1.11.0
