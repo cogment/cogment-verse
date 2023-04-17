@@ -15,6 +15,7 @@ SuperSuit~=3.7.0
 tinyscaler~=1.2.4
 Gymnasium~=0.26.3
 AutoROM~=0.4.2
+-e ./overcooked_ai
 
 # actors
 torch==1.11.0
