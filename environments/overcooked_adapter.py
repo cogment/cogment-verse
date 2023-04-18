@@ -42,7 +42,7 @@ class OvercookedEnvironment:
         gym_env = Overcooked(base_env=env, featurize_fn=env.featurize_state_mdp)
 
         self.env_specs = EnvironmentSpecs.create_homogeneous(
-            num_players=1,
+            num_players=2,
             turn_based=False,
             observation_space=gym_env.observation_space,
             action_space=gym_env.action_space,
@@ -61,19 +61,6 @@ class OvercookedEnvironment:
             for (actor_idx, actor) in enumerate(actors)
             if actor.actor_class_name == PLAYER_ACTOR_CLASS
         ]
-        assert len(player_actors) == 1
-        [(player_actor_idx, player_actor_name)] = player_actors
-
-        teacher_actors = [
-            (actor_idx, actor.actor_name)
-            for (actor_idx, actor) in enumerate(actors)
-            if actor.actor_class_name == TEACHER_ACTOR_CLASS
-        ]
-        assert len(teacher_actors) <= 1
-        has_teacher = len(teacher_actors) == 1
-
-        if has_teacher:
-            [(teacher_actor_idx, _teacher_actor_name)] = teacher_actors
 
         session_cfg = environment_session.config
 
@@ -94,31 +81,34 @@ class OvercookedEnvironment:
         environment_session.start([("*", observation_space.serialize(observation))])
         async for event in environment_session.all_events():
             if event.actions:
-                player_action = action_space.deserialize(
-                    event.actions[player_actor_idx].action,
-                )
-                action = player_action
-                overridden_players = []
-                if has_teacher:
-                    teacher_action = action_space.deserialize(
-                        event.actions[teacher_actor_idx].action,
+
+                # print(f"players in env event: {len(event.actions)}")
+                print(f"env agent_idx: {gym_env.agent_idx}")
+                print(f"player_idx: {0} | action: {action_space.deserialize(event.actions[0].action).value}")
+                print(f"player_idx: {1} | action: {action_space.deserialize(event.actions[1].action).value}")
+
+                joint_action = []
+                for player_actor_idx, player_actor_name in player_actors:
+                    player_action = action_space.deserialize(
+                        event.actions[player_actor_idx].action,
                     )
-                    if teacher_action.value is not None:
-                        action = teacher_action
-                        overridden_players = [player_actor_name]
+                    action_value = player_action.value
 
-                action_value = action.value
+                    # Clipped action and send to gym environment
+                    if isinstance(gym_env.action_space, gym.spaces.Box):
+                        action_value = np.clip(action_value, gym_env.action_space.low, gym_env.action_space.high)
 
-                # Clipped action and send to gym environment
-                if isinstance(gym_env.action_space, gym.spaces.Box):
-                    action_value = np.clip(action_value, gym_env.action_space.low, gym_env.action_space.high)
+                    # print(f"player_action: {player_action}")
+                    # print(f"ACTION: {action_value}")
 
-                gym_observation, reward, done, _info = gym_env.step(action_value)
+                    joint_action.append(action_value)
+
+                gym_observation, reward, done, _info = gym_env.step((joint_action))
 
                 observation = observation_space.create(
                     value=gym_observation["both_agent_obs"],
                     rendered_frame=gym_env.render() if session_cfg.render else None,
-                    overridden_players=overridden_players,
+                    overridden_players=[],
                 )
 
                 observations = [("*", observation_space.serialize(observation))]

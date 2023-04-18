@@ -18,6 +18,8 @@ run:
       implementation: actors.random_actor.RandomActor
     - name: player_2
       implementation: actors.random_actor.RandomActor
+    - name: player_3
+      implementation: client
 
   services:
     environment:
