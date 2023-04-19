@@ -13,21 +13,23 @@
 // limitations under the License.
 
 import { useMemo } from "react";
-import { RealTimeObserverControls } from "./RealTimeObserverControls";
-import { TurnBasedObserverControls } from "./TurnBasedObserverControls";
-import { GymLunarLanderControls, GymLunarLanderEnvironments } from "./GymLunarLanderControls";
+import { EVALUATOR_ACTOR_CLASS, OBSERVER_ACTOR_CLASS, PLAYER_ACTOR_CLASS, TEACHER_ACTOR_CLASS } from "../utils/constants";
+import { AtariPitfallControls, AtariPitfallEnvironments } from "./AtariPitfallControls";
+import { AtariPongPzControls, AtariPongPzEnvironments } from "./AtariPongPzControls";
+import { AtariPongPzFeedback, AtariPongPzHfbEnvironments } from "./AtariPongPzFeedback";
+import { ConnectFourControls, ConnectFourEnvironments } from "./ConnectFourControls";
+import { GymCartPoleControls, GymCartPoleEnvironments } from "./GymCartPoleControls";
 import {
   GymLunarLanderContinuousControls,
   GymLunarLanderContinuousEnvironments,
 } from "./GymLunarLanderContinuousControls";
-import { ConnectFourControls, ConnectFourEnvironments } from "./ConnectFourControls";
-import { GymCartPoleEnvironments, GymCartPoleControls } from "./GymCartPoleControls";
-import { GymMountainCarEnvironments, GymMountainCarControls } from "./GymMountainCarControls";
-import { AtariPitfallEnvironments, AtariPitfallControls } from "./AtariPitfallControls";
-import { TetrisEnvironments, TetrisControls } from "./TetrisControls";
-import { AtariPongPzEnvironments, AtariPongPzControls } from "./AtariPongPzControls";
-import { AtariPongPzHfbEnvironments, AtariPongPzFeedback } from "./AtariPongPzFeedback";
-import { TEACHER_ACTOR_CLASS, PLAYER_ACTOR_CLASS, OBSERVER_ACTOR_CLASS, EVALUATOR_ACTOR_CLASS } from "../utils/constants";
+import { GymLunarLanderControls, GymLunarLanderEnvironments } from "./GymLunarLanderControls";
+import { GymMountainCarControls, GymMountainCarEnvironments } from "./GymMountainCarControls";
+import { OvercookedControls, OvercookedEnvironments } from "./OvercookedControls";
+import { OvercookedTurnBasedControls, OvercookedTurnBasedEnvironments } from "./OvercookedTurnBasedControls";
+import { RealTimeObserverControls } from "./RealTimeObserverControls";
+import { TetrisControls, TetrisEnvironments } from "./TetrisControls";
+import { TurnBasedObserverControls } from "./TurnBasedObserverControls";
 
 const CONTROLS = [
   { environments: GymLunarLanderEnvironments, component: GymLunarLanderControls },
@@ -39,6 +41,8 @@ const CONTROLS = [
   { environments: ConnectFourEnvironments, component: ConnectFourControls },
   { environments: AtariPongPzEnvironments, component: AtariPongPzControls },
   { environments: AtariPongPzHfbEnvironments, component: AtariPongPzFeedback },
+  { environments: OvercookedEnvironments, component: OvercookedControls },
+  { environments: OvercookedTurnBasedEnvironments, component: OvercookedTurnBasedControls },
 ];
 
 export const Controls = ({ environment, actorClass, sendAction, fps, turnBased, observation, tickId }) => {
