@@ -15,12 +15,9 @@
 import { useCallback, useEffect, useState } from "react";
 import { CountdownCircleTimer } from "react-countdown-circle-timer";
 import { Button } from "../components/Button";
-import { DPad, DPAD_BUTTONS, usePressedButtons } from "../components/DPad";
-import { FpsCounter } from "../components/FpsCounter";
 import { KeyboardControlList } from "../components/KeyboardControlList";
-import { useDocumentKeypressListener, usePressedKeys } from "../hooks/usePressedKeys";
-import { useRealTimeUpdate } from "../hooks/useRealTimeUpdate";
-import { serializePlayerAction, Space, TEACHER_NOOP_ACTION } from "../utils/spaceSerialization";
+import { useDocumentKeypressListener } from "../hooks/usePressedKeys";
+import { serializePlayerAction, Space } from "../utils/spaceSerialization";
 
 
 const TURN_DURATION_SECS = 5;
