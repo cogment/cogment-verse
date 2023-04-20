@@ -23,7 +23,7 @@ import numpy as np
 import supersuit as ss
 from cogment.environment import EnvironmentSession
 
-from cogment_verse.constants import EVALUATOR_ACTOR_CLASS, PLAYER_ACTOR_CLASS, TEACHER_ACTOR_CLASS, WEB_ACTOR_NAME
+from cogment_verse.constants import WEB_ACTOR_NAME, ActorClass
 from cogment_verse.specs import EnvironmentSpecs
 from cogment_verse.specs.ndarray_serialization import SerializationFormat, deserialize_ndarray
 from cogment_verse.utils import import_class
@@ -127,7 +127,7 @@ class ClassicEnvironment(Environment):
         player_actors = [
             (actor_idx, actor.actor_name)
             for (actor_idx, actor) in enumerate(actors)
-            if actor.actor_class_name == PLAYER_ACTOR_CLASS
+            if actor.actor_class_name == ActorClass.PLAYER.value
         ]
         assert len(player_actors) == self.env_specs.num_players  # pylint: disable=no-member
 
@@ -135,7 +135,7 @@ class ClassicEnvironment(Environment):
         teacher_actors = [
             (actor_idx, actor.actor_name)
             for (actor_idx, actor) in enumerate(actors)
-            if actor.actor_class_name == TEACHER_ACTOR_CLASS
+            if actor.actor_class_name == ActorClass.TEACHER.value
         ]
         assert len(teacher_actors) == 0
 
@@ -233,7 +233,7 @@ class ClassicEnvironment(Environment):
 class AtariEnvironment(Environment):
     async def impl(self, environment_session: EnvironmentSession):
         actors = environment_session.get_active_actors()
-        actor_names = [actor.actor_name for actor in actors if actor.actor_class_name == PLAYER_ACTOR_CLASS]
+        actor_names = [actor.actor_name for actor in actors if actor.actor_class_name == ActorClass.PLAYER.value]
         web_actor_idx = [count for (count, actor_name) in enumerate(actor_names) if actor_name == WEB_ACTOR_NAME]
         session_cfg = environment_session.config
 
@@ -324,7 +324,7 @@ class HumanFeedbackAtariEnvironment(Environment):
     async def impl(self, environment_session: EnvironmentSession):
         session_cfg = environment_session.config
         actors = environment_session.get_active_actors()
-        valid_actor_class_names = {PLAYER_ACTOR_CLASS, EVALUATOR_ACTOR_CLASS}
+        valid_actor_class_names = {ActorClass.PLAYER.value, ActorClass.EVALUATOR.value}
         actor_names = [actor.actor_name for actor in actors if actor.actor_class_name in valid_actor_class_names]
 
         # Initialize environment
@@ -368,7 +368,7 @@ class HumanFeedbackAtariEnvironment(Environment):
                 continue
 
             action_value = event.actions[actor_idx].action
-            if actors[actor_idx].actor_class_name == PLAYER_ACTOR_CLASS:
+            if actors[actor_idx].actor_class_name == ActorClass.PLAYER.value:
                 # Observation
                 gym_action = action_space.deserialize(action_value)
                 pz_env.step(gym_action.value)
@@ -383,7 +383,7 @@ class HumanFeedbackAtariEnvironment(Environment):
                 rendered_frame = None
                 if session_cfg.render:
                     rendered_frame = pz_env.render()
-            elif actors[actor_idx].actor_class_name == EVALUATOR_ACTOR_CLASS:
+            elif actors[actor_idx].actor_class_name == ActorClass.EVALUATOR.value:
                 # TODO: To be modified when sending-UI-reward is added
                 pz_reward = deserialize_ndarray(action_value.value)[0]
                 pz_player_name = next(pz_agent_iterator)

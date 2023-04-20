@@ -19,7 +19,7 @@ import torch
 from gym.spaces import Discrete, utils
 
 from cogment_verse import Model
-from cogment_verse.constants import PLAYER_ACTOR_CLASS
+from cogment_verse.constants import ActorClass
 from cogment_verse.specs import AgentConfig, EnvironmentConfig, EnvironmentSpecs, cog_settings
 
 torch.multiprocessing.set_sharing_strategy("file_system")
@@ -113,7 +113,7 @@ class SimpleA2CActor:
         self._dtype = torch.float
 
     def get_actor_classes(self):
-        return [PLAYER_ACTOR_CLASS]
+        return [ActorClass.PLAYER.value]
 
     async def impl(self, actor_session):
         actor_session.start()
@@ -256,7 +256,7 @@ class SimpleA2CTraining:
                                 cogment.ActorParameters(
                                     cog_settings,
                                     name="player",
-                                    class_name=PLAYER_ACTOR_CLASS,
+                                    class_name=ActorClass.PLAYER.value,
                                     implementation="actors.simple_a2c.SimpleA2CActor",
                                     config=AgentConfig(
                                         run_id=run_session.run_id,

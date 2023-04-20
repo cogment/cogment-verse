@@ -26,7 +26,7 @@ import torch
 from gym.spaces import Discrete, utils
 
 from cogment_verse import Model, TorchReplayBuffer  # pylint: disable=abstract-class-instantiated
-from cogment_verse.constants import HUMAN_ACTOR_IMPL, PLAYER_ACTOR_CLASS, WEB_ACTOR_NAME
+from cogment_verse.constants import HUMAN_ACTOR_IMPL, WEB_ACTOR_NAME, ActorClass
 from cogment_verse.specs import AgentConfig, EnvironmentConfig, EnvironmentSpecs, cog_settings
 
 torch.multiprocessing.set_sharing_strategy("file_system")
@@ -122,7 +122,7 @@ class SimpleDQNActor:
         self._dtype = torch.float
 
     def get_actor_classes(self):
-        return [PLAYER_ACTOR_CLASS]
+        return [ActorClass.PLAYER.value]
 
     async def impl(self, actor_session):
         actor_session.start()
@@ -319,7 +319,7 @@ class SimpleDQNTraining:
                             cogment.ActorParameters(
                                 cog_settings,
                                 name="player",
-                                class_name=PLAYER_ACTOR_CLASS,
+                                class_name=ActorClass.PLAYER.value,
                                 implementation="actors.simple_dqn.SimpleDQNActor",
                                 config=AgentConfig(
                                     run_id=run_session.run_id,
@@ -444,7 +444,7 @@ class SimpleDQNSelfPlayTraining:
                 "action_space": EnvironmentSpecs.deserialize(actor_params.config.environment_specs).get_action_space(),
             }
             for actor_params in sample_producer_session.trial_info.parameters.actors
-            if actor_params.class_name == PLAYER_ACTOR_CLASS
+            if actor_params.class_name == ActorClass.PLAYER.value
         }
 
         players_partial_sample = {
@@ -563,7 +563,7 @@ class SimpleDQNSelfPlayTraining:
                 return cogment.ActorParameters(
                     cog_settings,
                     name=WEB_ACTOR_NAME,
-                    class_name=PLAYER_ACTOR_CLASS,
+                    class_name=ActorClass.PLAYER.value,
                     implementation=HUMAN_ACTOR_IMPL,
                     config=AgentConfig(
                         run_id=run_session.run_id,
@@ -573,7 +573,7 @@ class SimpleDQNSelfPlayTraining:
             return cogment.ActorParameters(
                 cog_settings,
                 name=name,
-                class_name=PLAYER_ACTOR_CLASS,
+                class_name=ActorClass.PLAYER.value,
                 implementation="actors.simple_dqn.SimpleDQNActor"
                 if version_number is not None
                 else "actors.random_actor.RandomActor",

@@ -15,13 +15,13 @@
 from data_pb2 import ObserverAction, PlayerAction, TeacherAction  # pylint: disable=import-error
 from gym.spaces import utils
 
-from ..constants import OBSERVER_ACTOR_CLASS, PLAYER_ACTOR_CLASS, TEACHER_ACTOR_CLASS
+from ..constants import ActorClass
 from .ndarray_serialization import deserialize_ndarray, serialize_ndarray
 
 ACTOR_CLASS_ACTION_CLASS = {
-    TEACHER_ACTOR_CLASS: TeacherAction,
-    PLAYER_ACTOR_CLASS: PlayerAction,
-    OBSERVER_ACTOR_CLASS: ObserverAction,
+    ActorClass.TEACHER.value: TeacherAction,
+    ActorClass.PLAYER.value: PlayerAction,
+    ActorClass.OBSERVER.value: ObserverAction,
 }
 
 # pylint: disable=attribute-defined-outside-init
@@ -95,7 +95,7 @@ class ActionSpace:
             Random seed used when generating random actions
     """
 
-    def __init__(self, gym_space, actor_class=PLAYER_ACTOR_CLASS, seed=None):
+    def __init__(self, gym_space, actor_class=ActorClass.PLAYER.value, seed=None):
         self.gym_space = gym_space
         self._action_class = ACTOR_CLASS_ACTION_CLASS[actor_class]
 

@@ -14,7 +14,7 @@
 
 import { Context } from "@cogment/cogment-js-sdk";
 import { useEffect, useRef, useState } from "react";
-import { WEB_ACTOR_NAME, PLAYER_ACTOR_CLASS } from "../utils/constants";
+import { actorClassEnum, WEB_ACTOR_NAME } from "../utils/constants";
 
 export const TRIAL_STATUS = {
   JOINING: "JOINING",
@@ -108,7 +108,7 @@ export const useJoinedTrial = (cogSettings, cogmentOrchestratorWebEndpoint, tria
     context.registerActor(
       actorImplementation,
       WEB_ACTOR_NAME,
-      PLAYER_ACTOR_CLASS // actually what we should do is [TEACHER_ACTOR_CLASS, PLAYER_ACTOR_CLASS, OBSERVER_ACTOR_CLASS]
+      actorClassEnum.PLAYER // actually what we should do is [actorClassEnum.TEACHER, actorClassEnum.PLAYER, actorClassEnum.OBSERVER]
     );
 
     context.joinTrial(trialId, cogmentOrchestratorWebEndpoint, WEB_ACTOR_NAME).catch((error) => {

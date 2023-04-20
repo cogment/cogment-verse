@@ -16,11 +16,8 @@ import cog_settings  # pylint: disable=import-error
 from data_pb2 import AgentConfig, EnvironmentConfig  # pylint: disable=import-error
 
 from cogment_verse.constants import (
-    EVALUATOR_ACTOR_CLASS,
+    ActorClass,
     HUMAN_ACTOR_IMPL,
-    OBSERVER_ACTOR_CLASS,
-    PLAYER_ACTOR_CLASS,
-    TEACHER_ACTOR_CLASS,
     WEB_ACTOR_NAME,
 )
 

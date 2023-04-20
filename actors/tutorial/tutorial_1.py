@@ -18,9 +18,8 @@ import cogment
 
 from cogment_verse.specs import (
     HUMAN_ACTOR_IMPL,
-    PLAYER_ACTOR_CLASS,
-    TEACHER_ACTOR_CLASS,
     WEB_ACTOR_NAME,
+    ActorClass,
     AgentConfig,
     EnvironmentConfig,
     EnvironmentSpecs,
@@ -35,7 +34,7 @@ class SimpleBCActor:
         super().__init__()
 
     def get_actor_classes(self):
-        return [PLAYER_ACTOR_CLASS]
+        return [ActorClass.PLAYER.value]
 
     async def impl(self, actor_session):
         actor_session.start()
@@ -68,12 +67,12 @@ class SimpleBCTraining:
         players_params = [
             actor_params
             for actor_params in sample_producer_session.trial_info.parameters.actors
-            if actor_params.class_name == PLAYER_ACTOR_CLASS
+            if actor_params.class_name == ActorClass.PLAYER.value
         ]
         teachers_params = [
             actor_params
             for actor_params in sample_producer_session.trial_info.parameters.actors
-            if actor_params.class_name == TEACHER_ACTOR_CLASS
+            if actor_params.class_name == ActorClass.TEACHER.value
         ]
         assert len(players_params) == 1
         assert len(teachers_params) == 1
@@ -104,7 +103,7 @@ class SimpleBCTraining:
             agent_actor_params = cogment.ActorParameters(
                 cog_settings,
                 name="player",
-                class_name=PLAYER_ACTOR_CLASS,
+                class_name=ActorClass.PLAYER.value,
                 implementation="actors.tutorial.tutorial_1.SimpleBCActor",
                 config=AgentConfig(
                     run_id=run_session.run_id,
@@ -115,7 +114,7 @@ class SimpleBCTraining:
             teacher_actor_params = cogment.ActorParameters(
                 cog_settings,
                 name=WEB_ACTOR_NAME,
-                class_name=TEACHER_ACTOR_CLASS,
+                class_name=ActorClass.TEACHER.value,
                 implementation=HUMAN_ACTOR_IMPL,
                 config=AgentConfig(
                     run_id=run_session.run_id,

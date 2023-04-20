@@ -23,7 +23,7 @@ import { Switch } from "../components/Switch"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faThumbsUp, faThumbsDown, faMeh } from "@fortawesome/free-solid-svg-icons";
 import { serializePlayerAction, DType, Space } from "../utils/spaceSerialization";
-import { EVALUATOR_ACTOR_CLASS, WEB_ACTOR_NAME } from "../utils/constants";
+import { WEB_ACTOR_NAME } from "../utils/constants";
 
 const ACTION_SPACE = new Space({
   box: {

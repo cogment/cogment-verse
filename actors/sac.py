@@ -25,7 +25,7 @@ from torch.distributions.normal import Normal
 from cogment_verse import Model, TorchReplayBuffer, TorchReplayBufferSample
 from cogment_verse.run.run_session import RunSession
 from cogment_verse.run.sample_producer_worker import SampleProducerSession
-from cogment_verse.specs import PLAYER_ACTOR_CLASS, AgentConfig, EnvironmentConfig, EnvironmentSpecs, cog_settings
+from cogment_verse.specs import ActorClass, AgentConfig, EnvironmentConfig, EnvironmentSpecs, cog_settings
 
 torch.multiprocessing.set_sharing_strategy("file_system")
 
@@ -252,7 +252,7 @@ class SACActor:
 
     def get_actor_classes(self):
         """Get actor"""
-        return [PLAYER_ACTOR_CLASS]
+        return [ActorClass.PLAYER.value]
 
     async def impl(self, actor_session):
         # Start a session
@@ -447,7 +447,7 @@ class SACTraining:
             agent_actor_params = cogment.ActorParameters(
                 cog_settings,
                 name="player",
-                class_name=PLAYER_ACTOR_CLASS,
+                class_name=ActorClass.PLAYER.value,
                 implementation="actors.sac.SACActor",
                 config=AgentConfig(
                     run_id=run_session.run_id,

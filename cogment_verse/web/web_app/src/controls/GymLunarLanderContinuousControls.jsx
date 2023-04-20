@@ -15,7 +15,7 @@
 import { useCallback, useState } from "react";
 import { useDocumentKeypressListener, usePressedKeys } from "../hooks/usePressedKeys";
 import { useRealTimeUpdate } from "../hooks/useRealTimeUpdate";
-import { TEACHER_ACTOR_CLASS } from "../utils/constants";
+import { actorClassEnum } from "../utils/constants";
 import { Button } from "../components/Button";
 import { useJoystickState, Joystick } from "../components/Joystick";
 import { FpsCounter } from "../components/FpsCounter";
@@ -34,7 +34,7 @@ const ACTION_SPACE = new Space({
 
 export const GymLunarLanderContinuousEnvironments = ["environments.gym_adapter.Environment/LunarLanderContinuous-v2"];
 export const GymLunarLanderContinuousControls = ({ sendAction, fps = 20, actorClass, ...props }) => {
-  const isTeacher = actorClass === TEACHER_ACTOR_CLASS;
+  const isTeacher = actorClass === actorClassEnum.TEACHER;
   const [paused, setPaused] = useState(false);
   const togglePause = useCallback(() => setPaused((paused) => !paused), [setPaused]);
   useDocumentKeypressListener("p", togglePause);

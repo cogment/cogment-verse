@@ -19,9 +19,8 @@ from google.protobuf.json_format import ParseDict
 
 from cogment_verse.specs import (
     HUMAN_ACTOR_IMPL,
-    OBSERVER_ACTOR_CLASS,
-    PLAYER_ACTOR_CLASS,
     WEB_ACTOR_NAME,
+    ActorClass,
     AgentConfig,
     EnvironmentConfig,
     cog_settings,
@@ -101,7 +100,7 @@ class PlayRun:
                         cogment.ActorParameters(
                             cog_settings,
                             name=WEB_ACTOR_NAME,
-                            class_name=PLAYER_ACTOR_CLASS,
+                            class_name=ActorClass.PLAYER.value,
                             implementation=HUMAN_ACTOR_IMPL,
                             config=extend_actor_config(
                                 actor_config_template=actor_params.get("agent_config", None),
@@ -117,7 +116,7 @@ class PlayRun:
                         cogment.ActorParameters(
                             cog_settings,
                             name=actor_params.name,
-                            class_name=PLAYER_ACTOR_CLASS,
+                            class_name=ActorClass.PLAYER.value,
                             implementation=actor_params.implementation,
                             config=extend_actor_config(
                                 actor_config_template=actor_params.get("agent_config", None),
@@ -136,7 +135,7 @@ class PlayRun:
                     cogment.ActorParameters(
                         cog_settings,
                         name=WEB_ACTOR_NAME,
-                        class_name=OBSERVER_ACTOR_CLASS,
+                        class_name=ActorClass.OBSERVER.value,
                         implementation=HUMAN_ACTOR_IMPL,
                         config=AgentConfig(
                             run_id=run_session.run_id,

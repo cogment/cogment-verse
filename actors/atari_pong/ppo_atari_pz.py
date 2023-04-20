@@ -28,10 +28,9 @@ from cogment_verse import HumanDataBuffer, Model
 from cogment_verse.run.run_session import RunSession
 from cogment_verse.run.sample_producer_worker import SampleProducerSession
 from cogment_verse.specs import (
-    EVALUATOR_ACTOR_CLASS,
     HUMAN_ACTOR_IMPL,
-    PLAYER_ACTOR_CLASS,
     WEB_ACTOR_NAME,
+    ActorClass,
     AgentConfig,
     EnvironmentConfig,
     EnvironmentSpecs,
@@ -172,7 +171,7 @@ class PPOActor:
 
     def get_actor_classes(self):
         """Get actor"""
-        return [PLAYER_ACTOR_CLASS]
+        return [ActorClass.PLAYER.value]
 
     async def impl(self, actor_session):
         # Start a session
@@ -279,7 +278,7 @@ class BasePPOTraining(ABC):
         actor_params = {
             actor_params.name: actor_params
             for actor_params in sample_producer_session.trial_info.parameters.actors
-            if actor_params.class_name == PLAYER_ACTOR_CLASS
+            if actor_params.class_name == ActorClass.PLAYER.value
         }
         actor_names = list(actor_params.keys())
         player_environment_specs = EnvironmentSpecs.deserialize(actor_params[actor_names[0]].config.environment_specs)
@@ -548,7 +547,7 @@ class PPOSelfTraining(BasePPOTraining):
             agent_actor_params = cogment.ActorParameters(
                 cog_settings,
                 name="player",
-                class_name=PLAYER_ACTOR_CLASS,
+                class_name=ActorClass.PLAYER.value,
                 implementation="actors.ppo_atari_pz.PPOActor",
                 config=AgentConfig(
                     run_id=run_session.run_id,
@@ -685,7 +684,7 @@ class HillPPOTraining(BasePPOTraining):
                     actor = cogment.ActorParameters(
                         cog_settings,
                         name=WEB_ACTOR_NAME,
-                        class_name=PLAYER_ACTOR_CLASS,
+                        class_name=ActorClass.PLAYER.value,
                         implementation=HUMAN_ACTOR_IMPL,
                         config=AgentConfig(
                             run_id=run_session.run_id,
@@ -697,7 +696,7 @@ class HillPPOTraining(BasePPOTraining):
                     actor = cogment.ActorParameters(
                         cog_settings,
                         name=name,
-                        class_name=PLAYER_ACTOR_CLASS,
+                        class_name=ActorClass.PLAYER.value,
                         implementation="actors.ppo_atari_pz.PPOActor",
                         config=AgentConfig(
                             run_id=run_session.run_id,
@@ -831,7 +830,7 @@ class HumanFeedbackPPOTraining(BasePPOTraining):
         actor_params = {
             actor_params.name: actor_params
             for actor_params in sample_producer_session.trial_info.parameters.actors
-            if actor_params.class_name == PLAYER_ACTOR_CLASS
+            if actor_params.class_name == ActorClass.PLAYER.value
         }
         actor_names = list(actor_params.keys())
         player_environment_specs = EnvironmentSpecs.deserialize(actor_params[actor_names[0]].config.environment_specs)
@@ -919,7 +918,7 @@ class HumanFeedbackPPOTraining(BasePPOTraining):
                 actor = cogment.ActorParameters(
                     cog_settings,
                     name=name,
-                    class_name=PLAYER_ACTOR_CLASS,
+                    class_name=ActorClass.PLAYER.value,
                     implementation="actors.ppo_atari_pz.PPOActor",
                     config=AgentConfig(
                         run_id=run_session.run_id,
@@ -934,7 +933,7 @@ class HumanFeedbackPPOTraining(BasePPOTraining):
             actor = cogment.ActorParameters(
                 cog_settings,
                 name=WEB_ACTOR_NAME,
-                class_name=EVALUATOR_ACTOR_CLASS,
+                class_name=ActorClass.EVALUATOR.value,
                 implementation=HUMAN_ACTOR_IMPL,
                 config=AgentConfig(run_id=run_session.run_id, environment_specs=self._environment_specs.serialize()),
             )

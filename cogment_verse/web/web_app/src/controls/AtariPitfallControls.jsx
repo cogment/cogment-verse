@@ -16,7 +16,7 @@ import { useCallback, useState } from "react";
 import { useDocumentKeypressListener, usePressedKeys } from "../hooks/usePressedKeys";
 import { useRealTimeUpdate } from "../hooks/useRealTimeUpdate";
 import { createLookup } from "../utils/controlLookup";
-import { TEACHER_ACTOR_CLASS } from "../utils/constants";
+import { actorClassEnum } from "../utils/constants";
 import { Button } from "../components/Button";
 import { FpsCounter } from "../components/FpsCounter";
 import { KeyboardControlList } from "../components/KeyboardControlList";
@@ -59,7 +59,7 @@ export const AtariPitfallControls = ({ sendAction, fps = 30, actorClass, ...prop
 
   const computeAndSendAction = useCallback(
     (dt) => {
-      if (pressedKeys.size === 0 && actorClass === TEACHER_ACTOR_CLASS) {
+      if (pressedKeys.size === 0 && actorClass === actorClassEnum.TEACHER) {
         sendAction(TEACHER_NOOP_ACTION);
         return;
       }

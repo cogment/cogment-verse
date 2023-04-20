@@ -15,7 +15,7 @@
 import { useCallback, useState } from "react";
 import { useDocumentKeypressListener, usePressedKeys } from "../hooks/usePressedKeys";
 import { useRealTimeUpdate } from "../hooks/useRealTimeUpdate";
-import { TEACHER_ACTOR_CLASS } from "../utils/constants";
+import { actorClassEnum } from "../utils/constants";
 import { DPad, usePressedButtons, DPAD_BUTTONS } from "../components/DPad";
 import { Button } from "../components/Button";
 import { FpsCounter } from "../components/FpsCounter";
@@ -32,7 +32,7 @@ const ACTION_SPACE = new Space({
 
 export const GymMountainCarEnvironments = ["environments.gym_adapter.Environment/MountainCar-v0"];
 export const GymMountainCarControls = ({ sendAction, fps = 30, actorClass, ...props }) => {
-  const isTeacher = actorClass === TEACHER_ACTOR_CLASS;
+  const isTeacher = actorClass === actorClassEnum.TEACHER;
   const [paused, setPaused] = useState(false);
   const togglePause = useCallback(() => setPaused((paused) => !paused), [setPaused]);
   useDocumentKeypressListener("p", togglePause);

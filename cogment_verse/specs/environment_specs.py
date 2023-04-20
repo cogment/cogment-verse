@@ -18,7 +18,7 @@ import yaml
 from data_pb2 import EnvironmentSpecs as PbEnvironmentSpecs  # pylint: disable=import-error
 from google.protobuf.json_format import MessageToDict, ParseDict
 
-from ..constants import PLAYER_ACTOR_CLASS
+from ..constants import ActorClass
 from .action_space import ActionSpace
 from .ndarray_serialization import SerializationFormat
 from .observation_space import ObservationSpace
@@ -69,7 +69,7 @@ class EnvironmentSpecs:
         """
         return ObservationSpace(deserialize_gym_space(self._pb.observation_space), render_width)
 
-    def get_action_space(self, actor_class=PLAYER_ACTOR_CLASS, seed=None):
+    def get_action_space(self, actor_class=ActorClass.PLAYER.value, seed=None):
         """
         Build an instance of the action space for this environment
 

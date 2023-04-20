@@ -18,7 +18,7 @@ import cogment
 import gym
 import numpy as np
 
-from cogment_verse.constants import PLAYER_ACTOR_CLASS, TEACHER_ACTOR_CLASS
+from cogment_verse.constants import ActorClass
 from cogment_verse.specs import EnvironmentSpecs
 
 # configure pygame to use a dummy video server to be able to render headlessly
@@ -49,7 +49,7 @@ class Environment:
         player_actors = [
             (actor_idx, actor.actor_name)
             for (actor_idx, actor) in enumerate(actors)
-            if actor.actor_class_name == PLAYER_ACTOR_CLASS
+            if actor.actor_class_name == ActorClass.PLAYER.value
         ]
         assert len(player_actors) == 1
         [(player_actor_idx, player_actor_name)] = player_actors
@@ -57,7 +57,7 @@ class Environment:
         teacher_actors = [
             (actor_idx, actor.actor_name)
             for (actor_idx, actor) in enumerate(actors)
-            if actor.actor_class_name == TEACHER_ACTOR_CLASS
+            if actor.actor_class_name == ActorClass.TEACHER.value
         ]
         assert len(teacher_actors) <= 1
         has_teacher = len(teacher_actors) == 1

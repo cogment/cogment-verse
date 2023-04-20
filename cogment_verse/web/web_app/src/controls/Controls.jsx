@@ -27,7 +27,7 @@ import { AtariPitfallEnvironments, AtariPitfallControls } from "./AtariPitfallCo
 import { TetrisEnvironments, TetrisControls } from "./TetrisControls";
 import { AtariPongPzEnvironments, AtariPongPzControls } from "./AtariPongPzControls";
 import { AtariPongPzHfbEnvironments, AtariPongPzFeedback } from "./AtariPongPzFeedback";
-import { TEACHER_ACTOR_CLASS, PLAYER_ACTOR_CLASS, OBSERVER_ACTOR_CLASS, EVALUATOR_ACTOR_CLASS } from "../utils/constants";
+import { actorClassEnum } from "../utils/constants";
 
 const CONTROLS = [
   { environments: GymLunarLanderEnvironments, component: GymLunarLanderControls },
@@ -43,13 +43,13 @@ const CONTROLS = [
 
 export const Controls = ({ environment, actorClass, sendAction, fps, turnBased, observation, tickId }) => {
   const ControlsComponent = useMemo(() => {
-    if (OBSERVER_ACTOR_CLASS === actorClass) {
+    if (actorClassEnum.OBSERVER === actorClass) {
       if (turnBased) {
         return TurnBasedObserverControls;
       }
       return RealTimeObserverControls;
     }
-    if ([PLAYER_ACTOR_CLASS, TEACHER_ACTOR_CLASS, EVALUATOR_ACTOR_CLASS].includes(actorClass)) {
+    if ([actorClassEnum.PLAYER, actorClassEnum.TEACHER, actorClassEnum.EVALUATOR].includes(actorClass)) {
       const control = CONTROLS.find(({ environments }) => environments.includes(environment));
       if (control == null) {
         return () => <div>{environment} is not playable</div>;

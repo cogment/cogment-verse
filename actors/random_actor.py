@@ -14,7 +14,7 @@
 
 import cogment
 
-from cogment_verse.specs import PLAYER_ACTOR_CLASS, EnvironmentSpecs
+from cogment_verse.specs import ActorClass, EnvironmentSpecs
 
 
 class RandomActor:
@@ -22,7 +22,7 @@ class RandomActor:
         pass
 
     def get_actor_classes(self):
-        return [PLAYER_ACTOR_CLASS]
+        return [ActorClass.PLAYER.value]
 
     async def impl(self, actor_session):
         actor_session.start()

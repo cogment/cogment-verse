@@ -26,7 +26,7 @@ from gym.spaces import Box, utils
 from torch import nn
 
 from cogment_verse import Model, TorchReplayBuffer
-from cogment_verse.specs import PLAYER_ACTOR_CLASS, AgentConfig, EnvironmentConfig, EnvironmentSpecs, cog_settings
+from cogment_verse.specs import ActorClass, AgentConfig, EnvironmentConfig, EnvironmentSpecs, cog_settings
 
 torch.multiprocessing.set_sharing_strategy("file_system")
 
@@ -181,7 +181,7 @@ class TD3Actor:
         self._dtype = torch.float
 
     def get_actor_classes(self):
-        return [PLAYER_ACTOR_CLASS]
+        return [ActorClass.PLAYER.value]
 
     async def impl(self, actor_session):
         actor_session.start()
@@ -341,7 +341,7 @@ class TD3Training:
                             cogment.ActorParameters(
                                 cog_settings,
                                 name="player",
-                                class_name=PLAYER_ACTOR_CLASS,
+                                class_name=ActorClass.PLAYER.value,
                                 implementation="actors.td3.TD3Actor",
                                 config=AgentConfig(
                                     run_id=run_session.run_id,
