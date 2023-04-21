@@ -204,7 +204,7 @@ class PPOActor:
             serialized_model = await actor_session.model_registry.retrieve_model(
                 config.model_id, config.model_iteration
             )
-            model = PPOModel.deserialize_model(serialized_model, config.model_id, config.model_iteration)
+            model = PPOModel.deserialize_model(serialized_model)
 
         log.info(f"Actor - retreved model number: {model.iteration}")
         obs_shape = model.input_shape[::-1]

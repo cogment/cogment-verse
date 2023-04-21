@@ -35,7 +35,6 @@ class Environment:
         self.gym_env_name = cfg.env_name
         print("self.gym_env_name = ", self.gym_env_name)
 
-        # gym_env = gym.make(self.gym_env_name)
         self.gym_env = isaacgymenvs.make(
             seed=0,
             task=self.gym_env_name,

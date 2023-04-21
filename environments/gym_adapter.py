@@ -29,7 +29,7 @@ class Environment:
     def __init__(self, cfg):
         self.gym_env_name = cfg.env_name
 
-        gym_env = gym.make(self.gym_env_name)
+        gym_env = gym.make(self.gym_env_name, new_step_api=True)
 
         self.env_specs = EnvironmentSpecs.create_homogeneous(
             num_players=1,
