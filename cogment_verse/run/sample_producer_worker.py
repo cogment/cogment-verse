@@ -15,9 +15,11 @@
 import asyncio
 import logging
 import sys
-from multiprocessing import Process
+from multiprocessing import Process, Queue
+from typing import Awaitable, Callable
 
 import cogment
+from cogment.datastore import Datastore, DatastoreSample
 
 log = logging.getLogger(__name__)
 
@@ -31,7 +33,14 @@ class SampleQueueEvent:
 
 
 class SampleProducerSession:
-    def __init__(self, datastore, trial_idx, trial_info, sample_queue, impl):
+    def __init__(
+        self,
+        datastore: Datastore,
+        trial_idx: int,
+        trial_info: list,
+        sample_queue: Queue,
+        impl: Callable[["SampleProducerSession"], Awaitable],
+    ):
         self.trial_idx = trial_idx
         self.datastore = datastore
         self.trial_info = trial_info
@@ -43,7 +52,7 @@ class SampleProducerSession:
             SampleQueueEvent(trial_id=self.trial_info.trial_id, trial_idx=self.trial_idx, sample=sample)
         )
 
-    def all_trial_samples(self):
+    def all_trial_samples(self) -> DatastoreSample:
         return self.datastore.all_samples([self.trial_info])
 
     def create_task(self):

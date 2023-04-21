@@ -18,6 +18,95 @@ import torch
 torch.multiprocessing.set_sharing_strategy("file_system")
 
 
+class PPOReplayBufferSample:
+    """PPO replay buffer's sample"""
+
+    def __init__(
+        self,
+        observation: torch.Tensor,
+        action: torch.Tensor,
+        adv: torch.Tensor,
+        value: torch.Tensor,
+        log_prob: torch.Tensor,
+    ):
+        self.observation = observation
+        self.action = action
+        self.adv = adv
+        self.value = value
+        self.log_prob = log_prob
+
+    def size(self) -> int:
+        """get sample size"""
+        return self.observation.size(dim=0)
+
+
+class PPOReplayBuffer:
+    """Replay buffer for PPO"""
+
+    observations: torch.Tensor
+    actions: torch.Tensor
+    advs: torch.Tensor
+    values: torch.Tensor
+    log_probs: torch.Tensor
+
+    def __init__(
+        self,
+        capacity: int,
+        observation_shape: tuple,
+        action_shape: tuple,
+        seed: int = 0,
+        dtype: torch.dtype = torch.float32,
+    ):
+        self.capacity = capacity
+        self.observation_shape = observation_shape
+        self.action_shape = action_shape
+        self.dtype = dtype
+
+        # Initialize data storage
+        self.observations = torch.zeros((self.capacity, *self.observation_shape), dtype=self.dtype)
+        self.actions = torch.zeros((self.capacity, *self.action_shape), dtype=self.dtype)
+        self.advs = torch.zeros((self.capacity, 1), dtype=self.dtype)
+        self.values = torch.zeros((self.capacity, 1), dtype=self.dtype)
+        self.log_probs = torch.zeros((self.capacity, 1), dtype=self.dtype)
+        self._ptr = 0
+        self.num_total = 0
+        self._rng = np.random.default_rng(seed)
+
+    def add(
+        self,
+        observation: torch.Tensor,
+        action: torch.Tensor,
+        adv: torch.Tensor,
+        value: torch.Tensor,
+        log_prob: torch.Tensor,
+    ):
+        self.observations[self._ptr] = observation
+        self.actions[self._ptr] = action
+        self.advs[self._ptr] = adv
+        self.values[self._ptr] = value
+        self.log_probs[self._ptr] = log_prob
+        self._ptr = (self._ptr + 1) % self.capacity
+        self.num_total += 1
+
+    def sample(self, num):
+        size = self.size()
+        if size < num:
+            indices = range(size)
+        else:
+            indices = self._rng.choice(self.size(), size=num, replace=False)
+
+        return PPOReplayBufferSample(
+            observation=self.observations[indices],
+            action=self.actions[indices],
+            adv=self.advs[indices],
+            value=self.values[indices],
+            log_prob=self.log_probs[indices],
+        )
+
+    def size(self):
+        return self.num_total if self.num_total < self.capacity else self.capacity
+
+
 class TorchReplayBufferSample:
     def __init__(self, observation, next_observation, action, reward, done):
         self.observation = observation

@@ -13,10 +13,11 @@ run:
   num_parallel_trials: 1
   learning_rate: 0.0004
   batch_size: 128
+  buffer_size: 1000
   num_steps: -1
   discount_factor: 0.99
   lambda_gae: 0.95
-  device: cpu
+  device: cuda
   entropy_loss_coef: 0.0
   value_loss_coef: 0.2
   action_loss_coef: 0.5

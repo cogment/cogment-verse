@@ -26,7 +26,7 @@ import torch
 from gym.spaces import Discrete, utils
 from torch.distributions.distribution import Distribution
 
-from cogment_verse import HumanDataBuffer, Model
+from cogment_verse import HumanDataBuffer, Model, PPOReplayBuffer, PPOReplayBufferSample
 from cogment_verse.run.run_session import RunSession
 from cogment_verse.run.sample_producer_worker import SampleProducerSession
 from cogment_verse.specs import (
@@ -240,6 +240,7 @@ class BasePPOTraining(ABC):
         "clipping_coef": 0.1,
         "learning_rate": 3e-4,
         "batch_size": 64,
+        "buffer_size": 1000,
         "num_steps": -1,  # End of trial
         "lambda_gae": 0.95,
         "device": "cpu",
@@ -254,6 +255,7 @@ class BasePPOTraining(ABC):
         self._dtype = torch.float32
         self._environment_specs = environment_specs
         self._cfg = cfg
+        # TODO: handle properly the device for training and input file
         self._device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.returns = 0
 
@@ -529,9 +531,177 @@ class BasePPOTraining(ABC):
         advs.reverse()
         return torch.vstack(advs)
 
+    def compute_gae_v2(
+        self,
+        rewards: torch.Tensor,
+        values: torch.Tensor,
+        dones: torch.Tensor,
+        next_value: torch.Tensor,
+        gamma: float = 0.99,
+        lambda_: float = 0.95,
+    ):
+        """Compute Generalized Advantage Estimation (GAE). See equations 11 & 12 in
+        https://arxiv.org/pdf/1707.06347.pdf
+        """
+        advs = []
+        with torch.no_grad():
+            gae = 0.0
+            # dones = torch.cat((dones, torch.zeros(1, 1).to(self._device)), dim=0)
+            for i in reversed(range(len(rewards))):
+                delta = rewards[i] + gamma * next_value * (1 - dones[i]) - values[i]
+                gae = delta + gamma * lambda_ * (1 - dones[i]) * gae
+                advs.append(gae)
+                next_value = values[i]
+        advs.reverse()
+
+        return advs
+
+
+class RolloutBuffer:
+    """Rollout buffer for PPO"""
+
+    def __init__(
+        self,
+        capacity: int,
+        observation_shape: tuple,
+        action_shape: tuple,
+        observation_dtype: torch.dtype = torch.float32,
+        action_dtype: torch.dtype = torch.float32,
+        reward_dtype: torch.dtype = torch.float32,
+    ) -> None:
+        self.capacity = capacity
+        self.observation_shape = observation_shape
+        self.action_shape = action_shape
+        self.observation_dtype = observation_dtype
+        self.action_dtype = action_dtype
+        self.reward_dtype = reward_dtype
+
+        self.observations = torch.zeros((self.capacity, *self.observation_shape), dtype=self.observation_dtype)
+        self.actions = torch.zeros((self.capacity, *self.action_shape), dtype=self.action_dtype)
+        self.rewards = torch.zeros((self.capacity,), dtype=self.reward_dtype)
+        self.dones = torch.zeros((self.capacity,), dtype=torch.int8)
+
+        self._ptr = 0
+        self.num_total = 0
+
+    def add(self, observation: torch.Tensor, action: torch.Tensor, reward: torch.Tensor, done: torch.Tensor) -> None:
+        """Add samples to rollout buffer"""
+        if self.num_total < self.capacity:
+            self.observations[self._ptr] = observation
+            self.actions[self._ptr] = action
+            self.rewards[self._ptr] = reward
+            self.dones[self._ptr] = done
+            self.num_total += 1
+
+    def reset(self) -> None:
+        """Reset the rollout"""
+        self.observations.zero_()
+        self.actions.zero_()
+        self.rewards.zero_()
+        self.dones.zero_()
+        self._ptr = 0
+        self.num_total = 0
+
 
 class PPOSelfTraining(BasePPOTraining):
     """Train PPO agent"""
+
+    async def sample_producer_impl(self, sample_producer_session: SampleProducerSession):
+        """Collect sample from the trial"""
+        actor_params = {
+            actor_params.name: actor_params
+            for actor_params in sample_producer_session.trial_info.parameters.actors
+            if actor_params.class_name == PLAYER_ACTOR_CLASS
+        }
+        actor_names = list(actor_params.keys())
+        player_environment_specs = EnvironmentSpecs.deserialize(actor_params[actor_names[0]].config.environment_specs)
+        player_observation_space = player_environment_specs.get_observation_space()
+        player_action_space = player_environment_specs.get_action_space()
+        obs_shape = tuple(self._cfg.image_size)[::-1]
+        num_steps = 32
+
+        rollout_buffer = RolloutBuffer(
+            capacity=num_steps,
+            observation_shape=self._cfg.image_size,
+            action_shape=(1,),  # TODO: remove hardcoding
+            action_dtype=torch.float64,
+        )
+
+        values = []
+        log_probs = []
+        episode_rewards = []
+        done = torch.zeros(1, dtype=torch.int8)
+        player_actor_name = actor_names[0]
+        total_reward = 0
+        step = 0
+        async for sample in sample_producer_session.all_trial_samples():
+            # Trail status
+            trial_done = sample.trial_state == cogment.TrialState.ENDED
+
+            previous_actor_sample = sample.actors_data[player_actor_name]
+            player_actor_name = previous_actor_sample.observation.current_player
+            actor_sample = sample.actors_data[player_actor_name]
+
+            # Collect data from environment
+            obs_flat = player_observation_space.deserialize(actor_sample.observation).flat_value
+            observation_value = torch.unsqueeze(
+                torch.permute(torch.tensor(obs_flat, dtype=self._dtype).reshape(obs_shape), (2, 0, 1)), dim=0
+            )
+            done = torch.ones(1, dtype=torch.int8) if trial_done else torch.zeros(1, dtype=torch.int8)
+            reward_value = torch.tensor(
+                actor_sample.reward if actor_sample.reward is not None else 0, dtype=self._dtype
+            )
+            if not trial_done:
+                action_value = torch.tensor(
+                    player_action_space.deserialize(actor_sample.action).value, dtype=self._dtype
+                )
+
+            # Compute values and log probs
+            if step < num_steps:
+                with torch.no_grad():
+                    obs_device = observation_value.to(torch.device(self.model.device))
+                    action_device = action_value.to(torch.device(self.model.device))
+                    value = self.model.network.get_value(obs_device)
+                    dist = self.model.network.get_action(obs_device)
+                    log_prob = dist.log_prob(action_device)
+                values.append(value.squeeze(0).cpu())
+                log_probs.append(log_prob.squeeze(0).cpu())
+
+                # Add sample to rollout replay buffer
+                rollout_buffer.add(observation=observation_value, action=action_value, reward=reward_value, done=done)
+
+            # Save episode reward i.e., number of total steps for an episode
+            step += 1
+            total_reward += 1
+            if trial_done:
+                episode_rewards.append(total_reward)
+                total_reward = 0
+
+            # Produce sample for training task
+            if step % num_steps == 0:
+                with torch.no_grad():
+                    obs_device = observation_value.to(torch.device(self.model.device))
+                    next_value = self.model.network.get_value(obs_device)
+                next_value = next_value.squeeze(0).cpu()
+                advs = self.compute_gae_v2(
+                    rewards=rollout_buffer.rewards,
+                    values=values,
+                    dones=rollout_buffer.dones,
+                    next_value=next_value,
+                    gamma=self._cfg.discount_factor,
+                    lambda_=self._cfg.lambda_gae,
+                )
+                observations = [rollout_buffer.observations[i, :] for i in range(num_steps)]
+                actions = [rollout_buffer.actions[i, :] for i in range(num_steps)]
+                sample_producer_session.produce_sample(
+                    (observations, actions, advs, values, log_probs, episode_rewards)
+                )
+
+                # Reset the rollout
+                rollout_buffer.reset()
+                step = 0
+                values = []
+                log_probs = []
 
     async def impl(self, run_session: RunSession) -> dict:
         """Train and publish the model"""
@@ -551,6 +721,14 @@ class PPOSelfTraining(BasePPOTraining):
             model_id=model_id,
             environment_implementation=self._environment_specs.implementation,
             hill_type="none",
+        )
+
+        replay_buffer = PPOReplayBuffer(
+            capacity=self._cfg.buffer_size,
+            observation_shape=self._cfg.image_size,
+            action_shape=(1,),
+            dtype=self._dtype,
+            seed=self._cfg.seed,
         )
 
         # Helper function to create a trial configuration
@@ -582,52 +760,36 @@ class PPOSelfTraining(BasePPOTraining):
             )
 
         # Run environment
-        observations = []
-        actions = []
-        rewards = []
-        dones = []
         episode_rewards = []
         episode_lens = []
 
         num_updates = 0
         total_steps = 0
         for iter_idx in range(self._cfg.num_iter):
-            for (_, _, _, sample) in run_session.start_and_await_trials(
-                trials_id_and_params=[
-                    (f"{run_session.run_id}_{iter_idx}_{trial_idx}", create_trial_params(trial_idx, iter_idx))
-                    for trial_idx in range(self._cfg.epoch_num_trials)
-                ],
-                sample_producer_impl=self.trial_sample_sequences_producer_impl,
-                num_parallel_trials=self._cfg.num_parallel_trials,
+            trials_id_and_params = [
+                (f"{run_session.run_id}_{iter_idx}_{trial_idx}", create_trial_params(trial_idx, iter_idx))
+                for trial_idx in range(self._cfg.epoch_num_trials)
+            ]
+            for (step_idx, trial_id, trial_idx, sample) in run_session.start_and_await_trials(
+                trials_id_and_params, self.sample_producer_impl, self._cfg.num_parallel_trials
             ):
                 # Collect the rollout
-                (trial_observation, trial_action, trial_reward, trial_done, _) = sample
+                (trial_obs, trial_act, trial_adv, trial_val, trial_log_prob, trial_eps_rew) = sample
+                for (obs, act, adv, val, log_prob) in zip(trial_obs, trial_act, trial_adv, trial_val, trial_log_prob):
 
-                observations.extend(trial_observation)
-                actions.extend(trial_action)
-                rewards.extend(trial_reward)
-                dones.extend(trial_done)
+                    replay_buffer.add(observation=obs, action=act, adv=adv, value=val, log_prob=log_prob)
 
-                episode_rewards.append(torch.vstack(trial_reward).sum())
-                episode_lens.append(torch.tensor(len(trial_action), dtype=torch.float32))
-                if len(actions) >= self._cfg.num_steps * self._cfg.epoch_num_trials + 1:
-                    num_updates += 1
-                    total_steps += self._cfg.num_steps * self._cfg.epoch_num_trials
-                    # Update model parameters
-                    policy_loss, value_loss = await self.train_step(
-                        observations=observations, rewards=rewards, actions=actions, dones=dones
-                    )
+                # if trial_done:
+                #     run_session.log_metrics(training_total_reward=sum(total_rewards.values()), episode_len=total_steps)
+                #     running_avg_len += total_steps
+                #     if (step_idx + 1) % 100 == 0:
+                #         run_session.log_metrics(episode_len=running_avg_len / 100)
+                #         running_avg_len = 0
 
-                    # Reset the data storage
-                    observations = []
-                    actions = []
-                    rewards = []
-                    dones = []
-                    if iter_idx % 100 == 0:
-                        # Compute average rewards for last 100 episodes
-                        avg_rewards = await self.compute_average_reward(episode_rewards)
-                        avg_lens = await self.compute_average_reward(episode_lens) / self._environment_specs.num_players
-                        log.info(f"epoch #{iter_idx + 1}/{self._cfg.num_iter}| avg. len: {avg_lens:0.2f}]")
+                # if len(actions) >= self._cfg.num_steps * self._cfg.epoch_num_trials + 1:
+                #     num_updates += 1
+                #     total_steps += self._cfg.num_steps * self._cfg.epoch_num_trials
+                #     data = replay_buffer.sample(self._cfg.batch_size)
 
                         run_session.log_metrics(
                             model_iteration=iteration_info.iteration,

@@ -13,5 +13,11 @@
 # limitations under the License.
 
 from .app import App
-from .model import Model
-from .replay_buffers import HumanDataBuffer, TorchReplayBuffer, TorchReplayBufferSample
+from .model_registry import Model
+from .replay_buffers import (
+    HumanDataBuffer,
+    PPOReplayBuffer,
+    PPOReplayBufferSample,
+    TorchReplayBuffer,
+    TorchReplayBufferSample,
+)
