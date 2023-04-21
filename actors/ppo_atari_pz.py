@@ -107,10 +107,10 @@ class PPOModel(Model):
         n_iter: int = 1000,
         dtype=torch.float32,
         device: str = "cpu",
-        version_number: int = 0,
+        iteration: int = 0,
     ) -> None:
 
-        super().__init__(model_id, version_number)
+        super().__init__(model_id, iteration)
         self._environment_implementation = environment_implementation
         self._num_actions = num_actions
         self.input_shape = input_shape
@@ -150,13 +150,13 @@ class PPOModel(Model):
         return stream.getvalue()
 
     @classmethod
-    def deserialize_model(cls, serialized_model, model_id, version_number) -> PPOModel:
+    def deserialize_model(cls, serialized_model, model_id, iteration) -> PPOModel:
         stream = io.BytesIO(serialized_model)
         (network_state_dict, model_user_data) = torch.load(stream)
 
         model = PPOModel(
             model_id=model_id,
-            version_number=version_number,
+            iteration=iteration,
             environment_implementation=model_user_data["environment_implementation"],
             num_actions=model_user_data["num_actions"],
             input_shape=model_user_data["input_shape"],
@@ -197,7 +197,7 @@ class PPOActor:
         serialized_model = await actor_session.model_registry.retrieve_model(config.model_id, config.model_iteration)
         model = PPOModel.deserialize_model(serialized_model, config.model_id, config.model_iteration)
 
-        log.info(f"Actor - retreved model number: {model.version_number}")
+        log.info(f"Actor - retreved model number: {model.iteration}")
         obs_shape = model.input_shape[::-1]
 
         async for event in actor_session.all_events():
@@ -699,7 +699,7 @@ class HillPPOTraining(BasePPOTraining):
             trial_idx: int,
             iter_idx: int,
             hill_training_trial_period: int,
-            version_number: int = -1,
+            iteration: int = -1,
         ):
             np.random.default_rng(self._cfg.seed + trial_idx + iter_idx * self._cfg.epoch_num_trials)
             human_actor_idx = np.random.choice(len(actor_names), 1, replace=False)
@@ -728,7 +728,7 @@ class HillPPOTraining(BasePPOTraining):
                             run_id=run_session.run_id,
                             environment_specs=self._environment_specs.serialize(),
                             model_id=model_id,
-                            model_iteration=version_number,
+                            model_iteration=iteration,
                             seed=self._cfg.seed + trial_idx + iter_idx * self._cfg.epoch_num_trials,
                         ),
                     )
@@ -951,7 +951,7 @@ class HumanFeedbackPPOTraining(BasePPOTraining):
 
         # Create actor parameters
         def create_actor_params(
-            actor_names: List[str], trial_idx: int, hill_training_trial_period: int, version_number: int = -1
+            actor_names: List[str], trial_idx: int, hill_training_trial_period: int, iteration: int = -1
         ):
             actors = []
             for i, name in enumerate(actor_names):
@@ -964,7 +964,7 @@ class HumanFeedbackPPOTraining(BasePPOTraining):
                         run_id=run_session.run_id,
                         environment_specs=self._environment_specs.serialize(),
                         model_id=model_id,
-                        model_iteration=version_number,
+                        model_iteration=iteration,
                         seed=self._cfg.seed,
                     ),
                 )

@@ -165,7 +165,7 @@ class PPOModel(Model):
         learning_rate: Learning rate
         n_iter: Number of iterations
         dtype: Data type objects
-        version_number: Version number of model
+        iteration: Version number of model
         policy_network: Policy network that outputs an action given a state
         value_network: Value network measure the the quality of action given a state
         policy_optimizer: Optimizer for policy network
@@ -190,11 +190,11 @@ class PPOModel(Model):
         learning_rate: float = 0.01,
         n_iter: int = 1000,
         dtype=torch.float,
-        version_number: int = 0,
+        iteration: int = 0,
         state_norm: bool = False,
     ) -> None:
 
-        super().__init__(model_id, version_number)
+        super().__init__(model_id, iteration)
         self._environment_implementation = environment_implementation
         self._num_input = num_input
         self._num_output = num_output
@@ -274,13 +274,13 @@ class PPOModel(Model):
         return stream.getvalue()
 
     @classmethod
-    def deserialize_model(cls, serialized_model, model_id, version_number) -> PPOModel:
+    def deserialize_model(cls, serialized_model, model_id, iteration) -> PPOModel:
         stream = io.BytesIO(serialized_model)
         (policy_network_state_dict, value_network_state_dict, model_user_data) = torch.load(stream)
 
         model = cls(
             model_id=model_id,
-            version_number=version_number,
+            iteration=iteration,
             environment_implementation=model_user_data["environment_implementation"],
             num_input=int(model_user_data["num_input"]),
             num_output=int(model_user_data["num_output"]),

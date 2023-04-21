@@ -99,9 +99,9 @@ class TD3Model(Model):
         expl_noise,
         random_steps,
         dtype=torch.float,
-        version_number=0,
+        iteration=0,
     ):
-        super().__init__(model_id, version_number)
+        super().__init__(model_id, iteration)
         self._dtype = dtype
         self._environment_implementation = environment_implementation
         self._num_input = num_input
@@ -150,7 +150,7 @@ class TD3Model(Model):
         return stream.getvalue()
 
     @classmethod
-    def deserialize_model(cls, serialized_model, model_id, version_number) -> TD3Model:
+    def deserialize_model(cls, serialized_model, model_id, iteration) -> TD3Model:
         stream = io.BytesIO(serialized_model)
         (
             actor_state_dict,
@@ -163,7 +163,7 @@ class TD3Model(Model):
 
         model = cls(
             model_id=model_id,
-            version_number=version_number,
+            iteration=iteration,
             environment_implementation=model_user_data["environment_implementation"],
             num_input=int(model_user_data["num_input"]),
             num_output=int(model_user_data["num_output"]),

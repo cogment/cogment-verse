@@ -97,10 +97,10 @@ class SACModel(Model):
         value_network_hidden_nodes: int,
         alpha: float,
         dtype: torch.FloatTensor = torch.float32,
-        version_number: int = 0,
+        iteration: int = 0,
         device: str = "cpu",
     ) -> None:
-        super().__init__(model_id, version_number)
+        super().__init__(model_id, iteration)
         self.model_id = model_id
         self.environment_implementation = environment_implementation
         self.num_inputs = num_inputs
@@ -109,7 +109,7 @@ class SACModel(Model):
         self.value_network_hidden_nodes = value_network_hidden_nodes
         self.alpha = alpha
         self.dtype = dtype
-        self.version_number = version_number
+        self.iteration = iteration
         self.device = device
 
         # Networks
@@ -183,7 +183,7 @@ class SACModel(Model):
         return stream.getvalue()
 
     @classmethod
-    def deserialize_model(cls, serialized_model, model_id, version_number) -> SACModel:
+    def deserialize_model(cls, serialized_model, model_id, iteration) -> SACModel:
         stream = io.BytesIO(serialized_model)
         (
             policy_network_state_dict,
@@ -196,7 +196,7 @@ class SACModel(Model):
 
         model = SACModel(
             model_id=model_id,
-            version_number=version_number,
+            iteration=iteration,
             environment_implementation=model_user_data["environment_implementation"],
             num_inputs=int(model_user_data["num_inputs"]),
             num_outputs=int(model_user_data["num_outputs"]),
@@ -457,7 +457,7 @@ class SACTraining:
                     run_id=run_session.run_id,
                     environment_specs=self._environment_specs.serialize(),
                     model_id=model_id,
-                    model_iteration=version_info["version_number"],
+                    model_iteration=version_info["iteration"],
                     seed=self._cfg.seed + trial_idx,
                 ),
             )
@@ -519,7 +519,7 @@ class SACTraining:
                     steps_per_seconds = 100 / (end_time - start_time)
                     start_time = end_time
                     run_session.log_metrics(
-                        model_iteration_number=version_info["version_number"],
+                        model_iteration_number=version_info["iteration"],
                         value_loss=value_loss,
                         log_alpha=log_alpha,
                         policy_loss=policy_loss,

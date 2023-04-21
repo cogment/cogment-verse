@@ -52,9 +52,9 @@ class SimpleBCModel(Model):
         num_input,
         num_output,
         policy_network_num_hidden_nodes=64,
-        version_number=0,
+        iteration=0,
     ):
-        super().__init__(model_id, version_number)
+        super().__init__(model_id, iteration)
 
         self._dtype = torch.float
         self._environment_implementation = environment_implementation
@@ -96,13 +96,13 @@ class SimpleBCModel(Model):
         return stream.getvalue()
 
     @classmethod
-    def deserialize_model(cls, serialized_model, model_id, version_number) -> SimpleBCModel:
+    def deserialize_model(cls, serialized_model, model_id, iteration) -> SimpleBCModel:
         stream = io.BytesIO(serialized_model)
         (policy_network_state_dict, model_user_data) = torch.load(stream)
 
         model = SimpleBCModel(
             model_id=model_id,
-            version_number=version_number,
+            iteration=iteration,
             environment_implementation=model_user_data["environment_implementation"],
             num_input=int(model_user_data["num_input"]),
             num_output=int(model_user_data["num_output"]),
@@ -134,7 +134,7 @@ class SimpleBCActor:
         serialized_model = await actor_session.model_registry.retrieve_model(config.model_id, config.model_iteration)
         model = SimpleBCModel.deserialize_model(serialized_model, config.model_id, config.model_iteration)
 
-        log.info(f"Starting trial with model v{model.version_number}")
+        log.info(f"Starting trial with model v{model.iteration}")
 
         model.policy_network.eval()
 

@@ -56,9 +56,9 @@ class SimpleDQNModel(Model):
         num_hidden_nodes,
         epsilon,
         dtype=torch.float,
-        version_number=0,
+        iteration=0,
     ):
-        super().__init__(model_id, version_number)
+        super().__init__(model_id, iteration)
         self._dtype = dtype
         self._environment_implementation = environment_implementation
         self._num_input = num_input
@@ -106,13 +106,13 @@ class SimpleDQNModel(Model):
         return stream.getvalue()
 
     @classmethod
-    def deserialize_model(cls, serialized_model, model_id, version_number) -> SimpleDQNModel:
+    def deserialize_model(cls, serialized_model, model_id, iteration) -> SimpleDQNModel:
         stream = io.BytesIO(serialized_model)
         (network_state_dict, epsilon, model_user_data) = torch.load(stream)
 
         model = cls(
             model_id=model_id,
-            version_number=version_number,
+            iteration=iteration,
             environment_implementation=model_user_data["environment_implementation"],
             num_input=int(model_user_data["num_input"]),
             num_output=int(model_user_data["num_output"]),
@@ -585,7 +585,7 @@ class SimpleDQNSelfPlayTraining:
             seed=self._rng.integers(9999),
         )
 
-        def create_actor_params(name, version_number=-1, human=False):
+        def create_actor_params(name, iteration=-1, human=False):
             if human:
                 return cogment.ActorParameters(
                     cog_settings,
@@ -602,13 +602,13 @@ class SimpleDQNSelfPlayTraining:
                 name=name,
                 class_name=PLAYER_ACTOR_CLASS,
                 implementation="actors.simple_dqn.SimpleDQNActor"
-                if version_number is not None
+                if iteration is not None
                 else "actors.random_actor.RandomActor",
                 config=AgentConfig(
                     run_id=run_session.run_id,
                     seed=self._rng.integers(9999),
                     model_id=model_id,
-                    model_iteration=version_number,
+                    model_iteration=iteration,
                     model_update_frequency=self._cfg.model_update_frequency,
                     environment_specs=self._environment_specs.serialize(),
                 ),
@@ -631,7 +631,7 @@ class SimpleDQNSelfPlayTraining:
             math.floor(1 / self._cfg.hill_training_trials_ratio) if self._cfg.hill_training_trials_ratio > 0 else 0
         )
 
-        previous_epoch_version_number = None
+        previous_epoch_iteration = None
         for epoch_idx in range(self._cfg.num_epochs):
             start_time = time.time()
 
@@ -736,10 +736,10 @@ class SimpleDQNSelfPlayTraining:
                     (
                         f"{run_session.run_id}_{epoch_idx}_v_{trial_idx}",
                         create_trials_params(
-                            p1_params=create_actor_params("reference", previous_epoch_version_number)
+                            p1_params=create_actor_params("reference", previous_epoch_iteration)
                             if trial_idx % 2 == 0
                             else create_actor_params("validated", iteration_info.iteration),
-                            p2_params=create_actor_params("reference", previous_epoch_version_number)
+                            p2_params=create_actor_params("reference", previous_epoch_iteration)
                             if trial_idx % 2 == 1
                             else create_actor_params("validated", iteration_info.iteration),
                         ),
@@ -760,18 +760,18 @@ class SimpleDQNSelfPlayTraining:
 
             avg_total_reward = cum_total_reward / self._cfg.epoch_num_validation_trials
             ties_ratio = num_ties / self._cfg.epoch_num_validation_trials
-            validation_version_number = iteration_info.iteration
+            validation_iteration = iteration_info.iteration
             run_session.log_metrics(
                 validation_avg_total_reward=avg_total_reward,
                 validation_ties_ratio=ties_ratio,
-                validation_version_number=validation_version_number,
+                validation_iteration=validation_iteration,
             )
-            if previous_epoch_version_number is not None:
+            if previous_epoch_iteration is not None:
                 run_session.log_metrics(
-                    reference_version_number=previous_epoch_version_number,
+                    reference_iteration=previous_epoch_iteration,
                 )
             log.info(
                 f"[SimpleDQN/{run_session.run_id}] epoch #{epoch_idx + 1}/{self._cfg.num_epochs} done - "
-                + f"[{model.model_id}@v{validation_version_number}] avg total reward = {avg_total_reward}, ties ratio = {ties_ratio}"
+                + f"[{model.model_id}@v{validation_iteration}] avg total reward = {avg_total_reward}, ties ratio = {ties_ratio}"
             )
-            previous_epoch_version_number = validation_version_number
+            previous_epoch_iteration = validation_iteration

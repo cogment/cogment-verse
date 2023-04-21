@@ -40,9 +40,9 @@ class SimpleA2CModel(Model):
         actor_network_num_hidden_nodes=64,  # ToDo: should be an array
         critic_network_num_hidden_nodes=64,
         dtype=torch.float,
-        version_number=0,
+        iteration=0,
     ):
-        super().__init__(model_id, version_number)
+        super().__init__(model_id, iteration)
         self._dtype = dtype
         self._environment_implementation = environment_implementation
         self._num_input = num_input
@@ -99,13 +99,13 @@ class SimpleA2CModel(Model):
         return stream.getvalue()
 
     @classmethod
-    def deserialize_model(cls, serialized_model, model_id, version_number) -> SimpleA2CModel:
+    def deserialize_model(cls, serialized_model, model_id, iteration) -> SimpleA2CModel:
         stream = io.BytesIO(serialized_model)
         (actor_network_state_dict, critic_network_state_dict, model_user_data) = torch.load(stream)
 
         model = cls(
             model_id=model_id,
-            version_number=version_number,
+            iteration=iteration,
             environment_implementation=model_user_data["environment_implementation"],
             num_input=int(model_user_data["num_input"]),
             num_output=int(model_user_data["num_output"]),

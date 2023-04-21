@@ -18,9 +18,9 @@ import abc
 
 
 class Model:
-    def __init__(self, model_id, version_number=0):
+    def __init__(self, model_id, iteration=0):
         self.model_id = model_id
-        self.version_number = version_number
+        self.iteration = iteration
 
     @abc.abstractmethod
     def get_model_user_data(self):
@@ -44,13 +44,13 @@ class Model:
 
     @classmethod
     @abc.abstractmethod
-    def deserialize_model(cls, serialized_model, model_id, version_number):
+    def deserialize_model(cls, serialized_model, model_id, iteration):
         """
         Serialize and save the model
         Args:
             serialized_model: file object that will be used to load the version model data
             model_id (string): unique identifier for the model
-            version_number (int): unique identifier for the model version
+            iteration (int): unique identifier for the model version
         Returns:
             model: the deserialized model
         """
