@@ -148,7 +148,7 @@ class SimpleA2CActor:
             serialized_model = await actor_session.model_registry.retrieve_model(
                 config.model_id, config.model_iteration
             )
-            model = SimpleA2CModel.deserialize_model(serialized_model, config.model_id, config.model_iteration)
+            model = SimpleA2CModel.deserialize_model(serialized_model)
 
         model.actor_network.eval()
         model.critic_network.eval()
