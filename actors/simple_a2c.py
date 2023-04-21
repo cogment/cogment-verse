@@ -136,13 +136,18 @@ class SimpleA2CActor:
         observation_space = environment_specs.get_observation_space()
         action_space = environment_specs.get_action_space(seed=config.seed)
 
+        # Get model
         if config.model_iteration == -1:
-            serialized_model = await actor_session.model_registry.track_latest_model(config.model_id)
+            latest_model = await actor_session.model_registry.track_latest_model(
+                name=config.model_id, deserialize_func=SimpleA2CModel.deserialize_model
+            )
+            model, _ = latest_model.get()
         else:
             serialized_model = await actor_session.model_registry.retrieve_model(
                 config.model_id, config.model_iteration
             )
-        model = SimpleA2CModel.deserialize_model(serialized_model, config.model_id, config.model_iteration)
+            model = SimpleA2CModel.deserialize_model(serialized_model, config.model_id, config.model_iteration)
+
         model.actor_network.eval()
         model.critic_network.eval()
 

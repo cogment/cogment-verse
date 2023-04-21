@@ -201,13 +201,17 @@ class TD3Actor:
 
         assert isinstance(action_space.gym_space, Box)
 
+        # Get model
         if config.model_iteration == -1:
-            serialized_model = await actor_session.model_registry.track_latest_model(config.model_id)
+            latest_model = await actor_session.model_registry.track_latest_model(
+                name=config.model_id, deserialize_func=TD3Model.deserialize_model
+            )
+            model, _ = latest_model.get()
         else:
             serialized_model = await actor_session.model_registry.retrieve_model(
                 config.model_id, config.model_iteration
             )
-        model = TD3Model.deserialize_model(serialized_model, config.model_id, config.model_iteration)
+            model = TD3Model.deserialize_model(serialized_model, config.model_id, config.model_iteration)
 
         async for event in actor_session.all_events():
             if event.observation and event.type == cogment.EventType.ACTIVE:

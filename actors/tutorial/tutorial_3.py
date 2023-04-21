@@ -135,13 +135,17 @@ class SimpleBCActor:
         action_space = environment_specs.get_action_space(seed=config.seed)
         observation_space = environment_specs.get_observation_space()
 
+        # Get model
         if config.model_iteration == -1:
-            serialized_model = await actor_session.model_registry.track_latest_model(config.model_id)
+            latest_model = await actor_session.model_registry.track_latest_model(
+                name=config.model_id, deserialize_func=SimpleBCModel.deserialize_model
+            )
+            model, _ = latest_model.get()
         else:
             serialized_model = await actor_session.model_registry.retrieve_model(
                 config.model_id, config.model_iteration
             )
-        model = SimpleBCModel.deserialize_model(serialized_model, config.model_id, config.model_iteration)
+            model = SimpleBCModel.deserialize_model(serialized_model, config.model_id, config.model_iteration)
 
         log.info(f"Starting trial with model v{model.iteration}")
 

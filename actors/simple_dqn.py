@@ -146,13 +146,18 @@ class SimpleDQNActor:
 
         assert isinstance(action_space.gym_space, Discrete)
 
+        # Get model
         if config.model_iteration == -1:
-            serialized_model = await actor_session.model_registry.track_latest_model(config.model_id)
+            latest_model = await actor_session.model_registry.track_latest_model(
+                name=config.model_id, deserialize_func=SimpleDQNModel.deserialize_model
+            )
+            model, _ = latest_model.get()
         else:
             serialized_model = await actor_session.model_registry.retrieve_model(
                 config.model_id, config.model_iteration
             )
-        model = SimpleDQNModel.deserialize_model(serialized_model, config.model_id, config.model_iteration)
+            model = SimpleDQNModel.deserialize_model(serialized_model, config.model_id, config.model_iteration)
+
         model.network.eval()
 
         async for event in actor_session.all_events():
@@ -168,13 +173,20 @@ class SimpleDQNActor:
                     and config.model_update_frequency > 0
                     and actor_session.get_tick_id() % config.model_update_frequency == 0
                 ):
+                    # Get model
                     if config.model_iteration == -1:
-                        serialized_model = await actor_session.model_registry.track_latest_model(config.model_id)
+                        latest_model = await actor_session.model_registry.track_latest_model(
+                            name=config.model_id, deserialize_func=SimpleDQNModel.deserialize_model
+                        )
+                        model, _ = latest_model.get()
                     else:
                         serialized_model = await actor_session.model_registry.retrieve_model(
                             config.model_id, config.model_iteration
                         )
-                    model = SimpleDQNModel.deserialize_model(serialized_model, config.model_id, config.model_iteration)
+                        model = SimpleDQNModel.deserialize_model(
+                            serialized_model, config.model_id, config.model_iteration
+                        )
+
                     model.network.eval()
 
                 if rng.random() < model.epsilon:

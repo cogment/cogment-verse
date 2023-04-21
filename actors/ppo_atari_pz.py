@@ -195,12 +195,15 @@ class PPOActor:
 
         # Get model
         if config.model_iteration == -1:
-            serialized_model = await actor_session.model_registry.track_latest_model(config.model_id)
+            latest_model = await actor_session.model_registry.track_latest_model(
+                name=config.model_id, deserialize_func=PPOModel.deserialize_model
+            )
+            model, _ = latest_model.get()
         else:
             serialized_model = await actor_session.model_registry.retrieve_model(
                 config.model_id, config.model_iteration
             )
-        model = PPOModel.deserialize_model(serialized_model, config.model_id, config.model_iteration)
+            model = PPOModel.deserialize_model(serialized_model, config.model_id, config.model_iteration)
 
         log.info(f"Actor - retreved model number: {model.iteration}")
         obs_shape = model.input_shape[::-1]
