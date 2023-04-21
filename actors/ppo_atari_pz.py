@@ -648,8 +648,7 @@ class PPOSelfTraining(BasePPOTraining):
                     self.model.iter_idx = iter_idx
                     serialized_model = PPOModel.serialize_model(self.model)
 
-                    archived = num_updates % 50 == 0
-                    if archived:
+                    if num_updates % 50 == 0:
                         iteration_info = await run_session.model_registry.store_model(
                             name=model_id,
                             model=serialized_model,
@@ -842,8 +841,7 @@ class HillPPOTraining(BasePPOTraining):
                     self.model.iter_idx = iter_idx
                     serialized_model = PPOModel.serialize_model(self.model)
 
-                    archived = num_updates % 50 == 0
-                    if archived:
+                    if num_updates % 50 == 0:
                         iteration_info = await run_session.model_registry.store_model(
                             name=model_id,
                             model=serialized_model,
@@ -1084,8 +1082,7 @@ class HumanFeedbackPPOTraining(BasePPOTraining):
                     self.model.iter_idx = iter_idx
                     serialized_model = PPOModel.serialize_model(self.model)
 
-                    archived = num_updates % 50 == 0
-                    if archived:
+                    if num_updates % 50 == 0:
                         iteration_info = await run_session.model_registry.store_model(
                             name=model_id,
                             model=serialized_model,
