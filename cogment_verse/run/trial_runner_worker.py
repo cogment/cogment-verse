@@ -47,7 +47,7 @@ async def async_trial_runner_worker(
 
     context = cogment.Context(cog_settings=cog_settings, user_id="cogment_verse_trial_runner")
 
-    controller = context.get_controller(endpoint=cogment.Endpoint(services_directory.get(ServiceType.ORCHESTRATOR)))
+    controller = await services_directory.get_controller(context)
 
     num_trials = len(trials_id_and_params)
     num_started_trials = 0

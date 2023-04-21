@@ -58,6 +58,7 @@ Cogment verse includes environments from:
 5. Install the python dependencies. For petting zoo's Atari games, [additional installation](/docs/development_setup.md#petting-zoo-atari-games) is required after this step
    ```console
    $ pip install -r requirements.txt
+   $ pip install SuperSuit==3.7.0
    ```
 6. In another terminal, launch a mlflow server on port 3000
    ```console

@@ -39,6 +39,7 @@ TEST_EXPERIMENTS = [
     "random_cartpole_ft",
     "ppo/hopper_ft",
     "ppo/lunar_lander_continuous_ft",
+    "sac/hopper_ft",
     "simple_dqn/cartpole_ft",
     # "simple_a2c/ant_ft", # requires: pip install -r isaac_requirements.txt
     "simple_a2c/cartpole_ft",

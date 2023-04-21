@@ -19,7 +19,6 @@ from names_generator import generate_name
 from omegaconf import OmegaConf
 
 from .constants import DEFAULT_WORK_DIR, HUMAN_ACTOR_IMPL
-from .model_registry import ModelRegistry
 from .processes import (
     create_actor_service,
     create_environment_service,
@@ -76,7 +75,6 @@ class App:
             cfg
         )  # The configuration (or sub configurations) will be passed to other processes let's avoid surprises
         self.services_directory = ServiceDirectory()
-        self.model_registry = ModelRegistry(self.services_directory)
         self.services_process = []
 
         for service_type, services_cfg in cfg.services.items():
@@ -107,9 +105,7 @@ class App:
             elif service_type == ServiceType.ACTOR.value:
                 for actor_service_cfg in services_cfg.values():
                     self.services_process.append(
-                        create_actor_service(
-                            work_dir, SPEC_FILEPATH, self.model_registry, actor_service_cfg, self.services_directory
-                        )
+                        create_actor_service(work_dir, SPEC_FILEPATH, actor_service_cfg, self.services_directory)
                     )
             elif service_type == ServiceType.WEB.value:
                 self.services_process.append(create_web_service(SPEC_FILEPATH, self.services_directory, services_cfg))
@@ -123,9 +119,7 @@ class App:
 
         run_cfg = cfg.get("run", None)
         if run_cfg is not None:
-            self.run_process = create_run_process(
-                work_dir, SPEC_FILEPATH, self.services_directory, self.model_registry, run_cfg
-            )
+            self.run_process = create_run_process(work_dir, SPEC_FILEPATH, self.services_directory, run_cfg)
         else:
             self.run_process = None
 
