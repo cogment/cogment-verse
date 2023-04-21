@@ -519,7 +519,7 @@ class SACTraining:
                     steps_per_seconds = 100 / (end_time - start_time)
                     start_time = end_time
                     run_session.log_metrics(
-                        model_iteration_number=version_info["iteration"],
+                        model_iteration=version_info["iteration"],
                         value_loss=value_loss,
                         log_alpha=log_alpha,
                         policy_loss=policy_loss,

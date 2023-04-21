@@ -136,7 +136,12 @@ class SimpleA2CActor:
         observation_space = environment_specs.get_observation_space()
         action_space = environment_specs.get_action_space(seed=config.seed)
 
-        serialized_model = await actor_session.model_registry.retrieve_model(config.model_id, config.model_iteration)
+        if config.model_iteration == -1:
+            serialized_model = await actor_session.model_registry.track_latest_model(config.model_id)
+        else:
+            serialized_model = await actor_session.model_registry.retrieve_model(
+                config.model_id, config.model_iteration
+            )
         model = SimpleA2CModel.deserialize_model(serialized_model, config.model_id, config.model_iteration)
         model.actor_network.eval()
         model.critic_network.eval()
@@ -352,7 +357,7 @@ class SimpleA2CTraining:
             )
 
             run_session.log_metrics(
-                model_iteration_number=iteration_info.iteration,
+                model_iteration=iteration_info.iteration,
                 epoch_idx=epoch_idx,
                 entropy_loss=entropy_loss.item(),
                 value_loss=value_loss.item(),

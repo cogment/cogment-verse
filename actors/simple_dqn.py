@@ -146,7 +146,12 @@ class SimpleDQNActor:
 
         assert isinstance(action_space.gym_space, Discrete)
 
-        serialized_model = await actor_session.model_registry.retrieve_model(config.model_id, config.model_iteration)
+        if config.model_iteration == -1:
+            serialized_model = await actor_session.model_registry.track_latest_model(config.model_id)
+        else:
+            serialized_model = await actor_session.model_registry.retrieve_model(
+                config.model_id, config.model_iteration
+            )
         model = SimpleDQNModel.deserialize_model(serialized_model, config.model_id, config.model_iteration)
         model.network.eval()
 
@@ -163,9 +168,12 @@ class SimpleDQNActor:
                     and config.model_update_frequency > 0
                     and actor_session.get_tick_id() % config.model_update_frequency == 0
                 ):
-                    serialized_model = await actor_session.model_registry.retrieve_model(
-                        config.model_id, config.model_iteration
-                    )
+                    if config.model_iteration == -1:
+                        serialized_model = await actor_session.model_registry.track_latest_model(config.model_id)
+                    else:
+                        serialized_model = await actor_session.model_registry.retrieve_model(
+                            config.model_id, config.model_iteration
+                        )
                     model = SimpleDQNModel.deserialize_model(serialized_model, config.model_id, config.model_iteration)
                     model.network.eval()
 
@@ -411,7 +419,7 @@ class SimpleDQNTraining:
                     steps_per_seconds = 100 / (end_time - start_time)
                     start_time = end_time
                     run_session.log_metrics(
-                        model_iteration_number=iteration_info.iteration,
+                        model_iteration=iteration_info.iteration,
                         loss=loss.item(),
                         q_values=action_values.mean().item(),
                         batch_avg_reward=data.reward.mean().item(),
@@ -715,7 +723,7 @@ class SimpleDQNSelfPlayTraining:
                         steps_per_seconds = 100 / (end_time - start_time)
                         start_time = end_time
                         run_session.log_metrics(
-                            model_iteration_number=iteration_info.iteration,
+                            model_iteration=iteration_info.iteration,
                             loss=loss.item(),
                             q_values=action_values.mean().item(),
                             epsilon=model.epsilon,
