@@ -83,7 +83,9 @@ class PlayRun:
                 for actor_idx, actor_params in enumerate(players_cfg)
             },
             **{
-                f"actor_{actor_idx}_model_version": actor_params.get("config", {"model_version": None})["model_version"]
+                f"actor_{actor_idx}_model_iteration": actor_params.get("config", {"model_iteration": None})[
+                    "model_iteration"
+                ]
                 for actor_idx, actor_params in enumerate(players_cfg)
             },
             environment=self._environment_specs.implementation,

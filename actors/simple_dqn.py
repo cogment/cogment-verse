@@ -146,8 +146,8 @@ class SimpleDQNActor:
 
         assert isinstance(action_space.gym_space, Discrete)
 
-        serialized_model = await actor_session.model_registry.retrieve_model(config.model_id, config.model_version)
-        model = SimpleDQNModel.deserialize_model(serialized_model, config.model_id, config.model_version)
+        serialized_model = await actor_session.model_registry.retrieve_model(config.model_id, config.model_iteration)
+        model = SimpleDQNModel.deserialize_model(serialized_model, config.model_id, config.model_iteration)
         model.network.eval()
 
         async for event in actor_session.all_events():
@@ -159,14 +159,14 @@ class SimpleDQNActor:
                     continue
 
                 if (
-                    config.model_version == -1
+                    config.model_iteration == -1
                     and config.model_update_frequency > 0
                     and actor_session.get_tick_id() % config.model_update_frequency == 0
                 ):
                     serialized_model = await actor_session.model_registry.retrieve_model(
-                        config.model_id, config.model_version
+                        config.model_id, config.model_iteration
                     )
-                    model = SimpleDQNModel.deserialize_model(serialized_model, config.model_id, config.model_version)
+                    model = SimpleDQNModel.deserialize_model(serialized_model, config.model_id, config.model_iteration)
                     model.network.eval()
 
                 if rng.random() < model.epsilon:
@@ -339,7 +339,7 @@ class SimpleDQNTraining:
                                     run_id=run_session.run_id,
                                     seed=self._cfg.seed + trial_idx,
                                     model_id=model_id,
-                                    model_version=-1,
+                                    model_iteration=-1,
                                     model_update_frequency=self._cfg.model_update_frequency,
                                     environment_specs=self._environment_specs.serialize(),
                                 ),
@@ -411,7 +411,7 @@ class SimpleDQNTraining:
                     steps_per_seconds = 100 / (end_time - start_time)
                     start_time = end_time
                     run_session.log_metrics(
-                        model_version_number=iteration_info.iteration,
+                        model_iteration_number=iteration_info.iteration,
                         loss=loss.item(),
                         q_values=action_values.mean().item(),
                         batch_avg_reward=data.reward.mean().item(),
@@ -608,7 +608,7 @@ class SimpleDQNSelfPlayTraining:
                     run_id=run_session.run_id,
                     seed=self._rng.integers(9999),
                     model_id=model_id,
-                    model_version=version_number,
+                    model_iteration=version_number,
                     model_update_frequency=self._cfg.model_update_frequency,
                     environment_specs=self._environment_specs.serialize(),
                 ),
@@ -715,7 +715,7 @@ class SimpleDQNSelfPlayTraining:
                         steps_per_seconds = 100 / (end_time - start_time)
                         start_time = end_time
                         run_session.log_metrics(
-                            model_version_number=iteration_info.iteration,
+                            model_iteration_number=iteration_info.iteration,
                             loss=loss.item(),
                             q_values=action_values.mean().item(),
                             epsilon=model.epsilon,

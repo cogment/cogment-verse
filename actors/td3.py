@@ -201,8 +201,8 @@ class TD3Actor:
 
         assert isinstance(action_space.gym_space, Box)
 
-        serialized_model = await actor_session.model_registry.retrieve_model(config.model_id, config.model_version)
-        model = TD3Model.deserialize_model(serialized_model, config.model_id, config.model_version)
+        serialized_model = await actor_session.model_registry.retrieve_model(config.model_id, config.model_iteration)
+        model = TD3Model.deserialize_model(serialized_model, config.model_id, config.model_iteration)
 
         async for event in actor_session.all_events():
             if event.observation and event.type == cogment.EventType.ACTIVE:
@@ -358,7 +358,7 @@ class TD3Training:
                                     run_id=run_session.run_id,
                                     seed=self._cfg.seed + trial_idx,
                                     model_id=model_id,
-                                    model_version=-1,
+                                    model_iteration=-1,
                                     model_update_frequency=self._cfg.policy_freq,
                                     environment_specs=self._environment_specs.serialize(),
                                 ),
@@ -456,7 +456,7 @@ class TD3Training:
                 steps_per_seconds = 100 / (end_time - start_time)
                 start_time = end_time
                 run_session.log_metrics(
-                    model_version_number=iteration_info.iteration,
+                    model_iteration_number=iteration_info.iteration,
                     steps_per_seconds=steps_per_seconds,
                 )
 

@@ -10,6 +10,6 @@ run:
       implementation: actors.simple_dqn.SimpleDQNActor
       agent_config:
         model_id: ???
-        model_version: -1
+        model_iteration: -1
     - name: player_2
       implementation: client

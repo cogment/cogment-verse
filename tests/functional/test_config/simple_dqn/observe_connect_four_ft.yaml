@@ -14,9 +14,9 @@ run:
       implementation: actors.simple_dqn.SimpleDQNActor
       agent_config:
         model_id: connect_four_self_training_model
-        model_version: -1
+        model_iteration: -1
     - name: player_2
       implementation: actors.simple_dqn.SimpleDQNActor
       agent_config:
         model_id: ${run.players.0.agent_config.model_id}
-        model_version: ${run.players.0.agent_config.model_version}
+        model_iteration: ${run.players.0.agent_config.model_iteration}

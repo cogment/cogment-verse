@@ -131,8 +131,8 @@ class SimpleBCActor:
         observation_space = environment_specs.get_observation_space()
         action_space = environment_specs.get_action_space(seed=config.seed)
 
-        serialized_model = await actor_session.model_registry.retrieve_model(config.model_id, config.model_version)
-        model = SimpleBCModel.deserialize_model(serialized_model, config.model_id, config.model_version)
+        serialized_model = await actor_session.model_registry.retrieve_model(config.model_id, config.model_iteration)
+        model = SimpleBCModel.deserialize_model(serialized_model, config.model_id, config.model_iteration)
 
         log.info(f"Starting trial with model v{model.version_number}")
 
@@ -250,7 +250,7 @@ class SimpleBCTraining:
                     run_id=run_session.run_id,
                     environment_specs=self._environment_specs.serialize(),
                     model_id=model_id,
-                    model_version=-1,
+                    model_iteration=-1,
                 ),
             )
 
@@ -331,7 +331,7 @@ class SimpleBCTraining:
                     model=serialized_model,
                 )
                 run_session.log_metrics(
-                    model_version_number=iteration_info.iteration,
+                    model_iteration_number=iteration_info.iteration,
                     loss=loss.item(),
                     total_samples=len(observations),
                 )

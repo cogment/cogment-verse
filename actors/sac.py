@@ -279,7 +279,7 @@ class SACActor:
 
         # Retrieve the model
         model, _, _ = await actor_session.model_registry.retrieve_version(
-            SACModel, config.model_id, config.model_version
+            SACModel, config.model_id, config.model_iteration
         )
         async for event in actor_session.all_events():
             if event.observation and event.type == cogment.EventType.ACTIVE:
@@ -457,7 +457,7 @@ class SACTraining:
                     run_id=run_session.run_id,
                     environment_specs=self._environment_specs.serialize(),
                     model_id=model_id,
-                    model_version=version_info["version_number"],
+                    model_iteration=version_info["version_number"],
                     seed=self._cfg.seed + trial_idx,
                 ),
             )
@@ -519,7 +519,7 @@ class SACTraining:
                     steps_per_seconds = 100 / (end_time - start_time)
                     start_time = end_time
                     run_session.log_metrics(
-                        model_version_number=version_info["version_number"],
+                        model_iteration_number=version_info["version_number"],
                         value_loss=value_loss,
                         log_alpha=log_alpha,
                         policy_loss=policy_loss,

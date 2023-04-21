@@ -194,8 +194,8 @@ class PPOActor:
         action_space = environment_specs.get_action_space(seed=config.seed)
 
         # Get model
-        serialized_model = await actor_session.model_registry.retrieve_model(config.model_id, config.model_version)
-        model = PPOModel.deserialize_model(serialized_model, config.model_id, config.model_version)
+        serialized_model = await actor_session.model_registry.retrieve_model(config.model_id, config.model_iteration)
+        model = PPOModel.deserialize_model(serialized_model, config.model_id, config.model_iteration)
 
         log.info(f"Actor - retreved model number: {model.version_number}")
         obs_shape = model.input_shape[::-1]
@@ -564,7 +564,7 @@ class PPOSelfTraining(BasePPOTraining):
                     run_id=run_session.run_id,
                     environment_specs=self._environment_specs.serialize(),
                     model_id=model_id,
-                    model_version=iteration_info.iteration,
+                    model_iteration=iteration_info.iteration,
                     seed=self._cfg.seed + trial_idx + iter_idx * self._cfg.epoch_num_trials,
                 ),
             )
@@ -630,7 +630,7 @@ class PPOSelfTraining(BasePPOTraining):
                         log.info(f"epoch #{iter_idx + 1}/{self._cfg.num_iter}| avg. len: {avg_lens:0.2f}]")
 
                         run_session.log_metrics(
-                            model_version_number=iteration_info.iteration,
+                            model_iteration_number=iteration_info.iteration,
                             policy_loss=policy_loss.item(),
                             value_loss=value_loss.item(),
                             avg_rewards=avg_rewards.item(),
@@ -728,7 +728,7 @@ class HillPPOTraining(BasePPOTraining):
                             run_id=run_session.run_id,
                             environment_specs=self._environment_specs.serialize(),
                             model_id=model_id,
-                            model_version=version_number,
+                            model_iteration=version_number,
                             seed=self._cfg.seed + trial_idx + iter_idx * self._cfg.epoch_num_trials,
                         ),
                     )
@@ -824,7 +824,7 @@ class HillPPOTraining(BasePPOTraining):
                         log.info(f"epoch #{iter_idx + 1}/{self._cfg.num_iter}| avg. len: {avg_lens:0.2f}")
 
                         run_session.log_metrics(
-                            model_version_number=iteration_info.iteration,
+                            model_iteration_number=iteration_info.iteration,
                             policy_loss=policy_loss.item(),
                             value_loss=value_loss.item(),
                             avg_rewards=avg_rewards.item(),
@@ -964,7 +964,7 @@ class HumanFeedbackPPOTraining(BasePPOTraining):
                         run_id=run_session.run_id,
                         environment_specs=self._environment_specs.serialize(),
                         model_id=model_id,
-                        model_version=version_number,
+                        model_iteration=version_number,
                         seed=self._cfg.seed,
                     ),
                 )
@@ -1066,7 +1066,7 @@ class HumanFeedbackPPOTraining(BasePPOTraining):
                         log.info(f"epoch #{iter_idx + 1}/{self._cfg.num_iter}| avg. len: {avg_lens:0.2f}")
 
                         run_session.log_metrics(
-                            model_version_number=iteration_info.iteration,
+                            model_iteration_number=iteration_info.iteration,
                             policy_loss=policy_loss.item(),
                             value_loss=value_loss.item(),
                             avg_rewards=avg_rewards.item(),
