@@ -156,6 +156,8 @@ class SACModel(Model):
     def get_model_user_data(self) -> dict:
         """Get user model"""
         return {
+            "model_id": self.model_id,
+            "iteration": self.iteration,
             "environment_implementation": self.environment_implementation,
             "num_inputs": self.num_inputs,
             "num_outputs": self.num_outputs,
@@ -183,7 +185,7 @@ class SACModel(Model):
         return stream.getvalue()
 
     @classmethod
-    def deserialize_model(cls, serialized_model, model_id, iteration) -> SACModel:
+    def deserialize_model(cls, serialized_model) -> SACModel:
         stream = io.BytesIO(serialized_model)
         (
             policy_network_state_dict,
@@ -195,8 +197,8 @@ class SACModel(Model):
         ) = torch.load(stream)
 
         model = SACModel(
-            model_id=model_id,
-            iteration=iteration,
+            model_id=model_user_data["model_id"],
+            iteration=model_user_data["iteration"],
             environment_implementation=model_user_data["environment_implementation"],
             num_inputs=int(model_user_data["num_inputs"]),
             num_outputs=int(model_user_data["num_outputs"]),

@@ -76,6 +76,8 @@ class SimpleA2CModel(Model):
 
     def get_model_user_data(self):
         return {
+            "model_id": self.model_id,
+            "iteration": self.iteration,
             "environment_implementation": self._environment_implementation,
             "num_input": self._num_input,
             "num_output": self._num_output,
@@ -99,13 +101,13 @@ class SimpleA2CModel(Model):
         return stream.getvalue()
 
     @classmethod
-    def deserialize_model(cls, serialized_model, model_id, iteration) -> SimpleA2CModel:
+    def deserialize_model(cls, serialized_model) -> SimpleA2CModel:
         stream = io.BytesIO(serialized_model)
         (actor_network_state_dict, critic_network_state_dict, model_user_data) = torch.load(stream)
 
         model = cls(
-            model_id=model_id,
-            iteration=iteration,
+            model_id=model_user_data["model_id"],
+            iteration=model_user_data["iteration"],
             environment_implementation=model_user_data["environment_implementation"],
             num_input=int(model_user_data["num_input"]),
             num_output=int(model_user_data["num_output"]),
@@ -141,7 +143,7 @@ class SimpleA2CActor:
             latest_model = await actor_session.model_registry.track_latest_model(
                 name=config.model_id, deserialize_func=SimpleA2CModel.deserialize_model
             )
-            model, _ = latest_model.get()
+            model, _ = await latest_model.get()
         else:
             serialized_model = await actor_session.model_registry.retrieve_model(
                 config.model_id, config.model_iteration

@@ -44,13 +44,11 @@ class Model:
 
     @classmethod
     @abc.abstractmethod
-    def deserialize_model(cls, serialized_model, model_id, iteration):
+    def deserialize_model(cls, serialized_model):
         """
         Serialize and save the model
         Args:
             serialized_model: file object that will be used to load the version model data
-            model_id (string): unique identifier for the model
-            iteration (int): unique identifier for the model version
         Returns:
             model: the deserialized model
         """
