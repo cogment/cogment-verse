@@ -67,7 +67,9 @@ class Environment:
 
         session_cfg = environment_session.config
 
-        gym_env = gym.make(self.gym_env_name, render_mode="single_rgb_array" if session_cfg.render else None, new_step_api=True)
+        gym_env = gym.make(
+            self.gym_env_name, render_mode="single_rgb_array" if session_cfg.render else None, new_step_api=True
+        )
         observation_space = self.env_specs.get_observation_space(session_cfg.render_width)
         action_space = self.env_specs.get_action_space()
 
