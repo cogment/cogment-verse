@@ -2,6 +2,7 @@ defaults:
   - services: local_base_services
   - services/environment: lunar_lander
   - services/actor: random
+  - services/trial_datastore: default
   - run: play
   - services/experiment_tracker@run.experiment_tracker: mlflow
   - _self_

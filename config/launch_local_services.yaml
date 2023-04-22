@@ -1,0 +1,12 @@
+defaults:
+  - services: local_base_services
+  - services/trial_datastore: local
+  - _self_
+
+services:
+  trial_datastore:
+    port: 9001
+    log_level: warning
+  model_registry:
+    port: 9002
+    log_level: warning

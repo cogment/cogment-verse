@@ -29,3 +29,6 @@ pytest-timeout~=2.1.0
 # For Mlflow
 alembic==1.9.3
 SQLAlchemy<2
+
+# Jupyter
+ipykernel~=6.22

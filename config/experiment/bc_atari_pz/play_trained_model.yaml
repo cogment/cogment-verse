@@ -1,0 +1,20 @@
+# @package _global_
+defaults:
+  - override /services/actor:
+      - dqn
+  - override /services/environment: adaptive_grid_v0
+  # To save test trials to trial_datastore, uncomment command below
+  # - override /services/trial_datastore: local
+  - _self_
+
+run:
+  class_name: runs.adaptive_grid.RunTrainedModel
+  observer: False
+  num_trials: 30
+  seed: 12
+  players:
+    - name: player_1
+      implementation: actors.adaptive_grid.dqn.DQNActor
+      agent_config:
+        model_id: elated_wing_0_model # Change to desired model id (find it in .cogment_verse/model_registry)
+        model_version: -1  # change to desired model version. -1 for latest version available.

@@ -18,7 +18,7 @@ import os
 from names_generator import generate_name
 from omegaconf import OmegaConf
 
-from .constants import DEFAULT_WORK_DIR, HUMAN_ACTOR_IMPL
+from .constants import DEFAULT_WORK_DIR, HUMAN_ACTOR_IMPL, SPEC_FILEPATH
 from .processes import (
     create_actor_service,
     create_environment_service,
@@ -32,8 +32,6 @@ from .services_directory import ServiceDirectory, ServiceType
 from .utils.find_free_port import find_free_port
 
 log = logging.getLogger(__name__)
-
-SPEC_FILEPATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "specs", "cogment.yaml"))
 
 
 def register_generate_port_resolver():
