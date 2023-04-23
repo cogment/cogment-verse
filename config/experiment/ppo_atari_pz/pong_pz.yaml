@@ -12,9 +12,11 @@ run:
   epoch_num_trials: 1
   num_parallel_trials: 1
   learning_rate: 0.0004
-  batch_size: 128
-  buffer_size: 1000
-  num_steps: -1
+  batch_size: 5
+  buffer_size: 100000
+  learning_starts: 5
+  update_freq: 1
+  num_rollout_steps: 10
   discount_factor: 0.99
   lambda_gae: 0.95
   device: cuda
@@ -25,3 +27,4 @@ run:
   grad_norm: 0.5
   lr_decay_factor: 0.995
   image_size: [6, 84, 84]
+  logging_interval: 100

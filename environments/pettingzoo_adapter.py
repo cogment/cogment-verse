@@ -279,6 +279,7 @@ class AtariEnvironment(Environment):
         )
 
         environment_session.start([("*", observation_space.serialize(observation))])
+        step = 0
         async for event in environment_session.all_events():
             if not event.actions:
                 continue
@@ -308,6 +309,7 @@ class AtariEnvironment(Environment):
             observations = [("*", observation_space.serialize(observation))]
             # TODO: need to revise the actor name received the reward
             environment_session.add_reward(value=pz_reward, confidence=1.0, to=[actor_name])
+            step += 1
             if done:
                 # The trial ended
                 environment_session.end(observations)

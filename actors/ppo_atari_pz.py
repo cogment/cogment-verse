@@ -26,7 +26,7 @@ import torch
 from gym.spaces import Discrete, utils
 from torch.distributions.distribution import Distribution
 
-from cogment_verse import HumanDataBuffer, Model, PPOReplayBuffer, PPOReplayBufferSample
+from cogment_verse import HumanDataBuffer, Model, PPOReplayBuffer
 from cogment_verse.run.run_session import RunSession
 from cogment_verse.run.sample_producer_worker import SampleProducerSession
 from cogment_verse.specs import (
@@ -241,13 +241,16 @@ class BasePPOTraining(ABC):
         "learning_rate": 3e-4,
         "batch_size": 64,
         "buffer_size": 1000,
-        "num_steps": -1,  # End of trial
+        "learning_starts": 128,
+        "update_freq": 1,
+        "num_rollout_steps": 10,
         "lambda_gae": 0.95,
         "device": "cpu",
         "grad_norm": 0.5,
         "lr_decay_factor": 0.999,
         "image_size": [6, 84, 84],
         "buffer_capacity": 100_000,
+        "logging_interval": 100,
     }
 
     def __init__(self, environment_specs: EnvironmentSpecs, cfg: EnvironmentConfig) -> None:
@@ -379,7 +382,7 @@ class BasePPOTraining(ABC):
         values: torch.Tensor,
         log_probs: torch.Tensor,
         num_epochs: int,
-    ) -> Tuple[torch.Tensor]:
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         """Update policy & value networks"""
 
         returns = advs + values
@@ -444,7 +447,7 @@ class BasePPOTraining(ABC):
         return policy_loss, value_loss
 
     @staticmethod
-    async def compute_average_reward(rewards: list) -> float:
+    async def compute_average_reward(rewards: list) -> torch.Tensor:
         """Compute the average reward of the last 100 episode"""
         last_100_rewards = rewards[np.maximum(0, len(rewards) - 100) : len(rewards)]
         return torch.vstack(last_100_rewards).mean()
@@ -618,10 +621,9 @@ class PPOSelfTraining(BasePPOTraining):
         player_observation_space = player_environment_specs.get_observation_space()
         player_action_space = player_environment_specs.get_action_space()
         obs_shape = tuple(self._cfg.image_size)[::-1]
-        num_steps = 32
 
         rollout_buffer = RolloutBuffer(
-            capacity=num_steps,
+            capacity=self._cfg.num_rollout_steps,
             observation_shape=self._cfg.image_size,
             action_shape=(1,),  # TODO: remove hardcoding
             action_dtype=torch.float64,
@@ -657,7 +659,7 @@ class PPOSelfTraining(BasePPOTraining):
                 )
 
             # Compute values and log probs
-            if step < num_steps:
+            if step < self._cfg.num_rollout_steps:
                 with torch.no_grad():
                     obs_device = observation_value.to(torch.device(self.model.device))
                     action_device = action_value.to(torch.device(self.model.device))
@@ -678,7 +680,7 @@ class PPOSelfTraining(BasePPOTraining):
                 total_reward = 0
 
             # Produce sample for training task
-            if step % num_steps == 0:
+            if step % self._cfg.num_rollout_steps == 0:
                 with torch.no_grad():
                     obs_device = observation_value.to(torch.device(self.model.device))
                     next_value = self.model.network.get_value(obs_device)
@@ -691,8 +693,10 @@ class PPOSelfTraining(BasePPOTraining):
                     gamma=self._cfg.discount_factor,
                     lambda_=self._cfg.lambda_gae,
                 )
-                observations = [rollout_buffer.observations[i, :] for i in range(num_steps)]
-                actions = [rollout_buffer.actions[i, :] for i in range(num_steps)]
+
+                # TODO: Find a better way to handle it
+                observations = [rollout_buffer.observations[i, :] for i in range(self._cfg.num_rollout_steps)]
+                actions = [rollout_buffer.actions[i, :] for i in range(self._cfg.num_rollout_steps)]
                 sample_producer_session.produce_sample(
                     (observations, actions, advs, values, log_probs, episode_rewards)
                 )
@@ -727,6 +731,7 @@ class PPOSelfTraining(BasePPOTraining):
             capacity=self._cfg.buffer_size,
             observation_shape=self._cfg.image_size,
             action_shape=(1,),
+            device=self._device,
             dtype=self._dtype,
             seed=self._cfg.seed,
         )
@@ -761,7 +766,6 @@ class PPOSelfTraining(BasePPOTraining):
 
         # Run environment
         episode_rewards = []
-        episode_lens = []
 
         num_updates = 0
         total_steps = 0
@@ -775,21 +779,29 @@ class PPOSelfTraining(BasePPOTraining):
             ):
                 # Collect the rollout
                 (trial_obs, trial_act, trial_adv, trial_val, trial_log_prob, trial_eps_rew) = sample
-                for (obs, act, adv, val, log_prob) in zip(trial_obs, trial_act, trial_adv, trial_val, trial_log_prob):
+                episode_rewards.extend(trial_eps_rew)
 
+                # Save data to replay buffer: TODO: remove loop
+                for (obs, act, adv, val, log_prob) in zip(trial_obs, trial_act, trial_adv, trial_val, trial_log_prob):
                     replay_buffer.add(observation=obs, action=act, adv=adv, value=val, log_prob=log_prob)
 
-                # if trial_done:
-                #     run_session.log_metrics(training_total_reward=sum(total_rewards.values()), episode_len=total_steps)
-                #     running_avg_len += total_steps
-                #     if (step_idx + 1) % 100 == 0:
-                #         run_session.log_metrics(episode_len=running_avg_len / 100)
-                #         running_avg_len = 0
+                if (
+                    step_idx > self._cfg.learning_starts
+                    and replay_buffer.size() > self._cfg.batch_size
+                    and step_idx % self._cfg.update_freq == 0
+                ):
+                    # Get sample
+                    data = replay_buffer.sample(self._cfg.batch_size)
 
-                # if len(actions) >= self._cfg.num_steps * self._cfg.epoch_num_trials + 1:
-                #     num_updates += 1
-                #     total_steps += self._cfg.num_steps * self._cfg.epoch_num_trials
-                #     data = replay_buffer.sample(self._cfg.batch_size)
+                    # Update parameters for policy and value networks
+                    policy_loss, value_loss = self.update_parameters(
+                        observations=data.observation,
+                        actions=data.action,
+                        advs=data.adv,
+                        values=data.value,
+                        log_probs=data.log_prob,
+                        num_epochs=self._cfg.num_epochs,
+                    )
 
                         run_session.log_metrics(
                             model_iteration=iteration_info.iteration,

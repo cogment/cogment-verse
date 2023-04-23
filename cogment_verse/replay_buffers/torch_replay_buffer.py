@@ -54,6 +54,7 @@ class PPOReplayBuffer:
         capacity: int,
         observation_shape: tuple,
         action_shape: tuple,
+        device: torch.device,
         seed: int = 0,
         dtype: torch.dtype = torch.float32,
     ):
@@ -61,6 +62,7 @@ class PPOReplayBuffer:
         self.observation_shape = observation_shape
         self.action_shape = action_shape
         self.dtype = dtype
+        self.device = device
 
         # Initialize data storage
         self.observations = torch.zeros((self.capacity, *self.observation_shape), dtype=self.dtype)
@@ -79,7 +81,7 @@ class PPOReplayBuffer:
         adv: torch.Tensor,
         value: torch.Tensor,
         log_prob: torch.Tensor,
-    ):
+    ) -> None:
         self.observations[self._ptr] = observation
         self.actions[self._ptr] = action
         self.advs[self._ptr] = adv
@@ -88,7 +90,7 @@ class PPOReplayBuffer:
         self._ptr = (self._ptr + 1) % self.capacity
         self.num_total += 1
 
-    def sample(self, num):
+    def sample(self, num) -> PPOReplayBufferSample:
         size = self.size()
         if size < num:
             indices = range(size)
@@ -96,11 +98,11 @@ class PPOReplayBuffer:
             indices = self._rng.choice(self.size(), size=num, replace=False)
 
         return PPOReplayBufferSample(
-            observation=self.observations[indices],
-            action=self.actions[indices],
-            adv=self.advs[indices],
-            value=self.values[indices],
-            log_prob=self.log_probs[indices],
+            observation=self.observations[indices].to(self.device),
+            action=self.actions[indices].to(self.device),
+            adv=self.advs[indices].to(self.device),
+            value=self.values[indices].to(self.device),
+            log_prob=self.log_probs[indices].to(self.device),
         )
 
     def size(self):
