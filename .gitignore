@@ -18,6 +18,7 @@ htmlcov/
 
 # Atari roms
 .atari_roms/
+Multi-Agent-ALE/
 
 .vscode
 
@@ -40,5 +41,6 @@ ngrok.yaml
 
 # Human feedback data
 *.npz
+
 #pyenv
 .python-version

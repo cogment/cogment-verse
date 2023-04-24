@@ -148,7 +148,7 @@ class SimpleBCActor:
                 actor_session.do_action(action_space.serialize(action))
 
 
-class SimpleBCTraining:
+class SimpleBCTrainingOffline:
     def __init__(self, environment_specs, cfg):
         super().__init__()
         self._dtype = torch.float
@@ -233,7 +233,7 @@ class SimpleBCTraining:
             rewards = []
 
             # One iteration per trial (all trial samples)
-            for (step_idx, _trial_id, _trial_idx, sample,) in run_session.load_trials_from_datastore(
+            for (step_idx, _trial_id, _trial_idx, sample,) in run_session.load_trials(
                 sample_producer_impl=self.sample_producer,
                 trial_ids=self._cfg.trial_ids,
                 num_trials=self._cfg.num_trials,

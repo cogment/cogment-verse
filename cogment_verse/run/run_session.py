@@ -15,6 +15,7 @@
 import logging
 import time
 from multiprocessing import Queue
+from cogment_verse.run.sample_loader_worker import start_sample_loader_worker
 
 from cogment_verse.utils.import_class import import_class
 
@@ -74,6 +75,37 @@ class RunSession:
             sample_producer_worker.terminate()
             trial_runner_worker.join()
             sample_producer_worker.join()
+            raise error
+
+    def load_trials(self, sample_producer_impl, trial_ids=[], num_trials=-1):
+        """Extracts samples from trials in datastore. Optionally, pass a list of specific trial_ids to select from."""
+        sample_queue = Queue()
+
+        sample_loader_worker = start_sample_loader_worker(
+            trial_ids=trial_ids,
+            num_trials=num_trials,
+            sample_queue=sample_queue,
+            impl=sample_producer_impl,
+            services_directory=self._services_directory,
+        )
+
+        try:
+            while True:
+                sample_queue_event = sample_queue.get()
+                if sample_queue_event.done:
+                    break
+                self._step_idx += 1
+                yield (
+                    self._step_idx,
+                    sample_queue_event.trial_id,
+                    sample_queue_event.trial_idx,
+                    sample_queue_event.sample,
+                )
+
+            sample_loader_worker.join()
+        except RuntimeError as error:
+            sample_loader_worker.terminate()
+            sample_loader_worker.join()
             raise error
 
     def log_params(self, *args, **kwargs):
