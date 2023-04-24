@@ -110,6 +110,19 @@ def test__model_registry(_prepare_config):
     proc.communicate()
     assert proc.returncode == 0
 
+    # Using the model iteration -1
+    proc = subprocess.Popen(
+        args=[
+            sys.executable,
+            "-m",
+            "tests.functional.test_experiments",
+            "+experiment=simple_dqn/observe_connect_four_specific_iteration_ft",
+        ]
+    )
+    proc.communicate()
+    assert proc.returncode == 0
+
+    # Using a specific model iteration number
     proc = subprocess.Popen(
         args=[
             sys.executable,
