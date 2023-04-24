@@ -158,7 +158,7 @@ class SimpleDQNActor:
             serialized_model = await actor_session.model_registry.retrieve_model(
                 config.model_id, config.model_iteration
             )
-            model = SimpleDQNModel.deserialize_model(serialized_model, config.model_id, config.model_iteration)
+            model = SimpleDQNModel.deserialize_model(serialized_model)
 
         model.network.eval()
 
@@ -185,9 +185,7 @@ class SimpleDQNActor:
                         serialized_model = await actor_session.model_registry.retrieve_model(
                             config.model_id, config.model_iteration
                         )
-                        model = SimpleDQNModel.deserialize_model(
-                            serialized_model, config.model_id, config.model_iteration
-                        )
+                        model = SimpleDQNModel.deserialize_model(serialized_model)
 
                     model.network.eval()
 

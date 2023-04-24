@@ -330,7 +330,7 @@ class PPOActor:
             serialized_model = await actor_session.model_registry.retrieve_model(
                 config.model_id, config.model_iteration
             )
-            model = PPOModel.deserialize_model(serialized_model, config.model_id, config.model_iteration)
+            model = PPOModel.deserialize_model(serialized_model)
 
         async for event in actor_session.all_events():
             if event.observation and event.type == cogment.EventType.ACTIVE:

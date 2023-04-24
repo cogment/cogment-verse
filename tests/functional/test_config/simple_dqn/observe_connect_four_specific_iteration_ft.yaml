@@ -1,0 +1,22 @@
+# @package _global_
+defaults:
+  - override /services/actor:
+      - simple_dqn
+  - override /services/environment: connect_four
+  - override /run: observe
+  - override /services/experiment_tracker@run.experiment_tracker: simple
+
+run:
+  observer: False
+  num_trials: 1
+  players:
+    - name: player_1
+      implementation: actors.simple_dqn.SimpleDQNActor
+      agent_config:
+        model_id: connect_four_self_training_model
+        model_iteration: 2
+    - name: player_2
+      implementation: actors.simple_dqn.SimpleDQNActor
+      agent_config:
+        model_id: ${run.players.0.agent_config.model_id}
+        model_iteration: ${run.players.0.agent_config.model_iteration}

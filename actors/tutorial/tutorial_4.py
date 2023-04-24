@@ -143,7 +143,7 @@ class SimpleBCActor:
             serialized_model = await actor_session.model_registry.retrieve_model(
                 config.model_id, config.model_iteration
             )
-            model = SimpleBCModel.deserialize_model(serialized_model, config.model_id, config.model_iteration)
+            model = SimpleBCModel.deserialize_model(serialized_model)
 
         log.info(f"Starting trial with model v{model.iteration}")
 
