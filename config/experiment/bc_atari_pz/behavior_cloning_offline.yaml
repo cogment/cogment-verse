@@ -1,20 +1,20 @@
 # @package _global_
 defaults:
-  - override /services/actor:
-      - behavior_cloning
-  - override /services/environment: adaptive_grid_v0
+  #- override /services/actor: behavior_cloning
+  - /services/actor/atari_pong@services.actor: behavior_cloning
+  - override /services/environment: pong_pz
   - override /services/trial_datastore: local
   - _self_
 
 run:
-  class_name: actors.adaptive_grid.behavior_cloning.SimpleBCTraining
+  class_name: actors.atari_pong.behavior_cloning.BehaviorCloningTrainingOffline
   seed: 618
   trial_ids: [] # example: [trusting_clarke_0_0, trusting_clarke_0_1]
-  
+
   # model
   model_id: ""
   archive_model: True # True: model will be saved to disk. Location: .cogment_verse/model_registry
-  
+
   # Training params
   num_epochs: 10
   num_trials: -1 # Max number of trials to extract from trial datastore. unlimited: -1

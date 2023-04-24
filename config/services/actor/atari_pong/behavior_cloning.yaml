@@ -1,0 +1,3 @@
+simple_bc:
+  class_name: actors.atari_pong.behavior_cloning.BehaviorCloningActor
+  port: ${generate_port:actor_2}

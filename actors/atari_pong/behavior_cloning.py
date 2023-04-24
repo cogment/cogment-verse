@@ -30,7 +30,7 @@ torch.multiprocessing.set_sharing_strategy("file_system")
 log = logging.getLogger(__name__)
 
 
-class SimpleBCModel(Model):
+class BehaviorCloningModel(Model):
     def __init__(
         self,
         model_id,
@@ -84,11 +84,11 @@ class SimpleBCModel(Model):
         return stream.getvalue()
 
     @classmethod
-    def deserialize_model(cls, serialized_model) -> SimpleBCModel:
+    def deserialize_model(cls, serialized_model) -> BehaviorCloningModel:
         stream = io.BytesIO(serialized_model)
         (policy_network_state_dict, model_user_data) = torch.load(stream)
 
-        model = SimpleBCModel(
+        model = BehaviorCloningModel(
             model_id=model_user_data["model_id"],
             iteration=model_user_data["iteration"],
             environment_implementation=model_user_data["environment_implementation"],
@@ -101,7 +101,7 @@ class SimpleBCModel(Model):
         return model
 
 
-class SimpleBCActor:
+class BehaviorCloningActor:
     def __init__(self, _cfg):
         super().__init__()
         self._dtype = torch.float
@@ -120,14 +120,14 @@ class SimpleBCActor:
         # Get model
         if config.model_iteration == -1:
             latest_model = await actor_session.model_registry.track_latest_model(
-                name=config.model_id, deserialize_func=SimpleBCModel.deserialize_model
+                name=config.model_id, deserialize_func=BehaviorCloningModel.deserialize_model
             )
             model, _ = await latest_model.get()
         else:
             serialized_model = await actor_session.model_registry.retrieve_model(
                 config.model_id, config.model_iteration
             )
-            model = SimpleBCModel.deserialize_model(serialized_model)
+            model = BehaviorCloningModel.deserialize_model(serialized_model)
 
         log.info(f"Starting trial with model_id: {model.model_id} | iteration: {model.iteration}")
 
@@ -148,7 +148,7 @@ class SimpleBCActor:
                 actor_session.do_action(action_space.serialize(action))
 
 
-class SimpleBCTrainingOffline:
+class BehaviorCloningTrainingOffline:
     def __init__(self, environment_specs, cfg):
         super().__init__()
         self._dtype = torch.float
@@ -156,7 +156,7 @@ class SimpleBCTrainingOffline:
         self._cfg = cfg
 
         # Initializing a model
-        self.model = SimpleBCModel(
+        self.model = BehaviorCloningModel(
             model_id="",
             environment_implementation=self._environment_specs.implementation,
             num_input=utils.flatdim(self._environment_specs.get_observation_space().gym_space),
@@ -202,7 +202,7 @@ class SimpleBCTrainingOffline:
             self._cfg.model_id = model_id
         self.model.model_id = model_id
 
-        serialized_model = SimpleBCModel.serialize_model(self.model)
+        serialized_model = BehaviorCloningModel.serialize_model(self.model)
         iteration_info = await run_session.model_registry.publish_model(
             name=model_id,
             model=serialized_model,
@@ -267,7 +267,7 @@ class SimpleBCTrainingOffline:
 
                 # Publish the newly trained iteration every 100 steps
                 if step_idx % self._cfg.update_frequency == 0:
-                    serialized_model = SimpleBCModel.serialize_model(self.model)
+                    serialized_model = BehaviorCloningModel.serialize_model(self.model)
                     iteration_info = await run_session.model_registry.store_model(
                         name=model_id,
                         model=serialized_model,
