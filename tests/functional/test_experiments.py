@@ -110,7 +110,7 @@ def test__model_registry(_prepare_config):
     proc.communicate()
     assert proc.returncode == 0
 
-    # Using the model iteration -1
+    # Using a specific model iteration number
     proc = subprocess.Popen(
         args=[
             sys.executable,
@@ -122,7 +122,7 @@ def test__model_registry(_prepare_config):
     proc.communicate()
     assert proc.returncode == 0
 
-    # Using a specific model iteration number
+    # Using the model iteration -1
     proc = subprocess.Popen(
         args=[
             sys.executable,
