@@ -193,7 +193,7 @@ class BehaviorCloningTrainingOffline:
             sample_producer_session.produce_sample((demonstration, observation, action, reward))
 
     async def impl(self, run_session):
-        assert self._environment_specs.num_players == 1
+        # assert self._environment_specs.num_players == 1
 
         if self._cfg.model_id:
             model_id = self._cfg.model_id
@@ -210,7 +210,6 @@ class BehaviorCloningTrainingOffline:
 
         run_session.log_params(
             self._cfg,
-            model_id=model_id,
             environment_implementation=self._environment_specs.implementation,
         )
 

@@ -1,7 +1,8 @@
 # @package _global_
 defaults:
   #- override /services/actor: behavior_cloning
-  - /services/actor/atari_pong@services.actor: behavior_cloning
+  - /services/actor/atari_pong@services.actor:
+    - behavior_cloning
   - override /services/environment: pong_pz
   - override /services/trial_datastore: local
   - _self_
