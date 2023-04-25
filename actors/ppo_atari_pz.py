@@ -653,13 +653,14 @@ class PPOSelfTraining(BasePPOTraining):
             reward_value = torch.tensor(
                 actor_sample.reward if actor_sample.reward is not None else 0, dtype=self._dtype
             )
+
             if not trial_done:
                 action_value = torch.tensor(
                     player_action_space.deserialize(actor_sample.action).value, dtype=self._dtype
                 )
 
             # Compute values and log probs
-            if step < self._cfg.num_rollout_steps:
+            if step < self._cfg.num_rollout_steps or trial_done:
                 with torch.no_grad():
                     obs_device = observation_value.to(torch.device(self.model.device))
                     action_device = action_value.to(torch.device(self.model.device))
@@ -674,6 +675,7 @@ class PPOSelfTraining(BasePPOTraining):
 
             # Save episode reward i.e., number of total steps for an episode
             step += 1
+            count += 1
             total_reward += 1
             if trial_done:
                 episode_rewards.append(total_reward)

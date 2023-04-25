@@ -295,6 +295,7 @@ class AtariEnvironment(Environment):
             pz_player_name = next(pz_agent_iterator)
             actor_idx = pz_player_names[pz_player_name]
             actor_name = actor_names[actor_idx]
+            step += 1
 
             observation = observation_space.create(
                 value=pz_observation,
@@ -309,7 +310,6 @@ class AtariEnvironment(Environment):
             observations = [("*", observation_space.serialize(observation))]
             # TODO: need to revise the actor name received the reward
             environment_session.add_reward(value=pz_reward, confidence=1.0, to=[actor_name])
-            step += 1
             if done:
                 # The trial ended
                 environment_session.end(observations)

@@ -16,10 +16,10 @@ run:
   buffer_size: 100000
   learning_starts: 5
   update_freq: 1
-  num_rollout_steps: 10
+  num_rollout_steps: 5
   discount_factor: 0.99
   lambda_gae: 0.95
-  device: cuda
+  device: cpu
   entropy_loss_coef: 0.0
   value_loss_coef: 0.2
   action_loss_coef: 0.5
