@@ -157,7 +157,6 @@ class SACModel(Model):
         """Get user model"""
         return {
             "model_id": self.model_id,
-            "iteration": self.iteration,
             "environment_implementation": self.environment_implementation,
             "num_inputs": self.num_inputs,
             "num_outputs": self.num_outputs,
@@ -198,7 +197,6 @@ class SACModel(Model):
 
         model = SACModel(
             model_id=model_user_data["model_id"],
-            iteration=model_user_data["iteration"],
             environment_implementation=model_user_data["environment_implementation"],
             num_inputs=int(model_user_data["num_inputs"]),
             num_outputs=int(model_user_data["num_outputs"]),
@@ -279,10 +277,14 @@ class SACActor:
         scale = torch.tensor((action_max - action_min) / 2.0, dtype=self._dtype)
         bias = torch.tensor((action_max + action_min) / 2.0, dtype=self._dtype)
 
-        # Retrieve the model
-        model, _, _ = await actor_session.model_registry.retrieve_version(
-            SACModel, config.model_id, config.model_iteration
-        )
+        # Get model
+        model = await SACModel.retrieve_model(actor_session, config.model_id, config.model_iteration)
+        model.policy_network.eval()
+        model.value_network_1.eval()
+        model.value_network_2.eval()
+        model.target_network_1.eval()
+        model.target_network_2.eval()
+
         async for event in actor_session.all_events():
             if event.observation and event.type == cogment.EventType.ACTIVE:
                 observation = observation_space.deserialize(event.observation.observation)

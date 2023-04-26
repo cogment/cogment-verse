@@ -86,7 +86,6 @@ class SimpleDQNModel(Model):
     def get_model_user_data(self):
         return {
             "model_id": self.model_id,
-            "iteration": self.iteration,
             "environment_implementation": self._environment_implementation,
             "num_input": self._num_input,
             "num_output": self._num_output,
@@ -96,6 +95,7 @@ class SimpleDQNModel(Model):
 
     @staticmethod
     def serialize_model(model) -> bytes:
+        print("")
         stream = io.BytesIO()
         torch.save(
             (
@@ -114,7 +114,6 @@ class SimpleDQNModel(Model):
 
         model = cls(
             model_id=model_user_data["model_id"],
-            iteration=model_user_data["iteration"],
             environment_implementation=model_user_data["environment_implementation"],
             num_input=int(model_user_data["num_input"]),
             num_output=int(model_user_data["num_output"]),
@@ -149,17 +148,7 @@ class SimpleDQNActor:
         assert isinstance(action_space.gym_space, Discrete)
 
         # Get model
-        if config.model_iteration == -1:
-            latest_model = await actor_session.model_registry.track_latest_model(
-                name=config.model_id, deserialize_func=SimpleDQNModel.deserialize_model
-            )
-            model, _ = await latest_model.get()
-        else:
-            serialized_model = await actor_session.model_registry.retrieve_model(
-                config.model_id, config.model_iteration
-            )
-            model = SimpleDQNModel.deserialize_model(serialized_model)
-
+        model = await SimpleDQNModel.retrieve_model(actor_session, config.model_id, config.model_iteration)
         model.network.eval()
 
         async for event in actor_session.all_events():
@@ -175,18 +164,7 @@ class SimpleDQNActor:
                     and config.model_update_frequency > 0
                     and actor_session.get_tick_id() % config.model_update_frequency == 0
                 ):
-                    # Get model
-                    if config.model_iteration == -1:
-                        latest_model = await actor_session.model_registry.track_latest_model(
-                            name=config.model_id, deserialize_func=SimpleDQNModel.deserialize_model
-                        )
-                        model, _ = await latest_model.get()
-                    else:
-                        serialized_model = await actor_session.model_registry.retrieve_model(
-                            config.model_id, config.model_iteration
-                        )
-                        model = SimpleDQNModel.deserialize_model(serialized_model)
-
+                    model = await SimpleDQNModel.retrieve_model(actor_session, config.model_id, config.model_iteration)
                     model.network.eval()
 
                 if rng.random() < model.epsilon:
@@ -302,11 +280,13 @@ class SimpleDQNTraining:
             dtype=self._dtype,
         )
 
+        print(f"Before serializing model iteration: {model.iteration}")
         serialized_model = SimpleDQNModel.serialize_model(model)
         iteration_info = await run_session.model_registry.publish_model(
             name=model_id,
             model=serialized_model,
         )
+        print(f"after publising, iteration_info: {iteration_info.iteration}")
 
         run_session.log_params(
             self._cfg,
@@ -425,6 +405,7 @@ class SimpleDQNTraining:
                     name=model_id,
                     model=serialized_model,
                 )
+                print(f"MODEL TRAINED: {iteration_info}")
 
                 if step_idx % 100 == 0:
                     end_time = time.time()

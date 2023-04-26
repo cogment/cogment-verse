@@ -129,7 +129,6 @@ class PPOModel(Model):
         """Get user model"""
         return {
             "model_id": self.model_id,
-            "iteration": self.iteration,
             "environment_implementation": self._environment_implementation,
             "num_actions": self._num_actions,
             "input_shape": self.input_shape,
@@ -158,7 +157,6 @@ class PPOModel(Model):
 
         model = PPOModel(
             model_id=model_user_data["model_id"],
-            iteration=model_user_data["iteration"],
             environment_implementation=model_user_data["environment_implementation"],
             num_actions=model_user_data["num_actions"],
             input_shape=model_user_data["input_shape"],
@@ -196,16 +194,8 @@ class PPOActor:
         action_space = environment_specs.get_action_space(seed=config.seed)
 
         # Get model
-        if config.model_iteration == -1:
-            latest_model = await actor_session.model_registry.track_latest_model(
-                name=config.model_id, deserialize_func=PPOModel.deserialize_model
-            )
-            model, _ = await latest_model.get()
-        else:
-            serialized_model = await actor_session.model_registry.retrieve_model(
-                config.model_id, config.model_iteration
-            )
-            model = PPOModel.deserialize_model(serialized_model)
+        model = await PPOModel.retrieve_model(actor_session, config.model_id, config.model_iteration)
+        model.network.eval()
 
         log.info(f"Actor - retreved model number: {model.iteration}")
         obs_shape = model.input_shape[::-1]

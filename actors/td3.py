@@ -124,7 +124,6 @@ class TD3Model(Model):
     def get_model_user_data(self):
         return {
             "model_id": self.model_id,
-            "iteration": self.iteration,
             "environment_implementation": self._environment_implementation,
             "num_input": self._num_input,
             "num_output": self._num_output,
@@ -165,7 +164,6 @@ class TD3Model(Model):
 
         model = cls(
             model_id=model_user_data["model_id"],
-            iteration=model_user_data["iteration"],
             environment_implementation=model_user_data["environment_implementation"],
             num_input=int(model_user_data["num_input"]),
             num_output=int(model_user_data["num_output"]),
@@ -204,16 +202,11 @@ class TD3Actor:
         assert isinstance(action_space.gym_space, Box)
 
         # Get model
-        if config.model_iteration == -1:
-            latest_model = await actor_session.model_registry.track_latest_model(
-                name=config.model_id, deserialize_func=TD3Model.deserialize_model
-            )
-            model, _ = await latest_model.get()
-        else:
-            serialized_model = await actor_session.model_registry.retrieve_model(
-                config.model_id, config.model_iteration
-            )
-            model = TD3Model.deserialize_model(serialized_model)
+        model = await TD3Model.retrieve_model(actor_session, config.model_id, config.model_iteration)
+        model.actor.eval()
+        model.actor_target.eval()
+        model.critic.eval()
+        model.critic_target.eval()
 
         async for event in actor_session.all_events():
             if event.observation and event.type == cogment.EventType.ACTIVE:
