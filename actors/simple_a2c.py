@@ -74,6 +74,10 @@ class SimpleA2CModel(Model):
         self.epoch_idx = 0
         self.total_samples = 0
 
+    def eval(self) -> None:
+        self.actor_network.eval()
+        self.critic_network.eval()
+
     def get_model_user_data(self):
         return {
             "model_id": self.model_id,
@@ -138,8 +142,7 @@ class SimpleA2CActor:
 
         # Get model
         model = await SimpleA2CModel.retrieve_model(actor_session, config.model_id, config.model_iteration)
-        model.actor_network.eval()
-        model.critic_network.eval()
+        model.eval()
 
         async for event in actor_session.all_events():
             if event.observation and event.type == cogment.EventType.ACTIVE:

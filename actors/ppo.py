@@ -248,6 +248,10 @@ class PPOModel(Model):
         if self._state_norm:
             self.state_normalization = Normalization(dtype=self._dtype, nums=self._num_input)
 
+    def eval(self) -> None:
+        self.policy_network.eval()
+        self.value_network.eval()
+
     def get_model_user_data(self) -> dict:
         """Get user model"""
         return {
@@ -320,8 +324,7 @@ class PPOActor:
 
         # Get model
         model = await PPOModel.retrieve_model(actor_session, config.model_id, config.model_iteration)
-        model.policy_network.eval()
-        model.value_network.eval()
+        model.eval()
 
         async for event in actor_session.all_events():
             if event.observation and event.type == cogment.EventType.ACTIVE:

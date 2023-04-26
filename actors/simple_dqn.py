@@ -163,6 +163,7 @@ class SimpleDQNActor:
                     and config.model_update_frequency > 0
                     and actor_session.get_tick_id() % config.model_update_frequency == 0
                 ):
+                    # Get model
                     model = await SimpleDQNModel.retrieve_model(actor_session, config.model_id, config.model_iteration)
                     model.network.eval()
 
