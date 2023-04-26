@@ -147,7 +147,9 @@ class SimpleDQNActor:
         assert isinstance(action_space.gym_space, Discrete)
 
         # Get model
-        model = await SimpleDQNModel.retrieve_model(actor_session, config.model_id, config.model_iteration)
+        model = await SimpleDQNModel.retrieve_model(
+            actor_session.model_registry, config.model_id, config.model_iteration
+        )
         model.network.eval()
 
         async for event in actor_session.all_events():
@@ -164,7 +166,9 @@ class SimpleDQNActor:
                     and actor_session.get_tick_id() % config.model_update_frequency == 0
                 ):
                     # Get model
-                    model = await SimpleDQNModel.retrieve_model(actor_session, config.model_id, config.model_iteration)
+                    model = await SimpleDQNModel.retrieve_model(
+                        actor_session.model_registry, config.model_id, config.model_iteration
+                    )
                     model.network.eval()
 
                 if rng.random() < model.epsilon:

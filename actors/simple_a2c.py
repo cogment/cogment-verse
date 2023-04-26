@@ -141,7 +141,9 @@ class SimpleA2CActor:
         action_space = environment_specs.get_action_space(seed=config.seed)
 
         # Get model
-        model = await SimpleA2CModel.retrieve_model(actor_session, config.model_id, config.model_iteration)
+        model = await SimpleA2CModel.retrieve_model(
+            actor_session.model_registry, config.model_id, config.model_iteration
+        )
         model.eval()
 
         async for event in actor_session.all_events():

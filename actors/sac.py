@@ -285,7 +285,7 @@ class SACActor:
         bias = torch.tensor((action_max + action_min) / 2.0, dtype=self._dtype)
 
         # Get model
-        model = await SACModel.retrieve_model(actor_session, config.model_id, config.model_iteration)
+        model = await SACModel.retrieve_model(actor_session.model_registry, config.model_id, config.model_iteration)
         model.eval()
 
         async for event in actor_session.all_events():

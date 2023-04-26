@@ -208,7 +208,7 @@ class TD3Actor:
         assert isinstance(action_space.gym_space, Box)
 
         # Get model
-        model = await TD3Model.retrieve_model(actor_session, config.model_id, config.model_iteration)
+        model = await TD3Model.retrieve_model(actor_session.model_registry, config.model_id, config.model_iteration)
         model.eval()
 
         async for event in actor_session.all_events():

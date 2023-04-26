@@ -132,7 +132,9 @@ class SimpleBCActor:
         action_space = environment_specs.get_action_space(seed=config.seed)
 
         # Get model
-        model = await SimpleBCModel.retrieve_model(actor_session, config.model_id, config.model_iteration)
+        model = await SimpleBCModel.retrieve_model(
+            actor_session.model_registry, config.model_id, config.model_iteration
+        )
         model.policy_network.eval()
 
         log.info(f"Starting trial with model v{model.iteration}")

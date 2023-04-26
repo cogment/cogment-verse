@@ -194,7 +194,7 @@ class PPOActor:
         action_space = environment_specs.get_action_space(seed=config.seed)
 
         # Get model
-        model = await PPOModel.retrieve_model(actor_session, config.model_id, config.model_iteration)
+        model = await PPOModel.retrieve_model(actor_session.model_registry, config.model_id, config.model_iteration)
         model.network.eval()
 
         log.info(f"Actor - retreved model number: {model.iteration}")
