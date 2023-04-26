@@ -279,13 +279,11 @@ class SimpleDQNTraining:
             dtype=self._dtype,
         )
 
-        print(f"Before serializing model iteration: {model.iteration}")
         serialized_model = SimpleDQNModel.serialize_model(model)
         iteration_info = await run_session.model_registry.publish_model(
             name=model_id,
             model=serialized_model,
         )
-        print(f"after publising, iteration_info: {iteration_info.iteration}")
 
         run_session.log_params(
             self._cfg,
@@ -404,7 +402,6 @@ class SimpleDQNTraining:
                     name=model_id,
                     model=serialized_model,
                 )
-                print(f"MODEL TRAINED: {iteration_info}")
 
                 if step_idx % 100 == 0:
                     end_time = time.time()
