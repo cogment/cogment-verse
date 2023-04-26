@@ -95,7 +95,6 @@ class SimpleDQNModel(Model):
 
     @staticmethod
     def serialize_model(model) -> bytes:
-        print("")
         stream = io.BytesIO()
         torch.save(
             (

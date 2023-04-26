@@ -153,6 +153,13 @@ class SACModel(Model):
         else:
             self._device = torch.device("cpu")
 
+    def eval(self) -> None:
+        self.policy_network.eval()
+        self.value_network_1.eval()
+        self.value_network_2.eval()
+        self.target_network_1.eval()
+        self.target_network_2.eval()
+
     def get_model_user_data(self) -> dict:
         """Get user model"""
         return {
@@ -279,11 +286,7 @@ class SACActor:
 
         # Get model
         model = await SACModel.retrieve_model(actor_session, config.model_id, config.model_iteration)
-        model.policy_network.eval()
-        model.value_network_1.eval()
-        model.value_network_2.eval()
-        model.target_network_1.eval()
-        model.target_network_2.eval()
+        model.eval()
 
         async for event in actor_session.all_events():
             if event.observation and event.type == cogment.EventType.ACTIVE:

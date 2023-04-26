@@ -121,6 +121,12 @@ class TD3Model(Model):
         self.epoch_idx = 0
         self.total_samples = 0
 
+    def eval(self) -> None:
+        self.actor.eval()
+        self.actor_target.eval()
+        self.critic.eval()
+        self.critic_target.eval()
+
     def get_model_user_data(self):
         return {
             "model_id": self.model_id,
@@ -203,10 +209,7 @@ class TD3Actor:
 
         # Get model
         model = await TD3Model.retrieve_model(actor_session, config.model_id, config.model_iteration)
-        model.actor.eval()
-        model.actor_target.eval()
-        model.critic.eval()
-        model.critic_target.eval()
+        model.eval()
 
         async for event in actor_session.all_events():
             if event.observation and event.type == cogment.EventType.ACTIVE:
