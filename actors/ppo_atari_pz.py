@@ -21,6 +21,7 @@ from abc import ABC, abstractmethod
 from typing import List, Tuple
 
 import cogment
+from cogment.actor import ActorSession
 import numpy as np
 import torch
 from gym.spaces import Discrete, utils
@@ -180,7 +181,7 @@ class PPOActor:
         """Get actor"""
         return [PLAYER_ACTOR_CLASS]
 
-    async def impl(self, actor_session):
+    async def impl(self, actor_session: ActorSession):
         # Start a session
         actor_session.start()
         config = actor_session.config
@@ -209,6 +210,15 @@ class PPOActor:
                     # Not the turn of the agent
                     actor_session.do_action(action_space.serialize(action_space.create()))
                     continue
+                if (event.observation.tick_id + 1) % config.model_update_frequency == 0:
+                    latest_model = await actor_session.model_registry.track_latest_model(
+                        name=config.model_id, deserialize_func=PPOModel.deserialize_model
+                    )
+                    model, _ = await latest_model.get()
+                    log.info(
+                        f"Actor - retreved model number: {model.iteration} for trial id {actor_session.get_trial_id()}"
+                    )
+
                 obs = observation_space.deserialize(event.observation.observation)
                 obs_tensor = torch.tensor(obs.flat_value, dtype=self._dtype).reshape(obs_shape)
                 obs_tensor = torch.unsqueeze(obs_tensor.permute((2, 0, 1)), dim=0).to(torch.device(model.device))
@@ -636,6 +646,7 @@ class PPOSelfTraining(BasePPOTraining):
         player_actor_name = actor_names[0]
         total_reward = 0
         step = 0
+        total_steps = 0
         async for sample in sample_producer_session.all_trial_samples():
             # Trail status
             trial_done = sample.trial_state == cogment.TrialState.ENDED
@@ -660,7 +671,7 @@ class PPOSelfTraining(BasePPOTraining):
                 )
 
             # Compute values and log probs
-            if step < self._cfg.num_rollout_steps or trial_done:
+            if step % self._cfg.num_rollout_steps < self._cfg.num_rollout_steps or trial_done:
                 with torch.no_grad():
                     obs_device = observation_value.to(torch.device(self.model.device))
                     action_device = action_value.to(torch.device(self.model.device))
@@ -675,10 +686,9 @@ class PPOSelfTraining(BasePPOTraining):
 
             # Save episode reward i.e., number of total steps for an episode
             step += 1
-            count += 1
             total_reward += 1
             if trial_done:
-                episode_rewards.append(total_reward)
+                episode_rewards.append(torch.tensor(total_reward / 2, dtype=self._dtype))
                 total_reward = 0
 
             # Produce sample for training task
@@ -705,7 +715,6 @@ class PPOSelfTraining(BasePPOTraining):
 
                 # Reset the rollout
                 rollout_buffer.reset()
-                step = 0
                 values = []
                 log_probs = []
 
@@ -716,10 +725,7 @@ class PPOSelfTraining(BasePPOTraining):
         # Initalize model
         self.model.model_id = model_id  # pylint: disable=attribute-defined-outside-init
         serialized_model = PPOModel.serialize_model(self.model)
-        iteration_info = await run_session.model_registry.publish_model(
-            name=model_id,
-            model=serialized_model,
-        )
+        iteration_info = await run_session.model_registry.publish_model(name=model_id, model=serialized_model)
         self.model.network.to(self._device)
 
         run_session.log_params(
@@ -751,6 +757,7 @@ class PPOSelfTraining(BasePPOTraining):
                     model_id=model_id,
                     model_iteration=iteration_info.iteration,
                     seed=self._cfg.seed + trial_idx + iter_idx * self._cfg.epoch_num_trials,
+                    model_update_frequency=self._cfg.num_rollout_steps,
                 ),
             )
 
@@ -779,6 +786,7 @@ class PPOSelfTraining(BasePPOTraining):
             for (step_idx, trial_id, trial_idx, sample) in run_session.start_and_await_trials(
                 trials_id_and_params, self.sample_producer_impl, self._cfg.num_parallel_trials
             ):
+                print(f"step idx: {step_idx}")
                 # Collect the rollout
                 (trial_obs, trial_act, trial_adv, trial_val, trial_log_prob, trial_eps_rew) = sample
                 episode_rewards.extend(trial_eps_rew)
@@ -787,11 +795,7 @@ class PPOSelfTraining(BasePPOTraining):
                 for (obs, act, adv, val, log_prob) in zip(trial_obs, trial_act, trial_adv, trial_val, trial_log_prob):
                     replay_buffer.add(observation=obs, action=act, adv=adv, value=val, log_prob=log_prob)
 
-                if (
-                    step_idx > self._cfg.learning_starts
-                    and replay_buffer.size() > self._cfg.batch_size
-                    and step_idx % self._cfg.update_freq == 0
-                ):
+                if (replay_buffer.size() >= self._cfg.batch_size and step_idx % self._cfg.update_freq == 0):
                     # Get sample
                     data = replay_buffer.sample(self._cfg.batch_size)
 
@@ -805,15 +809,23 @@ class PPOSelfTraining(BasePPOTraining):
                         num_epochs=self._cfg.num_epochs,
                     )
 
-                        run_session.log_metrics(
-                            model_iteration=iteration_info.iteration,
-                            policy_loss=policy_loss.item(),
-                            value_loss=value_loss.item(),
-                            avg_rewards=avg_rewards.item(),
-                            avg_lens=avg_lens.item(),
-                            num_steps=total_steps,
-                            num_updates=num_updates,
-                        )
+                    # Compute the average reward i.e., average step length
+                    avg_rewards = torch.zeros(1, dtype=self._dtype)
+                    if len(episode_rewards) > 0:
+                        avg_rewards = await self.compute_average_reward(episode_rewards)
+
+                    # Send metric to mlflow
+                    total_steps += self._cfg.num_rollout_steps
+                    num_updates += 1
+                    run_session.log_metrics(
+                        model_iteration=iteration_info.iteration,
+                        policy_loss=policy_loss.item(),
+                        value_loss=value_loss.item(),
+                        avg_rewards=avg_rewards.item(),
+                        num_steps=total_steps,
+                        num_updates=num_updates,
+                    )
+                    log.info(f"Steps: #{total_steps} | Avg. reward: {avg_rewards.item()}")
 
                     # Publish the newly updated model
                     self.model.iter_idx = iter_idx
@@ -821,13 +833,11 @@ class PPOSelfTraining(BasePPOTraining):
 
                     if num_updates % 50 == 0:
                         iteration_info = await run_session.model_registry.store_model(
-                            name=model_id,
-                            model=serialized_model,
+                            name=model_id, model=serialized_model
                         )
                     else:
                         iteration_info = await run_session.model_registry.publish_model(
-                            name=model_id,
-                            model=serialized_model,
+                            name=model_id, model=serialized_model
                         )
 
                     self.model.network.to(self._device)

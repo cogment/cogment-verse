@@ -12,11 +12,11 @@ run:
   epoch_num_trials: 1
   num_parallel_trials: 1
   learning_rate: 0.0004
-  batch_size: 5
+  batch_size: 64
   buffer_size: 100000
-  learning_starts: 5
+  learning_starts: 1
   update_freq: 1
-  num_rollout_steps: 5
+  num_rollout_steps: 128
   discount_factor: 0.99
   lambda_gae: 0.95
   device: cpu
