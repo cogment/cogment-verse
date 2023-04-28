@@ -20,11 +20,15 @@ RUN apt-get update && apt-get install -y swig python3-opencv python3-pip nodejs 
 
 WORKDIR /cogment-verse
 
-COPY requirements.txt .
+COPY requirements.txt /opt/ml/code/
+COPY . /opt/ml/code/
+RUN chmod +x /opt/ml/code
+
+WORKDIR /opt/ml/code
 RUN pip install -r requirements.txt --timeout 5000
 RUN pip install SuperSuit==3.7.0
 
-COPY . .
 
-ENV COGMENT_VERSE_WORK_DIR /cogment_verse_work_dir
-VOLUME ${COGMENT_VERSE_WORK_DIR}
+RUN chmod +x run_both.py
+ENTRYPOINT ["python", "run_both.py"]
+

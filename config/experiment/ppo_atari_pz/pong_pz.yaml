@@ -6,12 +6,12 @@ defaults:
 
 run:
   class_name: actors.ppo_atari_pz.PPOSelfTraining
-  seed: 1
-  num_epochs: 5
+  seed: 0
+  num_epochs: 4
   num_iter: 5000
   epoch_num_trials: 1
   num_parallel_trials: 1
-  learning_rate: 0.0004
+  learning_rate: 0.0005
   batch_size: 64
   buffer_size: 100000
   learning_starts: 1
@@ -22,8 +22,7 @@ run:
   device: cpu
   entropy_loss_coef: 0.0
   value_loss_coef: 0.2
-  action_loss_coef: 0.5
-  clipping_coef: 0.4
+  clipping_coef: 0.2
   grad_norm: 0.5
   lr_decay_factor: 0.995
   image_size: [6, 84, 84]
