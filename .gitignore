@@ -42,3 +42,5 @@ ngrok.yaml
 *.npz
 #pyenv
 .python-version
+
+*.ipynb
