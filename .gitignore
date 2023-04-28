@@ -43,4 +43,5 @@ ngrok.yaml
 #pyenv
 .python-version
 
+*.ipynb_checkpoints/
 *.ipynb
