@@ -46,7 +46,7 @@ ATARI_LOOKUP.setAction(["UP", "LEFT", "FIRE"], serializePlayerAction(ACTION_SPAC
 ATARI_LOOKUP.setAction(["DOWN", "RIGHT", "FIRE"], serializePlayerAction(ACTION_SPACE, 16));
 ATARI_LOOKUP.setAction(["DOWN", "LEFT", "FIRE"], serializePlayerAction(ACTION_SPACE, 17));
 
-export const AtariPitfallEnvironments = ["environments.gym_adapter.Environment/ALE/Pitfall-v5"];
+export const AtariPitfallEnvironments = ["environments.gym.environment.Environment/ALE/Pitfall-v5"];
 export const AtariPitfallControls = ({ sendAction, fps = 30, actorClass, ...props }) => {
   const [paused, setPaused] = useState(false);
   const togglePause = useCallback(() => setPaused((paused) => !paused), [setPaused]);

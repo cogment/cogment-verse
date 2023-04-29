@@ -45,6 +45,7 @@ def create_app():
         routes=[
             Mount("/static", app=StaticFiles(directory=os.path.join(web_app_cfg["served_dir"], "static"), html=True)),
             Mount("/assets", app=StaticFiles(directory=os.path.join(web_app_cfg["served_dir"], "assets"), html=True)),
+            Mount("/components", app=StaticFiles(directory=web_app_cfg["web_components_dir"], check_dir=False)),
             Route("/{rest_of_path:path}", endpoint=homepage),
         ]
     )
@@ -56,9 +57,14 @@ def server_main(
     orchestrator_web_endpoint,
     port,
     served_dir,
+    web_components_dir,
 ):
     # Writing the configuration for the web app in an environment variable
-    web_app_cfg = {"orchestrator_web_endpoint": orchestrator_web_endpoint, "served_dir": served_dir}
+    web_app_cfg = {
+        "orchestrator_web_endpoint": orchestrator_web_endpoint,
+        "served_dir": served_dir,
+        "web_components_dir": web_components_dir
+    }
     os.environ[WEB_CFG_ENV_VAR] = json.dumps(web_app_cfg)
 
     on_ready()

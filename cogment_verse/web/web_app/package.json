@@ -21,6 +21,9 @@
     "yaml": "^2.3.1"
   },
   "scripts": {
+    "old____start": "react-scripts start",
+    "old____build": "npm run cogment_generate && react-scripts build",
+    "old____eject": "react-scripts eject",
     "cogment_generate": "npx cogment-js-sdk-generate cogment.yaml",
     "build:js": "node build.js",
     "build:css": "npx tailwindcss -i ./src/index.css -o ./build/static/style.css --minify",

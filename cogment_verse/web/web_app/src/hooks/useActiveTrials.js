@@ -15,7 +15,9 @@
 import { Context, TrialState } from "@cogment/cogment-js-sdk";
 import { useEffect, useState } from "react";
 
-export const useActiveTrials = (cogSettings, cogmentOrchestratorWebEndpoint) => {
+const sleep = async (delayMs) => new Promise((resolve) => setTimeout(resolve, delayMs));
+
+export const useActiveTrials = (cogSettings, cogmentOrchestratorWebEndpoint, retryDelayMs = 500) => {
   const [trials, setTrials] = useState([]);
 
   useEffect(() => {
@@ -24,9 +26,10 @@ export const useActiveTrials = (cogSettings, cogmentOrchestratorWebEndpoint) => 
 
     let cancelled = false;
 
-    const watchTrials = async () => {
+    const watchTrials = async (retryNum) => {
       const watchTrialsGenerator = trialController.watchTrials();
 
+      const delayMs = retryNum * retryDelayMs;
       try {
         for await (const trialEvent of watchTrialsGenerator) {
           if (cancelled) {
@@ -49,19 +52,20 @@ export const useActiveTrials = (cogSettings, cogmentOrchestratorWebEndpoint) => 
             return trials;
           });
         }
-        console.warn("[useActiveTrials] watch trials returned early, restarting");
+        console.warn(`[useActiveTrials] watch trials returned early, restarting in ${delayMs}ms`);
       } catch (error) {
-        console.warn(`[useActiveTrials] error during watch trials (${error}), restarting`);
+        console.warn(`[useActiveTrials] error during watch trials (${error}), restarting in ${delayMs}ms`);
       }
-      await watchTrials();
+      await sleep(delayMs);
+      await watchTrials(retryNum + 1);
     };
 
-    watchTrials();
+    watchTrials(0);
 
     return () => {
       cancelled = true;
     };
-  }, [cogSettings, cogmentOrchestratorWebEndpoint]);
+  }, [cogSettings, cogmentOrchestratorWebEndpoint, retryDelayMs]);
 
   return trials;
 };
