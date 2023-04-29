@@ -13,13 +13,20 @@
 // limitations under the License.
 
 import { useCallback, useState } from "react";
-import { useDocumentKeypressListener, usePressedKeys } from "../hooks/usePressedKeys";
-import { useRealTimeUpdate } from "../hooks/useRealTimeUpdate";
-import { TEACHER_ACTOR_CLASS } from "../utils/constants";
-import { Button } from "../components/Button";
-import { FpsCounter } from "../components/FpsCounter";
-import { KeyboardControlList } from "../components/KeyboardControlList";
-import { serializePlayerAction, TEACHER_NOOP_ACTION, Space } from "../utils/spaceSerialization";
+import {
+  useDocumentKeypressListener,
+  usePressedKeys,
+} from "../../../cogment_verse/web/web_app/src/hooks/usePressedKeys";
+import { useRealTimeUpdate } from "../../../cogment_verse/web/web_app/src/hooks/useRealTimeUpdate";
+import { TEACHER_ACTOR_CLASS } from "../../../cogment_verse/web/web_app/src/utils/constants";
+import { Button } from "../../../cogment_verse/web/web_app/src/components/Button";
+import { FpsCounter } from "../../../cogment_verse/web/web_app/src/components/FpsCounter";
+import { KeyboardControlList } from "../../../cogment_verse/web/web_app/src/components/KeyboardControlList";
+import {
+  serializePlayerAction,
+  TEACHER_NOOP_ACTION,x
+  Space,
+} from "../../../cogment_verse/web/web_app/src/utils/spaceSerialization";
 
 const ACTION_SPACE = new Space({
   discrete: {
@@ -27,8 +34,8 @@ const ACTION_SPACE = new Space({
   },
 });
 
-export const GymCartPoleEnvironments = ["environments.gym_adapter.Environment/CartPole-v1"];
-export const GymCartPoleControls = ({ sendAction, fps = 30, actorClass, ...props }) => {
+export const Environments = ["environments.gym.environment.Environment/CartPole-v1"];
+export const Controls = ({ sendAction, fps = 30, actorClass, ...props }) => {
   const [paused, setPaused] = useState(true);
   const togglePause = useCallback(() => setPaused((paused) => !paused), [setPaused]);
   useDocumentKeypressListener("p", togglePause);

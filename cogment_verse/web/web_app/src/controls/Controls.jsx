@@ -15,25 +15,19 @@
 import { useMemo } from "react";
 import { RealTimeObserverControls } from "./RealTimeObserverControls";
 import { TurnBasedObserverControls } from "./TurnBasedObserverControls";
-import { GymLunarLanderControls, GymLunarLanderEnvironments } from "./GymLunarLanderControls";
-import {
-  GymLunarLanderContinuousControls,
-  GymLunarLanderContinuousEnvironments,
-} from "./GymLunarLanderContinuousControls";
 import { ConnectFourControls, ConnectFourEnvironments } from "./ConnectFourControls";
-import { GymCartPoleEnvironments, GymCartPoleControls } from "./GymCartPoleControls";
-import { GymMountainCarEnvironments, GymMountainCarControls } from "./GymMountainCarControls";
 import { AtariPitfallEnvironments, AtariPitfallControls } from "./AtariPitfallControls";
 import { TetrisEnvironments, TetrisControls } from "./TetrisControls";
 import { AtariPongPzEnvironments, AtariPongPzControls } from "./AtariPongPzControls";
 import { AtariPongPzHfbEnvironments, AtariPongPzFeedback } from "./AtariPongPzFeedback";
-import { TEACHER_ACTOR_CLASS, PLAYER_ACTOR_CLASS, OBSERVER_ACTOR_CLASS, EVALUATOR_ACTOR_CLASS } from "../utils/constants";
+import {
+  TEACHER_ACTOR_CLASS,
+  PLAYER_ACTOR_CLASS,
+  OBSERVER_ACTOR_CLASS,
+  EVALUATOR_ACTOR_CLASS,
+} from "../utils/constants";
 
 const CONTROLS = [
-  { environments: GymLunarLanderEnvironments, component: GymLunarLanderControls },
-  { environments: GymLunarLanderContinuousEnvironments, component: GymLunarLanderContinuousControls },
-  { environments: GymCartPoleEnvironments, component: GymCartPoleControls },
-  { environments: GymMountainCarEnvironments, component: GymMountainCarControls },
   { environments: AtariPitfallEnvironments, component: AtariPitfallControls },
   { environments: TetrisEnvironments, component: TetrisControls },
   { environments: ConnectFourEnvironments, component: ConnectFourControls },

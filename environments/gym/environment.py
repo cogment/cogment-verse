@@ -24,6 +24,12 @@ from cogment_verse.specs import EnvironmentSpecs
 # configure pygame to use a dummy video server to be able to render headlessly
 os.environ["SDL_VIDEODRIVER"] = "dummy"
 
+WEB_COMPONENTS = {
+    "CartPole-v1": "GymCartPole.js",
+    "LunarLander-v2": "GymLunarLander.js",
+    "LunarLanderContinuous-v2": "GymLunarLanderContinuous.js",
+    "MountainCar-v0": "GymMountainCar.js",
+}
 
 class Environment:
     def __init__(self, cfg):
@@ -31,12 +37,20 @@ class Environment:
 
         gym_env = gym.make(self.gym_env_name, new_step_api=True)
 
+        web_components_file = None
+        if self.gym_env_name in WEB_COMPONENTS:
+            web_components_file = WEB_COMPONENTS[self.gym_env_name]
+
         self.env_specs = EnvironmentSpecs.create_homogeneous(
             num_players=1,
             turn_based=False,
             observation_space=gym_env.observation_space,
             action_space=gym_env.action_space,
+            web_components_file=web_components_file,
         )
+
+    def get_web_components_dir(self):
+        return os.path.join(os.path.abspath(os.path.dirname(__file__)), "web", "dist")
 
     def get_implementation_name(self):
         return self.gym_env_name

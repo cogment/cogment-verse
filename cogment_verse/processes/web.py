@@ -37,7 +37,7 @@ def on_awaiting_cra_ready():
 
 
 class NpmProcess(PopenProcess):
-    def __init__(self, name, specs_filename, services_directory, web_cfg):
+    def __init__(self, name, work_dir, specs_filename, services_directory, web_cfg):
         log.info("Installing web components dependencies using `npm install`...")
         npm_command(["install", "--no-audit"], WEB_SOURCES_DIR)
 
@@ -55,7 +55,7 @@ class NpmProcess(PopenProcess):
 
 
 class WebProcess(CogmentVerseProcess):
-    def __init__(self, name, specs_filename, services_directory, web_cfg):
+    def __init__(self, name, work_dir, specs_filename, services_directory, web_cfg):
         # TODO find a better way to detect a rebuild is needed
         if not os.path.isdir(WEB_BUILD_DIR) or web_cfg.get("build", False):
             log.info("Installing web app dependencies using `npm install`...")
@@ -72,10 +72,11 @@ class WebProcess(CogmentVerseProcess):
             port=web_cfg.port,
             orchestrator_web_endpoint=services_directory.get(ServiceType.ORCHESTRATOR_WEB_ENDPOINT),
             served_dir=WEB_BUILD_DIR,
+            web_components_dir=os.path.join(work_dir, "web_components")
         )
 
 
-def create_web_service(specs_filename, services_directory, web_cfg):
+def create_web_service(work_dir, specs_filename, services_directory, web_cfg):
     if web_cfg.get("dev", False):
-        return NpmProcess("web", specs_filename, services_directory, web_cfg)
-    return WebProcess("web", specs_filename, services_directory, web_cfg)
+        return NpmProcess("web", work_dir, specs_filename, services_directory, web_cfg)
+    return WebProcess("web", work_dir, specs_filename, services_directory, web_cfg)
