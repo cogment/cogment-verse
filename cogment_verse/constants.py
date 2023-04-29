@@ -14,7 +14,7 @@
 
 import os
 
-COGMENT_VERSION = "v2.13.0"
+COGMENT_VERSION = "v2.13.1"
 WEB_ACTOR_NAME = "web_actor"  # At the moment the web client can only join the trial using the actor name which means a unique name is required
 HUMAN_ACTOR_IMPL = "client"
 
