@@ -141,7 +141,7 @@ class ClassicEnvironment(Environment):
 
         session_cfg = environment_session.config
 
-        pz_env = self.env_class.env()
+        pz_env = self.env_class.env(render_mode="rgb_array")
         observation_space = self.env_specs.get_observation_space(session_cfg.render_width)
         action_space = self.env_specs.get_action_space()
 
@@ -168,7 +168,7 @@ class ClassicEnvironment(Environment):
             if "rgb_array" not in pz_env.metadata["render_modes"]:
                 log.warning(f"Petting Zoo environment [{self.env_class_name}] doesn't support rendering to pixels")
                 return
-            rendered_frame = pz_env.render(mode="rgb_array")
+            rendered_frame = pz_env.render()
 
         observation = observation_space.create(
             value=pz_observation["observation"],  # TODO Should only be sent to the current player
@@ -193,7 +193,7 @@ class ClassicEnvironment(Environment):
                 observation = observation_space.create(
                     value=pz_observation["observation"],  # TODO Should only be sent to the current player
                     action_mask=pz_observation["action_mask"],  # TODO Should only be sent to the current player
-                    rendered_frame=pz_env.render(mode="rgb_array")
+                    rendered_frame=pz_env.render()
                     if session_cfg.render
                     else None,  # TODO Should only be sent to observers
                     current_player=current_player_actor_name,
