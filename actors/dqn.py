@@ -47,7 +47,9 @@ def create_linear_schedule(start, end, duration):
 
     return compute_value
 
+
 # Acknowledgements: The networks and associated utils are adapted from RLHive
+
 
 def calculate_output_dim(net, input_shape):
     if isinstance(input_shape, int):
@@ -55,6 +57,7 @@ def calculate_output_dim(net, input_shape):
     placeholder = torch.zeros((0,) + tuple(input_shape))
     output = net(placeholder)
     return output.size()[1:]
+
 
 class MLPNetwork(nn.Module):
     def __init__(
@@ -101,9 +104,7 @@ class ConvNetwork(nn.Module):
             if isinstance(paddings, int):
                 paddings = [paddings] * len(channels)
 
-            if not all(
-                len(x) == len(channels) for x in [kernel_sizes, strides, paddings]
-            ):
+            if not all(len(x) == len(channels) for x in [kernel_sizes, strides, paddings]):
                 raise ValueError("The lengths of the parameter lists must be the same")
 
             # Convolutional Layers
@@ -127,9 +128,7 @@ class ConvNetwork(nn.Module):
         if mlp_layers is not None:
             # MLP Layers
             conv_output_size = calculate_output_dim(self.conv, in_dim)
-            self.mlp = MLPNetwork(
-                conv_output_size, mlp_layers, noisy=noisy, std_init=std_init
-            )
+            self.mlp = MLPNetwork(conv_output_size, mlp_layers, noisy=noisy, std_init=std_init)
         else:
             self.mlp = torch.nn.Identity()
 
