@@ -79,7 +79,7 @@ def test_default_experiment(_prepare_config):
             "-m",
             "tests.functional.test_experiments",
             "run=headless_play",
-            "services/experiment_tracker@run.experiment_tracker=simple",
+            "run/experiment_tracker=simple",
         ]
     )
     proc.communicate()
