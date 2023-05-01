@@ -128,7 +128,7 @@ class ConvNetwork(nn.Module):
         if mlp_layers is not None:
             # MLP Layers
             conv_output_size = calculate_output_dim(self.conv, in_dim)
-            self.mlp = MLPNetwork(conv_output_size, mlp_layers, noisy=noisy, std_init=std_init)
+            self.mlp = MLPNetwork(conv_output_size, mlp_layers)
         else:
             self.mlp = torch.nn.Identity()
 
