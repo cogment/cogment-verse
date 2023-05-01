@@ -8,12 +8,12 @@ run:
   class_name: actors.ppo_atari_pz.PPOSelfTraining
   seed: 0
   num_epochs: 4
-  num_iter: 2
+  num_iter: 1000
   epoch_num_trials: 1
   num_parallel_trials: 1
   learning_rate: 0.0005
   batch_size: 64
-  buffer_size: 100000
+  buffer_size: 10000
   learning_starts: 1
   update_freq: 1
   num_rollout_steps: 128

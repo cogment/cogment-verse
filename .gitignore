@@ -45,3 +45,4 @@ ngrok.yaml
 
 *.ipynb_checkpoints/
 *.ipynb
+*.pem

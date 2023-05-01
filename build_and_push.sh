@@ -4,7 +4,8 @@
 # by SageMaker. The argument to this script is the image name. This will be used as the image on the local
 # machine and combined with the account and region to form the repository name for ECR.
 image=$1
-to_ecr=$2
+is_build=$2
+to_ecr=$3
 
 if [ "${image}" == "" ]; then
   echo "Usage: $0 <image-name>"
@@ -29,9 +30,12 @@ aws --profile dev ecr get-login-password --region "${region}" | docker login --u
 
 # Build the docker image locally with the image name and then push it to ECR
 # with the full name.
-docker build --platform linux/amd64 -t "${image}" .
-docker tag "${image}" "${fullname}"
-if [ "$to_ecr" == "true" ]; then
+if [[ "$is_build" == "true" ]]; then
+  docker build --platform linux/amd64 -t "$image" .
+  docker tag "$image" "$fullname"
+fi
+
+if [[ "$to_ecr" == "true" ]]; then
   docker push "${fullname}"
 fi
 #

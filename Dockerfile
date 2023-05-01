@@ -21,14 +21,17 @@ RUN apt-get update && apt-get install -y swig python3-opencv python3-pip nodejs 
 WORKDIR /cogment-verse
 
 COPY requirements.txt /opt/ml/code/
-COPY . /opt/ml/code/
+COPY sagemaker_main.py /opt/ml/code/
+COPY cloud /opt/ml/code/cloud
 RUN chmod +x /opt/ml/code
 
 WORKDIR /opt/ml/code
 RUN pip install -r requirements.txt --timeout 5000
 RUN pip install SuperSuit==3.7.0
+RUN chmod +x sagemaker_main.py
 
+# Activate license for atari game
+RUN AutoROM --accept-license
 
-RUN chmod +x run_both.py
-ENTRYPOINT ["python", "run_both.py"]
+ENTRYPOINT ["python", "sagemaker_main.py"]
 
