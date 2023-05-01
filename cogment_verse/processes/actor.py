@@ -18,17 +18,17 @@ import sys
 
 import cogment
 
-from .cogment_py_sdk_process import CogmentPySdkProcess
-from ..utils.import_class import import_class
-from ..utils.get_implementation_name import get_implementation_name
 from ..services_directory import ServiceType
+from ..utils.get_implementation_name import get_implementation_name
+from ..utils.import_class import import_class
+from .cogment_py_sdk_process import CogmentPySdkProcess
 
 log = logging.getLogger(__name__)
 
 
 def actor_main(
     actor_cfg,
-    model_registry,
+    services_directory,
     name,  # pylint: disable=unused-argument
     on_ready,
     specs_filename,  # pylint: disable=unused-argument
@@ -44,11 +44,12 @@ def actor_main(
 
         actor_implementation_name = get_implementation_name(actor)
 
+        context = cogment.Context(cog_settings=cog_settings, user_id="cogment_verse_actor")
+        model_registry = await services_directory.get_model_registry(context)
+
         async def impl_wrapper(actor_session):
             actor_session.model_registry = model_registry
             await actor.impl(actor_session)
-
-        context = cogment.Context(cog_settings=cog_settings, user_id="cogment_verse_actor")
 
         context.register_actor(
             impl_name=actor_implementation_name, actor_classes=actor.get_actor_classes(), impl=impl_wrapper
@@ -70,13 +71,13 @@ def actor_main(
         sys.exit(-1)
 
 
-def create_actor_service(work_dir, specs_filename, model_registry, actor_cfg, services_directory):
+def create_actor_service(work_dir, specs_filename, actor_cfg, services_directory):
     process = CogmentPySdkProcess(
         name="actor",
         work_dir=work_dir,
         specs_filename=specs_filename,
         main=actor_main,
-        model_registry=model_registry,
+        services_directory=services_directory,
         actor_cfg=actor_cfg,
     )
 

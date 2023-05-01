@@ -18,9 +18,9 @@ import os
 import re
 import time
 
-from .popen_process import PopenProcess
-from ..utils.download_cogment import download_cogment
 from ..constants import COGMENT_VERSION
+from ..utils.download_cogment import download_cogment
+from .popen_process import PopenProcess
 
 log = logging.getLogger(__name__)
 

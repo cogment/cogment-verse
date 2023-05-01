@@ -14,15 +14,9 @@
 
 import numpy as np
 import pytest
-
 from google.protobuf.json_format import MessageToDict, ParseDict
 
-from cogment_verse.specs.ndarray_serialization import (
-    serialize_ndarray,
-    deserialize_ndarray,
-    SerializationFormat,
-    Array,
-)
+from cogment_verse.specs.ndarray_serialization import Array, SerializationFormat, deserialize_ndarray, serialize_ndarray
 
 
 def create_large_nd_array(seed=12, dtype=np.float32):

@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools", "wheel"]
+requires = ["setuptools<67.3", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [tool.black]
@@ -43,3 +43,6 @@ generated-members=["cv2", "torch"]
 
 [tool.pytest.ini_options]
 addopts = "-rfs --ignore=_old"
+markers = [
+  "functional: mark test as functional."
+]

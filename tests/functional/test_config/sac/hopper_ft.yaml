@@ -1,0 +1,32 @@
+# @package _global_
+defaults:
+  - override /services/actor:
+      - sac
+  - override /services/environment: hopper
+  - override /services/experiment_tracker@run.experiment_tracker: simple
+
+run:
+  class_name: actors.sac.SACTraining
+  seed: 0
+  num_trials: 2
+  num_parallel_trials: 2
+  discount_factor: 0.99
+  entropy_loss_coef: 0.05
+  value_loss_coef: 0.05
+  policy_learning_rate: 5e-4
+  value_learning_rate: 3e-4
+  batch_size: 64
+  grad_norm: 0.5
+  is_alpha_learnable: True
+  alpha: 0.1
+  tau: 0.005
+  buffer_size: 1_000_000
+  learning_starts: 64
+  update_freq: 10
+  device: cpu
+  delay_steps: 1
+  logging_interval: 64
+  policy_network:
+    num_hidden_nodes: 64
+  value_network:
+    num_hidden_nodes: 64

@@ -25,7 +25,9 @@ import { GymCartPoleEnvironments, GymCartPoleControls } from "./GymCartPoleContr
 import { GymMountainCarEnvironments, GymMountainCarControls } from "./GymMountainCarControls";
 import { AtariPitfallEnvironments, AtariPitfallControls } from "./AtariPitfallControls";
 import { TetrisEnvironments, TetrisControls } from "./TetrisControls";
-import { TEACHER_ACTOR_CLASS, PLAYER_ACTOR_CLASS, OBSERVER_ACTOR_CLASS } from "../utils/constants";
+import { AtariPongPzEnvironments, AtariPongPzControls } from "./AtariPongPzControls";
+import { AtariPongPzHfbEnvironments, AtariPongPzFeedback } from "./AtariPongPzFeedback";
+import { TEACHER_ACTOR_CLASS, PLAYER_ACTOR_CLASS, OBSERVER_ACTOR_CLASS, EVALUATOR_ACTOR_CLASS } from "../utils/constants";
 
 const CONTROLS = [
   { environments: GymLunarLanderEnvironments, component: GymLunarLanderControls },
@@ -35,9 +37,11 @@ const CONTROLS = [
   { environments: AtariPitfallEnvironments, component: AtariPitfallControls },
   { environments: TetrisEnvironments, component: TetrisControls },
   { environments: ConnectFourEnvironments, component: ConnectFourControls },
+  { environments: AtariPongPzEnvironments, component: AtariPongPzControls },
+  { environments: AtariPongPzHfbEnvironments, component: AtariPongPzFeedback },
 ];
 
-export const Controls = ({ environment, actorClass, sendAction, fps, turnBased, observation }) => {
+export const Controls = ({ environment, actorClass, sendAction, fps, turnBased, observation, tickId }) => {
   const ControlsComponent = useMemo(() => {
     if (OBSERVER_ACTOR_CLASS === actorClass) {
       if (turnBased) {
@@ -45,7 +49,7 @@ export const Controls = ({ environment, actorClass, sendAction, fps, turnBased, 
       }
       return RealTimeObserverControls;
     }
-    if ([PLAYER_ACTOR_CLASS, TEACHER_ACTOR_CLASS].includes(actorClass)) {
+    if ([PLAYER_ACTOR_CLASS, TEACHER_ACTOR_CLASS, EVALUATOR_ACTOR_CLASS].includes(actorClass)) {
       const control = CONTROLS.find(({ environments }) => environments.includes(environment));
       if (control == null) {
         return () => <div>{environment} is not playable</div>;
@@ -62,6 +66,7 @@ export const Controls = ({ environment, actorClass, sendAction, fps, turnBased, 
       actorClass={actorClass}
       environment={environment}
       observation={observation}
+      tickId={tickId}
     />
   );
 };

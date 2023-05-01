@@ -16,15 +16,15 @@ import argparse
 import os
 from subprocess import check_call
 
+from cogment_verse.constants import DEFAULT_WORK_DIR
+
 
 def main():
     parser = argparse.ArgumentParser(description="Start a simple mlflow server")
     parser.add_argument("--port", type=int, default=3000, nargs="?", help="TCP port (optional, default is 3000)")
     args = parser.parse_args()
 
-    work_dir = os.environ.get(
-        "COGMENT_VERSE_WORK_DIR", os.path.abspath(os.path.join(os.path.dirname(__file__), ".cogment_verse"))
-    )
+    work_dir = os.environ.get("COGMENT_VERSE_WORK_DIR", DEFAULT_WORK_DIR)
 
     mlflow_data_dir = os.path.join(work_dir, "mlflow")
     os.makedirs(mlflow_data_dir, exist_ok=True)

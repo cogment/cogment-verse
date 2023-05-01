@@ -97,7 +97,7 @@ At the top of the file, we include the configuration structure for multi-layer p
 
 `_save` and `_load` are implemented using PyTorch's load and save function.
 
-Notice that we added named arguments to the `_create` functions. They are forwarded from the call to `self.create_and_publish_initial_version` that is added at the top of the run implementation.
+Notice that we added named arguments to the `_create` functions. They are forwarded from the call to `self.store_initial_version` that is added at the top of the run implementation.
 
 The agent implementation uses `self.retrieve_version` to retrieve the model having the configured name and version. These are now specified as a part of the actor params in the run implementation. The version number is defined as `-1`, which means the latest available version. Also in the agent implementation, we use the action conversion helpers to build an `ActorAction` from the output of the policy network.
 

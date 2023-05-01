@@ -47,19 +47,20 @@ Cogment verse includes environments from:
 
    - `swig`, which is required for the Box2d gym environments, it can be installed using `apt-get install swig` on ubuntu or `brew install swig` on macOS
    - `python3-opencv`, which is required on ubuntu systems, it can be installed using `apt-get install python3-opencv`
+   - `libosmesa6-dev` and `patchelf` are required to run the environment libraries using `mujoco`. They can be installed using `apt-get install libosmesa6-dev patchelf`.
 
-4. Create and activate a virtual environment by runnning
-
+4. Create and activate a virtual environment
    ```console
    $ python -m venv .venv
    $ source .venv/bin/activate
    ```
 
-5. Install the python dependencies by running
+5. Install the python dependencies. For petting zoo's Atari games, [additional installation](/docs/development_setup.md#petting-zoo-atari-games) is required after this step
    ```console
    $ pip install -r requirements.txt
+   $ pip install SuperSuit==3.7.0
    ```
-6. In another terminal, launch a mlflow server on port 3000 by running
+6. In another terminal, launch a mlflow server on port 3000
    ```console
    $ source .venv/bin/activate
    $ python -m simple_mlflow
@@ -109,6 +110,21 @@ Here are a few examples:
   ```console
   $ python -m main +experiment=simple_dqn/connect_four +run.hill_training_trials_ratio=0.05
   ```
+- Petting Zoo's  [Atari Pong Environment](https://pettingzoo.farama.org/environments/atari/pong/)
+
+  Example #1: Self-training
+  ```console
+  $ python -m main +experiment=ppo_atari_pz/pong_pz
+  ```
+  Example #2: Training with human's demonstrations
+  ```console
+  $ python -m main +experiment=ppo_atari_pz/hill_pong_pz
+  ```
+  Example #3: Training with human's feedback
+  ```console
+  $ python -m main +experiment=ppo_atari_pz/hfb_pong_pz
+  ```
+  NOTE: Example 2&3 require users to open Chrome and navigate to http://localhost:8080 in order to provide either demonstrations or feedback.
 
 ## Isaac gym
 

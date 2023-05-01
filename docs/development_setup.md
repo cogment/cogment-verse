@@ -88,8 +88,10 @@ This perform to a full static build of the web app before launching the instance
 To start an autoreloading isntance of the webapp, set `services.web.dev` to `True`. e.g.
 
 ```console
-$ python -m main services.web.dev=True
+$ python -m main service.web.dev=True
 ```
+
+The web app will be served as an autoreloading server: any edit to the web app sources will be taken into account and cause a reload.
 
 ## Testing
 
@@ -99,4 +101,27 @@ Run the test suite on the python codebase using `pytest` by running the followin
 
 ```console
 $ python -m pytest
+```
+## Petting Zoo Atari Games
+### MAC Installation
+
+This step is only required for Apple silicon-based computers (e.g., M1&2 chips). Clone [Multi-Agent-ALE](https://github.com/Farama-Foundation/Multi-Agent-ALE) repository
+
+  ```sh
+  git clone https://github.com/Farama-Foundation/Multi-Agent-ALE.git
+  cd Multi-Agent-ALE
+  pip install .
+  ```
+### License Activation
+
+Activate [AutoROM](https://github.com/Farama-Foundation/AutoROM) license relating to Atari games
+
+  ```sh
+  AutoROM --accept-license
+  ```
+
+### Functional Tests
+To only run functional tests
+```console
+$ python -m pytest -m functional --durations=0 --no-header -v
 ```

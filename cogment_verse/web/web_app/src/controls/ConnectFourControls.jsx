@@ -44,7 +44,7 @@ const ACTION_MASK_SPACE = new Space({
 });
 
 export const ConnectFourEnvironments = [
-  "environments.pettingzoo_adapter.Environment/pettingzoo.classic.connect_four_v3",
+  "environments.pettingzoo_adapter.ClassicEnvironment/pettingzoo.classic.connect_four_v3",
 ];
 export const ConnectFourControls = ({ sendAction, observation, actorClass, ...props }) => {
   const currentPlayer = observation?.currentPlayer;

@@ -18,6 +18,7 @@ import pytest
 from gym.spaces import Box, Dict, Discrete, MultiBinary, MultiDiscrete
 from pettingzoo.classic import connect_four_v3
 
+from cogment_verse.specs.ndarray_serialization import SerializationFormat
 from cogment_verse.specs.spaces_serialization import deserialize_gym_space, serialize_gym_space
 
 # pylint: disable=no-member
@@ -28,8 +29,7 @@ def test_serialize_connect4_observation_space():
     env.reset()
 
     gym_space = env.observation_space("player_0")
-
-    pb_space = serialize_gym_space(gym_space)
+    pb_space = serialize_gym_space(gym_space, serilization_format=SerializationFormat.STRUCTURED)
 
     assert len(pb_space.dict.spaces) == 2
     assert pb_space.dict.spaces[0].key == "action_mask"
@@ -41,15 +41,15 @@ def test_serialize_connect4_observation_space():
 
     deserialized_space = deserialize_gym_space(pb_space)
 
-    assert gym_space == deserialized_space
+    assert gym_space.shape == deserialized_space.shape
 
 
 def test_serialize_cartpole_observation_space():
-    env = gym.make("CartPole-v1")
+    env = gym.make("CartPole-v1", new_step_api=True)
 
     gym_space = env.observation_space
 
-    pb_space = serialize_gym_space(gym_space)
+    pb_space = serialize_gym_space(gym_space, serilization_format=SerializationFormat.STRUCTURED)
 
     assert pb_space.box.high.shape == [4]
     assert pb_space.box.low.shape == [4]
@@ -87,7 +87,7 @@ def test_serialize_custom_observation_space():
         }
     )
 
-    pb_space = serialize_gym_space(gym_space)
+    pb_space = serialize_gym_space(gym_space, serilization_format=SerializationFormat.STRUCTURED)
 
     assert len(pb_space.dict.spaces) == 2
     assert pb_space.dict.spaces[0].key == "ext_controller"

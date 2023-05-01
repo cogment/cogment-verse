@@ -16,7 +16,6 @@ import logging
 import os
 import shutil
 
-
 from .npm import npm_command
 
 log = logging.getLogger(__name__)

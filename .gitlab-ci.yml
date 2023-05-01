@@ -26,10 +26,11 @@ build_docker:
   before_script:
     - mkdir -p ${PIP_CACHE_DIR}
     - apt-get update
-    - apt-get install -y swig python3-opencv
+    - apt-get install -y swig python3-opencv libosmesa6-dev patchelf
     - python -m venv .venv
     - source .venv/bin/activate
     - pip install -r requirements.txt
+    - pip install SuperSuit==3.7.0
   cache:
     # pip's cache
     - paths:
@@ -64,4 +65,5 @@ pytest:
   stage: test
   extends: .base
   script:
-    - python -m pytest
+    - python -m pytest --durations=0 -v
+

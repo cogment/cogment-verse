@@ -3,6 +3,7 @@ defaults:
   - override /services/actor:
       - ppo
   - override /services/environment: hopper
+  - override /services/experiment_tracker@run.experiment_tracker: simple
 
 run:
   class_name: actors.ppo.PPOTraining
