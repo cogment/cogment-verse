@@ -14,24 +14,16 @@
 
 import { useRouteError } from "react-router-dom";
 import { Button } from "../components/Button";
+import { Error as ErrorComponent } from "../components/Error";
 
 const Error = () => {
   const error = useRouteError();
-  console.error(error);
   return (
-    <div>
-      <h1 className="text-xl font-semibold">Oups...</h1>
-      <p>{error.message}</p>
-      {error.cause ? (
-        <p>
-          <span className="font-semibold">cause: </span>
-          {error.cause.message}
-        </p>
-      ) : null}
+    <ErrorComponent title="Oups..." error={error}>
       <Button to="/" reloadDocument>
         Retry
       </Button>
-    </div>
+    </ErrorComponent>
   );
 };
 

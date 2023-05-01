@@ -24,7 +24,7 @@ import { FpsCounter } from "../../../cogment_verse/web/web_app/src/components/Fp
 import { KeyboardControlList } from "../../../cogment_verse/web/web_app/src/components/KeyboardControlList";
 import {
   serializePlayerAction,
-  TEACHER_NOOP_ACTION,x
+  TEACHER_NOOP_ACTION,
   Space,
 } from "../../../cogment_verse/web/web_app/src/utils/spaceSerialization";
 

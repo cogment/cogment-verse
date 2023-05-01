@@ -13,14 +13,13 @@
 // limitations under the License.
 
 import React from "react";
-import ReactDOM from "react-dom";
+import { createRoot } from "react-dom/client";
 import "./index.css";
 import Play from "./pages/Play";
 import { loader as playAnyLoader } from "./pages/PlayAny";
 import Error from "./pages/Error";
 import Trials from "./pages/Trials";
 import Root from "./pages/Root";
-import reportWebVitals from "./reportWebVitals";
 import { createBrowserRouter, createRoutesFromElements, Route, RouterProvider } from "react-router-dom";
 
 const router = createBrowserRouter(
@@ -35,14 +34,10 @@ const router = createBrowserRouter(
   )
 );
 
-ReactDOM.render(
+const root = createRoot(document.getElementById("root"));
+
+root.render(
   <React.StrictMode>
     <RouterProvider router={router} />
-  </React.StrictMode>,
-  document.getElementById("root")
+  </React.StrictMode>
 );
-
-// If you want to start measuring performance in your app, pass a function
-// to log results (for example: reportWebVitals(console.log))
-// or send to an analytics endpoint. Learn more: https://bit.ly/CRA-vitals
-reportWebVitals();

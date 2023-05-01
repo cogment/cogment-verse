@@ -12,7 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { useMemo } from "react";
+import { useEffect, useRef, useState } from "react";
+import { Error } from "../components/Error";
 import { RealTimeObserverControls } from "./RealTimeObserverControls";
 import { TurnBasedObserverControls } from "./TurnBasedObserverControls";
 import { ConnectFourControls, ConnectFourEnvironments } from "./ConnectFourControls";
@@ -21,6 +22,7 @@ import { TetrisEnvironments, TetrisControls } from "./TetrisControls";
 import { AtariPongPzEnvironments, AtariPongPzControls } from "./AtariPongPzControls";
 import { AtariPongPzHfbEnvironments, AtariPongPzFeedback } from "./AtariPongPzFeedback";
 import {
+  WEB_BASE_URL,
   TEACHER_ACTOR_CLASS,
   PLAYER_ACTOR_CLASS,
   OBSERVER_ACTOR_CLASS,
@@ -35,30 +37,67 @@ const CONTROLS = [
   { environments: AtariPongPzHfbEnvironments, component: AtariPongPzFeedback },
 ];
 
-export const Controls = ({ environment, actorClass, sendAction, fps, turnBased, observation, tickId }) => {
-  const ControlsComponent = useMemo(() => {
+const Loading = ({ implementation }) => <div>Loading controls for {implementation}</div>;
+
+export const ExternalControls = (module) => (props) => {
+  const controlsRootRef = useRef(null);
+  const [render, setRender] = useState(null);
+  useEffect(() => {
+    if (controlsRootRef.current == null) {
+      return;
+    }
+    const { mount } = module;
+    const { render, unmount } = mount(controlsRootRef.current);
+    setRender(render);
+    return () => {
+      setRender(null);
+      unmount();
+    };
+  }, [module, controlsRootRef]);
+  if (render != null) {
+    render(props);
+  }
+  return <div ref={controlsRootRef} />;
+};
+
+export const Controls = ({
+  implementation,
+  actorClass,
+  sendAction,
+  fps,
+  turnBased,
+  observation,
+  tickId,
+  componentFile,
+}) => {
+  const [ControlsComponent, setControlsComponent] = useState(() => Loading);
+  useEffect(() => {
     if (OBSERVER_ACTOR_CLASS === actorClass) {
       if (turnBased) {
-        return TurnBasedObserverControls;
+        setControlsComponent(TurnBasedObserverControls);
+      } else {
+        setControlsComponent(RealTimeObserverControls);
       }
-      return RealTimeObserverControls;
     }
-    if ([PLAYER_ACTOR_CLASS, TEACHER_ACTOR_CLASS, EVALUATOR_ACTOR_CLASS].includes(actorClass)) {
-      const control = CONTROLS.find(({ environments }) => environments.includes(environment));
-      if (control == null) {
-        return () => <div>{environment} is not playable</div>;
-      }
-      return control.component;
-    }
-    return () => <div>Unknown actor class "{actorClass}"</div>;
-  }, [environment, actorClass, turnBased]);
+    const componentUrl = `${WEB_BASE_URL}/components/environments/${implementation}/${componentFile}`;
+    console.log(`importing ${componentUrl}...`);
+    import(componentUrl)
+      .then((componentModule) => {
+        setControlsComponent(() => ExternalControls(componentModule));
+      })
+      .catch((error) =>
+        setControlsComponent(() => ({ implementation }) => (
+          <Error title={`Unable to load controls from ${implementation}`} error={error} />
+        ))
+      );
+  }, [implementation, actorClass, turnBased, componentFile]);
 
   return (
     <ControlsComponent
       sendAction={sendAction}
       fps={fps}
       actorClass={actorClass}
-      environment={environment}
+      implementation={implementation}
       observation={observation}
       tickId={tickId}
     />

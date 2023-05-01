@@ -15,6 +15,7 @@
 import { useEffect, useRef } from "react";
 import styles from "./RenderedScreen.module.css";
 import classNames from "classnames";
+import { WEB_BASE_URL } from "../utils/constants";
 
 function bufferToBase64(buf) {
   const binstr = Array.prototype.map
@@ -25,7 +26,7 @@ function bufferToBase64(buf) {
   return btoa(binstr);
 }
 
-const DEFAULT_SCREEN_SRC = `${process.env.PUBLIC_URL}/assets/cogment-splash.png`;
+const DEFAULT_SCREEN_SRC = `${WEB_BASE_URL}/assets/cogment-splash.png`;
 
 export const RenderedScreen = ({ observation, overlay, className, ...props }) => {
   const canvasRef = useRef();

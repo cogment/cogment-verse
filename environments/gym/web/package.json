@@ -1,9 +1,11 @@
 {
   "name": "cogment_verse_environments_gym_web",
   "version": "0.1.0",
-  "dependencies": {
+  "devDependencies": {
     "esbuild": "0.17.17",
-    "esbuild-css-modules-plugin": "2.7.1",
+    "esbuild-css-modules-plugin": "2.7.1"
+  },
+  "peerDependencies": {
     "react": "^18.2.0"
   },
   "scripts": {
@@ -11,6 +13,9 @@
     "build:lunar_lander": "node build.js GymLunarLander.jsx",
     "build:lunar_lander_continuous": "node build.js GymLunarLanderContinuous.jsx",
     "build:mountain_car": "node build.js GymMountainCar.jsx",
-    "build": "npm run build:cartpole && npm run build:lunar_lander && npm run build:lunar_lander_continuous && npm run build:mountain_car"
+    "build": "node build.js"
+  },
+  "dependencies": {
+    "react-dom": "^18.2.0"
   }
 }

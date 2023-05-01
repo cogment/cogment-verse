@@ -19,7 +19,5 @@ export const PLAYER_ACTOR_CLASS = "player";
 export const OBSERVER_ACTOR_CLASS = "observer";
 export const EVALUATOR_ACTOR_CLASS = "evaluator";
 
-export const ORCHESTRATOR_WEB_ENDPOINT =
-  window.ORCHESTRATOR_WEB_ENDPOINT !== ""
-    ? window.ORCHESTRATOR_WEB_ENDPOINT
-    : process.env.REACT_APP_ORCHESTRATOR_WEB_ENDPOINT;
+export const ORCHESTRATOR_WEB_ENDPOINT = window.ORCHESTRATOR_WEB_ENDPOINT;
+export const WEB_BASE_URL = window.location.origin;

@@ -41,6 +41,7 @@ const ACTION_SPACE = new Space({
 export const Environments = ["environments.gym.environment.Environment/LunarLander-v2"];
 
 export const Controls = ({ sendAction, fps = 20, actorClass, ...props }) => {
+  console.log("in GymLunarLander render");
   const isTeacher = actorClass === TEACHER_ACTOR_CLASS;
   const [paused, setPaused] = useState(false);
   const togglePause = useCallback(() => setPaused((paused) => !paused), [setPaused]);

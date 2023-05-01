@@ -52,7 +52,8 @@ const Play = () => {
     JOIN_TIMEOUT
   );
 
-  const environment = actorParams?.config?.environmentSpecs?.implementation || undefined;
+  const implementation = actorParams?.config?.environmentSpecs?.implementation || undefined;
+  const componentFile = actorParams?.config?.environmentSpecs?.webComponentsFile || undefined;
   const turnBased = actorParams?.config?.environmentSpecs?.turnBased || false;
   const actorClassName = actorParams?.className;
 
@@ -77,11 +78,12 @@ const Play = () => {
         {trialStatus === TRIAL_STATUS.ONGOING ? (
           <Controls
             actorClass={actorClassName}
-            environment={environment}
+            implementation={implementation}
             sendAction={sendAction}
             turnBased={turnBased}
             observation={event.observation}
             tickId={event.tickId}
+            componentFile={componentFile}
           />
         ) : null}
       </div>
