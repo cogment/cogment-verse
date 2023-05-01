@@ -18,10 +18,9 @@ import logging
 import copy
 import time
 import json
-import math
+from typing import List, Tuple, Union
 import numpy as np
 
-from typing import List, Tuple, Union
 import cogment
 import torch
 from torch import nn
@@ -29,7 +28,7 @@ from gym.spaces import Discrete, utils
 
 from cogment_verse.specs import AgentConfig, cog_settings, EnvironmentConfig, EnvironmentSpecs
 
-from cogment_verse.constants import PLAYER_ACTOR_CLASS, WEB_ACTOR_NAME, HUMAN_ACTOR_IMPL
+from cogment_verse.constants import PLAYER_ACTOR_CLASS
 
 from cogment_verse import Model, TorchReplayBuffer  # pylint: disable=abstract-class-instantiated
 
@@ -62,8 +61,6 @@ class MLPNetwork(nn.Module):
         self,
         in_dim: Tuple[int],
         hidden_units: Union[int, List[int]] = 256,
-        noisy: bool = False,
-        std_init: float = 0.5,
     ):
         super().__init__()
         if isinstance(hidden_units, int):
