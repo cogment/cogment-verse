@@ -7,11 +7,11 @@
 
 .canvas,
 .overlay {
-  height: 40vh;
+  height: 70vh;
   grid-area: 1/-1;
   z-index: 0;
 
-  width: auto;
+  width: 100%;
 }
 
 .overlay {

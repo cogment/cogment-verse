@@ -1,4 +1,6 @@
 # @package _global_
+
+# TODO: To be tested
 defaults:
   - override /services/actor:
       - behavior_cloning
@@ -10,11 +12,11 @@ run:
   class_name: actors.adaptive_grid.behavior_cloning.SimpleBCTraining
   seed: 618
   trial_ids: [] # example: [trusting_clarke_0_0, trusting_clarke_0_1]
-  
+
   # model
   model_id: ""
   archive_model: True # True: model will be saved to disk. Location: .cogment_verse/model_registry
-  
+
   # Training params
   num_epochs: 10
   num_trials: -1 # Max number of trials to extract from trial datastore. unlimited: -1
