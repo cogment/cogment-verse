@@ -201,26 +201,35 @@ class DQNModel(Model):
 
         return {"num_samples_seen": self.num_samples_seen}
 
+    @staticmethod
+    def serialize_model(model) -> bytes:
+        stream = io.BytesIO()
+        torch.save(
+            (
+                model.network.state_dict(),
+                model.epsilon,
+                model.get_model_user_data(),
+            ),
+            stream,
+        )
+        return stream.getvalue()
+
     @classmethod
-    def load(cls, model_id, version_number, model_user_data, version_user_data, model_data_f):
-        # Create the model instance
-        model = DQNModel(
-            model_id=model_id,
-            version_number=version_number,
+    def deserialize_model(cls, serialized_model) -> DQNModel:
+        stream = io.BytesIO(serialized_model)
+        (network_state_dict, epsilon, model_user_data) = torch.load(stream)
+
+        model = cls(
+            model_id=model_user_data["model_id"],
             environment_implementation=model_user_data["environment_implementation"],
             num_input=int(model_user_data["num_input"]),
             num_output=int(model_user_data["num_output"]),
             num_hidden_nodes=json.loads(model_user_data["num_hidden_nodes"]),
             epsilon=0,
         )
-
-        # Load the saved states
-        (network_state_dict, epsilon) = torch.load(model_data_f)
         model.network.load_state_dict(network_state_dict)
         model.epsilon = epsilon
-
-        # Load version data
-        model.num_samples_seen = int(version_user_data["num_samples_seen"])
+        model.num_samples_seen = int(model_user_data["num_samples_seen"])
 
         return model
 
