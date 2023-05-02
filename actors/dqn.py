@@ -91,8 +91,6 @@ class ConvNetwork(nn.Module):
         strides=1,
         paddings=0,
         normalization_factor=255,
-        noisy=False,
-        std_init=0.5,
     ):
         super().__init__()
         self._normalization_factor = normalization_factor
