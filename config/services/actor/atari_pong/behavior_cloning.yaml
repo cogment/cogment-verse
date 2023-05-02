@@ -1,3 +1,4 @@
-simple_bc:
+# @package _global_.services.actor
+behavior_cloning:
   class_name: actors.atari_pong.behavior_cloning.BehaviorCloningActor
   port: ${generate_port:actor_2}

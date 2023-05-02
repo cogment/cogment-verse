@@ -99,6 +99,9 @@ class Environment(ABC):
                         "Petting zoo environment with heterogeneous action/observation spaces are not supported yet"
                     )
 
+        print(f"NUM PLAYERS: {num_players}")
+        print(f"Turn-Based: {self.env_type in [PzEnvType.CLASSIC]}")
+
         assert num_players >= 1
         self.env_specs = EnvironmentSpecs.create_homogeneous(
             num_players=num_players,
@@ -247,6 +250,8 @@ class AtariEnvironment(Environment):
         pz_env.reset(seed=session_cfg.seed)
         pz_agent_iterator = iter(pz_env.agent_iter())
         pz_observation, _, _, _, _ = pz_env.last()
+
+        print(f"pz_observation shape: {pz_observation.size}")
 
         if len(pz_env.agents) != len(actor_names) and len(actor_names) > 1:
             raise ValueError(f"Number of actors does not match environments requirement ({len(pz_env.agents)} actors)")

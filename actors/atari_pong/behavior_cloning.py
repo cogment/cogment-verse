@@ -13,6 +13,7 @@
 # limitations under the License.
 
 from __future__ import annotations
+from enum import Enum
 
 import io
 import logging
@@ -28,6 +29,12 @@ from cogment_verse.specs import ActorClass, EnvironmentSpecs
 torch.multiprocessing.set_sharing_strategy("file_system")
 
 log = logging.getLogger(__name__)
+
+
+class DataAugmentationEnum(Enum):
+    SINGLE_PLAYER = "single_player"
+    ALL_PLAYERS = "all_players"
+    FLIP = "flip"
 
 
 class BehaviorCloningModel(Model):
@@ -136,15 +143,14 @@ class BehaviorCloningActor:
         async for event in actor_session.all_events():
             if event.observation and event.type == cogment.EventType.ACTIVE:
                 observation = observation_space.deserialize(event.observation.observation)
+
                 observation_tensor = torch.tensor(observation.flat_value, dtype=self._dtype).view(1, -1)
 
                 with torch.no_grad():
                     scores = model.policy_network(observation_tensor)
                     probs = torch.softmax(scores, dim=-1)
-
                 discrete_action_tensor = torch.distributions.Categorical(probs).sample()
                 action = action_space.create(value=discrete_action_tensor.item())
-
                 actor_session.do_action(action_space.serialize(action))
 
 
@@ -154,6 +160,9 @@ class BehaviorCloningTrainingOffline:
         self._dtype = torch.float
         self._environment_specs = environment_specs
         self._cfg = cfg
+        self._data_augmentation_type = DataAugmentationEnum(cfg.data_augmentation.type)
+        self._data_augmentation_cfg = cfg.data_augmentation
+
 
         # Initializing a model
         self.model = BehaviorCloningModel(
@@ -172,25 +181,77 @@ class BehaviorCloningTrainingOffline:
             if actor_params.class_name == ActorClass.PLAYER.value
         ]
 
+        player_names = [params.name for params in players_params]
+
         player_params = players_params[0]
         environment_specs = EnvironmentSpecs.deserialize(player_params.config.environment_specs)
         action_space = environment_specs.get_action_space()
         observation_space = environment_specs.get_observation_space()
 
         async for sample in sample_producer_session.all_trial_samples():
-            player_action = action_space.deserialize(sample.actors_data[player_params.name].action)
-            player_observation = observation_space.deserialize(sample.actors_data[player_params.name].observation)
-            player_reward = sample.actors_data[player_params.name].reward
 
-            if player_action.flat_value is None:
-                continue
+            actions = []
+            demonstrations = []
+            observations = []
+            rewards = []
 
-            action = torch.tensor(player_action.flat_value, dtype=self._dtype)
-            demonstration = False  # No teacher in our current scenario
-            observation = torch.tensor(player_observation.flat_value, dtype=self._dtype)
-            reward = torch.tensor(player_reward if player_reward is not None else 0, dtype=self._dtype)
+            if self._data_augmentation_type == DataAugmentationEnum.SINGLE_PLAYER:
+                assert "player" in self._data_augmentation_cfg, "The 'player' parameter is missing from the 'data_augmentation' parameters."
+                assert self._data_augmentation_cfg.player in player_names, f"The 'player' parameter does not match with any player actor present in the trial: [{', '.join(player_names)}]."
+                player_action = action_space.deserialize(sample.actors_data[self._data_augmentation_cfg.player].action)
+                player_observation = observation_space.deserialize(sample.actors_data[self._data_augmentation_cfg.player].observation)
+                player_reward = sample.actors_data[self._data_augmentation_cfg.player].reward
 
-            sample_producer_session.produce_sample((demonstration, observation, action, reward))
+                if player_action.flat_value is None:
+                    continue
+
+                actions.append(torch.tensor(player_action.flat_value, dtype=self._dtype))
+                demonstrations.append(False)  # No teacher in our current scenario
+                observations.append(torch.tensor(player_observation.flat_value, dtype=self._dtype))
+                rewards.append(torch.tensor(player_reward if player_reward is not None else 0, dtype=self._dtype))
+
+            elif self._data_augmentation_type == DataAugmentationEnum.ALL_PLAYERS:
+                for player in players_params:
+                    player_action = action_space.deserialize(sample.actors_data[player.name].action)
+                    player_observation = observation_space.deserialize(sample.actors_data[player.name].observation)
+                    player_reward = sample.actors_data[player.name].reward
+
+                    if player_action.flat_value is None:
+                        continue
+
+                    actions.append(torch.tensor(player_action.flat_value, dtype=self._dtype))
+                    demonstrations.append(False)  # No teacher in our current scenario
+                    observations.append(torch.tensor(player_observation.flat_value, dtype=self._dtype))
+                    rewards.append(torch.tensor(player_reward if player_reward is not None else 0, dtype=self._dtype))
+
+            elif self._data_augmentation_type == DataAugmentationEnum.FLIP:
+                assert "player" in self._data_augmentation_cfg, "The 'player' parameter is missing from the 'data_augmentation' parameters."
+                assert self._data_augmentation_cfg.player in [params.name for params in players_params], "The 'player' parameter does not match with any player actor present in the trial."
+                player_action = action_space.deserialize(sample.actors_data[self._data_augmentation_cfg.player].action)
+                player_observation = observation_space.deserialize(sample.actors_data[self._data_augmentation_cfg.player].observation)
+                player_reward = sample.actors_data[self._data_augmentation_cfg.player].reward
+
+                if player_action.flat_value is None:
+                        continue
+
+
+                observation_tensor = torch.tensor(player_observation.value, dtype=self._dtype)
+                assert len(observation_tensor.size()) == 3, f"Observation tensor has {len(observation_tensor.size())} dimensions."
+                assert observation_tensor.size() == torch.Size([84, 84, 6]), f"Observation tensor has size {observation_tensor.size()}."
+
+                last_dim_idx = torch.arange(observation_tensor.size(-1))
+                # flipped_observation_tensor = observation_tensor[:, :, last_dim_idx[0:4] + last_dim_idx[-1, -2]]
+                flipped_observation_tensor = observation_tensor[:, :, [0, 1, 2, 3, 5, 4]]
+                flipped_observation = observation_space.create(value=flipped_observation_tensor)
+
+                for obs in [player_observation, flipped_observation]:
+                    actions.append(torch.tensor(player_action.flat_value, dtype=self._dtype))
+                    demonstrations.append(False)  # No teacher in our current scenario
+                    observations.append(torch.tensor(obs.flat_value, dtype=self._dtype))
+                    rewards.append(torch.tensor(player_reward if player_reward is not None else 0, dtype=self._dtype))
+
+            for action, demonstration, observation, reward in zip(actions, demonstrations, observations, rewards):
+                sample_producer_session.produce_sample((demonstration, observation, action, reward))
 
     async def impl(self, run_session):
         # assert self._environment_specs.num_players == 1

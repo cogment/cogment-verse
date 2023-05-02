@@ -94,9 +94,11 @@ class PlayRun:
             actors_params = []
             has_human_actor = False
             for actor_idx, actor_params in enumerate(players_cfg):
+                actor_seed = actor_params.get("seed", (self._cfg.seed + actor_idx) * trial_idx)
                 if actor_params.implementation == HUMAN_ACTOR_IMPL:
                     if has_human_actor:
                         raise RuntimeError("Can't have more than one human involved in the trial")
+
                     # Human actor
                     actors_params.append(
                         cogment.ActorParameters(
@@ -108,7 +110,7 @@ class PlayRun:
                                 actor_config_template=actor_params.get("agent_config", None),
                                 run_id=run_session.run_id,
                                 environment_specs=self._environment_specs.serialize(),
-                                seed=(self._cfg.seed + actor_idx) * trial_idx,
+                                seed=actor_seed,
                             ),
                         )
                     )
@@ -124,7 +126,7 @@ class PlayRun:
                                 actor_config_template=actor_params.get("agent_config", None),
                                 run_id=run_session.run_id,
                                 environment_specs=self._environment_specs.serialize(),
-                                seed=(self._cfg.seed + actor_idx) * trial_idx,
+                                seed=actor_seed,
                             ),
                         )
                     )

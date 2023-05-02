@@ -2,14 +2,14 @@
 defaults:
   - override /services/environment: pong_pz
   - override /services/trial_datastore: local
-  - override /services/experiment_tracker@run.experiment_tracker: simple
+  - override /run/experiment_tracker: simple
 
 run:
   class_name: runs.play.PlayRun
   num_trials: 5
   seed: 12
   players:
-    - name: player_1
+    - name: player_1  # Left player
       implementation: client
-    - name: player_2
+    - name: player_2  # Right player
       implementation: actors.random_actor.RandomActor

@@ -27,7 +27,7 @@ export const TEACHER_NOOP_ACTION = new TeacherAction({});
 const serializeNdArray = (dtype, shape, flattenedArray) => {
   let arrayValue;
   switch (dtype) {
-    case DType.DTYPE_INT8:
+    case DType.DTYPE_INT8 :
       arrayValue = new Int8Array(flattenedArray);
       break;
     case DType.DTYPE_INT32:
@@ -38,6 +38,9 @@ const serializeNdArray = (dtype, shape, flattenedArray) => {
       break;
     case DType.DTYPE_FLOAT64:
       arrayValue = new Float64Array(flattenedArray);
+      break;
+    case DType.DTYPE_UINT8 :
+      arrayValue = new Uint8Array(flattenedArray);
       break;
     default:
       throw new Error(`Unsupported dtype [${dtype}]`);
@@ -78,6 +81,9 @@ const deserializeNdArray = (serializedArray) => {
       } else {
         typedArray = new Float32Array(rawData.buffer, rawData.byteOffset, length);
       }
+      break;
+    case DType.DTYPE_UINT8:
+      typedArray = new Uint8Array(rawData.buffer, rawData.byteOffset, length);
       break;
     default:
       throw new Error(`Unsupported dtype [${dtype}]`);

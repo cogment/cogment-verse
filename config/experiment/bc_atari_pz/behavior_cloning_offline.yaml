@@ -1,10 +1,11 @@
 # @package _global_
 defaults:
-  #- override /services/actor: behavior_cloning
-  - /services/actor/atari_pong@services.actor:
-    - behavior_cloning
+  - override /services/actor:
+      - atari_pong/behavior_cloning
   - override /services/environment: pong_pz
   - override /services/trial_datastore: local
+  # TODO: remove
+  - override /run/experiment_tracker: simple
   - _self_
 
 run:
@@ -17,6 +18,10 @@ run:
   archive_model: True # True: model will be saved to disk. Location: .cogment_verse/model_registry
 
   # Training params
+  data_augmentation:
+    type: all_players  # This is augmenting the training data to flip
+    player: web_actor
+
   num_epochs: 10
   num_trials: -1 # Max number of trials to extract from trial datastore. unlimited: -1
   update_frequency: 100 # Number of steps before a new model version is published.
@@ -29,3 +34,8 @@ run:
     num_hidden_nodes: 64
 
 
+# Result:
+# It works. But it only trains to play from the side that you played during the collected trials.
+
+# TODO:
+# Make the behavior cloning, but train in a mix of data from both actors.

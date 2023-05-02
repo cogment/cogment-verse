@@ -1,22 +1,47 @@
 # @package _global_
-
-# TODO: To be tested
 defaults:
   - override /services/actor:
-      - dqn
-  - override /services/environment: adaptive_grid_v0
+      - random
+      - atari_pong/behavior_cloning
+  - override /services/environment: pong_pz
   # To save test trials to trial_datastore, uncomment command below
   # - override /services/trial_datastore: local
+  - override /run/experiment_tracker: simple
   - _self_
 
 run:
-  class_name: runs.adaptive_grid.RunTrainedModel
-  observer: False
+  class_name: runs.play.PlayRun
+  observer: True
   num_trials: 30
   seed: 12
   players:
     - name: player_1
-      implementation: actors.adaptive_grid.dqn.DQNActor
+      implementation: actors.atari_pong.behavior_cloning.BehaviorCloningActor
       agent_config:
-        model_id: elated_wing_0_model # Change to desired model id (find it in .cogment_verse/model_registry)
-        model_version: -1  # change to desired model version. -1 for latest version available.
+        model_id: practical_lederberg_0_model # Change to desired model id (find it in .cogment_verse/model_registry)
+        model_iteration: -1  # change to desired model version. -1 for latest version available.
+    - name: player_2
+      implementation: actors.atari_pong.behavior_cloning.BehaviorCloningActor
+      agent_config:
+        model_id: practical_lederberg_0_model # Change to desired model id (find it in .cogment_verse/model_registry)
+        model_iteration: -1  # change to desired model version. -1 for latest version available.
+    # - name: player_1
+    #   implementation: actors.random_actor.RandomActor
+    #   seed: 0
+    # - name: player_2
+    #   implementation: actors.random_actor.RandomActor
+    #   seed: 1
+
+
+
+# Notes
+# Two random actors can play
+# The BC actor can only play if it is the second actors.
+# It returns an action value of 0 at every step when it is in 1st.
+
+# Conclusion: It never moves when playing on the right, simply because it was trained with behavior cloning data playing from the left only.
+# LOOOOOOOOOOOOOOOOOOOOL
+
+# Result: it works.
+
+

@@ -19,4 +19,4 @@ run:
       implementation: actors.adaptive_grid.dqn.DQNActor
       agent_config:
         model_id: elated_wing_0_model # Change to desired model id (find it in .cogment_verse/model_registry)
-        model_version: -1  # change to desired model version. -1 for latest version available.
+        model_iteration: -1  # change to desired model version. -1 for latest version available.
