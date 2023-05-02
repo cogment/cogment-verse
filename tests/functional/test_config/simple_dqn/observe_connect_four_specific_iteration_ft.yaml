@@ -4,7 +4,7 @@ defaults:
       - simple_dqn
   - override /services/environment: connect_four
   - override /run: observe
-  - override /services/experiment_tracker@run.experiment_tracker: simple
+  - override /run/experiment_tracker: simple
 
 run:
   observer: False
