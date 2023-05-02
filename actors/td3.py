@@ -14,19 +14,22 @@
 
 # pylint: disable=invalid-name
 
-import logging
+from __future__ import annotations
+
 import copy
+import io
+import logging
 import time
-import numpy as np
+
 import cogment
+import numpy as np
 import torch
-from torch import nn
 import torch.nn.functional as F
+from gym.spaces import Box, utils
+from torch import nn
 
-from gym.spaces import utils, Box
-
-from cogment_verse.specs import AgentConfig, cog_settings, EnvironmentConfig, EnvironmentSpecs, PLAYER_ACTOR_CLASS
 from cogment_verse import Model, TorchReplayBuffer
+from cogment_verse.specs import PLAYER_ACTOR_CLASS, AgentConfig, EnvironmentConfig, EnvironmentSpecs, cog_settings
 
 torch.multiprocessing.set_sharing_strategy("file_system")
 
@@ -96,9 +99,9 @@ class TD3Model(Model):
         expl_noise,
         random_steps,
         dtype=torch.float,
-        version_number=0,
+        iteration=0,
     ):
-        super().__init__(model_id, version_number)
+        super().__init__(model_id, iteration)
         self._dtype = dtype
         self._environment_implementation = environment_implementation
         self._num_input = num_input
@@ -118,35 +121,55 @@ class TD3Model(Model):
         self.epoch_idx = 0
         self.total_samples = 0
 
+    def eval(self) -> None:
+        self.actor.eval()
+        self.actor_target.eval()
+        self.critic.eval()
+        self.critic_target.eval()
+
     def get_model_user_data(self):
         return {
+            "model_id": self.model_id,
             "environment_implementation": self._environment_implementation,
             "num_input": self._num_input,
             "num_output": self._num_output,
             "max_action": self.max_action,
             "expl_noise": self.expl_noise,
             "random_steps": self.random_steps,
+            "epoch_idx": self.epoch_idx,
+            "total_samples": self.total_samples,
         }
 
-    def save(self, model_data_f):
+    @staticmethod
+    def serialize_model(model) -> bytes:
+        stream = io.BytesIO()
         torch.save(
             (
-                self.actor.state_dict(),
-                self.actor_target.state_dict(),
-                self.critic.state_dict(),
-                self.critic_target.state_dict(),
-                self.time_steps,
+                model.actor.state_dict(),
+                model.actor_target.state_dict(),
+                model.critic.state_dict(),
+                model.critic_target.state_dict(),
+                model.time_steps,
+                model.get_model_user_data(),
             ),
-            model_data_f,
+            stream,
         )
-        return {"epoch_idx": self.epoch_idx, "total_samples": self.total_samples}
+        return stream.getvalue()
 
     @classmethod
-    def load(cls, model_id, version_number, model_user_data, version_user_data, model_data_f):
-        # Create the model instance
-        model = TD3Model(
-            model_id=model_id,
-            version_number=version_number,
+    def deserialize_model(cls, serialized_model) -> TD3Model:
+        stream = io.BytesIO(serialized_model)
+        (
+            actor_state_dict,
+            actor_target_state_dict,
+            critic_state_dict,
+            critic_target_state_dict,
+            time_steps,
+            model_user_data,
+        ) = torch.load(stream)
+
+        model = cls(
+            model_id=model_user_data["model_id"],
             environment_implementation=model_user_data["environment_implementation"],
             num_input=int(model_user_data["num_input"]),
             num_output=int(model_user_data["num_output"]),
@@ -155,24 +178,14 @@ class TD3Model(Model):
             random_steps=int(model_user_data["random_steps"]),
             time_steps=0,
         )
-
-        # Load the saved states
-        (
-            actor_state_dict,
-            actor_target_state_dict,
-            critic_state_dict,
-            critic_target_state_dict,
-            time_steps,
-        ) = torch.load(model_data_f)
         model.actor.load_state_dict(actor_state_dict)
         model.actor_target.load_state_dict(actor_target_state_dict)
         model.critic.load_state_dict(critic_state_dict)
         model.critic_target.load_state_dict(critic_target_state_dict)
         model.time_steps = time_steps
+        model.epoch_idx = model_user_data["epoch_idx"]
+        model.total_samples = model_user_data["total_samples"]
 
-        # Load version data
-        model.epoch_idx = version_user_data["epoch_idx"]
-        model.total_samples = version_user_data["total_samples"]
         return model
 
 
@@ -194,9 +207,9 @@ class TD3Actor:
 
         assert isinstance(action_space.gym_space, Box)
 
-        model, _, _ = await actor_session.model_registry.retrieve_version(
-            TD3Model, config.model_id, config.model_version
-        )
+        # Get model
+        model = await TD3Model.retrieve_model(actor_session.model_registry, config.model_id, config.model_iteration)
+        model.eval()
 
         async for event in actor_session.all_events():
             if event.observation and event.type == cogment.EventType.ACTIVE:
@@ -299,7 +312,12 @@ class TD3Training:
             time_steps=0,
             dtype=self._dtype,
         )
-        _model_info, _ = await run_session.model_registry.publish_initial_version(model)
+
+        serialized_model = TD3Model.serialize_model(model)
+        iteration_info = await run_session.model_registry.publish_model(
+            name=model_id,
+            model=serialized_model,
+        )
 
         run_session.log_params(
             self._cfg,
@@ -347,7 +365,7 @@ class TD3Training:
                                     run_id=run_session.run_id,
                                     seed=self._cfg.seed + trial_idx,
                                     model_id=model_id,
-                                    model_version=-1,
+                                    model_iteration=-1,
                                     model_update_frequency=self._cfg.policy_freq,
                                     environment_specs=self._environment_specs.serialize(),
                                 ),
@@ -434,15 +452,23 @@ class TD3Training:
                     )
 
             model.time_steps += 1
-            version_info = await run_session.model_registry.publish_version(model)
+            serialized_model = TD3Model.serialize_model(model)
+            iteration_info = await run_session.model_registry.publish_model(
+                name=model_id,
+                model=serialized_model,
+            )
 
             if step_idx % 100 == 0:
                 end_time = time.time()
                 steps_per_seconds = 100 / (end_time - start_time)
                 start_time = end_time
                 run_session.log_metrics(
-                    model_version_number=version_info["version_number"],
+                    model_iteration=iteration_info.iteration,
                     steps_per_seconds=steps_per_seconds,
                 )
 
-        version_info = await run_session.model_registry.publish_version(model, archived=True)
+        serialized_model = TD3Model.serialize_model(model)
+        iteration_info = await run_session.model_registry.store_model(
+            name=model_id,
+            model=serialized_model,
+        )

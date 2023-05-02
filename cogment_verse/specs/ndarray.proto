@@ -23,6 +23,7 @@ enum DType {
   DTYPE_INT8 = 3;
   DTYPE_INT32 = 4;
   DTYPE_INT64 = 5;
+  DTYPE_UINT8 = 6;
 }
 
 message Array {

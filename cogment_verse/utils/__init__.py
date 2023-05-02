@@ -12,6 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from .import_class import import_class
 from .lru import LRU
 from .sizeof_fmt import sizeof_fmt
-from .import_class import import_class

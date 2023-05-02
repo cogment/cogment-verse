@@ -16,18 +16,18 @@ import asyncio
 import logging
 import sys
 
+import cogment
 from omegaconf import OmegaConf
 
-from .cogment_py_sdk_process import CogmentPySdkProcess
-from ..utils.import_class import import_class
-from ..services_directory import ServiceType
 from ..run import RunSession
+from ..services_directory import ServiceType
+from ..utils.import_class import import_class
+from .cogment_py_sdk_process import CogmentPySdkProcess
 
 log = logging.getLogger(__name__)
 
 
 def run_main(
-    model_registry,
     name,  # pylint: disable=unused-argument
     on_ready,
     run_cfg,
@@ -38,7 +38,7 @@ def run_main(
     async def run_main_async():
         # Importing 'specs' only in the subprocess (i.e. where generate has been properly executed)
         # pylint: disable-next=import-outside-toplevel
-        from cogment_verse.specs import EnvironmentSpecs
+        from cogment_verse.specs import EnvironmentSpecs, cog_settings
 
         _run_cfg = run_cfg
         run_cls = import_class(_run_cfg.class_name)
@@ -52,6 +52,9 @@ def run_main(
             environment_specs = EnvironmentSpecs.load(work_dir, enviroment_impl_name)
         except Exception as error:
             raise RuntimeError(f"Unable to start run, unknown environment: '{enviroment_impl_name}'") from error
+
+        context = cogment.Context(cog_settings=cog_settings, user_id="cogment_verse_run")
+        model_registry = await services_directory.get_model_registry(context)
 
         run_id = _run_cfg.run_id
         run = run_cls(cfg=_run_cfg, environment_specs=environment_specs)
@@ -77,13 +80,12 @@ def run_main(
         sys.exit(-1)
 
 
-def create_run_process(work_dir, specs_filename, services_directory, model_registry, run_cfg):
+def create_run_process(work_dir, specs_filename, services_directory, run_cfg):
     return CogmentPySdkProcess(
         name="run",
         work_dir=work_dir,
         specs_filename=specs_filename,
         main=run_main,
         services_directory=services_directory,
-        model_registry=model_registry,
         run_cfg=run_cfg,
     )

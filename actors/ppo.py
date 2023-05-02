@@ -12,6 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
+import io
 import logging
 from dataclasses import dataclass
 from typing import List, Tuple, Union
@@ -19,19 +22,13 @@ from typing import List, Tuple, Union
 import cogment
 import numpy as np
 import torch
-from torch.distributions.normal import Normal
 from gym.spaces import Box, utils
+from torch.distributions.normal import Normal
 
 from cogment_verse import Model
 from cogment_verse.run.run_session import RunSession
 from cogment_verse.run.sample_producer_worker import SampleProducerSession
-from cogment_verse.specs import (
-    AgentConfig,
-    cog_settings,
-    EnvironmentConfig,
-    EnvironmentSpecs,
-    PLAYER_ACTOR_CLASS,
-)
+from cogment_verse.specs import PLAYER_ACTOR_CLASS, AgentConfig, EnvironmentConfig, EnvironmentSpecs, cog_settings
 
 torch.multiprocessing.set_sharing_strategy("file_system")
 
@@ -75,7 +72,7 @@ class ValueNetwork(torch.nn.Module):
         self.fully_connected = torch.nn.Linear(num_hidden, num_hidden)
         self.output = torch.nn.Linear(num_hidden, 1)
 
-    def forward(self, x: torch.Tensor):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         # Input layer
         x = self.input(x)
         x = torch.tanh(x)
@@ -168,7 +165,7 @@ class PPOModel(Model):
         learning_rate: Learning rate
         n_iter: Number of iterations
         dtype: Data type objects
-        version_number: Version number of model
+        iteration: Version number of model
         policy_network: Policy network that outputs an action given a state
         value_network: Value network measure the the quality of action given a state
         policy_optimizer: Optimizer for policy network
@@ -193,11 +190,11 @@ class PPOModel(Model):
         learning_rate: float = 0.01,
         n_iter: int = 1000,
         dtype=torch.float,
-        version_number: int = 0,
+        iteration: int = 0,
         state_norm: bool = False,
     ) -> None:
 
-        super().__init__(model_id, version_number)
+        super().__init__(model_id, iteration)
         self._environment_implementation = environment_implementation
         self._num_input = num_input
         self._num_output = num_output
@@ -251,44 +248,54 @@ class PPOModel(Model):
         if self._state_norm:
             self.state_normalization = Normalization(dtype=self._dtype, nums=self._num_input)
 
+    def eval(self) -> None:
+        self.policy_network.eval()
+        self.value_network.eval()
+
     def get_model_user_data(self) -> dict:
         """Get user model"""
         return {
+            "model_id": self.model_id,
             "environment_implementation": self._environment_implementation,
             "num_input": self._num_input,
             "num_output": self._num_output,
             "policy_network_hidden_nodes": self._policy_network_hidden_nodes,
             "value_network_hidden_nodes": self._value_network_hidden_nodes,
+            "iter_idx": self.iter_idx,
+            "total_samples": self.total_samples,
         }
 
-    def save(self, model_data_f: str) -> dict:
-        """Save the model"""
-        torch.save((self.policy_network.state_dict(), self.value_network.state_dict()), model_data_f)
-        return {"iter_idx": self.iter_idx, "total_samples": self.total_samples}
+    @staticmethod
+    def serialize_model(model) -> bytes:
+        stream = io.BytesIO()
+        torch.save(
+            (
+                model.policy_network.state_dict(),
+                model.value_network.state_dict(),
+                model.get_model_user_data(),
+            ),
+            stream,
+        )
+        return stream.getvalue()
 
     @classmethod
-    def load(
-        cls, model_id: int, version_number: int, model_user_data: dict, version_user_data: dict, model_data_f: str
-    ) -> Model:
-        """Load the model"""
-        model = PPOModel(
-            model_id=model_id,
-            version_number=version_number,
+    def deserialize_model(cls, serialized_model) -> PPOModel:
+        stream = io.BytesIO(serialized_model)
+        (policy_network_state_dict, value_network_state_dict, model_user_data) = torch.load(stream)
+
+        model = cls(
+            model_id=model_user_data["model_id"],
             environment_implementation=model_user_data["environment_implementation"],
             num_input=int(model_user_data["num_input"]),
             num_output=int(model_user_data["num_output"]),
             policy_network_hidden_nodes=int(model_user_data["policy_network_hidden_nodes"]),
             value_network_hidden_nodes=int(model_user_data["value_network_hidden_nodes"]),
         )
-
-        # Load the model parameters
-        (policy_network_state_dict, value_network_state_dict) = torch.load(model_data_f)
         model.policy_network.load_state_dict(policy_network_state_dict)
         model.value_network.load_state_dict(value_network_state_dict)
+        model.iter_idx = model_user_data["iter_idx"]
+        model.total_samples = model_user_data["total_samples"]
 
-        # Load version data
-        model.iter_idx = version_user_data["iter_idx"]
-        model.total_samples = version_user_data["total_samples"]
         return model
 
 
@@ -316,9 +323,8 @@ class PPOActor:
         assert config.environment_specs.num_players == 1
 
         # Get model
-        model, _, _ = await actor_session.model_registry.retrieve_version(
-            PPOModel, config.model_id, config.model_version
-        )
+        model = await PPOModel.retrieve_model(actor_session.model_registry, config.model_id, config.model_iteration)
+        model.eval()
 
         async for event in actor_session.all_events():
             if event.observation and event.type == cogment.EventType.ACTIVE:
@@ -445,10 +451,15 @@ class PPOTraining:
 
         assert self._environment_specs.num_players == 1
         assert isinstance(self._environment_specs.get_action_space().gym_space, Box)
+        assert self._cfg.num_steps >= self._cfg.batch_size
 
         # Initalize model
         self.model.model_id = model_id
-        _, version_info = await run_session.model_registry.publish_initial_version(self.model)
+        serialized_model = PPOModel.serialize_model(self.model)
+        iteration_info = await run_session.model_registry.publish_model(
+            name=model_id,
+            model=serialized_model,
+        )
 
         run_session.log_params(
             self._cfg,
@@ -469,7 +480,7 @@ class PPOTraining:
                     run_id=run_session.run_id,
                     environment_specs=self._environment_specs.serialize(),
                     model_id=model_id,
-                    model_version=version_info["version_number"],
+                    model_iteration=iteration_info.iteration,
                 ),
             )
 
@@ -510,7 +521,6 @@ class PPOTraining:
                 episode_rewards.append(torch.vstack(trial_reward).sum())
 
                 # Publish the newly trained version every 100 steps
-                # print(f"Iter #{iter_idx}: step: {len(actions)}")
                 if len(actions) >= self._cfg.num_steps * self._cfg.epoch_num_trials + 1:
                     # Update model parameters
                     policy_loss, value_loss = await self.train_step(
@@ -522,7 +532,7 @@ class PPOTraining:
                     actions = []
                     rewards = []
                     dones = []
-                    if iter_idx % 1 == 0:
+                    if iter_idx % 100 == 0:
                         # Compute average rewards for last 100 episodes
                         avg_rewards = await self.compute_average_reward(episode_rewards)
                         log.info(
@@ -530,7 +540,7 @@ class PPOTraining:
                         )
 
                         run_session.log_metrics(
-                            model_version_number=version_info["version_number"],
+                            model_iteration=iteration_info.iteration,
                             policy_loss=policy_loss.item(),
                             value_loss=value_loss.item(),
                             rewards=avg_rewards.item(),
@@ -538,7 +548,11 @@ class PPOTraining:
 
                     # Publish the newly updated model
                     self.model.iter_idx = iter_idx
-                    version_info = await run_session.model_registry.publish_version(self.model)
+                    serialized_model = PPOModel.serialize_model(self.model)
+                    iteration_info = await run_session.model_registry.store_model(
+                        name=model_id,
+                        model=serialized_model,
+                    )
 
     async def train_step(
         self,

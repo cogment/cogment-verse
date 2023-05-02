@@ -2,6 +2,7 @@ defaults:
   - services: local_base_services
   - services/environment: lunar_lander
   - services/actor: random
+  - run/experiment_tracker: mlflow
   - run: play
   - _self_
 
@@ -12,4 +13,3 @@ hydra:
     num: 0
 run:
   run_id: ${generate_name:run_id}_${hydra:job.num}
-  mlflow_tracking_uri: http://localhost:3000

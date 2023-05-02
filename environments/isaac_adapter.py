@@ -16,13 +16,14 @@
 # pylint: disable=E0401
 
 import os
-import isaacgymenvs
-import torch
-import cogment
-import numpy as np
 
-from cogment_verse.specs import EnvironmentSpecs
+import cogment
+import isaacgymenvs
+import numpy as np
+import torch
+
 from cogment_verse.constants import PLAYER_ACTOR_CLASS, TEACHER_ACTOR_CLASS
+from cogment_verse.specs import EnvironmentSpecs
 
 # configure pygame to use a dummy video server to be able to render headlessly
 os.environ["SDL_VIDEODRIVER"] = "dummy"
@@ -34,7 +35,6 @@ class Environment:
         self.gym_env_name = cfg.env_name
         print("self.gym_env_name = ", self.gym_env_name)
 
-        # gym_env = gym.make(self.gym_env_name)
         self.gym_env = isaacgymenvs.make(
             seed=0,
             task=self.gym_env_name,

@@ -47,19 +47,20 @@ Cogment verse includes environments from:
 
    - `swig`, which is required for the Box2d gym environments, it can be installed using `apt-get install swig` on ubuntu or `brew install swig` on macOS
    - `python3-opencv`, which is required on ubuntu systems, it can be installed using `apt-get install python3-opencv`
+   - `libosmesa6-dev` and `patchelf` are required to run the environment libraries using `mujoco`. They can be installed using `apt-get install libosmesa6-dev patchelf`.
 
-4. Create and activate a virtual environment by runnning
-
+4. Create and activate a virtual environment
    ```console
    $ python -m venv .venv
    $ source .venv/bin/activate
    ```
 
-5. Install the python dependencies by running
+5. Install the python dependencies. For petting zoo's Atari games, [additional installation](/docs/development_setup.md#petting-zoo-atari-games) is required after this step
    ```console
    $ pip install -r requirements.txt
+   $ pip install SuperSuit==3.7.0
    ```
-6. In another terminal, launch a mlflow server on port 3000 by running
+6. In another terminal, launch a mlflow server on port 3000
    ```console
    $ source .venv/bin/activate
    $ python -m simple_mlflow
@@ -109,6 +110,21 @@ Here are a few examples:
   ```console
   $ python -m main +experiment=simple_dqn/connect_four +run.hill_training_trials_ratio=0.05
   ```
+- Petting Zoo's  [Atari Pong Environment](https://pettingzoo.farama.org/environments/atari/pong/)
+
+  Example #1: Self-training
+  ```console
+  $ python -m main +experiment=ppo_atari_pz/pong_pz
+  ```
+  Example #2: Training with human's demonstrations
+  ```console
+  $ python -m main +experiment=ppo_atari_pz/hill_pong_pz
+  ```
+  Example #3: Training with human's feedback
+  ```console
+  $ python -m main +experiment=ppo_atari_pz/hfb_pong_pz
+  ```
+  NOTE: Example 2&3 require users to open Chrome and navigate to http://localhost:8080 in order to provide either demonstrations or feedback.
 
 ## Isaac gym
 
@@ -131,6 +147,9 @@ If you want to use Isaac Gym, use python3.8 (not python3.9)
 (please open a pull request to add missing entries)
 
 ## Docker
+
+1. Install Docker 23.0.1
+2. Install docker compose plugin v2.16.0. Docker Compose commands may not work with earlier versions.
 
 To run cogment verse from docker containers:
 
@@ -160,13 +179,29 @@ To run cogment verse from docker containers:
    $ docker compose run --service-ports cogment_verse +experiment=simple_bc/mountain_car
    ```
 
-   To specify the orchestrator's web endpoint port, set the environment variables `ORCHESTRATOR_WEB_PORT`
+3.
+   In case the default ports to access the web app, the orchestrator's web endpoint as well as mlflow are not available, you can specify alternates using the following environment variables. The default port values are the following:
+   - `WEB_PORT=8080`
+   - `ORCHESTRATOR_WEB_PORT=9000`
+   - `MLFLOW_PORT=3000`
+
+   For example, to use a different port for the web app and mlflow, use the command:
 
    ```console
-   $ ORCHESTRATOR_WEB_PORT=9000 docker compose run --service-ports cogment_verse
+   $ WEB_PORT=8081 MLFLOW_PORT=5000 docker compose run --service-ports cogment_verse
    ```
 
-3. Open Chrome (other web browser might work but haven't tested) and navigate to http://localhost:8080
+4. Open Chrome (other web browser might work but haven't tested) and navigate to http://localhost:8080
+
+### Docker on Remote Instance
+To run the docker version on a remote instance, make sure that the default ports are available. See the section above to pass a different combination of ports. Additionally, in order to connect to the remotly hosted web app from your browser, you must pass the public address of the host instance through the `WEB_HOST` environment variable.
+
+For example, from the remote instance, run the command:
+```console
+$ WEB_HOST=[public ip address] docker compose run --service-ports cogment_verse
+```
+
+Open Chrome (other web browser might work but haven't tested) and navigate to http://[public ip address]:8080
 
 ### Troubleshooting
 

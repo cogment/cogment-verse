@@ -1,0 +1,37 @@
+# @package _global_
+defaults:
+  - override /services/actor:
+      - simple_dqn
+      - random
+  - override /services/environment: connect_four
+  - override /run/experiment_tracker: simple
+
+run:
+  run_id: connect_four_self_training
+  class_name: actors.simple_dqn.SimpleDQNSelfPlayTraining
+  seed: 618
+
+  # Archiving
+  archive_model: True
+  archive_frequency: 100 # Unit: steps
+
+  # Training Params
+  num_epochs: 1
+  epoch_num_training_trials: 2 # Unit: trials
+  epoch_num_validation_trials: 2 # Unit: trials
+  num_parallel_trials: 2 # Unit: trials
+  learning_starts: ${run.batch_size} # Unit: steps
+  target_update_frequency: 20 # Unit: steps
+  buffer_size: 10000 # Unit: steps
+  train_frequency: 10 # Unit: steps
+  model_update_frequency: 10 # Unit: steps
+
+  # Network Params
+  value_network:
+    num_hidden_nodes: [64, 64]
+  learning_rate: 0.0005
+  discount_factor: 0.99
+  batch_size: 64
+  epsilon_schedule_start: 1
+  epsilon_schedule_end: 0.05
+  epsilon_schedule_duration_ratio: 0.75

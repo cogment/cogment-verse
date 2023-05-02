@@ -1,0 +1,22 @@
+# @package _global_
+defaults:
+  - override /services/actor:
+      - simple_a2c
+  - override /services/environment: cartpole
+  - override /run/experiment_tracker: simple
+
+run:
+  class_name: actors.simple_a2c.SimpleA2CTraining
+  seed: 618
+  num_epochs: 2
+  epoch_num_trials: 4
+  num_parallel_trials: 2
+  learning_rate: 0.01
+  actor_network:
+    num_hidden_nodes: 32
+  critic_network:
+    num_hidden_nodes: 32
+  discount_factor: 0.95
+  entropy_loss_coef: 0.05
+  value_loss_coef: 1.0
+  action_loss_coef: 0.1

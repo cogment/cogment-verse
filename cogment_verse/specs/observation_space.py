@@ -12,12 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from gym.spaces import utils, Dict
-
 from data_pb2 import Observation as PbObservation  # pylint: disable=import-error
+from gym.spaces import Dict, utils
 
 from .encode_rendered_frame import encode_rendered_frame
-from .ndarray_serialization import serialize_ndarray, deserialize_ndarray
+from .ndarray_serialization import deserialize_ndarray, serialize_ndarray
+
 
 # pylint: disable=attribute-defined-outside-init
 class Observation:
@@ -51,6 +51,8 @@ class Observation:
         rendered_frame=None,
         current_player=None,
         overridden_players=None,
+        game_player_name=None,
+        action_value=None,
     ):
         """
         Observation constructor.
@@ -66,6 +68,8 @@ class Observation:
             assert rendered_frame is None
             assert current_player is None
             assert overridden_players is None
+            assert game_player_name is None
+            assert action_value is None
             self._pb_observation = pb_observation
             return
 
@@ -76,6 +80,8 @@ class Observation:
         self._pb_observation = PbObservation(
             current_player=current_player,
             overridden_players=overridden_players,
+            game_player_name=game_player_name,
+            action_value=action_value,
         )
 
     def _compute_flat_value(self):
@@ -150,6 +156,20 @@ class Observation:
             return []
         return overridden_players
 
+    @property
+    def game_player_name(self):
+        if not self._pb_observation.HasField("game_player_name"):
+            return None
+
+        return self._pb_observation.game_player_name
+
+    @property
+    def action_value(self):
+        if not self._pb_observation.HasField("action_value"):
+            return None
+
+        return self._pb_observation.action_value
+
 
 class ObservationSpace:
     """
@@ -184,7 +204,16 @@ class ObservationSpace:
         # Other configuration
         self.render_width = render_width
 
-    def create(self, value=None, action_mask=None, rendered_frame=None, current_player=None, overridden_players=None):
+    def create(
+        self,
+        value=None,
+        action_mask=None,
+        rendered_frame=None,
+        current_player=None,
+        overridden_players=None,
+        game_player_name=None,
+        action_value=None,
+    ):
         """
         Create an Observation
         """
@@ -196,6 +225,8 @@ class ObservationSpace:
             rendered_frame=rendered_frame,
             current_player=current_player,
             overridden_players=overridden_players,
+            game_player_name=game_player_name,
+            action_value=action_value,
         )
 
     def serialize(
@@ -223,10 +254,13 @@ class ObservationSpace:
             rendered_frame=serialized_rendered_frame,
             overridden_players=observation.overridden_players,
             current_player=observation.current_player,
+            game_player_name=observation.game_player_name,
+            action_value=observation.action_value,
         )
 
     def deserialize(self, pb_observation):
         """
         Deserialize an Observation from an Observation protobuf message
         """
+
         return Observation(self.gym_space, self.action_mask_gym_space, pb_observation=pb_observation)

@@ -5,14 +5,14 @@ services:
         dockerfile: Dockerfile
     image: cogment_verse:local
     ports:
-      - "3000:3000"
+      - ${MLFLOW_PORT:-3000}:${MLFLOW_PORT:-3000}
     volumes:
       - type: bind
         source: .cogment_verse
         target: /cogment_verse_work_dir
         bind:
           create_host_path: true
-    command: python -m simple_mlflow
+    command: python -m simple_mlflow --port=${MLFLOW_PORT:-3000}
 
   cogment_verse:
     build:
@@ -20,7 +20,7 @@ services:
         dockerfile: Dockerfile
     image: cogment_verse:local
     ports:
-      - "8080:8080"
+      - ${WEB_PORT:-8080}:${WEB_PORT:-8080}
       - ${ORCHESTRATOR_WEB_PORT:-9000}:${ORCHESTRATOR_WEB_PORT:-9000}
     volumes:
       - type: bind
@@ -30,4 +30,9 @@ services:
           create_host_path: true
     depends_on:
       - mlflow
-    command: python -m main run.mlflow_tracking_uri=http://mlflow:3000 services.orchestrator.web_port=${ORCHESTRATOR_WEB_PORT:-9000} services.orchestrator.web_endpoint=http://localhost:${ORCHESTRATOR_WEB_PORT:-9000}
+    entrypoint: >
+      python -m main
+      run.experiment_tracker.mlflow_tracking_uri=http://mlflow:${MLFLOW_PORT:-3000}
+      services.web.port=${WEB_PORT:-8080}
+      services.orchestrator.web_port=${ORCHESTRATOR_WEB_PORT:-9000}
+      services.orchestrator.web_endpoint=http://${WEB_HOST:-localhost}:${ORCHESTRATOR_WEB_PORT:-9000}

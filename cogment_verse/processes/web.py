@@ -16,10 +16,10 @@ import logging
 import os
 import time
 
-from ..web import server_main, generate, npm_command, create_dev_server_popen_kwargs
+from ..services_directory import ServiceType
+from ..web import create_dev_server_popen_kwargs, generate, npm_command, server_main
 from .cogment_verse_process import CogmentVerseProcess
 from .popen_process import PopenProcess
-from ..services_directory import ServiceType
 
 log = logging.getLogger(__name__)
 
