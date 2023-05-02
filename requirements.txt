@@ -26,6 +26,11 @@ pytest~=6.2.5
 pytest-benchmark~=4.0.0
 pytest-timeout~=2.1.0
 
+# robosuite
+robosuite
+h5py
+
 # For Mlflow
 alembic==1.9.3
 SQLAlchemy<2
+

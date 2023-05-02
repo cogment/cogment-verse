@@ -1,0 +1,13 @@
+class_name: environments.robosuite_adapter.Environment
+env_name: blah
+port: ${generate_port:environments.robosuite_adapter.Environment}
+robosuite:
+    class: robo
+    params:
+      env_name: PickPlaceBread #PickPlaceSubtask
+      robots: Jaco
+      horizon: 200
+      reward_shaping: true
+      control_freq: 5
+      controller_name: OSC_POSE
+      controller_config_file: 'osc_pose.json' #jaco_osc_pose_5hz.json
