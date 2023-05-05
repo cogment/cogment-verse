@@ -18,8 +18,10 @@ def main():
     cwd_dir = os.getcwd()
     cog_verse = f"{cwd_dir}/.cogment_verse"
     mlflow_folder = f"{cog_verse}/mlflow"
+    mr_folder = f"{cog_verse}/model_registry"
     os.mkdir(cog_verse)
     os.mkdir(mlflow_folder)
+    os.mkdir(mr_folder)
 
     # Extract the source code to the main directory
     with tarfile.open(SOURCE_ARCHIVE, "r:gz") as tar:
@@ -102,6 +104,7 @@ def upload_to_s3_periodically(bucket: str, repo: str, interval: int = 300):
         main_dir=cwd_dir,
         output_path=cwd_dir,
         archive_name=archive_name,
+        source_dir_names=["mlflow", "model_registry"],
         ignore_folders=ignore_folders,
     )
     s3_key = f"{repo}/models/{archive_name}"
@@ -117,13 +120,19 @@ def upload_to_s3_periodically(bucket: str, repo: str, interval: int = 300):
 def upload_to_mlflow_db_s3_realtime(bucket: str, repo: str, interval: int = 5):
     """Upload mlflow data to S3"""
     cwd_dir = os.getcwd()
-    project_dir = f"{cwd_dir}/.cogment_verse/mlflow"
+    project_dir = f"{cwd_dir}/.cogment_verse"
     archive_name = "mlflow_db.tar.gz"
-    pack_archive(project_dir=project_dir, main_dir=cwd_dir, output_path=cwd_dir, archive_name=archive_name)
+    pack_archive(
+        project_dir=project_dir,
+        main_dir=cwd_dir,
+        output_path=cwd_dir,
+        source_dir_names=["mlflow"],
+        archive_name=archive_name,
+    )
 
     while True:
         local_path = f"{cwd_dir}/{archive_name}"
-        upload_to_s3(local_path, bucket, f"{repo}/mlflow/{archive_name}")
+        upload_to_s3(local_path=local_path, bucket=bucket, s3_key=f"{repo}/mlflow/{archive_name}")
         delete_archive(local_path)
         time.sleep(interval)
 
