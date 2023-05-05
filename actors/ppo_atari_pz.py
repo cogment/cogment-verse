@@ -411,9 +411,7 @@ class BasePPOTraining(ABC):
             np.random.seed(self._cfg.seed + i + num_updates)
             np.random.shuffle(global_idx)
             for i in range(0, num_obs, self._cfg.batch_size):
-                # Get data in batch. TODO: Send data to device (need to test with cuda)
-                # idx = np.random.randint(0, num_obs, self._cfg.batch_size)
-                # idx = np.random.choice(num_obs, self._cfg.batch_size, replace=False)
+                # Get data in batch
                 idx = global_idx[i : i + self._cfg.batch_size]
                 if len(idx) < self._cfg.batch_size:
                     break
@@ -457,11 +455,9 @@ class BasePPOTraining(ABC):
                 self.network_optimizer.step()
 
         # Decaying learning rate after each update
-        # self._cfg.learning_rate = max(self._cfg.lr_decay_factor * self._cfg.learning_rate, 0.000001)
-        # self.network_optimizer.param_groups[0]["lr"] = self._cfg.learning_rate
-        # self._cfg.clipping_coef = max(self._cfg.lr_decay_factor * self._cfg.clipping_coef, 0.05)
-        # # log.info(f"learning rate {self.network_optimizer.param_groups[0]['lr']}")
-        # self.model.scheduler.step()
+        self._cfg.learning_rate = max(self._cfg.lr_decay_factor * self._cfg.learning_rate, 1e-5)
+        self.network_optimizer.param_groups[0]["lr"] = self._cfg.learning_rate
+        self._cfg.clipping_coef = max(self._cfg.lr_decay_factor * self._cfg.clipping_coef, 0.1)
 
         return policy_loss, value_loss
 
@@ -842,7 +838,7 @@ class PPOSelfTraining(BasePPOTraining):
                         num_updates=num_updates,
                     )
                     if num_updates % self._cfg.logging_interval == 0:
-                        log.info(f"Steps: #{total_steps} | Avg. reward: {avg_rewards.item()}")
+                        log.info(f"Steps: #{total_steps} | Avg. reward: {avg_rewards.item():.2f}")
 
                     # Publish the newly updated model
                     self.model.iter_idx = iter_idx

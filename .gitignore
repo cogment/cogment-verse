@@ -44,5 +44,5 @@ ngrok.yaml
 .python-version
 
 *.ipynb_checkpoints/
-*.ipynb
+*.ipynb_output/
 *.pem
