@@ -517,7 +517,7 @@ class DQNTraining:
                     steps_per_seconds = 100 / (end_time - start_time)
                     start_time = end_time
                     run_session.log_metrics(
-                        model_version_number=version_info["version_number"],
+                        model_iteration_number=iteration_info["iteration_number"],
                         loss=loss.item(),
                         q_values=action_values.mean().item(),
                         batch_avg_reward=data.reward.mean().item(),
