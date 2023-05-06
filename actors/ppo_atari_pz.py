@@ -82,7 +82,7 @@ class PolicyValueNetwork(torch.nn.Module):
             initialize_layer(torch.nn.Linear(64 * 7 * 7, 512)),
             torch.nn.ReLU(),
         )
-        self.actor = initialize_layer(torch.nn.Linear(512, num_actions), 0.01)
+        self.actor = initialize_layer(torch.nn.Linear(512, num_actions), 0.05)
         self.value = initialize_layer(torch.nn.Linear(512, 1), 1)
 
     def get_value(self, observation: torch.Tensor) -> torch.Tensor:
@@ -428,10 +428,11 @@ class BasePPOTraining(ABC):
                 value = self.model.network.get_value(observation)
                 # value_loss = torch.nn.functional.mse_loss(return_, value) * self._cfg.value_loss_coef
                 value_loss_unclipped = (value - return_) ** 2
-                value_clipped = old_value + torch.clamp(value - old_value, -0.1, 0.1)
-                value_loss_clipped = (value_clipped - return_) ** 2
-                value_loss_max = torch.max(value_loss_unclipped, value_loss_clipped)
-                value_loss = value_loss_max.mean() * self._cfg.value_loss_coef
+                # value_clipped = old_value + torch.clamp(value - old_value, -0.1, 0.1)
+                # value_loss_clipped = (value_clipped - return_) ** 2
+                # value_loss_max = torch.max(value_loss_unclipped, value_loss_clipped)
+                # value_loss = value_loss_max.mean() * self._cfg.value_loss_coef
+                value_loss = value_loss_unclipped.mean() * self._cfg.value_loss_coef
 
                 # Get action distribution & the log-likelihood
                 dist = self.model.network.get_action(observation)
@@ -455,7 +456,7 @@ class BasePPOTraining(ABC):
                 self.network_optimizer.step()
 
         # Decaying learning rate after each update
-        self._cfg.learning_rate = max(self._cfg.lr_decay_factor * self._cfg.learning_rate, 1e-5)
+        self._cfg.learning_rate = max(self._cfg.lr_decay_factor * self._cfg.learning_rate, 1e-6)
         self.network_optimizer.param_groups[0]["lr"] = self._cfg.learning_rate
         self._cfg.clipping_coef = max(self._cfg.lr_decay_factor * self._cfg.clipping_coef, 0.1)
 
@@ -838,7 +839,7 @@ class PPOSelfTraining(BasePPOTraining):
                         num_updates=num_updates,
                     )
                     if num_updates % self._cfg.logging_interval == 0:
-                        log.info(f"Steps: #{total_steps} | Avg. reward: {avg_rewards.item():.2f}")
+                        log.info(f"Iteration: #{iter_idx} | Steps: #{total_steps} | Avg. reward: {avg_rewards.item():.2f}")
 
                     # Publish the newly updated model
                     self.model.iter_idx = iter_idx

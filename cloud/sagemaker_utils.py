@@ -2,6 +2,7 @@ from typing import Union, List
 import os
 import tarfile
 import boto3
+from botocore.exceptions import ClientError
 
 
 def is_valid_source_dir(dir_name: str) -> bool:
@@ -127,24 +128,24 @@ def download_from_s3(bucket: str, s3_key: str, local_path: str):
     """
     s3_storage = boto3.client("s3")
     try:
+        # Make sure the local directory exists
+        os.makedirs(os.path.dirname(local_path), exist_ok=True)
         s3_storage.download_file(bucket, s3_key, local_path)
-        print(f"File downloaded successfully from S3: {bucket}/{s3_key}")
     except Exception as error:
-        print(f"Error downloading file from S3: {bucket}/{s3_key}")
-        print(error)
-    print(f"Downloaded s3://{bucket}/{s3_key} to {local_path}")
+        print(f"Error downloading file from S3: {bucket}/{s3_key}. Details: {error}")
 
 
-def download_and_extract_data_from_s3(bucket: str, s3_key: str, local_path: str) -> None:
+def download_and_extract_data_from_s3(bucket: str, s3_key: str, download_path: str, archive_name: str, unpack_path: str) -> None:
     """Download the data from s3, extract to local path, and delete the packed file"""
     # Download the data
-    download_from_s3(bucket=bucket, s3_key=s3_key, local_path=local_path)
+    archive_path = f"{download_path}/{archive_name}"
+    download_from_s3(bucket=bucket, s3_key=s3_key, local_path=archive_path)
 
     # Uppack the data
-    unpack_archive(archive_path=local_path, source_dir=local_path)
+    unpack_archive(archive_path=archive_path, source_dir=unpack_path)
 
     # Delete the packed file
-    delete_archive(archive_path=local_path)
+    delete_archive(archive_path=archive_path)
 
 def pack_files(input_folder, output_folder, archive_name, ignore_folders=None):
     """"""
@@ -164,6 +165,26 @@ def pack_files(input_folder, output_folder, archive_name, ignore_folders=None):
             for file in files:
                 file_path = os.path.join(root, file)
                 tar.add(file_path, arcname=os.path.relpath(file_path, input_folder))
+
+def create_bucket_if_not_exists(bucket_name: str, region: str):
+    """Create a s3 bucket if not exisits"""
+    s3_storage = boto3.resource('s3')
+    try:
+        s3_storage.meta.client.head_bucket(Bucket=bucket_name)
+        print(f"Bucket '{bucket_name}' already exists.")
+    except ClientError as err:
+        error_code = err.response['Error']['Code']
+        if error_code == '404':
+            print(f"Bucket '{bucket_name}' does not exist. Creating the bucket...")
+            s3_storage.create_bucket(
+                Bucket=bucket_name,
+                CreateBucketConfiguration={
+                    'LocationConstraint': region
+                }
+            )
+            print(f"Bucket '{bucket_name}' created.")
+        else:
+            print(f"Error checking bucket '{bucket_name}': {err}")
 
 
 if __name__ == "__main__":

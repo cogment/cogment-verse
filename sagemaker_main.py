@@ -14,7 +14,7 @@ SOURCE_DIR = os.path.join(PREFIX, "code/")
 
 def main():
     """API for runing cogment verse on Sagemaker"""
-    # Create cogment verse folder
+    # Create cogment verse folder.
     cwd_dir = os.getcwd()
     cog_verse = f"{cwd_dir}/.cogment_verse"
     mlflow_folder = f"{cog_verse}/mlflow"
@@ -22,9 +22,6 @@ def main():
     os.mkdir(cog_verse)
     os.mkdir(mlflow_folder)
     os.mkdir(mr_folder)
-    with open(os.path.join(mlflow_folder, "test.txt"), "w") as file:
-        file.write("Hello, world!\n")
-        file.write("This is an example text file.")
 
     # Extract the source code to the main directory
     with tarfile.open(SOURCE_ARCHIVE, "r:gz") as tar:
@@ -127,16 +124,20 @@ def upload_to_mlflow_db_s3_realtime(bucket: str, repo: str, interval: int = 5):
     archive_name = "mlflow_db.tar.gz"
 
     while True:
-        pack_archive(
-            project_dir=project_dir,
-            main_dir=cwd_dir,
-            output_path=cwd_dir,
-            source_dir_names=["mlflow"],
-            archive_name=archive_name,
-        )
-        local_path = f"{cwd_dir}/{archive_name}"
-        upload_to_s3(local_path=local_path, bucket=bucket, s3_key=f"{repo}/mlflow/{archive_name}")
-        delete_archive(local_path)
+        try:
+            pack_archive(
+                project_dir=project_dir,
+                main_dir=cwd_dir,
+                output_path=cwd_dir,
+                source_dir_names=["mlflow"],
+                archive_name=archive_name,
+            )
+            local_path = f"{cwd_dir}/{archive_name}"
+            upload_to_s3(local_path=local_path, bucket=bucket, s3_key=f"{repo}/mlflow/{archive_name}")
+            delete_archive(local_path)
+        except Exception as err_msg:
+            print(f"Error: {err_msg}")
+            continue
         time.sleep(interval)
 
 
