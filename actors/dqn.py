@@ -268,7 +268,7 @@ class DQNActor:
                     and self.samples_since_update % config.model_update_frequency == 0
                 ):
                     model, _, _ = await actor_session.model_registry.retrieve_version(
-                        DQNModel, config.model_id, config.model_version
+                        DQNModel, config.model_id, config.model_iteration
                     )
                     model.network.eval()
                     self.samples_since_update = 0
