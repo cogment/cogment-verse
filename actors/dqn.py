@@ -192,12 +192,8 @@ class DQNModel(Model):
             "num_input": self._num_input,
             "num_output": self._num_output,
             "num_hidden_nodes": json.dumps(self._num_hidden_nodes),
+            "num_samples_seen": self.num_samples_seen,
         }
-
-    def save(self, model_data_f):
-        torch.save((self.network.state_dict(), self.epsilon), model_data_f)
-
-        return {"num_samples_seen": self.num_samples_seen}
 
     @staticmethod
     def serialize_model(model) -> bytes:
@@ -254,7 +250,7 @@ class DQNActor:
         assert isinstance(action_space.gym_space, Discrete)
 
         model, _, _ = await actor_session.model_registry.retrieve_version(
-            DQNModel, config.model_id, config.model_version
+            DQNModel, config.model_id, config.model_iteration
         )
         model.network.eval()
 
@@ -392,7 +388,11 @@ class DQNTraining:
             epsilon=epsilon_schedule(0),
             dtype=self._dtype,
         )
-        _model_info, version_info = await run_session.model_registry.publish_initial_version(model)
+        serialized_model = DQNModel.serialize_model(model)
+        iteration_info = await run_session.model_registry.publish_model(
+            name=model_id,
+            model=serialized_model,
+        )
 
         run_session.log_params(
             self._cfg,
@@ -506,7 +506,11 @@ class DQNTraining:
                 if step_idx % self._cfg.target_update_frequency == 0:
                     target_network.load_state_dict(model.network.state_dict())
 
-                version_info = await run_session.model_registry.publish_version(model)
+                serialized_model = DQNModel.serialize_model(model)
+                iteration_info = await run_session.model_registry.publish_model(
+                    name=model_id,
+                    model=serialized_model,
+                )
 
                 if step_idx % 100 == 0:
                     end_time = time.time()
@@ -521,4 +525,9 @@ class DQNTraining:
                         steps_per_seconds=steps_per_seconds,
                     )
 
-        version_info = await run_session.model_registry.publish_version(model, archived=True)
+        serialized_model = DQNModel.serialize_model(model)
+        iteration_info = await run_session.model_registry.store_model(
+            name=model_id,
+            model=serialized_model,
+        )
+

@@ -8,10 +8,6 @@ run:
   class_name: actors.simple_dqn.DQNTraining
   seed: 618
 
-  # Archiving
-  archive_model: True
-  archive_frequency: 20000                    # Unit: steps
-
   # Training Params
   num_trials: 10000                           # Unit: trials
   num_parallel_trials: 10                     # Unit: trials
