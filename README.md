@@ -16,7 +16,7 @@ approaches.
 Cogment verse includes environments from:
 
 - [OpenAI Gym](https://gym.openai.com),
-- [Petting Zoo](https://www.pettingzoo.ml).
+- [Petting Zoo](https://pettingzoo.farama.org).
 - [MinAtar](https://github.com/kenjyoung/MinAtar).
 - [Procgen](https://github.com/openai/procgen).
 
