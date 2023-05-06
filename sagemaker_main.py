@@ -22,6 +22,9 @@ def main():
     os.mkdir(cog_verse)
     os.mkdir(mlflow_folder)
     os.mkdir(mr_folder)
+    with open(os.path.join(mlflow_folder, "test.txt"), "w") as file:
+        file.write("Hello, world!\n")
+        file.write("This is an example text file.")
 
     # Extract the source code to the main directory
     with tarfile.open(SOURCE_ARCHIVE, "r:gz") as tar:
@@ -58,7 +61,7 @@ def main():
     # Define process for uploading mlflow data for real-time tracking
     upload_mlflow_process = multiprocessing.Process(
         target=upload_to_mlflow_db_s3_realtime,
-        args=(s3_bucket, repo),
+        args=(s3_bucket, repo, ),
     )
 
     # Start all processes
@@ -99,17 +102,17 @@ def upload_to_s3_periodically(bucket: str, repo: str, interval: int = 300):
     project_dir = f"{cwd_dir}/.cogment_verse"
     archive_name = "model.tar.gz"
     ignore_folders = ["bin"]
-    pack_archive(
-        project_dir=project_dir,
-        main_dir=cwd_dir,
-        output_path=cwd_dir,
-        archive_name=archive_name,
-        source_dir_names=["mlflow", "model_registry"],
-        ignore_folders=ignore_folders,
-    )
     s3_key = f"{repo}/models/{archive_name}"
 
     while True:
+        pack_archive(
+            project_dir=project_dir,
+            main_dir=cwd_dir,
+            output_path=cwd_dir,
+            archive_name=archive_name,
+            source_dir_names=["mlflow", "model_registry"],
+            ignore_folders=ignore_folders,
+        )
         local_path = f"{cwd_dir}/{archive_name}"
         upload_to_s3(local_path=local_path, bucket=bucket, s3_key=s3_key)
         delete_archive(local_path)
@@ -122,15 +125,15 @@ def upload_to_mlflow_db_s3_realtime(bucket: str, repo: str, interval: int = 5):
     cwd_dir = os.getcwd()
     project_dir = f"{cwd_dir}/.cogment_verse"
     archive_name = "mlflow_db.tar.gz"
-    pack_archive(
-        project_dir=project_dir,
-        main_dir=cwd_dir,
-        output_path=cwd_dir,
-        source_dir_names=["mlflow"],
-        archive_name=archive_name,
-    )
 
     while True:
+        pack_archive(
+            project_dir=project_dir,
+            main_dir=cwd_dir,
+            output_path=cwd_dir,
+            source_dir_names=["mlflow"],
+            archive_name=archive_name,
+        )
         local_path = f"{cwd_dir}/{archive_name}"
         upload_to_s3(local_path=local_path, bucket=bucket, s3_key=f"{repo}/mlflow/{archive_name}")
         delete_archive(local_path)

@@ -146,6 +146,25 @@ def download_and_extract_data_from_s3(bucket: str, s3_key: str, local_path: str)
     # Delete the packed file
     delete_archive(archive_path=local_path)
 
+def pack_files(input_folder, output_folder, archive_name, ignore_folders=None):
+    """"""
+    if ignore_folders is None:
+        ignore_folders = []
+    # Ensure the output folder exists
+    if not os.path.exists(output_folder):
+        os.makedirs(output_folder)
+
+    # Create the output tar file path
+    tar_path = os.path.join(output_folder, f"{archive_name}.tar")
+
+    # Create a tar archive
+    with tarfile.open(tar_path, "w") as tar:
+        for root, dirs, files in os.walk(input_folder):
+            dirs[:] = [d for d in dirs if d not in ignore_folders]
+            for file in files:
+                file_path = os.path.join(root, file)
+                tar.add(file_path, arcname=os.path.relpath(file_path, input_folder))
+
 
 if __name__ == "__main__":
     project_dir = os.getcwd()
