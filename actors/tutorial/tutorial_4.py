@@ -97,11 +97,7 @@ class SimpleBCModel(Model):
         return stream.getvalue()
 
     @classmethod
-<<<<<<< HEAD
-    def deserialize_model(cls, serialized_model, model_id, version_number) -> SimpleBCModel:
-=======
     def deserialize_model(cls, serialized_model) -> SimpleBCModel:
->>>>>>> main
         stream = io.BytesIO(serialized_model)
         (policy_network_state_dict, model_user_data) = torch.load(stream)
 
@@ -135,18 +131,10 @@ class SimpleBCActor:
         observation_space = environment_specs.get_observation_space()
         action_space = environment_specs.get_action_space(seed=config.seed)
 
-<<<<<<< HEAD
-        serialized_model = await actor_session.model_registry.retrieve_model(config.model_id, config.model_version)
-        model = SimpleBCModel.deserialize_model(serialized_model, config.model_id, config.model_version)
-
-        log.info(f"Starting trial with model v{model.version_number}")
-
-=======
         # Get model
         model = await SimpleBCModel.retrieve_model(
             actor_session.model_registry, config.model_id, config.model_iteration
         )
->>>>>>> main
         model.policy_network.eval()
 
         log.info(f"Starting trial with model v{model.iteration}")
@@ -344,11 +332,7 @@ class SimpleBCTraining:
                     model=serialized_model,
                 )
                 run_session.log_metrics(
-<<<<<<< HEAD
-                    model_version_number=iteration_info.iteration,
-=======
                     model_iteration=iteration_info.iteration,
->>>>>>> main
                     loss=loss.item(),
                     total_samples=len(observations),
                 )

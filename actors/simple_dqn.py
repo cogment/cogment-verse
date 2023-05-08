@@ -169,7 +169,6 @@ class SimpleDQNActor:
                     model = await SimpleDQNModel.retrieve_model(
                         actor_session.model_registry, config.model_id, config.model_iteration
                     )
-                    model = SimpleDQNModel.deserialize_model(serialized_model, config.model_id, config.model_version)
                     model.network.eval()
 
                 if rng.random() < model.epsilon:
