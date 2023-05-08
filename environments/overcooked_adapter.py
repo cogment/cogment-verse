@@ -59,6 +59,11 @@ class OvercookedEnvironment:
             for (actor_idx, actor) in enumerate(actors)
             if actor.actor_class_name == PLAYER_ACTOR_CLASS
         ]
+        non_player_actors = [
+            (actor_idx, actor.actor_name)
+            for (actor_idx, actor) in enumerate(actors)
+            if actor.actor_class_name != PLAYER_ACTOR_CLASS
+        ]
 
         session_cfg = environment_session.config
 
@@ -78,6 +83,15 @@ class OvercookedEnvironment:
                 overridden_players=[],
             )
             observations.append((player_actor_name, observation_space.serialize(observation)))
+
+        for _, player_actor_name in non_player_actors:
+            observation = observation_space.create(
+                value=gym_observation[0],  # Dummy observation for non-player actors
+                rendered_frame=gym_env.render() if session_cfg.render else None,
+                overridden_players=[],
+            )
+            observations.append((player_actor_name, observation_space.serialize(observation)))
+
 
         environment_session.start(observations)
         async for event in environment_session.all_events():
@@ -102,6 +116,14 @@ class OvercookedEnvironment:
                 for player_actor_idx, player_actor_name in player_actors:
                     observation = observation_space.create(
                         value=gym_observation["both_agent_obs"][player_actor_idx],
+                        rendered_frame=gym_env.render() if session_cfg.render else None,
+                        overridden_players=[],
+                    )
+                    observations.append((player_actor_name, observation_space.serialize(observation)))
+
+                for _, player_actor_name in non_player_actors:
+                    observation = observation_space.create(
+                        value=gym_observation["both_agent_obs"][0],  # Dummy observation for non-player actors
                         rendered_frame=gym_env.render() if session_cfg.render else None,
                         overridden_players=[],
                     )
