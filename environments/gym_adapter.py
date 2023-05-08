@@ -29,7 +29,7 @@ class Environment:
     def __init__(self, cfg):
         self.gym_env_name = cfg.env_name
 
-        gym_env = gym.make(self.gym_env_name)
+        gym_env = gym.make(self.gym_env_name, new_step_api=True)
 
         self.env_specs = EnvironmentSpecs.create_homogeneous(
             num_players=1,
@@ -67,7 +67,9 @@ class Environment:
 
         session_cfg = environment_session.config
 
-        gym_env = gym.make(self.gym_env_name, render_mode="single_rgb_array" if session_cfg.render else None)
+        gym_env = gym.make(
+            self.gym_env_name, render_mode="single_rgb_array" if session_cfg.render else None, new_step_api=True
+        )
         observation_space = self.env_specs.get_observation_space(session_cfg.render_width)
         action_space = self.env_specs.get_action_space()
 
@@ -100,7 +102,7 @@ class Environment:
                 if isinstance(gym_env.action_space, gym.spaces.Box):
                     action_value = np.clip(action_value, gym_env.action_space.low, gym_env.action_space.high)
 
-                gym_observation, reward, done, _info = gym_env.step(action_value)
+                gym_observation, reward, terminated, truncated, _info = gym_env.step(action_value)
 
                 observation = observation_space.create(
                     value=gym_observation,
@@ -117,7 +119,7 @@ class Environment:
                         to=[player_actor_name],
                     )
 
-                if done:
+                if terminated or truncated:
                     # The trial ended
                     environment_session.end(observations)
                 elif event.type != cogment.EventType.ACTIVE:

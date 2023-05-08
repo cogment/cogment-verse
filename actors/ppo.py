@@ -165,7 +165,7 @@ class PPOModel(Model):
         learning_rate: Learning rate
         n_iter: Number of iterations
         dtype: Data type objects
-        version_number: Version number of model
+        iteration: Version number of model
         policy_network: Policy network that outputs an action given a state
         value_network: Value network measure the the quality of action given a state
         policy_optimizer: Optimizer for policy network
@@ -190,11 +190,11 @@ class PPOModel(Model):
         learning_rate: float = 0.01,
         n_iter: int = 1000,
         dtype=torch.float,
-        version_number: int = 0,
+        iteration: int = 0,
         state_norm: bool = False,
     ) -> None:
 
-        super().__init__(model_id, version_number)
+        super().__init__(model_id, iteration)
         self._environment_implementation = environment_implementation
         self._num_input = num_input
         self._num_output = num_output
@@ -248,9 +248,14 @@ class PPOModel(Model):
         if self._state_norm:
             self.state_normalization = Normalization(dtype=self._dtype, nums=self._num_input)
 
+    def eval(self) -> None:
+        self.policy_network.eval()
+        self.value_network.eval()
+
     def get_model_user_data(self) -> dict:
         """Get user model"""
         return {
+            "model_id": self.model_id,
             "environment_implementation": self._environment_implementation,
             "num_input": self._num_input,
             "num_output": self._num_output,
@@ -274,13 +279,12 @@ class PPOModel(Model):
         return stream.getvalue()
 
     @classmethod
-    def deserialize_model(cls, serialized_model, model_id, version_number) -> PPOModel:
+    def deserialize_model(cls, serialized_model) -> PPOModel:
         stream = io.BytesIO(serialized_model)
         (policy_network_state_dict, value_network_state_dict, model_user_data) = torch.load(stream)
 
         model = cls(
-            model_id=model_id,
-            version_number=version_number,
+            model_id=model_user_data["model_id"],
             environment_implementation=model_user_data["environment_implementation"],
             num_input=int(model_user_data["num_input"]),
             num_output=int(model_user_data["num_output"]),
@@ -319,8 +323,8 @@ class PPOActor:
         assert config.environment_specs.num_players == 1
 
         # Get model
-        serialized_model = await actor_session.model_registry.retrieve_model(config.model_id, config.model_version)
-        model = PPOModel.deserialize_model(serialized_model, config.model_id, config.model_version)
+        model = await PPOModel.retrieve_model(actor_session.model_registry, config.model_id, config.model_iteration)
+        model.eval()
 
         async for event in actor_session.all_events():
             if event.observation and event.type == cogment.EventType.ACTIVE:
@@ -476,7 +480,7 @@ class PPOTraining:
                     run_id=run_session.run_id,
                     environment_specs=self._environment_specs.serialize(),
                     model_id=model_id,
-                    model_version=iteration_info.iteration,
+                    model_iteration=iteration_info.iteration,
                 ),
             )
 
@@ -536,7 +540,7 @@ class PPOTraining:
                         )
 
                         run_session.log_metrics(
-                            model_version_number=iteration_info.iteration,
+                            model_iteration=iteration_info.iteration,
                             policy_loss=policy_loss.item(),
                             value_loss=value_loss.item(),
                             rewards=avg_rewards.item(),

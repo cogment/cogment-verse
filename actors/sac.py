@@ -97,10 +97,10 @@ class SACModel(Model):
         value_network_hidden_nodes: int,
         alpha: float,
         dtype: torch.FloatTensor = torch.float32,
-        version_number: int = 0,
+        iteration: int = 0,
         device: str = "cpu",
     ) -> None:
-        super().__init__(model_id, version_number)
+        super().__init__(model_id, iteration)
         self.model_id = model_id
         self.environment_implementation = environment_implementation
         self.num_inputs = num_inputs
@@ -109,7 +109,7 @@ class SACModel(Model):
         self.value_network_hidden_nodes = value_network_hidden_nodes
         self.alpha = alpha
         self.dtype = dtype
-        self.version_number = version_number
+        self.iteration = iteration
         self.device = device
 
         # Networks
@@ -153,9 +153,17 @@ class SACModel(Model):
         else:
             self._device = torch.device("cpu")
 
+    def eval(self) -> None:
+        self.policy_network.eval()
+        self.value_network_1.eval()
+        self.value_network_2.eval()
+        self.target_network_1.eval()
+        self.target_network_2.eval()
+
     def get_model_user_data(self) -> dict:
         """Get user model"""
         return {
+            "model_id": self.model_id,
             "environment_implementation": self.environment_implementation,
             "num_inputs": self.num_inputs,
             "num_outputs": self.num_outputs,
@@ -183,7 +191,7 @@ class SACModel(Model):
         return stream.getvalue()
 
     @classmethod
-    def deserialize_model(cls, serialized_model, model_id, version_number) -> SACModel:
+    def deserialize_model(cls, serialized_model) -> SACModel:
         stream = io.BytesIO(serialized_model)
         (
             policy_network_state_dict,
@@ -195,8 +203,7 @@ class SACModel(Model):
         ) = torch.load(stream)
 
         model = SACModel(
-            model_id=model_id,
-            version_number=version_number,
+            model_id=model_user_data["model_id"],
             environment_implementation=model_user_data["environment_implementation"],
             num_inputs=int(model_user_data["num_inputs"]),
             num_outputs=int(model_user_data["num_outputs"]),
@@ -277,10 +284,10 @@ class SACActor:
         scale = torch.tensor((action_max - action_min) / 2.0, dtype=self._dtype)
         bias = torch.tensor((action_max + action_min) / 2.0, dtype=self._dtype)
 
-        # Retrieve the model
-        model, _, _ = await actor_session.model_registry.retrieve_version(
-            SACModel, config.model_id, config.model_version
-        )
+        # Get model
+        model = await SACModel.retrieve_model(actor_session.model_registry, config.model_id, config.model_iteration)
+        model.eval()
+
         async for event in actor_session.all_events():
             if event.observation and event.type == cogment.EventType.ACTIVE:
                 observation = observation_space.deserialize(event.observation.observation)
@@ -457,7 +464,7 @@ class SACTraining:
                     run_id=run_session.run_id,
                     environment_specs=self._environment_specs.serialize(),
                     model_id=model_id,
-                    model_version=version_info["version_number"],
+                    model_iteration=version_info["iteration"],
                     seed=self._cfg.seed + trial_idx,
                 ),
             )
@@ -519,7 +526,7 @@ class SACTraining:
                     steps_per_seconds = 100 / (end_time - start_time)
                     start_time = end_time
                     run_session.log_metrics(
-                        model_version_number=version_info["version_number"],
+                        model_iteration=version_info["iteration"],
                         value_loss=value_loss,
                         log_alpha=log_alpha,
                         policy_loss=policy_loss,

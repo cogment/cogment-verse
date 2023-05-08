@@ -40,9 +40,9 @@ class SimpleA2CModel(Model):
         actor_network_num_hidden_nodes=64,  # ToDo: should be an array
         critic_network_num_hidden_nodes=64,
         dtype=torch.float,
-        version_number=0,
+        iteration=0,
     ):
-        super().__init__(model_id, version_number)
+        super().__init__(model_id, iteration)
         self._dtype = dtype
         self._environment_implementation = environment_implementation
         self._num_input = num_input
@@ -74,8 +74,13 @@ class SimpleA2CModel(Model):
         self.epoch_idx = 0
         self.total_samples = 0
 
+    def eval(self) -> None:
+        self.actor_network.eval()
+        self.critic_network.eval()
+
     def get_model_user_data(self):
         return {
+            "model_id": self.model_id,
             "environment_implementation": self._environment_implementation,
             "num_input": self._num_input,
             "num_output": self._num_output,
@@ -99,13 +104,12 @@ class SimpleA2CModel(Model):
         return stream.getvalue()
 
     @classmethod
-    def deserialize_model(cls, serialized_model, model_id, version_number) -> SimpleA2CModel:
+    def deserialize_model(cls, serialized_model) -> SimpleA2CModel:
         stream = io.BytesIO(serialized_model)
         (actor_network_state_dict, critic_network_state_dict, model_user_data) = torch.load(stream)
 
         model = cls(
-            model_id=model_id,
-            version_number=version_number,
+            model_id=model_user_data["model_id"],
             environment_implementation=model_user_data["environment_implementation"],
             num_input=int(model_user_data["num_input"]),
             num_output=int(model_user_data["num_output"]),
@@ -136,10 +140,11 @@ class SimpleA2CActor:
         observation_space = environment_specs.get_observation_space()
         action_space = environment_specs.get_action_space(seed=config.seed)
 
-        serialized_model = await actor_session.model_registry.retrieve_model(config.model_id, config.model_version)
-        model = SimpleA2CModel.deserialize_model(serialized_model, config.model_id, config.model_version)
-        model.actor_network.eval()
-        model.critic_network.eval()
+        # Get model
+        model = await SimpleA2CModel.retrieve_model(
+            actor_session.model_registry, config.model_id, config.model_iteration
+        )
+        model.eval()
 
         async for event in actor_session.all_events():
             if event.observation and event.type == cogment.EventType.ACTIVE:
@@ -277,7 +282,7 @@ class SimpleA2CTraining:
                                     config=AgentConfig(
                                         run_id=run_session.run_id,
                                         model_id=model_id,
-                                        model_version=iteration_info.iteration,
+                                        model_iteration=iteration_info.iteration,
                                         environment_specs=self._environment_specs.serialize(),
                                     ),
                                 )
@@ -352,7 +357,7 @@ class SimpleA2CTraining:
             )
 
             run_session.log_metrics(
-                model_version_number=iteration_info.iteration,
+                model_iteration=iteration_info.iteration,
                 epoch_idx=epoch_idx,
                 entropy_loss=entropy_loss.item(),
                 value_loss=value_loss.item(),

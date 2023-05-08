@@ -16,7 +16,7 @@ approaches.
 Cogment verse includes environments from:
 
 - [OpenAI Gym](https://gym.openai.com),
-- [Petting Zoo](https://www.pettingzoo.ml).
+- [Petting Zoo](https://pettingzoo.farama.org).
 - [MinAtar](https://github.com/kenjyoung/MinAtar).
 - [Procgen](https://github.com/openai/procgen).
 
@@ -58,6 +58,7 @@ Cogment verse includes environments from:
 5. Install the python dependencies. For petting zoo's Atari games, [additional installation](/docs/development_setup.md#petting-zoo-atari-games) is required after this step
    ```console
    $ pip install -r requirements.txt
+   $ pip install SuperSuit==3.7.0
    ```
 6. In another terminal, launch a mlflow server on port 3000
    ```console

@@ -52,9 +52,9 @@ class SimpleBCModel(Model):
         num_input,
         num_output,
         policy_network_num_hidden_nodes=64,
-        version_number=0,
+        iteration=0,
     ):
-        super().__init__(model_id, version_number)
+        super().__init__(model_id, iteration)
 
         self._dtype = torch.float
         self._environment_implementation = environment_implementation
@@ -76,6 +76,7 @@ class SimpleBCModel(Model):
 
     def get_model_user_data(self):
         return {
+            "model_id": self.model_id,
             "environment_implementation": self._environment_implementation,
             "num_input": self._num_input,
             "num_output": self._num_output,
@@ -96,13 +97,16 @@ class SimpleBCModel(Model):
         return stream.getvalue()
 
     @classmethod
+<<<<<<< HEAD
     def deserialize_model(cls, serialized_model, model_id, version_number) -> SimpleBCModel:
+=======
+    def deserialize_model(cls, serialized_model) -> SimpleBCModel:
+>>>>>>> main
         stream = io.BytesIO(serialized_model)
         (policy_network_state_dict, model_user_data) = torch.load(stream)
 
         model = SimpleBCModel(
-            model_id=model_id,
-            version_number=version_number,
+            model_id=model_user_data["model_id"],
             environment_implementation=model_user_data["environment_implementation"],
             num_input=int(model_user_data["num_input"]),
             num_output=int(model_user_data["num_output"]),
@@ -131,12 +135,21 @@ class SimpleBCActor:
         observation_space = environment_specs.get_observation_space()
         action_space = environment_specs.get_action_space(seed=config.seed)
 
+<<<<<<< HEAD
         serialized_model = await actor_session.model_registry.retrieve_model(config.model_id, config.model_version)
         model = SimpleBCModel.deserialize_model(serialized_model, config.model_id, config.model_version)
 
         log.info(f"Starting trial with model v{model.version_number}")
 
+=======
+        # Get model
+        model = await SimpleBCModel.retrieve_model(
+            actor_session.model_registry, config.model_id, config.model_iteration
+        )
+>>>>>>> main
         model.policy_network.eval()
+
+        log.info(f"Starting trial with model v{model.iteration}")
 
         async for event in actor_session.all_events():
             if event.observation and event.type == cogment.EventType.ACTIVE:
@@ -250,7 +263,7 @@ class SimpleBCTraining:
                     run_id=run_session.run_id,
                     environment_specs=self._environment_specs.serialize(),
                     model_id=model_id,
-                    model_version=-1,
+                    model_iteration=-1,
                 ),
             )
 
@@ -331,7 +344,11 @@ class SimpleBCTraining:
                     model=serialized_model,
                 )
                 run_session.log_metrics(
+<<<<<<< HEAD
                     model_version_number=iteration_info.iteration,
+=======
+                    model_iteration=iteration_info.iteration,
+>>>>>>> main
                     loss=loss.item(),
                     total_samples=len(observations),
                 )

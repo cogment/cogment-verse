@@ -3,9 +3,7 @@ defaults:
   - override /services/actor:
       - random
   - override /services/environment: overcooked/cramped_room
-  - override /services/experiment_tracker@run.experiment_tracker: simple
   - _self_
-
 
 run:
   class_name: runs.play.PlayRun

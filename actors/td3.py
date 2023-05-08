@@ -99,9 +99,9 @@ class TD3Model(Model):
         expl_noise,
         random_steps,
         dtype=torch.float,
-        version_number=0,
+        iteration=0,
     ):
-        super().__init__(model_id, version_number)
+        super().__init__(model_id, iteration)
         self._dtype = dtype
         self._environment_implementation = environment_implementation
         self._num_input = num_input
@@ -121,8 +121,15 @@ class TD3Model(Model):
         self.epoch_idx = 0
         self.total_samples = 0
 
+    def eval(self) -> None:
+        self.actor.eval()
+        self.actor_target.eval()
+        self.critic.eval()
+        self.critic_target.eval()
+
     def get_model_user_data(self):
         return {
+            "model_id": self.model_id,
             "environment_implementation": self._environment_implementation,
             "num_input": self._num_input,
             "num_output": self._num_output,
@@ -150,7 +157,7 @@ class TD3Model(Model):
         return stream.getvalue()
 
     @classmethod
-    def deserialize_model(cls, serialized_model, model_id, version_number) -> TD3Model:
+    def deserialize_model(cls, serialized_model) -> TD3Model:
         stream = io.BytesIO(serialized_model)
         (
             actor_state_dict,
@@ -162,8 +169,7 @@ class TD3Model(Model):
         ) = torch.load(stream)
 
         model = cls(
-            model_id=model_id,
-            version_number=version_number,
+            model_id=model_user_data["model_id"],
             environment_implementation=model_user_data["environment_implementation"],
             num_input=int(model_user_data["num_input"]),
             num_output=int(model_user_data["num_output"]),
@@ -201,8 +207,9 @@ class TD3Actor:
 
         assert isinstance(action_space.gym_space, Box)
 
-        serialized_model = await actor_session.model_registry.retrieve_model(config.model_id, config.model_version)
-        model = TD3Model.deserialize_model(serialized_model, config.model_id, config.model_version)
+        # Get model
+        model = await TD3Model.retrieve_model(actor_session.model_registry, config.model_id, config.model_iteration)
+        model.eval()
 
         async for event in actor_session.all_events():
             if event.observation and event.type == cogment.EventType.ACTIVE:
@@ -358,7 +365,7 @@ class TD3Training:
                                     run_id=run_session.run_id,
                                     seed=self._cfg.seed + trial_idx,
                                     model_id=model_id,
-                                    model_version=-1,
+                                    model_iteration=-1,
                                     model_update_frequency=self._cfg.policy_freq,
                                     environment_specs=self._environment_specs.serialize(),
                                 ),
@@ -456,7 +463,7 @@ class TD3Training:
                 steps_per_seconds = 100 / (end_time - start_time)
                 start_time = end_time
                 run_session.log_metrics(
-                    model_version_number=iteration_info.iteration,
+                    model_iteration=iteration_info.iteration,
                     steps_per_seconds=steps_per_seconds,
                 )
 
