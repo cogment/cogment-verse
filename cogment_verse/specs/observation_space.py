@@ -12,8 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from cogment_verse.constants import DEFAULT_RENDERED_WIDTH
 from data_pb2 import Observation as PbObservation  # pylint: disable=import-error
 from gym.spaces import Dict, utils
+import numpy as np
 
 from .encode_rendered_frame import encode_rendered_frame
 from .ndarray_serialization import deserialize_ndarray, serialize_ndarray
@@ -184,7 +186,7 @@ class ObservationSpace:
             Maximum width for the serialized rendered frame in observations
     """
 
-    def __init__(self, space, render_width=1024):
+    def __init__(self, space, render_width=DEFAULT_RENDERED_WIDTH):
         """
         ObservationSpace constructor.
         Shouldn't be called directly, prefer the factory function of EnvironmentSpecs.
@@ -246,7 +248,9 @@ class ObservationSpace:
 
         serialized_rendered_frame = None
         if observation.rendered_frame is not None:
-            serialized_rendered_frame = encode_rendered_frame(observation.rendered_frame, self.render_width)
+            serialized_rendered_frame = encode_rendered_frame(
+                rendered_frame=observation.rendered_frame, max_size=self.render_width
+            )
 
         return PbObservation(
             value=serialized_value,

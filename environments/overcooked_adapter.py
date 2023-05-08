@@ -14,16 +14,14 @@
 
 import logging
 import os
-import time
 
 import cogment
 import gym
 import numpy as np
-from overcooked_ai_py.mdp.overcooked_env import DEFAULT_ENV_PARAMS
-from overcooked_ai_py.mdp.overcooked_env import Overcooked, OvercookedEnv
+from overcooked_ai_py.mdp.overcooked_env import DEFAULT_ENV_PARAMS, Overcooked, OvercookedEnv
 from overcooked_ai_py.mdp.overcooked_mdp import OvercookedGridworld
 
-from cogment_verse.constants import PLAYER_ACTOR_CLASS, TEACHER_ACTOR_CLASS
+from cogment_verse.constants import PLAYER_ACTOR_CLASS
 from cogment_verse.specs import EnvironmentSpecs
 
 # configure pygame to use a dummy video server to be able to render headlessly
@@ -39,11 +37,11 @@ class OvercookedEnvironment:
 
         base_mdp = OvercookedGridworld.from_layout_name(self.cfg.layout)
         env = OvercookedEnv.from_mdp(base_mdp, **DEFAULT_ENV_PARAMS)
-        gym_env = Overcooked(base_env=env, featurize_fn=env.featurize_state_mdp)
+        gym_env = Overcooked(base_env=env, featurize_fn=env.featurize_state_mdp, baselines_reproducible=True)
 
         self.env_specs = EnvironmentSpecs.create_homogeneous(
-            num_players=2,
-            turn_based=False,
+            num_players=self.cfg.num_players,
+            turn_based=self.cfg.turn_based,
             observation_space=gym_env.observation_space,
             action_space=gym_env.action_space,
         )
@@ -66,26 +64,24 @@ class OvercookedEnvironment:
 
         base_mdp = OvercookedGridworld.from_layout_name(self.cfg.layout)
         env = OvercookedEnv.from_mdp(base_mdp, **DEFAULT_ENV_PARAMS)
-        gym_env = Overcooked(base_env=env, featurize_fn=env.featurize_state_mdp)
+        gym_env = Overcooked(base_env=env, featurize_fn=env.featurize_state_mdp, baselines_reproducible=True)
+        gym_observation = gym_env.reset()["both_agent_obs"]
 
         observation_space = self.env_specs.get_observation_space(session_cfg.render_width)
         action_space = self.env_specs.get_action_space()
 
-        gym_observation = gym_env.reset()["both_agent_obs"]
+        observations = []
+        for player_actor_idx, player_actor_name in player_actors:
+            observation = observation_space.create(
+                value=gym_observation[player_actor_idx],
+                rendered_frame=gym_env.render() if session_cfg.render else None,
+                overridden_players=[],
+            )
+            observations.append((player_actor_name, observation_space.serialize(observation)))
 
-        observation = observation_space.create(
-            value=gym_observation,
-            rendered_frame=gym_env.render() if session_cfg.render else None,
-        )
-
-        environment_session.start([("*", observation_space.serialize(observation))])
+        environment_session.start(observations)
         async for event in environment_session.all_events():
             if event.actions:
-
-                # print(f"players in env event: {len(event.actions)}")
-                print(f"env agent_idx: {gym_env.agent_idx}")
-                print(f"player_idx: {0} | action: {action_space.deserialize(event.actions[0].action).value}")
-                print(f"player_idx: {1} | action: {action_space.deserialize(event.actions[1].action).value}")
 
                 joint_action = []
                 for player_actor_idx, player_actor_name in player_actors:
@@ -98,20 +94,18 @@ class OvercookedEnvironment:
                     if isinstance(gym_env.action_space, gym.spaces.Box):
                         action_value = np.clip(action_value, gym_env.action_space.low, gym_env.action_space.high)
 
-                    # print(f"player_action: {player_action}")
-                    # print(f"ACTION: {action_value}")
-
                     joint_action.append(action_value)
 
                 gym_observation, reward, done, _info = gym_env.step((joint_action))
 
-                observation = observation_space.create(
-                    value=gym_observation["both_agent_obs"],
-                    rendered_frame=gym_env.render() if session_cfg.render else None,
-                    overridden_players=[],
-                )
-
-                observations = [("*", observation_space.serialize(observation))]
+                observations = []
+                for player_actor_idx, player_actor_name in player_actors:
+                    observation = observation_space.create(
+                        value=gym_observation["both_agent_obs"][player_actor_idx],
+                        rendered_frame=gym_env.render() if session_cfg.render else None,
+                        overridden_players=[],
+                    )
+                    observations.append((player_actor_name, observation_space.serialize(observation)))
 
                 if reward is not None:
                     environment_session.add_reward(

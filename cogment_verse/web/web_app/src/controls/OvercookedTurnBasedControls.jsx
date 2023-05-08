@@ -29,7 +29,7 @@ const ACTION_SPACE = new Space({
 });
 
 
-export const OvercookedTurnBasedEnvironments = ["environments.overcooked_adapter.OvercookedEnvironment/overcooked-turn-based"];
+export const OvercookedTurnBasedEnvironments = ["environments.overcooked_adapter.OvercookedEnvironment/overcooked"];
 export const OvercookedTurnBasedControls = ({ sendAction, fps = 1, actorClass, observation, ...props }) => {
   const currentPlayer = observation?.currentPlayer;
   const [paused, setPaused] = useState(false);

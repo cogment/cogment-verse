@@ -25,7 +25,7 @@ import {
 } from "./GymLunarLanderContinuousControls";
 import { GymLunarLanderControls, GymLunarLanderEnvironments } from "./GymLunarLanderControls";
 import { GymMountainCarControls, GymMountainCarEnvironments } from "./GymMountainCarControls";
-import { OvercookedControls, OvercookedEnvironments } from "./OvercookedControls";
+import { OvercookedRealTimeControls, OvercookedRealTimeEnvironments } from "./OvercookedRealTimeControls";
 import { OvercookedTurnBasedControls, OvercookedTurnBasedEnvironments } from "./OvercookedTurnBasedControls";
 import { RealTimeObserverControls } from "./RealTimeObserverControls";
 import { TetrisControls, TetrisEnvironments } from "./TetrisControls";
@@ -41,7 +41,7 @@ const CONTROLS = [
   { environments: ConnectFourEnvironments, component: ConnectFourControls },
   { environments: AtariPongPzEnvironments, component: AtariPongPzControls },
   { environments: AtariPongPzHfbEnvironments, component: AtariPongPzFeedback },
-  { environments: OvercookedEnvironments, component: OvercookedControls },
+  { environments: OvercookedRealTimeEnvironments, component: OvercookedRealTimeControls },
   { environments: OvercookedTurnBasedEnvironments, component: OvercookedTurnBasedControls },
 ];
 

@@ -2,14 +2,12 @@
 defaults:
   - override /services/actor:
       - random
-  - override /services/environment: overcooked
+  - override /services/environment: overcooked/cramped_room
   - override /services/experiment_tracker@run.experiment_tracker: simple
   - _self_
 
-
 run:
   class_name: runs.play.PlayRun
-  agent_class: RandomActor
   observer: True
   num_trials: 50
   seed: 12
@@ -18,9 +16,3 @@ run:
       implementation: actors.random_actor.RandomActor
     - name: player_2
       implementation: actors.random_actor.RandomActor
-    - name: player_3
-      implementation: client
-
-  services:
-    environment:
-      layout: cramped_room

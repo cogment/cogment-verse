@@ -1,6 +1,0 @@
-class_name: environments.overcooked_adapter.OvercookedEnvironment
-env_name: overcooked
-port: ${generate_port:environments.overcooked_adapter.OvercookedEnvironment}
-
-layout: cramped_room
-turn_based=: False

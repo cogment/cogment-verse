@@ -2,7 +2,7 @@
 defaults:
   - override /services/actor:
       - random
-  - override /services/environment: overcooked
+  - override /services/environment: overcooked/cramped_room
   - override /services/experiment_tracker@run.experiment_tracker: simple
   - _self_
 
@@ -18,7 +18,3 @@ run:
       implementation: client
     - name: player_2
       implementation: actors.random_actor.RandomActor
-
-  services:
-    environment:
-      layout: cramped_room

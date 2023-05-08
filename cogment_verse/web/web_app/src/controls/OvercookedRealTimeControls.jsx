@@ -28,8 +28,8 @@ const ACTION_SPACE = new Space({
   });
 
 
-export const OvercookedEnvironments = ["environments.overcooked_adapter.OvercookedEnvironment/overcooked"];
-export const OvercookedControls = ({ sendAction, fps = 10, actorClass, ...props }) => {
+export const OvercookedRealTimeEnvironments = ["environments.overcooked_adapter.OvercookedEnvironment/overcooked-real-time"];
+export const OvercookedRealTimeControls = ({ sendAction, fps = 10, actorClass, ...props }) => {
   const [paused, setPaused] = useState(false);
   const togglePause = useCallback(() => setPaused((paused) => !paused), [setPaused]);
   useDocumentKeypressListener("p", togglePause);

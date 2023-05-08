@@ -30,8 +30,14 @@ const serializeNdArray = (dtype, shape, flattenedArray) => {
     case DType.DTYPE_INT8:
       arrayValue = new Int8Array(flattenedArray);
       break;
+    case DType.DTYPE_INT32:
+      arrayValue = new Int32Array(flattenedArray);
+      break;
     case DType.DTYPE_FLOAT32:
       arrayValue = new Float32Array(flattenedArray);
+      break;
+    case DType.DTYPE_FLOAT64:
+      arrayValue = new Float64Array(flattenedArray);
       break;
     default:
       throw new Error(`Unsupported dtype [${dtype}]`);
@@ -54,8 +60,17 @@ const deserializeNdArray = (serializedArray) => {
     case DType.DTYPE_INT8:
       typedArray = new Int8Array(rawData.buffer, rawData.byteOffset, length);
       break;
-      case DType.DTYPE_FLOAT64:
-      case DType.DTYPE_FLOAT32:
+    case DType.DTYPE_INT32:
+      if (rawData.byteOffset % 4 !== 0) {
+        // original buffer is not aligne, we need to copy
+        const alignedData = Uint8Array.from(rawData);
+        typedArray = new Int32Array(alignedData.buffer, alignedData.byteOffset, length);
+      } else {
+        typedArray = new Int32Array(rawData.buffer, rawData.byteOffset, length);
+      }
+      break;
+    case DType.DTYPE_FLOAT64:
+    case DType.DTYPE_FLOAT32:
       if (rawData.byteOffset % 4 !== 0) {
         // original buffer is not aligne, we need to copy
         const alignedData = Uint8Array.from(rawData);
@@ -174,7 +189,7 @@ const unflatten = (space, flattenedValue) => {
     return deepUnflattenArray(space.box.low.shape, flattenedValue);
   }
   if (space.multiBinary) {
-    return deepUnflattenArray(space.multiBinary.n.int32Data, flattenedValue);  
+    return deepUnflattenArray(space.multiBinary.n.int32Data, flattenedValue);
   }
   if (space.multiDiscrete) {
     return deepUnflattenArray(space.multiDiscrete.nvec.shape, flattenedValue);

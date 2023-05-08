@@ -15,7 +15,7 @@
 import { Outlet } from "react-router-dom";
 
 const Root = () => (
-  <div className="max-w-screen-md mx-auto min-h-screen">
+  <div className="max-w-screen-xl mx-auto min-h-fit">
     <Outlet />
   </div>
 );
