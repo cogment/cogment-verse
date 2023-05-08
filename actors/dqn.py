@@ -14,13 +14,13 @@
 
 # pylint: disable=E0611
 
+from __future__ import annotations
 import copy
 import io
 import time
 import json
 import logging
 from typing import List, Tuple, Union
-from __future__ import annotations
 import numpy as np
 
 import cogment
