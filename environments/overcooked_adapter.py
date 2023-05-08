@@ -92,7 +92,6 @@ class OvercookedEnvironment:
             )
             observations.append((player_actor_name, observation_space.serialize(observation)))
 
-
         environment_session.start(observations)
         async for event in environment_session.all_events():
             if event.actions:
