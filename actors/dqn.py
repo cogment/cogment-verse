@@ -174,7 +174,7 @@ class DQNModel(Model):
         dtype=torch.float,
         iteration=0,
     ):
-        super().__init__(model_id, version_number)
+        super().__init__(model_id, iteration)
         self._dtype = dtype
         self._environment_implementation = environment_implementation
         self._num_input = num_input
