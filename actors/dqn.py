@@ -172,7 +172,7 @@ class DQNModel(Model):
         num_hidden_nodes,
         epsilon,
         dtype=torch.float,
-        version_number=0,
+        iteration=0,
     ):
         super().__init__(model_id, version_number)
         self._dtype = dtype
