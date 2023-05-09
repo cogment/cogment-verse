@@ -190,6 +190,7 @@ class DQNModel(Model):
 
     def get_model_user_data(self):
         return {
+            "model_id": self.model_id,
             "environment_implementation": self._environment_implementation,
             "num_input": self._num_input,
             "num_output": self._num_output,
@@ -251,8 +252,8 @@ class DQNActor:
 
         assert isinstance(action_space.gym_space, Discrete)
 
-        model, _, _ = await actor_session.model_registry.retrieve_version(
-            DQNModel, config.model_id, config.model_iteration
+        model = await DQNModel.retrieve_model(
+            actor_session.model_registry, config.model_id, config.model_iteration
         )
         model.network.eval()
 
@@ -447,7 +448,7 @@ class DQNTraining:
                                     run_id=run_session.run_id,
                                     seed=self._cfg.seed + trial_idx,
                                     model_id=model_id,
-                                    model_version=-1,
+                                    model_iteration=-1,
                                     model_update_frequency=self._cfg.model_update_frequency,
                                     environment_specs=self._environment_specs.serialize(),
                                 ),
