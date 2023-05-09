@@ -447,7 +447,7 @@ class DQNTraining:
                                     run_id=run_session.run_id,
                                     seed=self._cfg.seed + trial_idx,
                                     model_id=model_id,
-                                    model_version=-1,
+                                    model_iteration=-1,
                                     model_update_frequency=self._cfg.model_update_frequency,
                                     environment_specs=self._environment_specs.serialize(),
                                 ),
