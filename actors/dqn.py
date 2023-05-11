@@ -34,8 +34,6 @@ from cogment_verse.constants import PLAYER_ACTOR_CLASS
 
 from cogment_verse import Model, TorchReplayBuffer  # pylint: disable=abstract-class-instantiated
 
-torch.manual_seed(0)
-np.random.seed(0)
 torch.multiprocessing.set_sharing_strategy("file_system")
 
 log = logging.getLogger(__name__)
@@ -51,7 +49,6 @@ def create_linear_schedule(start, end, duration):
 
 
 # Acknowledgements: The networks and associated utils are adapted from RLHive
-
 
 def calculate_output_dim(net, input_shape):
     if isinstance(input_shape, int):
@@ -398,7 +395,7 @@ class DQNTraining:
         )
 
         run_session.log_params(
-            self._cfg,
+            # self._cfg,
             model_id=model_id,
             environment_implementation=self._environment_specs.implementation,
         )
