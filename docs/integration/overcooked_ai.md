@@ -4,7 +4,7 @@ You can use the overcooked environment integration with cogment-verse by install
 
 To install the forked repository, in addition to the original installation instructions, run the following command:
 ```console
-pip install overcooked_requirements.txt
+pip install -r overcooked_requirements.txt
 ```
 
 The integration uses the `play` run implementation as defined in
