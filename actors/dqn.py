@@ -50,6 +50,7 @@ def create_linear_schedule(start, end, duration):
 
 # Acknowledgements: The networks and associated utils are adapted from RLHive
 
+
 def calculate_output_dim(net, input_shape):
     if isinstance(input_shape, int):
         input_shape = (input_shape,)
@@ -249,9 +250,7 @@ class DQNActor:
 
         assert isinstance(action_space.gym_space, Discrete)
 
-        model = await DQNModel.retrieve_model(
-            actor_session.model_registry, config.model_id, config.model_iteration
-        )
+        model = await DQNModel.retrieve_model(actor_session.model_registry, config.model_id, config.model_iteration)
         model.network.eval()
 
         async for event in actor_session.all_events():
