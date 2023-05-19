@@ -63,6 +63,7 @@ class PPOReplayBuffer:
         self.action_shape = action_shape
         self.dtype = dtype
         self.device = device
+        self.seed = seed
 
         # Initialize data storage
         self.observations = torch.zeros((self.capacity, *self.observation_shape), dtype=self.dtype)
@@ -72,7 +73,7 @@ class PPOReplayBuffer:
         self.log_probs = torch.zeros((self.capacity, 1), dtype=self.dtype)
         self._ptr = 0
         self.num_total = 0
-        self._rng = np.random.default_rng(seed)
+        self.count = 0
 
     def add(
         self,
@@ -90,13 +91,21 @@ class PPOReplayBuffer:
         self._ptr = (self._ptr + 1) % self.capacity
         self.num_total += 1
 
+    async def add_multi_samples(
+        self, trial_obs: list, trial_act: list, trial_adv: list, trial_val: list, trial_log_prob: list
+    ) -> None:
+        for (obs, act, adv, val, log_prob) in zip(trial_obs, trial_act, trial_adv, trial_val, trial_log_prob):
+            self.add(observation=obs, action=act, adv=adv, value=val, log_prob=log_prob)
+
+        self.count += 1
+
     def sample(self, num) -> PPOReplayBufferSample:
+        np.random.seed(self.seed + self.count)
         size = self.size()
         if size < num:
             indices = range(size)
         else:
-            indices = self._rng.choice(self.size(), size=num, replace=False)
-
+            indices = np.random.choice(self.size(), size=num, replace=False)
         return PPOReplayBufferSample(
             observation=self.observations[indices].to(self.device),
             action=self.actions[indices].to(self.device),
@@ -169,11 +178,11 @@ class TorchReplayBuffer:
             indices = self._rng.choice(self.size(), size=num, replace=False)
 
         return TorchReplayBufferSample(
-            observation=self.observation[indices],
-            next_observation=self.next_observation[indices],
-            action=self.action[indices],
-            reward=self.reward[indices],
-            done=self.done[indices],
+            observation=self.observation[indices].clone(),
+            next_observation=self.next_observation[indices].clone(),
+            action=self.action[indices].clone(),
+            reward=self.reward[indices].clone(),
+            done=self.done[indices].clone(),
         )
 
     def size(self):

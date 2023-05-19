@@ -17,6 +17,10 @@ from enum import Enum
 from random import choice
 
 import cogment
+from cogment.context import Context
+from cogment.control import Controller
+from cogment.datastore import Datastore
+from cogment.model_registry_v2 import ModelRegistry
 
 
 class ServiceType(Enum):
@@ -57,19 +61,19 @@ class ServiceDirectory:
 
         return [*self._directory[service_type.value].keys()]
 
-    async def get_datastore(self, context):
+    async def get_datastore(self, context: Context) -> Datastore:
         datastore = context.get_datastore(endpoint=cogment.Endpoint(self.get(ServiceType.TRIAL_DATASTORE)))
         if inspect.isawaitable(datastore):
             return await datastore
         return datastore
 
-    async def get_controller(self, context):
+    async def get_controller(self, context: Context) -> Controller:
         controller = context.get_controller(endpoint=cogment.Endpoint(self.get(ServiceType.ORCHESTRATOR)))
         if inspect.isawaitable(controller):
             return await controller
         return controller
 
-    async def get_model_registry(self, context):
+    async def get_model_registry(self, context: Context) -> ModelRegistry:
         registry = context.get_model_registry_v2(endpoint=cogment.Endpoint(self.get(ServiceType.MODEL_REGISTRY)))
         if inspect.isawaitable(registry):
             return await registry

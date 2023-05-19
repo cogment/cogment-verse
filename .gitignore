@@ -45,4 +45,7 @@ ngrok.yaml
 
 *.ipynb_checkpoints/
 *.ipynb_output/
-*.pem
+
+# Visualization
+case_study/
+

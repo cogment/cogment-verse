@@ -3,8 +3,9 @@ import multiprocessing
 import os
 import subprocess
 import tarfile
-from cloud.sagemaker_utils import upload_to_s3, pack_archive, delete_archive
 import time
+
+from cloud.sagemaker_utils import delete_archive, pack_archive, upload_to_s3
 
 PREFIX = "/opt/ml/"  # Sagemaker's required prefix
 PARAM_PATH = os.path.join(PREFIX, "input/config/")
@@ -58,7 +59,10 @@ def main():
     # Define process for uploading mlflow data for real-time tracking
     upload_mlflow_process = multiprocessing.Process(
         target=upload_to_mlflow_db_s3_realtime,
-        args=(s3_bucket, repo, ),
+        args=(
+            s3_bucket,
+            repo,
+        ),
     )
 
     # Start all processes
@@ -90,7 +94,7 @@ def main():
 
 def run_script(module_name, *args):
     """Execute Python script"""
-    subprocess.run(["python", "-m", module_name, *args])
+    subprocess.run(["python", "-m", module_name, *args], check=True)
 
 
 def upload_to_s3_periodically(bucket: str, repo: str, interval: int = 300):
@@ -135,7 +139,7 @@ def upload_to_mlflow_db_s3_realtime(bucket: str, repo: str, interval: int = 5):
             local_path = f"{cwd_dir}/{archive_name}"
             upload_to_s3(local_path=local_path, bucket=bucket, s3_key=f"{repo}/mlflow/{archive_name}")
             delete_archive(local_path)
-        except Exception as err_msg:
+        except ValueError as err_msg:
             print(f"Error: {err_msg}")
             continue
         time.sleep(interval)

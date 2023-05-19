@@ -1,6 +1,8 @@
-from typing import Union, List
 import os
 import tarfile
+import time
+from typing import List, Union
+
 import boto3
 from botocore.exceptions import ClientError
 
@@ -131,11 +133,13 @@ def download_from_s3(bucket: str, s3_key: str, local_path: str):
         # Make sure the local directory exists
         os.makedirs(os.path.dirname(local_path), exist_ok=True)
         s3_storage.download_file(bucket, s3_key, local_path)
-    except Exception as error:
+    except ClientError as error:
         print(f"Error downloading file from S3: {bucket}/{s3_key}. Details: {error}")
 
 
-def download_and_extract_data_from_s3(bucket: str, s3_key: str, download_path: str, archive_name: str, unpack_path: str) -> None:
+def download_and_extract_data_from_s3(
+    bucket: str, s3_key: str, download_path: str, archive_name: str, unpack_path: str
+) -> None:
     """Download the data from s3, extract to local path, and delete the packed file"""
     # Download the data
     archive_path = f"{download_path}/{archive_name}"
@@ -143,12 +147,14 @@ def download_and_extract_data_from_s3(bucket: str, s3_key: str, download_path: s
 
     # Uppack the data
     unpack_archive(archive_path=archive_path, source_dir=unpack_path)
+    time.sleep(0.5)
 
     # Delete the packed file
     delete_archive(archive_path=archive_path)
 
-def pack_files(input_folder, output_folder, archive_name, ignore_folders=None):
-    """"""
+
+def pack_files(input_folder, output_folder, archive_name, ignore_folders: str = None):
+    """Simple packing file"""
     if ignore_folders is None:
         ignore_folders = []
     # Ensure the output folder exists
@@ -166,44 +172,33 @@ def pack_files(input_folder, output_folder, archive_name, ignore_folders=None):
                 file_path = os.path.join(root, file)
                 tar.add(file_path, arcname=os.path.relpath(file_path, input_folder))
 
+
 def create_bucket_if_not_exists(bucket_name: str, region: str):
     """Create a s3 bucket if not exisits"""
-    s3_storage = boto3.resource('s3')
+    s3_storage = boto3.resource("s3")
     try:
         s3_storage.meta.client.head_bucket(Bucket=bucket_name)
         print(f"Bucket '{bucket_name}' already exists.")
     except ClientError as err:
-        error_code = err.response['Error']['Code']
-        if error_code == '404':
+        error_code = err.response["Error"]["Code"]
+        if error_code == "404":
             print(f"Bucket '{bucket_name}' does not exist. Creating the bucket...")
-            s3_storage.create_bucket(
-                Bucket=bucket_name,
-                CreateBucketConfiguration={
-                    'LocationConstraint': region
-                }
-            )
+            s3_storage.create_bucket(Bucket=bucket_name, CreateBucketConfiguration={"LocationConstraint": region})
             print(f"Bucket '{bucket_name}' created.")
         else:
             print(f"Error checking bucket '{bucket_name}': {err}")
 
 
-if __name__ == "__main__":
-    project_dir = os.getcwd()
-    source_dir_names = [
-        "actors",
-        "cogment_verse",
-        "config",
-        "environments",
-        "runs",
-        "tests",
-        "main.py",
-        "simple_mlflow.py",
-    ]
-    ignore_folders = ["node_modules"]
-    # package_source_code(project_dir=project_dir, source_dir_names=source_dir_names, ignore_folders=ignore_folders)
-    source_code_arv = f"{project_dir}/input/data/training/source_code.tar.gz"
-    mlflow_arv = f"{project_dir}/.congment_verse/mlflow/"
-    pack_archive(
-        project_dir=f"{project_dir}/.cogment_verse", source_dir_names=["mlflow"], archive_name="mlflow_db.tar.gz"
-    )
-    # unpack_archive(archive_path=f"{project_dir}/test_unpack/mlflow_db.tar.gz", source_dir=f"{project_dir}/test_unpack")
+def aws_creden_setup(profile_name: str) -> None:
+    """Setting access credential for AWS"""
+    # Profile setup
+    session = boto3.Session(profile_name=profile_name)
+
+    # Get the access key and secret key for the specified profile
+    credentials = session.get_credentials()
+    access_key = credentials.access_key
+    secret_key = credentials.secret_key
+
+    # Set the environment variables
+    os.environ["AWS_ACCESS_KEY_ID"] = access_key
+    os.environ["AWS_SECRET_ACCESS_KEY"] = secret_key
