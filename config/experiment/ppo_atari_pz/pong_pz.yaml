@@ -3,6 +3,7 @@ defaults:
   - override /services/actor:
       - ppo_atari_pz
   - override /services/environment: pong_pz
+  - override /run/experiment_tracker: simple
 
 run:
   class_name: actors.ppo_atari_pz.PPOSelfTraining
@@ -17,7 +18,7 @@ run:
   learning_starts: 1
   update_freq: 1
   num_rollout_steps: 128
-  max_training_steps: 20_000_000
+  max_training_steps: 300_000
   discount_factor: 0.99
   lambda_gae: 0.95
   device: cpu

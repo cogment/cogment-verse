@@ -91,10 +91,10 @@ class PPOReplayBuffer:
         self._ptr = (self._ptr + 1) % self.capacity
         self.num_total += 1
 
-    async def add_multi_samples(
+    def add_multi_samples(
         self, trial_obs: list, trial_act: list, trial_adv: list, trial_val: list, trial_log_prob: list
     ) -> None:
-        for (obs, act, adv, val, log_prob) in zip(trial_obs, trial_act, trial_adv, trial_val, trial_log_prob):
+        for obs, act, adv, val, log_prob in zip(trial_obs, trial_act, trial_adv, trial_val, trial_log_prob):
             self.add(observation=obs, action=act, adv=adv, value=val, log_prob=log_prob)
 
         self.count += 1

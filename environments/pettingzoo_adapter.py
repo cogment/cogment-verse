@@ -201,7 +201,7 @@ class ClassicEnvironment(Environment):
 
                 observations = [("*", observation_space.serialize(observation))]
 
-                for (rewarded_player_pz_agent, pz_reward) in pz_env.rewards.items():
+                for rewarded_player_pz_agent, pz_reward in pz_env.rewards.items():
                     if pz_reward == 0:
                         continue
                     rewarded_player_actor_name = next(
@@ -279,7 +279,6 @@ class AtariEnvironment(Environment):
         )
 
         environment_session.start([("*", observation_space.serialize(observation))])
-        step = 0
         async for event in environment_session.all_events():
             if not event.actions:
                 continue
@@ -295,7 +294,6 @@ class AtariEnvironment(Environment):
             pz_player_name = next(pz_agent_iterator)
             actor_idx = pz_player_names[pz_player_name]
             actor_name = actor_names[actor_idx]
-            step += 1
 
             observation = observation_space.create(
                 value=pz_observation,
@@ -312,6 +310,7 @@ class AtariEnvironment(Environment):
             environment_session.add_reward(value=pz_reward, confidence=1.0, to=[actor_name])
             if termination or truncation:
                 # The trial ended
+                # log.info("Environement done")
                 environment_session.end(observations)
             elif event.type != cogment.EventType.ACTIVE:
                 # The trial termination has been requested
@@ -405,6 +404,7 @@ class HumanFeedbackAtariEnvironment(Environment):
 
             observations = [("*", observation_space.serialize(observation))]
             environment_session.add_reward(value=pz_reward, confidence=1.0, to=[rewarded_actor_name])
+
             if termination or truncation:
                 # The trial ended
                 environment_session.end(observations)

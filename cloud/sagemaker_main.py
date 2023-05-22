@@ -61,7 +61,7 @@ def main():
     )
 
     # Define process for uploading model to S3
-    upload_process = multiprocessing.Process(
+    upload_model_process = multiprocessing.Process(
         target=upload_to_s3_periodically,
         args=(
             s3_bucket,
@@ -82,28 +82,23 @@ def main():
     # Start all processes
     mlflow_process.start()
     cogverse_process.start()
-    upload_process.start()
+    upload_model_process.start()
     upload_mlflow_process.start()
 
-    # Check if the cog-verse is still running
-    while upload_process.is_alive():
+    while True:
+        time.sleep(10)
         if not cogverse_process.is_alive():
+            # Terminate the subprocesses after they're done running
             mlflow_process.terminate()
-            upload_process.terminate()
+            cogverse_process.terminate()
+            upload_model_process.terminate()
             upload_mlflow_process.terminate()
+
+            mlflow_process.join()
+            cogverse_process.join()
+            upload_model_process.join()
+            upload_mlflow_process.join()
             break
-        time.sleep(20)
-
-    mlflow_process.join()
-    cogverse_process.join()
-    upload_process.join()
-    upload_mlflow_process.join()
-
-    # Terminate the subprocesses after they're done running
-    mlflow_process.terminate()
-    cogverse_process.terminate()
-    upload_process.terminate()
-    upload_mlflow_process.terminate()
 
 
 def run_script(module_name, *args):
@@ -116,22 +111,23 @@ def upload_to_s3_periodically(bucket: str, repo: str, interval: int = 300):
     cwd_dir = os.getcwd()
     project_dir = f"{cwd_dir}/.cogment_verse"
     archive_name = "model.tar.gz"
-    ignore_folders = ["bin"]
     s3_key = f"{repo}/models/{archive_name}"
+    local_path = f"{cwd_dir}/{archive_name}"
 
     while True:
-        pack_archive(
-            project_dir=project_dir,
-            main_dir=cwd_dir,
-            output_path=cwd_dir,
-            archive_name=archive_name,
-            source_dir_names=["mlflow", "model_registry"],
-            ignore_folders=ignore_folders,
-        )
-        local_path = f"{cwd_dir}/{archive_name}"
-        upload_to_s3(local_path=local_path, bucket=bucket, s3_key=s3_key)
-        delete_archive(local_path)
-        print(f"Uploaded {local_path} to s3://{bucket}/{s3_key}")
+        try:
+            pack_archive(
+                project_dir=project_dir,
+                main_dir=cwd_dir,
+                output_path=cwd_dir,
+                archive_name=archive_name,
+                source_dir_names=["mlflow", "model_registry"],
+            )
+            upload_to_s3(local_path=local_path, bucket=bucket, s3_key=s3_key)
+            delete_archive(local_path)
+        except FileNotFoundError as err_msg:
+            print(f"Error: {err_msg}")
+            continue
         time.sleep(interval)
 
 
@@ -140,6 +136,8 @@ def upload_to_mlflow_db_s3_realtime(bucket: str, repo: str, interval: int = 5):
     cwd_dir = os.getcwd()
     project_dir = f"{cwd_dir}/.cogment_verse"
     archive_name = "mlflow_db.tar.gz"
+    local_path = f"{cwd_dir}/{archive_name}"
+    s3_key = f"{repo}/mlflow/{archive_name}"
 
     while True:
         try:
@@ -150,10 +148,9 @@ def upload_to_mlflow_db_s3_realtime(bucket: str, repo: str, interval: int = 5):
                 source_dir_names=["mlflow"],
                 archive_name=archive_name,
             )
-            local_path = f"{cwd_dir}/{archive_name}"
-            upload_to_s3(local_path=local_path, bucket=bucket, s3_key=f"{repo}/mlflow/{archive_name}")
+            upload_to_s3(local_path=local_path, bucket=bucket, s3_key=s3_key)
             delete_archive(local_path)
-        except ValueError as err_msg:
+        except FileNotFoundError as err_msg:
             print(f"Error: {err_msg}")
             continue
         time.sleep(interval)

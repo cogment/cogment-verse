@@ -4,25 +4,29 @@ defaults:
       - ppo_atari_pz
       - ppo_atari_pz
   - override /services/environment: pong_pz
+  - override /run/experiment_tracker: simple
 
 run:
   class_name: actors.ppo_atari_pz.HillPPOTraining
-  seed: 0
+  seed: 3407
   num_epochs: 4
-  num_iter: 5000
-  epoch_num_trials: 4
-  num_parallel_trials: 4
+  num_iter: 1000
+  epoch_num_trials: 1
+  num_parallel_trials: 1
   learning_rate: 3e-4
   batch_size: 128
-  num_steps: -1
+  buffer_size: 10000
+  learning_starts: 1
+  update_freq: 1
+  num_rollout_steps: 128
+  max_training_steps: 20_000_000
   discount_factor: 0.99
   lambda_gae: 0.95
   device: cpu
-  entropy_loss_coef: 0.05
-  value_loss_coef: 0.2
-  action_loss_coef: 0.1
+  entropy_loss_coef: 0.01
+  value_loss_coef: 0.5
   clipping_coef: 0.2
   grad_norm: 0.5
   image_size: [6, 84, 84]
   hill_training_trials_ratio: 0.05
-  buffer_capacity: 100_000
+  logging_interval: 10
