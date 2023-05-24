@@ -12,16 +12,27 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { Controls } from "./GymLunarLander";
+import { Play } from "../../../cogment_verse/web/web_app/src/components/Play";
+
+const PlayPage = (props) => {
+  useEffect(() => {
+    setTimeout(() => props.onTrialEnd(), 5000);
+  }, []);
+  return <Play {...props} />;
+  //return <Play {...props} controls={Controls} />;
+  // return <div>{props.trialId}</div>;
+};
 
 export const mount = (container) => {
-  const root = createRoot(container);
+  const root = createRoot(container, { identifierPrefix: "blop" });
   const render = (props) => {
+    console.log("render", props);
     root.render(
       <React.StrictMode>
-        <Controls {...props} />
+        <PlayPage {...props} />
       </React.StrictMode>
     );
   };

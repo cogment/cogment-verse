@@ -5,9 +5,6 @@
     "esbuild": "0.17.17",
     "esbuild-css-modules-plugin": "2.7.1"
   },
-  "peerDependencies": {
-    "react": "^18.2.0"
-  },
   "scripts": {
     "build:cartpole": "node build.js GymCartPole.jsx",
     "build:lunar_lander": "node build.js GymLunarLander.jsx",
@@ -16,6 +13,7 @@
     "build": "node build.js"
   },
   "dependencies": {
+    "react": "^18.2.0",
     "react-dom": "^18.2.0"
   }
 }
