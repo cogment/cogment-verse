@@ -1,4 +1,4 @@
-# Copyright 2022 AI Redefined Inc. <dev+cogment@ai-r.com>
+# Copyright 2023 AI Redefined Inc. <dev+cogment@ai-r.com>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -27,7 +27,7 @@ from .spaces_serialization import deserialize_gym_space, serialize_gym_space
 
 class EnvironmentSpecs:
     """
-    Representation of the specification of an environment within cogment verse
+    Representation of the specification of an environment within Cogment Verse
 
     Properties:
         implementation:

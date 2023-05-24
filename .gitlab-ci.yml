@@ -55,11 +55,12 @@ pylint:
   script:
     - pylint --recursive=y .
 
-apache_licenses_check:
-  stage: lint
-  image: registry.gitlab.com/ai-r/apache-license-checker:latest
+licenses_checker:
+  stage: build
+  needs: []
+  image: registry.gitlab.com/ai-r/cogment/license-checker:latest
   script:
-    - apache-license-checker
+    - license-checker
 
 pytest:
   stage: test

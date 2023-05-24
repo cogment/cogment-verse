@@ -1,6 +1,6 @@
 # Development setup
 
-This is a practical guide for developers wanting to develop within cogment verse.
+This is a practical guide for developers wanting to develop within Cogment Verse.
 
 ## Linting
 
@@ -57,7 +57,7 @@ NOTE: The other commands are the same as the [PDB debugger](https://docs.python.
 
 ## Developing the web app
 
-Cogment verse includes a web app designed for human-in-the-loop learning developed with React.
+Cogment Verse includes a web app designed for human-in-the-loop learning developed with React.
 
 To develop the web app, you'll need to install [Node.JS v16](https://nodejs.org/) or above.
 
@@ -65,7 +65,7 @@ Sources for the web app can be found in `/cogment_verse/web/web_app`.
 
 ### Prebuilt web app - Default
 
-When running a default instance of cogment verse, the prebuilt web app, located in `/cogment_verse/web/web_app/build` is used. e.g.
+When running a default instance of Cogment Verse, the prebuilt web app, located in `/cogment_verse/web/web_app/build` is used. e.g.
 
 ```console
 $ python -m main
@@ -102,26 +102,31 @@ Run the test suite on the python codebase using `pytest` by running the followin
 ```console
 $ python -m pytest
 ```
+
 ## Petting Zoo Atari Games
+
 ### MAC Installation
 
 This step is only required for Apple silicon-based computers (e.g., M1&2 chips). Clone [Multi-Agent-ALE](https://github.com/Farama-Foundation/Multi-Agent-ALE) repository
 
-  ```sh
-  git clone https://github.com/Farama-Foundation/Multi-Agent-ALE.git
-  cd Multi-Agent-ALE
-  pip install .
-  ```
+```sh
+git clone https://github.com/Farama-Foundation/Multi-Agent-ALE.git
+cd Multi-Agent-ALE
+pip install .
+```
+
 ### License Activation
 
 Activate [AutoROM](https://github.com/Farama-Foundation/AutoROM) license relating to Atari games
 
-  ```sh
-  AutoROM --accept-license
-  ```
+```sh
+AutoROM --accept-license
+```
 
 ### Functional Tests
+
 To only run functional tests
+
 ```console
 $ python -m pytest -m functional --durations=0 --no-header -v
 ```
