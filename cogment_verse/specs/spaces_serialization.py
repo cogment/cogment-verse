@@ -1,4 +1,4 @@
-# Copyright 2022 AI Redefined Inc. <dev+cogment@ai-r.com>
+# Copyright 2023 AI Redefined Inc. <dev+cogment@ai-r.com>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import gym
+import gymnasium
 import numpy as np
 from spaces_pb2 import Box, Dict, Discrete, MultiBinary, MultiDiscrete, Space  # pylint: disable=import-error
 
@@ -20,10 +21,9 @@ from .ndarray_serialization import SerializationFormat, deserialize_ndarray, ser
 
 
 def serialize_gym_space(gym_space, serilization_format=SerializationFormat.STRUCTURED):
-    if isinstance(gym_space, gym.spaces.Discrete):
+    if isinstance(gym_space, (gym.spaces.Discrete, gymnasium.spaces.Discrete)):
         return Space(discrete=Discrete(n=gym_space.n, start=gym_space.start))
-
-    if isinstance(gym_space, gym.spaces.Box):
+    if isinstance(gym_space, (gym.spaces.Box, gymnasium.spaces.Box)):
         low = gym_space.low
         high = gym_space.high
         return Space(
@@ -33,22 +33,22 @@ def serialize_gym_space(gym_space, serilization_format=SerializationFormat.STRUC
             )
         )
 
-    if isinstance(gym_space, gym.spaces.MultiBinary):
+    if isinstance(gym_space, (gym.spaces.MultiBinary, gymnasium.spaces.MultiBinary)):
         if isinstance(gym_space.n, np.ndarray):
             size = gym_space.n
         elif isinstance(gym_space.n, int):
-            size = np.array([gym_space.n], dtype=np.dtype("int8"))
+            size = np.array([gym_space.n], dtype=np.dtype("int32"))
         else:
-            size = np.array(gym_space.n, dtype=np.dtype("int8"))
+            size = np.array(gym_space.n, dtype=np.dtype("int32"))
         return Space(multi_binary=MultiBinary(n=serialize_ndarray(size, serilization_format=serilization_format)))
 
-    if isinstance(gym_space, gym.spaces.MultiDiscrete):
+    if isinstance(gym_space, (gym.spaces.MultiDiscrete, gymnasium.spaces.MultiDiscrete)):
         nvec = gym_space.nvec
         return Space(
             multi_discrete=MultiDiscrete(nvec=serialize_ndarray(nvec, serilization_format=serilization_format))
         )
 
-    if isinstance(gym_space, gym.spaces.Dict):
+    if isinstance(gym_space, (gym.spaces.Dict, gymnasium.spaces.Dict)):
         spaces = []
         for key, gym_sub_space in gym_space.spaces.items():
             spaces.append(Dict.SubSpace(key=key, space=serialize_gym_space(gym_sub_space)))

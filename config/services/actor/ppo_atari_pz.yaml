@@ -1,0 +1,3 @@
+ppo_atari_pz:
+  class_name: actors.ppo_atari_pz.PPOActor
+  port: ${generate_port:actors.ppo_atari_pz.PPOActor}

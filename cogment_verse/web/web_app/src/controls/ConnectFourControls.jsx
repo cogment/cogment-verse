@@ -1,4 +1,4 @@
-// Copyright 2022 AI Redefined Inc. <dev+cogment@ai-r.com>
+// Copyright 2023 AI Redefined Inc. <dev+cogment@ai-r.com>
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -44,7 +44,7 @@ const ACTION_MASK_SPACE = new Space({
 });
 
 export const ConnectFourEnvironments = [
-  "environments.pettingzoo_adapter.Environment/pettingzoo.classic.connect_four_v3",
+  "environments.pettingzoo_adapter.ClassicEnvironment/pettingzoo.classic.connect_four_v3",
 ];
 export const ConnectFourControls = ({ sendAction, observation, actorClass, ...props }) => {
   const currentPlayer = observation?.currentPlayer;

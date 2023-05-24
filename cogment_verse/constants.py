@@ -1,4 +1,4 @@
-# Copyright 2022 AI Redefined Inc. <dev+cogment@ai-r.com>
+# Copyright 2023 AI Redefined Inc. <dev+cogment@ai-r.com>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,13 +14,14 @@
 
 import os
 
-COGMENT_VERSION = "v2.12.1"
+COGMENT_VERSION = "v2.13.1"
 WEB_ACTOR_NAME = "web_actor"  # At the moment the web client can only join the trial using the actor name which means a unique name is required
 HUMAN_ACTOR_IMPL = "client"
 
 TEACHER_ACTOR_CLASS = "teacher"
 PLAYER_ACTOR_CLASS = "player"
 OBSERVER_ACTOR_CLASS = "observer"
+EVALUATOR_ACTOR_CLASS = "evaluator"
 
 ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 DEFAULT_WORK_DIR = os.path.join(ROOT_DIR, ".cogment_verse")
@@ -32,3 +33,6 @@ DEFAULT_CONFIG_NAME = "config"
 
 TEST_DIR = os.path.join(ROOT_DIR, "tests")
 FUNCTIONAL_TEST_DIR = os.path.join(TEST_DIR, "functional")
+
+DEFAULT_RENDERED_WIDTH = 1024
+MAX_RENDERED_WIDTH = 2048

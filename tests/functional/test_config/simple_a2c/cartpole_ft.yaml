@@ -3,7 +3,7 @@ defaults:
   - override /services/actor:
       - simple_a2c
   - override /services/environment: cartpole
-  - override /services/experiment_tracker@run.experiment_tracker: simple
+  - override /run/experiment_tracker: simple
 
 run:
   class_name: actors.simple_a2c.SimpleA2CTraining

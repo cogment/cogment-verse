@@ -1,4 +1,4 @@
-# Copyright 2022 AI Redefined Inc. <dev+cogment@ai-r.com>
+# Copyright 2023 AI Redefined Inc. <dev+cogment@ai-r.com>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,10 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from multiprocessing import Process
 import asyncio
 import logging
 import sys
+from multiprocessing import Process
 
 import cogment
 
@@ -47,7 +47,7 @@ async def async_trial_runner_worker(
 
     context = cogment.Context(cog_settings=cog_settings, user_id="cogment_verse_trial_runner")
 
-    controller = context.get_controller(endpoint=cogment.Endpoint(services_directory.get(ServiceType.ORCHESTRATOR)))
+    controller = await services_directory.get_controller(context)
 
     num_trials = len(trials_id_and_params)
     num_started_trials = 0

@@ -1,4 +1,4 @@
-# Copyright 2022 AI Redefined Inc. <dev+cogment@ai-r.com>
+# Copyright 2023 AI Redefined Inc. <dev+cogment@ai-r.com>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,21 +14,20 @@
 
 import os
 
-from google.protobuf.json_format import MessageToDict, ParseDict
 import yaml
-
 from data_pb2 import EnvironmentSpecs as PbEnvironmentSpecs  # pylint: disable=import-error
+from google.protobuf.json_format import MessageToDict, ParseDict
 
-from .spaces_serialization import serialize_gym_space, deserialize_gym_space
-from .observation_space import ObservationSpace
+from ..constants import DEFAULT_RENDERED_WIDTH, PLAYER_ACTOR_CLASS
 from .action_space import ActionSpace
-
-from ..constants import PLAYER_ACTOR_CLASS
+from .ndarray_serialization import SerializationFormat
+from .observation_space import ObservationSpace
+from .spaces_serialization import deserialize_gym_space, serialize_gym_space
 
 
 class EnvironmentSpecs:
     """
-    Representation of the specification of an environment within cogment verse
+    Representation of the specification of an environment within Cogment Verse
 
     Properties:
         implementation:
@@ -58,7 +57,7 @@ class EnvironmentSpecs:
     def turn_based(self):
         return self._pb.turn_based
 
-    def get_observation_space(self, render_width=1024):
+    def get_observation_space(self, render_width=DEFAULT_RENDERED_WIDTH):
         """
         Build an instance of the observation space for this environment
 
@@ -86,7 +85,14 @@ class EnvironmentSpecs:
         return ActionSpace(deserialize_gym_space(self._pb.action_space), actor_class, seed)
 
     @classmethod
-    def create_homogeneous(cls, num_players, turn_based, observation_space, action_space):
+    def create_homogeneous(
+        cls,
+        num_players,
+        turn_based,
+        observation_space,
+        action_space,
+        serilization_format=SerializationFormat.STRUCTURED,
+    ):
         """
         Factory function building an homogenous EnvironmentSpecs, ie  with all actors having the same action and observation spaces.
         """
@@ -94,8 +100,8 @@ class EnvironmentSpecs:
             PbEnvironmentSpecs(
                 num_players=num_players,
                 turn_based=turn_based,
-                observation_space=serialize_gym_space(observation_space),
-                action_space=serialize_gym_space(action_space),
+                observation_space=serialize_gym_space(observation_space, serilization_format),
+                action_space=serialize_gym_space(action_space, serilization_format),
             )
         )
 

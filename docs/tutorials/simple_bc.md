@@ -51,6 +51,7 @@ In the first step, the run implementation is pretty minimal. It sets up an exper
 #### Running everything
 
 Make sure you are using step 1 version of the adapter by ensuring the following:
+
 1. In `config/experiment/simple_bc/mountain_car.yaml` file, `class_name` is set to `actors.tutorial.tutorial_1.SimpleBCTraining`.
 2. In `config/services/actor/simple_bc.yaml` file, `class_name` is set to `actors.tutorial.tutorial_1.SimpleBCActor`.
 3. Port 3000 is not in use.
@@ -60,7 +61,9 @@ First, launch a mlflow server on port 3000 using:
 ```
 python -m simple_mlflow
 ```
+
 In a new terminal, launch a simple behavior cloning run with the mountain car gym environment using:
+
 ```
 python -m main +experiment=simple_bc/mountain_car
 ```
@@ -75,7 +78,7 @@ Open Chrome (other web browser might work but haven't tested) and navigate to ht
 
 In this second step, we properly define the **sample producer implementation**.
 
-At the top of the file, a few helpers are imported in order to convert actions and observations between the cogment verse format and PyTorch tensors.
+At the top of the file, a few helpers are imported in order to convert actions and observations between the Cogment Verse format and PyTorch tensors.
 
 In the event loop of the **sample producer implementation** those helpers are used to convert the observation, the agent action and the teacher action. If the teacher performed an action, this is the one used in the produced sample.
 
@@ -97,7 +100,7 @@ At the top of the file, we include the configuration structure for multi-layer p
 
 `_save` and `_load` are implemented using PyTorch's load and save function.
 
-Notice that we added named arguments to the `_create` functions. They are forwarded from the call to `self.create_and_publish_initial_version` that is added at the top of the run implementation.
+Notice that we added named arguments to the `_create` functions. They are forwarded from the call to `self.store_initial_version` that is added at the top of the run implementation.
 
 The agent implementation uses `self.retrieve_version` to retrieve the model having the configured name and version. These are now specified as a part of the actor params in the run implementation. The version number is defined as `-1`, which means the latest available version. Also in the agent implementation, we use the action conversion helpers to build an `ActorAction` from the output of the policy network.
 

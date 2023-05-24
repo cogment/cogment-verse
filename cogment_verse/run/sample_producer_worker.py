@@ -1,4 +1,4 @@
-# Copyright 2022 AI Redefined Inc. <dev+cogment@ai-r.com>
+# Copyright 2023 AI Redefined Inc. <dev+cogment@ai-r.com>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,14 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from multiprocessing import Process
 import asyncio
 import logging
 import sys
+from multiprocessing import Process
 
 import cogment
-
-from ..services_directory import ServiceType
 
 log = logging.getLogger(__name__)
 
@@ -70,10 +68,9 @@ async def async_sample_producer_worker(trial_started_queue, sample_queue, impl, 
     # pylint: disable-next=import-outside-toplevel
     from cogment_verse.specs import cog_settings
 
-    cog_context = cogment.Context(cog_settings=cog_settings, user_id="cogment_verse_sample_producer")
-    datastore = cog_context.get_datastore(
-        endpoint=cogment.Endpoint(services_directory.get(ServiceType.TRIAL_DATASTORE))
-    )
+    context = cogment.Context(cog_settings=cog_settings, user_id="cogment_verse_sample_producer")
+    datastore = await services_directory.get_datastore(context)
+
     # Define a timeout for trial info retrieval
     # pylint: disable-next=protected-access
     datastore._timeout = 20

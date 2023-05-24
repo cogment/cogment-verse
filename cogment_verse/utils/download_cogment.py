@@ -1,4 +1,4 @@
-# Copyright 2022 AI Redefined Inc. <dev+cogment@ai-r.com>
+# Copyright 2023 AI Redefined Inc. <dev+cogment@ai-r.com>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,8 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from enum import Enum
-from tempfile import mkdtemp
 import json
 import logging
 import os
@@ -21,7 +19,9 @@ import platform
 import re
 import stat
 import subprocess
-from urllib.request import urlretrieve, urlopen
+from enum import Enum
+from tempfile import mkdtemp
+from urllib.request import urlopen, urlretrieve
 
 from cogment.errors import CogmentError
 

@@ -1,4 +1,4 @@
-# Copyright 2022 AI Redefined Inc. <dev+cogment@ai-r.com>
+# Copyright 2023 AI Redefined Inc. <dev+cogment@ai-r.com>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,18 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from data_pb2 import (  # pylint: disable=import-error
-    AgentConfig,
-    EnvironmentConfig,
-)
 import cog_settings  # pylint: disable=import-error
+from data_pb2 import AgentConfig, EnvironmentConfig  # pylint: disable=import-error
+
 from cogment_verse.constants import (
-    WEB_ACTOR_NAME,
+    EVALUATOR_ACTOR_CLASS,
     HUMAN_ACTOR_IMPL,
-    TEACHER_ACTOR_CLASS,
-    PLAYER_ACTOR_CLASS,
     OBSERVER_ACTOR_CLASS,
+    PLAYER_ACTOR_CLASS,
+    TEACHER_ACTOR_CLASS,
+    WEB_ACTOR_NAME,
 )
 
-from .environment_specs import EnvironmentSpecs
 from .encode_rendered_frame import encode_rendered_frame
+from .environment_specs import EnvironmentSpecs
