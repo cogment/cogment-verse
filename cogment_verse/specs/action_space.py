@@ -1,4 +1,4 @@
-# Copyright 2022 AI Redefined Inc. <dev+cogment@ai-r.com>
+# Copyright 2023 AI Redefined Inc. <dev+cogment@ai-r.com>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,13 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from data_pb2 import ObserverAction, PlayerAction, TeacherAction  # pylint: disable=import-error
 from gym.spaces import utils
 
-from data_pb2 import PlayerAction, TeacherAction, ObserverAction  # pylint: disable=import-error
-
-from .ndarray_serialization import serialize_ndarray, deserialize_ndarray
-
-from ..constants import TEACHER_ACTOR_CLASS, PLAYER_ACTOR_CLASS, OBSERVER_ACTOR_CLASS
+from ..constants import OBSERVER_ACTOR_CLASS, PLAYER_ACTOR_CLASS, TEACHER_ACTOR_CLASS
+from .ndarray_serialization import deserialize_ndarray, serialize_ndarray
 
 ACTOR_CLASS_ACTION_CLASS = {
     TEACHER_ACTOR_CLASS: TeacherAction,

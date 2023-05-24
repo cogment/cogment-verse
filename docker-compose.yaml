@@ -32,7 +32,7 @@ services:
       - mlflow
     entrypoint: >
       python -m main
-      run.mlflow_tracking_uri=http://mlflow:${MLFLOW_PORT:-3000}
+      run.experiment_tracker.mlflow_tracking_uri=http://mlflow:${MLFLOW_PORT:-3000}
       services.web.port=${WEB_PORT:-8080}
       services.orchestrator.web_port=${ORCHESTRATOR_WEB_PORT:-9000}
       services.orchestrator.web_endpoint=http://${WEB_HOST:-localhost}:${ORCHESTRATOR_WEB_PORT:-9000}

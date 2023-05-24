@@ -1,4 +1,4 @@
-// Copyright 2022 AI Redefined Inc. <dev+cogment@ai-r.com>
+// Copyright 2023 AI Redefined Inc. <dev+cogment@ai-r.com>
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@ export const WEB_ACTOR_NAME = "web_actor";
 export const TEACHER_ACTOR_CLASS = "teacher";
 export const PLAYER_ACTOR_CLASS = "player";
 export const OBSERVER_ACTOR_CLASS = "observer";
+export const EVALUATOR_ACTOR_CLASS = "evaluator";
 
 export const ORCHESTRATOR_WEB_ENDPOINT =
   window.ORCHESTRATOR_WEB_ENDPOINT !== ""

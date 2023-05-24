@@ -1,4 +1,4 @@
-# Copyright 2022 AI Redefined Inc. <dev+cogment@ai-r.com>
+# Copyright 2023 AI Redefined Inc. <dev+cogment@ai-r.com>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,21 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
+import io
 import logging
 
 import cogment
 import torch
-
-from gym.spaces import utils, Discrete
+from gym.spaces import Discrete, utils
 
 from cogment_verse import Model
-from cogment_verse.specs import (
-    AgentConfig,
-    cog_settings,
-    EnvironmentConfig,
-    EnvironmentSpecs,
-)
 from cogment_verse.constants import PLAYER_ACTOR_CLASS
+from cogment_verse.specs import AgentConfig, EnvironmentConfig, EnvironmentSpecs, cog_settings
 
 torch.multiprocessing.set_sharing_strategy("file_system")
 
@@ -43,9 +40,9 @@ class SimpleA2CModel(Model):
         actor_network_num_hidden_nodes=64,  # ToDo: should be an array
         critic_network_num_hidden_nodes=64,
         dtype=torch.float,
-        version_number=0,
+        iteration=0,
     ):
-        super().__init__(model_id, version_number)
+        super().__init__(model_id, iteration)
         self._dtype = dtype
         self._environment_implementation = environment_implementation
         self._num_input = num_input
@@ -77,40 +74,53 @@ class SimpleA2CModel(Model):
         self.epoch_idx = 0
         self.total_samples = 0
 
+    def eval(self) -> None:
+        self.actor_network.eval()
+        self.critic_network.eval()
+
     def get_model_user_data(self):
         return {
+            "model_id": self.model_id,
             "environment_implementation": self._environment_implementation,
             "num_input": self._num_input,
             "num_output": self._num_output,
             "actor_network_num_hidden_nodes": self._actor_network_num_hidden_nodes,
             "critic_network_num_hidden_nodes": self._critic_network_num_hidden_nodes,
+            "epoch_idx": self.epoch_idx,
+            "total_samples": self.total_samples,
         }
 
-    def save(self, model_data_f):
-        torch.save((self.actor_network.state_dict(), self.critic_network.state_dict()), model_data_f)
-        return {"epoch_idx": self.epoch_idx, "total_samples": self.total_samples}
+    @staticmethod
+    def serialize_model(model) -> bytes:
+        stream = io.BytesIO()
+        torch.save(
+            (
+                model.actor_network.state_dict(),
+                model.critic_network.state_dict(),
+                model.get_model_user_data(),
+            ),
+            stream,
+        )
+        return stream.getvalue()
 
     @classmethod
-    def load(cls, model_id, version_number, model_user_data, version_user_data, model_data_f):
-        # Create the model instance
-        model = SimpleA2CModel(
-            model_id=model_id,
-            version_number=version_number,
+    def deserialize_model(cls, serialized_model) -> SimpleA2CModel:
+        stream = io.BytesIO(serialized_model)
+        (actor_network_state_dict, critic_network_state_dict, model_user_data) = torch.load(stream)
+
+        model = cls(
+            model_id=model_user_data["model_id"],
             environment_implementation=model_user_data["environment_implementation"],
             num_input=int(model_user_data["num_input"]),
             num_output=int(model_user_data["num_output"]),
             actor_network_num_hidden_nodes=int(model_user_data["actor_network_num_hidden_nodes"]),
             critic_network_num_hidden_nodes=int(model_user_data["critic_network_num_hidden_nodes"]),
         )
-
-        # Load the saved states
-        (actor_network_state_dict, critic_network_state_dict) = torch.load(model_data_f)
         model.actor_network.load_state_dict(actor_network_state_dict)
         model.critic_network.load_state_dict(critic_network_state_dict)
+        model.epoch_idx = model_user_data["epoch_idx"]
+        model.total_samples = model_user_data["total_samples"]
 
-        # Load version data
-        model.epoch_idx = version_user_data["epoch_idx"]
-        model.total_samples = version_user_data["total_samples"]
         return model
 
 
@@ -130,11 +140,11 @@ class SimpleA2CActor:
         observation_space = environment_specs.get_observation_space()
         action_space = environment_specs.get_action_space(seed=config.seed)
 
-        model, _, _ = await actor_session.model_registry.retrieve_version(
-            SimpleA2CModel, config.model_id, config.model_version
+        # Get model
+        model = await SimpleA2CModel.retrieve_model(
+            actor_session.model_registry, config.model_id, config.model_iteration
         )
-        model.actor_network.eval()
-        model.critic_network.eval()
+        model.eval()
 
         async for event in actor_session.all_events():
             if event.observation and event.type == cogment.EventType.ACTIVE:
@@ -222,7 +232,12 @@ class SimpleA2CTraining:
             critic_network_num_hidden_nodes=self._cfg.critic_network.num_hidden_nodes,
             dtype=self._dtype,
         )
-        _model_info, version_info = await run_session.model_registry.publish_initial_version(model)
+
+        serialized_model = SimpleA2CModel.serialize_model(model)
+        iteration_info = await run_session.model_registry.publish_model(
+            name=model_id,
+            model=serialized_model,
+        )
 
         run_session.log_params(
             self._cfg,
@@ -267,7 +282,7 @@ class SimpleA2CTraining:
                                     config=AgentConfig(
                                         run_id=run_session.run_id,
                                         model_id=model_id,
-                                        model_version=version_info["version_number"],
+                                        model_iteration=iteration_info.iteration,
                                         environment_specs=self._environment_specs.serialize(),
                                     ),
                                 )
@@ -332,15 +347,17 @@ class SimpleA2CTraining:
             loss.backward()
             optimizer.step()
 
-            # Publish the newly trained version
-            last_epoch = (epoch_idx + 1) == self._cfg.num_epochs
-
             model.epoch_idx = epoch_idx
             model.total_samples = total_samples
 
-            version_info = await run_session.model_registry.publish_version(model, archived=last_epoch)
+            serialized_model = SimpleA2CModel.serialize_model(model)
+            iteration_info = await run_session.model_registry.publish_model(
+                name=model_id,
+                model=serialized_model,
+            )
+
             run_session.log_metrics(
-                model_version_number=version_info["version_number"],
+                model_iteration=iteration_info.iteration,
                 epoch_idx=epoch_idx,
                 entropy_loss=entropy_loss.item(),
                 value_loss=value_loss.item(),
@@ -351,3 +368,9 @@ class SimpleA2CTraining:
             log.info(
                 f"[SimpleA2CTraining/{run_session.run_id}] epoch #{epoch_idx + 1}/{self._cfg.num_epochs} finished ({total_samples} samples seen)"
             )
+
+        serialized_model = SimpleA2CModel.serialize_model(model)
+        iteration_info = await run_session.model_registry.store_model(
+            name=model_id,
+            model=serialized_model,
+        )

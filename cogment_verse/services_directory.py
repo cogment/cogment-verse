@@ -1,4 +1,4 @@
-# Copyright 2022 AI Redefined Inc. <dev+cogment@ai-r.com>
+# Copyright 2023 AI Redefined Inc. <dev+cogment@ai-r.com>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,7 +13,9 @@
 # limitations under the License.
 
 from enum import Enum
+import inspect
 from random import choice
+import cogment
 
 
 class ServiceType(Enum):
@@ -53,3 +55,21 @@ class ServiceDirectory:
             return []
 
         return [*self._directory[service_type.value].keys()]
+
+    async def get_datastore(self, context):
+        datastore = context.get_datastore(endpoint=cogment.Endpoint(self.get(ServiceType.TRIAL_DATASTORE)))
+        if inspect.isawaitable(datastore):
+            return await datastore
+        return datastore
+
+    async def get_controller(self, context):
+        controller = context.get_controller(endpoint=cogment.Endpoint(self.get(ServiceType.ORCHESTRATOR)))
+        if inspect.isawaitable(controller):
+            return await controller
+        return controller
+
+    async def get_model_registry(self, context):
+        registry = context.get_model_registry_v2(endpoint=cogment.Endpoint(self.get(ServiceType.MODEL_REGISTRY)))
+        if inspect.isawaitable(registry):
+            return await registry
+        return registry

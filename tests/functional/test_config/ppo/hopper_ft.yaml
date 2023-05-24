@@ -3,7 +3,7 @@ defaults:
   - override /services/actor:
       - ppo
   - override /services/environment: hopper
-  - override /services/experiment_tracker@run.experiment_tracker: simple
+  - override /run/experiment_tracker: simple
 
 run:
   class_name: actors.ppo.PPOTraining
@@ -14,7 +14,7 @@ run:
   num_parallel_trials: 2
   learning_rate: 3e-4
   batch_size: 64
-  num_steps: 2
+  num_steps: 64
   policy_network:
     num_hidden_nodes: 64
   value_network:

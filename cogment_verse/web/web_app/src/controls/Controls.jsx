@@ -1,4 +1,4 @@
-// Copyright 2022 AI Redefined Inc. <dev+cogment@ai-r.com>
+// Copyright 2023 AI Redefined Inc. <dev+cogment@ai-r.com>
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,19 +13,23 @@
 // limitations under the License.
 
 import { useMemo } from "react";
-import { RealTimeObserverControls } from "./RealTimeObserverControls";
-import { TurnBasedObserverControls } from "./TurnBasedObserverControls";
-import { GymLunarLanderControls, GymLunarLanderEnvironments } from "./GymLunarLanderControls";
+import { EVALUATOR_ACTOR_CLASS, OBSERVER_ACTOR_CLASS, PLAYER_ACTOR_CLASS, TEACHER_ACTOR_CLASS } from "../utils/constants";
+import { AtariPitfallControls, AtariPitfallEnvironments } from "./AtariPitfallControls";
+import { AtariPongPzControls, AtariPongPzEnvironments } from "./AtariPongPzControls";
+import { AtariPongPzFeedback, AtariPongPzHfbEnvironments } from "./AtariPongPzFeedback";
+import { ConnectFourControls, ConnectFourEnvironments } from "./ConnectFourControls";
+import { GymCartPoleControls, GymCartPoleEnvironments } from "./GymCartPoleControls";
 import {
   GymLunarLanderContinuousControls,
   GymLunarLanderContinuousEnvironments,
 } from "./GymLunarLanderContinuousControls";
-import { ConnectFourControls, ConnectFourEnvironments } from "./ConnectFourControls";
-import { GymCartPoleEnvironments, GymCartPoleControls } from "./GymCartPoleControls";
-import { GymMountainCarEnvironments, GymMountainCarControls } from "./GymMountainCarControls";
-import { AtariPitfallEnvironments, AtariPitfallControls } from "./AtariPitfallControls";
-import { TetrisEnvironments, TetrisControls } from "./TetrisControls";
-import { TEACHER_ACTOR_CLASS, PLAYER_ACTOR_CLASS, OBSERVER_ACTOR_CLASS } from "../utils/constants";
+import { GymLunarLanderControls, GymLunarLanderEnvironments } from "./GymLunarLanderControls";
+import { GymMountainCarControls, GymMountainCarEnvironments } from "./GymMountainCarControls";
+import { OvercookedRealTimeControls, OvercookedRealTimeEnvironments } from "./OvercookedRealTimeControls";
+import { OvercookedTurnBasedControls, OvercookedTurnBasedEnvironments } from "./OvercookedTurnBasedControls";
+import { RealTimeObserverControls } from "./RealTimeObserverControls";
+import { TetrisControls, TetrisEnvironments } from "./TetrisControls";
+import { TurnBasedObserverControls } from "./TurnBasedObserverControls";
 
 const CONTROLS = [
   { environments: GymLunarLanderEnvironments, component: GymLunarLanderControls },
@@ -35,9 +39,13 @@ const CONTROLS = [
   { environments: AtariPitfallEnvironments, component: AtariPitfallControls },
   { environments: TetrisEnvironments, component: TetrisControls },
   { environments: ConnectFourEnvironments, component: ConnectFourControls },
+  { environments: AtariPongPzEnvironments, component: AtariPongPzControls },
+  { environments: AtariPongPzHfbEnvironments, component: AtariPongPzFeedback },
+  { environments: OvercookedRealTimeEnvironments, component: OvercookedRealTimeControls },
+  { environments: OvercookedTurnBasedEnvironments, component: OvercookedTurnBasedControls },
 ];
 
-export const Controls = ({ environment, actorClass, sendAction, fps, turnBased, observation }) => {
+export const Controls = ({ environment, actorClass, sendAction, fps, turnBased, observation, tickId }) => {
   const ControlsComponent = useMemo(() => {
     if (OBSERVER_ACTOR_CLASS === actorClass) {
       if (turnBased) {
@@ -45,7 +53,7 @@ export const Controls = ({ environment, actorClass, sendAction, fps, turnBased, 
       }
       return RealTimeObserverControls;
     }
-    if ([PLAYER_ACTOR_CLASS, TEACHER_ACTOR_CLASS].includes(actorClass)) {
+    if ([PLAYER_ACTOR_CLASS, TEACHER_ACTOR_CLASS, EVALUATOR_ACTOR_CLASS].includes(actorClass)) {
       const control = CONTROLS.find(({ environments }) => environments.includes(environment));
       if (control == null) {
         return () => <div>{environment} is not playable</div>;
@@ -62,6 +70,7 @@ export const Controls = ({ environment, actorClass, sendAction, fps, turnBased, 
       actorClass={actorClass}
       environment={environment}
       observation={observation}
+      tickId={tickId}
     />
   );
 };

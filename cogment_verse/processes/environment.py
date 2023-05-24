@@ -1,4 +1,4 @@
-# Copyright 2022 AI Redefined Inc. <dev+cogment@ai-r.com>
+# Copyright 2023 AI Redefined Inc. <dev+cogment@ai-r.com>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ import logging
 import sys
 
 import cogment
+from hydra.core.hydra_config import HydraConfig
 
 from ..services_directory import ServiceType
 from ..utils.get_implementation_name import get_implementation_name

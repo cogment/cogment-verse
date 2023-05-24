@@ -1,4 +1,4 @@
-# Copyright 2022 AI Redefined Inc. <dev+cogment@ai-r.com>
+# Copyright 2023 AI Redefined Inc. <dev+cogment@ai-r.com>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
 
 
 class CogmentVerseError(Exception):
-    """Cogment-Verse specific exception class. All exceptions raised by Cogment-Verse are of this type."""
+    """Cogment Verse specific exception class. All exceptions raised by Cogment Verse are of this type."""
 
     def __init__(self, msg):
         super().__init__(msg)

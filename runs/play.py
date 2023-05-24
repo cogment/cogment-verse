@@ -1,4 +1,4 @@
-# Copyright 2022 AI Redefined Inc. <dev+cogment@ai-r.com>
+# Copyright 2023 AI Redefined Inc. <dev+cogment@ai-r.com>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,13 +18,13 @@ import cogment
 from google.protobuf.json_format import ParseDict
 
 from cogment_verse.specs import (
-    AgentConfig,
-    cog_settings,
-    EnvironmentConfig,
     HUMAN_ACTOR_IMPL,
     OBSERVER_ACTOR_CLASS,
     PLAYER_ACTOR_CLASS,
     WEB_ACTOR_NAME,
+    AgentConfig,
+    EnvironmentConfig,
+    cog_settings,
 )
 
 log = logging.getLogger(__name__)
@@ -83,7 +83,9 @@ class PlayRun:
                 for actor_idx, actor_params in enumerate(players_cfg)
             },
             **{
-                f"actor_{actor_idx}_model_version": actor_params.get("config", {"model_version": None})["model_version"]
+                f"actor_{actor_idx}_model_iteration": actor_params.get("config", {"model_iteration": None})[
+                    "model_iteration"
+                ]
                 for actor_idx, actor_params in enumerate(players_cfg)
             },
             environment=self._environment_specs.implementation,
@@ -107,7 +109,7 @@ class PlayRun:
                                 actor_config_template=actor_params.get("agent_config", None),
                                 run_id=run_session.run_id,
                                 environment_specs=self._environment_specs.serialize(),
-                                seed=(self._cfg.seed + actor_idx) * trial_idx,
+                                seed=self._cfg.seed * (trial_idx + 1) * (actor_idx + 1),
                             ),
                         )
                     )
@@ -123,7 +125,7 @@ class PlayRun:
                                 actor_config_template=actor_params.get("agent_config", None),
                                 run_id=run_session.run_id,
                                 environment_specs=self._environment_specs.serialize(),
-                                seed=(self._cfg.seed + actor_idx) * trial_idx,
+                                seed=self._cfg.seed * (trial_idx + 1) * (actor_idx + 1),
                             ),
                         )
                     )

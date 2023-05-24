@@ -4,6 +4,7 @@ defaults:
       - simple_dqn
       - random
   - override /services/environment: connect_four
+
 run:
   class_name: actors.simple_dqn.SimpleDQNSelfPlayTraining
   seed: 618

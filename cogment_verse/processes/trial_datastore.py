@@ -1,4 +1,4 @@
-# Copyright 2022 AI Redefined Inc. <dev+cogment@ai-r.com>
+# Copyright 2023 AI Redefined Inc. <dev+cogment@ai-r.com>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,8 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .cogment_cli_process import CogmentCliProcess
 from ..services_directory import ServiceType
+from .cogment_cli_process import CogmentCliProcess
 
 
 def create_trial_datastore_service(work_dir, trial_datastore_cfg, services_directory):

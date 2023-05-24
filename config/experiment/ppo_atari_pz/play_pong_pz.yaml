@@ -1,0 +1,15 @@
+# @package _global_
+defaults:
+  - override /services/actor:
+      - ppo_atari_pz
+  - override /services/environment: pong_pz
+  - override /run: play
+run:
+  players:
+    - name: player_1
+      implementation: actors.ppo_atari_pz.PPOActor
+      agent_config:
+        model_id: thirsty_matsumoto_0_model
+        model_iteration: 351
+    - name: player_2
+      implementation: client

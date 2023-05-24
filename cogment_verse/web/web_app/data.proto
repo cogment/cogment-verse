@@ -1,4 +1,4 @@
-// Copyright 2022 AI Redefined Inc. <dev+cogment@ai-r.com>
+// Copyright 2023 AI Redefined Inc. <dev+cogment@ai-r.com>
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -45,7 +45,7 @@ message AgentConfig {
   EnvironmentSpecs environment_specs = 2;
   uint32 seed = 3;
   string model_id = 4;
-  int32 model_version = 5;
+  int32 model_iteration = 5;
   int32 model_update_frequency = 6;
 }
 
@@ -58,6 +58,8 @@ message Observation {
   optional nd_array.Array action_mask = 3;
   optional bytes rendered_frame = 4;
   repeated string overridden_players = 5;  // list of players that provided an action that was overriden during the last tick
+  optional string game_player_name = 6;
+  optional int32 action_value = 7;
 }
 
 message PlayerAction {
@@ -70,4 +72,8 @@ message TeacherAction {
 
 message ObserverAction {
   // NOTHING
+}
+
+message EvaluatorAction{
+  nd_array.Array value = 1;
 }

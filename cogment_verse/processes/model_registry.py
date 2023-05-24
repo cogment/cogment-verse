@@ -1,4 +1,4 @@
-# Copyright 2022 AI Redefined Inc. <dev+cogment@ai-r.com>
+# Copyright 2023 AI Redefined Inc. <dev+cogment@ai-r.com>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,8 +16,8 @@ import os
 
 from cogment_verse.constants import MODEL_REGISTRY_DIR
 
-from .cogment_cli_process import CogmentCliProcess
 from ..services_directory import ServiceType
+from .cogment_cli_process import CogmentCliProcess
 
 
 def create_model_registry_service(work_dir, model_registry_cfg, services_directory):
