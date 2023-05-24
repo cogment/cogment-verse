@@ -59,7 +59,7 @@ const Play = () => {
   const redirectToPlayAny = useCallback(() => navigate(".."), [navigate]);
 
   return (
-    <div className="max-w-screen-md mx-auto min-h-screen justify-center">
+    <div className="max-w-screen-xl mx-auto min-h-fit justify-center">
       <Inspector trialId={trialId} event={event} actorParams={actorParams} className="my-2" />
       <RenderedScreen
         observation={event.observation}

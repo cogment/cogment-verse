@@ -18,7 +18,7 @@ import yaml
 from data_pb2 import EnvironmentSpecs as PbEnvironmentSpecs  # pylint: disable=import-error
 from google.protobuf.json_format import MessageToDict, ParseDict
 
-from ..constants import PLAYER_ACTOR_CLASS
+from ..constants import DEFAULT_RENDERED_WIDTH, PLAYER_ACTOR_CLASS
 from .action_space import ActionSpace
 from .ndarray_serialization import SerializationFormat
 from .observation_space import ObservationSpace
@@ -57,7 +57,7 @@ class EnvironmentSpecs:
     def turn_based(self):
         return self._pb.turn_based
 
-    def get_observation_space(self, render_width=1024):
+    def get_observation_space(self, render_width=DEFAULT_RENDERED_WIDTH):
         """
         Build an instance of the observation space for this environment
 

@@ -37,9 +37,9 @@ def serialize_gym_space(gym_space, serilization_format=SerializationFormat.STRUC
         if isinstance(gym_space.n, np.ndarray):
             size = gym_space.n
         elif isinstance(gym_space.n, int):
-            size = np.array([gym_space.n], dtype=np.dtype("int8"))
+            size = np.array([gym_space.n], dtype=np.dtype("int32"))
         else:
-            size = np.array(gym_space.n, dtype=np.dtype("int8"))
+            size = np.array(gym_space.n, dtype=np.dtype("int32"))
         return Space(multi_binary=MultiBinary(n=serialize_ndarray(size, serilization_format=serilization_format)))
 
     if isinstance(gym_space, (gym.spaces.MultiDiscrete, gymnasium.spaces.MultiDiscrete)):

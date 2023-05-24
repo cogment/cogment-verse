@@ -31,9 +31,7 @@ os.environ["SDL_VIDEODRIVER"] = "dummy"
 
 class Environment:
     def __init__(self, cfg):
-        print("cfg = ", cfg)
         self.gym_env_name = cfg.env_name
-        print("self.gym_env_name = ", self.gym_env_name)
 
         self.gym_env = isaacgymenvs.make(
             seed=0,

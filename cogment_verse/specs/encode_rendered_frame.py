@@ -14,10 +14,12 @@
 
 import cv2
 
+from cogment_verse.constants import MAX_RENDERED_WIDTH
 
-def encode_rendered_frame(rendered_frame, max_size=1024):
+
+def encode_rendered_frame(rendered_frame, max_size=MAX_RENDERED_WIDTH):
     if max_size <= 0:
-        max_size = 1024
+        max_size = MAX_RENDERED_WIDTH
     # gRPC max message size hack
     height, width = rendered_frame.shape[:2]
     if max(height, width) > max_size:
