@@ -27,7 +27,7 @@ from .spaces_serialization import deserialize_gym_space, serialize_gym_space
 
 class EnvironmentSpecs:
     """
-    Representation of the specification of an environment within cogment verse
+    Representation of the specification of an environment within Cogment Verse
 
     Properties:
         implementation:

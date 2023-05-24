@@ -16,7 +16,7 @@
 
 
 class CogmentVerseError(Exception):
-    """Cogment-Verse specific exception class. All exceptions raised by Cogment-Verse are of this type."""
+    """Cogment Verse specific exception class. All exceptions raised by Cogment Verse are of this type."""
 
     def __init__(self, msg):
         super().__init__(msg)
