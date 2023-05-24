@@ -12,8 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
+
 from .cogment_cli_process import CogmentCliProcess
 from ..services_directory import ServiceType
+
+log = logging.getLogger(__name__)
 
 
 def create_directory_service(work_dir, directory_cfg, services_directory):
@@ -28,6 +32,9 @@ def create_directory_service(work_dir, directory_cfg, services_directory):
         service_type=ServiceType.DIRECTORY_WEB_ENDPOINT,
         service_endpoint=web_endpoint,
     )
+
+    log.info(f"Directory service starting on port [{port}]...")
+
     return CogmentCliProcess(
         name="directory",
         work_dir=work_dir,

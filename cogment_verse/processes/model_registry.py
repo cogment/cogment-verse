@@ -12,12 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
 import os
 
 from cogment_verse.constants import MODEL_REGISTRY_DIR
 
 from ..services_directory import ServiceType
 from .cogment_cli_process import CogmentCliProcess
+
+log = logging.getLogger(__name__)
 
 
 def create_model_registry_service(work_dir, model_registry_cfg, services_directory):
@@ -30,6 +33,8 @@ def create_model_registry_service(work_dir, model_registry_cfg, services_directo
         service_type=ServiceType.MODEL_REGISTRY,
         service_endpoint=f"grpc://localhost:{port}",
     )
+
+    log.info(f"Model Registry starting on port [{port}]...")
 
     return CogmentCliProcess(
         name="model_registry",
