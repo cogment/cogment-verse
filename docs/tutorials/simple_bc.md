@@ -51,6 +51,7 @@ In the first step, the run implementation is pretty minimal. It sets up an exper
 #### Running everything
 
 Make sure you are using step 1 version of the adapter by ensuring the following:
+
 1. In `config/experiment/simple_bc/mountain_car.yaml` file, `class_name` is set to `actors.tutorial.tutorial_1.SimpleBCTraining`.
 2. In `config/services/actor/simple_bc.yaml` file, `class_name` is set to `actors.tutorial.tutorial_1.SimpleBCActor`.
 3. Port 3000 is not in use.
@@ -60,7 +61,9 @@ First, launch a mlflow server on port 3000 using:
 ```
 python -m simple_mlflow
 ```
+
 In a new terminal, launch a simple behavior cloning run with the mountain car gym environment using:
+
 ```
 python -m main +experiment=simple_bc/mountain_car
 ```
@@ -75,7 +78,7 @@ Open Chrome (other web browser might work but haven't tested) and navigate to ht
 
 In this second step, we properly define the **sample producer implementation**.
 
-At the top of the file, a few helpers are imported in order to convert actions and observations between the cogment verse format and PyTorch tensors.
+At the top of the file, a few helpers are imported in order to convert actions and observations between the Cogment Verse format and PyTorch tensors.
 
 In the event loop of the **sample producer implementation** those helpers are used to convert the observation, the agent action and the teacher action. If the teacher performed an action, this is the one used in the produced sample.
 

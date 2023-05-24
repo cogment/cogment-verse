@@ -1,6 +1,6 @@
 # Tunnel using ngrok
 
-[ngrok](https://ngrok.com) is a tool providing a _quick n' dirty_ way to deploy any web service from a host (even your local computer) to the internet. Using ngrok and cogment verse, you can easily make an experiment available to the internet. THis will work fine for turn by turn environment but don't expect to have a good level of playability on anything real time as ngrok adds a significant lag.
+[ngrok](https://ngrok.com) is a tool providing a _quick n' dirty_ way to deploy any web service from a host (even your local computer) to the internet. Using ngrok and Cogment Verse, you can easily make an experiment available to the internet. THis will work fine for turn by turn environment but don't expect to have a good level of playability on anything real time as ngrok adds a significant lag.
 
 ## Step 1 - Install and setup ngrok
 
