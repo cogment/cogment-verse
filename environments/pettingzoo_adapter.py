@@ -251,6 +251,7 @@ class AtariEnvironment(Environment):
         pz_agent_iterator = iter(pz_env.agent_iter())
         pz_observation, _, _, _, _ = pz_env.last()
 
+        print(f"pz_env agents: {pz_env.agents}")
         print(f"pz_observation shape: {pz_observation.size}")
 
         if len(pz_env.agents) != len(actor_names) and len(actor_names) > 1:
@@ -261,6 +262,10 @@ class AtariEnvironment(Environment):
             if len(actor_names) == 1 and len(pz_env.agents) > len(actor_names)
             else {agent_name: count for (count, agent_name) in enumerate(pz_env.agents)}
         )
+
+        print(f"cogment actor names: {actor_names}")
+        print(f"web_actor_idx: {web_actor_idx}")
+        print(f"pz_player_names: {pz_player_names}")
 
         assert len(web_actor_idx) < 2
         human_player_name = pz_env.agents[web_actor_idx[0]] if web_actor_idx else ""

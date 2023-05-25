@@ -9,7 +9,9 @@ run:
   num_trials: 5
   seed: 12
   players:
-    - name: player_1  # Left player
+    # Right player
+    - name: player_1
       implementation: client
-    - name: player_2  # Right player
+    # Left player
+    - name: player_2
       implementation: actors.random_actor.RandomActor
