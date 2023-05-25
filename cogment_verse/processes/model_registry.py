@@ -49,12 +49,12 @@ def create_model_registry_service(work_dir, model_registry_cfg, services_directo
         f"--port={port}",
     ]
 
-    if model_registry_cfg.sent_version_chunk_size:
+    if "sent_version_chunk_size" in model_registry_cfg and model_registry_cfg.sent_version_chunk_size:
         cli_args.append(f"--sent_version_chunk_size={model_registry_cfg.sent_version_chunk_size}")
     else:
         cli_args.append(f"--sent_version_chunk_size={DEFAULT_CHUNK_SIZE}")
 
-    if model_registry_cfg.cache_max_items:
+    if "cache_max_items" in model_registry_cfg and model_registry_cfg.cache_max_items:
         cli_args.append(f"--cache_max_items={model_registry_cfg.cache_max_items}")
     else:
         cli_args.append(f"--cache_max_items={DEFAULT_CACHE_MAX_ITEMS}")

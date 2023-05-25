@@ -12,8 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
+from urllib.parse import urlparse
+
 from .cogment_cli_process import CogmentCliProcess
 from ..services_directory import ServiceType
+
+log = logging.getLogger(__name__)
 
 
 def create_directory_service(work_dir, directory_cfg, services_directory):
@@ -23,6 +28,8 @@ def create_directory_service(work_dir, directory_cfg, services_directory):
         service_type=ServiceType.DIRECTORY,
         service_endpoint=f"grpc://localhost:{port}",
     )
+
+    log.info(f"Directory service starting on port [{port}]...")
 
     return CogmentCliProcess(
         name="directory",
@@ -36,3 +43,4 @@ def create_directory_service(work_dir, directory_cfg, services_directory):
             f"--registration_lag={directory_cfg.registration_lag}"
         ],
     )
+

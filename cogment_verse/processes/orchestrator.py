@@ -12,8 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
+
 from ..services_directory import ServiceType
 from .cogment_cli_process import CogmentCliProcess
+
+log = logging.getLogger(__name__)
 
 
 def create_orchestrator_service(work_dir, orchestrator_cfg, services_directory):
@@ -28,6 +32,9 @@ def create_orchestrator_service(work_dir, orchestrator_cfg, services_directory):
         service_type=ServiceType.ORCHESTRATOR_WEB_ENDPOINT,
         service_endpoint=web_endpoint,
     )
+
+    log.info(f"Orchestrator starting on port [{port}]...")
+
     return CogmentCliProcess(
         name="orchestrator",
         work_dir=work_dir,

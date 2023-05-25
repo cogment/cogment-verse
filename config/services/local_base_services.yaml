@@ -1,5 +1,5 @@
 directory:
-  port: ${generate_port:directory}
+  port: 9000
   log_level: warning
   registration_lag: 0
 orchestrator:

@@ -12,10 +12,52 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from enum import Enum
 import inspect
+import logging
+from enum import Enum
 from random import choice
+from urllib.parse import urlparse
+
 import cogment
+from cogment.directory import ServiceType as CogmentServiceType
+
+from cogment_verse.processes.cogment_cli_process import CogmentCliProcess
+
+log = logging.getLogger(__name__)
+
+
+def extract_port_from_endpoint(endpoint_url):
+    parsed_url = urlparse(endpoint_url)
+    port = parsed_url.port
+    return port
+
+
+def is_grpc_endpoint(url):
+    return url.startswith("grpc://") or url.startswith("grpcs://")
+
+
+def register_service(work_dir, directory_endpoint, port, service_type):
+
+    log.info(f"Directory service registered service type [{service_type}] on port [{port}].")
+
+    cli_args = [
+        "services",
+        "directory",
+        "register",
+        f"--directory_endpoint={directory_endpoint}",
+        f"--host=localhost",
+        f"--port={port}",
+        f"--type={service_type}",
+        # "--permanent=false",
+    ]
+
+    print(f"cli_args: {cli_args}")
+
+    return CogmentCliProcess(
+        name="directory",
+        work_dir=work_dir,
+        cli_args=cli_args,
+    )
 
 
 class ServiceType(Enum):
@@ -32,6 +74,53 @@ class ServiceType(Enum):
 class ServiceDirectory:
     def __init__(self):
         self._directory = {}
+
+    def register_all_services(self, work_dir):
+        for service_type, service_names in self._directory.items():
+            # print(f"type: {service_type} | endpoint {service_names}")
+
+            if service_type == ServiceType.ENVIRONMENT.value:
+                environment_endpoints = self._directory[service_type]
+                for name, endpoints in environment_endpoints.items():
+                    for endpoint in endpoints:
+                        register_service(
+                            work_dir=work_dir,
+                            directory_endpoint=self.get(ServiceType.DIRECTORY),
+                            port=extract_port_from_endpoint(endpoint),
+                            service_type="environment",
+                        )
+            elif service_type == ServiceType.ACTOR.value:
+                actor_endpoints = self._directory[service_type]
+                for name, endpoints in actor_endpoints.items():
+                    for endpoint in endpoints:
+                        if is_grpc_endpoint(endpoint):
+                            register_service(
+                                work_dir=work_dir,
+                                directory_endpoint=self.get(ServiceType.DIRECTORY),
+                                port=extract_port_from_endpoint(endpoint),
+                                service_type="actor",
+                            )
+            elif service_type == ServiceType.TRIAL_DATASTORE.value:
+                endpoint = self.get(service_type=ServiceType.TRIAL_DATASTORE)
+                # print(f"get endpoint: {endpoint}")
+                register_service(
+                    work_dir=work_dir,
+                    directory_endpoint=self.get(ServiceType.DIRECTORY),
+                    port=extract_port_from_endpoint(endpoint),
+                    service_type="datastore",
+                )
+            elif service_type == ServiceType.MODEL_REGISTRY.value:
+                endpoint = self.get(service_type=ServiceType.MODEL_REGISTRY)
+                # print(f"get endpoint: {endpoint}")
+                register_service(
+                    work_dir=work_dir,
+                    directory_endpoint=self.get(ServiceType.DIRECTORY),
+                    port=extract_port_from_endpoint(endpoint),
+                    service_type="modelregistry",
+                )
+            else:
+                continue
+
 
     def add(self, service_type, service_endpoint, service_name=None):
         if service_type.value not in self._directory:

@@ -14,23 +14,20 @@
 
 import logging
 import os
+from urllib.parse import urlparse
 
+import cogment
 from names_generator import generate_name
 from omegaconf import OmegaConf
-from cogment_verse.processes.directory import create_directory_service
+from cogment_verse.processes.cogment_cli_process import CogmentCliProcess
 
+from cogment_verse.processes.directory import create_directory_service
 from cogment_verse.processes.launch import create_launch_process
 
 from .constants import DEFAULT_WORK_DIR, HUMAN_ACTOR_IMPL
-from .processes import (
-    create_actor_service,
-    create_environment_service,
-    create_model_registry_service,
-    create_orchestrator_service,
-    create_run_process,
-    create_trial_datastore_service,
-    create_web_service,
-)
+from .processes import (create_actor_service, create_environment_service, create_model_registry_service,
+                        create_orchestrator_service, create_run_process, create_trial_datastore_service,
+                        create_web_service)
 from .services_directory import ServiceDirectory, ServiceType
 from .utils.find_free_port import find_free_port
 
@@ -73,6 +70,7 @@ register_generate_name_resolver()
 
 class App:
     def __init__(self, cfg, work_dir=DEFAULT_WORK_DIR):
+        self.work_dir = work_dir
         self.cfg = OmegaConf.create(cfg)
         OmegaConf.resolve(
             cfg
@@ -84,10 +82,9 @@ class App:
         # create_launch_process()
 
 
-        # TODO: Directory Service
-        directory_cfg = cfg.services["directory"]
+        directory_service_cfg = cfg.services["directory"]
         self.services_process.append(
-            create_directory_service(work_dir, directory_cfg, self.services_directory)
+            create_directory_service(work_dir, directory_service_cfg, self.services_directory)
         )
 
         for service_type, services_cfg in cfg.services.items():
@@ -127,8 +124,15 @@ class App:
                     service_name=HUMAN_ACTOR_IMPL,
                     service_endpoint="cogment://client",
                 )
+            elif service_type == ServiceType.DIRECTORY.value:
+                continue
             else:
                 raise NotImplementedError()
+
+
+        # TODO: register services to Directory
+        log.info("Registering all services to Directory")
+        self.services_directory.register_all_services(self.work_dir)
 
         run_cfg = cfg.get("run", None)
         if run_cfg is not None:
@@ -144,6 +148,8 @@ class App:
         for service_process in self.services_process:
             service_process.await_ready()
         log.info("Services ready")
+
+
 
         if self.run_process:
             log.info("Run starting...")
