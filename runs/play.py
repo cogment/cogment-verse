@@ -1,4 +1,4 @@
-# Copyright 2022 AI Redefined Inc. <dev+cogment@ai-r.com>
+# Copyright 2023 AI Redefined Inc. <dev+cogment@ai-r.com>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -110,7 +110,7 @@ class PlayRun:
                                 actor_config_template=actor_params.get("agent_config", None),
                                 run_id=run_session.run_id,
                                 environment_specs=self._environment_specs.serialize(),
-                                seed=actor_seed,
+                                seed=self._cfg.seed * (trial_idx + 1) * (actor_idx + 1),
                             ),
                         )
                     )
@@ -126,7 +126,7 @@ class PlayRun:
                                 actor_config_template=actor_params.get("agent_config", None),
                                 run_id=run_session.run_id,
                                 environment_specs=self._environment_specs.serialize(),
-                                seed=actor_seed,
+                                seed=self._cfg.seed * (trial_idx + 1) * (actor_idx + 1),
                             ),
                         )
                     )

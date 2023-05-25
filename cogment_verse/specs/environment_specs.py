@@ -1,4 +1,4 @@
-# Copyright 2022 AI Redefined Inc. <dev+cogment@ai-r.com>
+# Copyright 2023 AI Redefined Inc. <dev+cogment@ai-r.com>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ from data_pb2 import EnvironmentSpecs as PbEnvironmentSpecs  # pylint: disable=i
 from google.protobuf.json_format import MessageToDict, ParseDict
 
 from ..constants import ActorClass
+from ..constants import DEFAULT_RENDERED_WIDTH
 from .action_space import ActionSpace
 from .ndarray_serialization import SerializationFormat
 from .observation_space import ObservationSpace
@@ -27,7 +28,7 @@ from .spaces_serialization import deserialize_gym_space, serialize_gym_space
 
 class EnvironmentSpecs:
     """
-    Representation of the specification of an environment within cogment verse
+    Representation of the specification of an environment within Cogment Verse
 
     Properties:
         implementation:
@@ -57,7 +58,7 @@ class EnvironmentSpecs:
     def turn_based(self):
         return self._pb.turn_based
 
-    def get_observation_space(self, render_width=1024):
+    def get_observation_space(self, render_width=DEFAULT_RENDERED_WIDTH):
         """
         Build an instance of the observation space for this environment
 

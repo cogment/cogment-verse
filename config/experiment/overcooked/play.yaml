@@ -1,0 +1,18 @@
+# @package _global_
+defaults:
+  - override /services/actor:
+      - random
+  - override /services/environment: overcooked/cramped_room
+  - _self_
+
+run:
+  class_name: runs.play.PlayRun
+  agent_class: RandomActor
+  observer: False
+  num_trials: 50
+  seed: 12
+  players:
+    - name: player_1
+      implementation: client
+    - name: player_2
+      implementation: actors.random_actor.RandomActor

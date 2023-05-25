@@ -1,4 +1,4 @@
-# Copyright 2022 AI Redefined Inc. <dev+cogment@ai-r.com>
+# Copyright 2023 AI Redefined Inc. <dev+cogment@ai-r.com>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -31,9 +31,7 @@ os.environ["SDL_VIDEODRIVER"] = "dummy"
 
 class Environment:
     def __init__(self, cfg):
-        print("cfg = ", cfg)
         self.gym_env_name = cfg.env_name
-        print("self.gym_env_name = ", self.gym_env_name)
 
         self.gym_env = isaacgymenvs.make(
             seed=0,

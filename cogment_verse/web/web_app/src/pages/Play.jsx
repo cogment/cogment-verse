@@ -1,4 +1,4 @@
-// Copyright 2022 AI Redefined Inc. <dev+cogment@ai-r.com>
+// Copyright 2023 AI Redefined Inc. <dev+cogment@ai-r.com>
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -59,7 +59,7 @@ const Play = () => {
   const redirectToPlayAny = useCallback(() => navigate(".."), [navigate]);
 
   return (
-    <div className="max-w-screen-md mx-auto min-h-screen justify-center">
+    <div className="max-w-screen-xl mx-auto min-h-fit justify-center">
       <Inspector trialId={trialId} event={event} actorParams={actorParams} className="my-2" />
       <RenderedScreen
         observation={event.observation}
