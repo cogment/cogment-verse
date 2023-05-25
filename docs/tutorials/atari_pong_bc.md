@@ -13,9 +13,9 @@ The goal of this tutorial is to showcase various experiment setups possible with
 ## Collecting Data
 To play the game and collect data, use the following command:
 ```console
-python -m main +experiment=adaptive_grid/data_collection
+python -m main +experiment=bc_atari_pz/data_collection
 ```
-By default, only 20 trials will be played before the platform shuts down. To increase this number, go to `config/experiment/data_collection.yaml` and increase the `num_trials: 20` parameter.
+By default, only 20 trials will be played before the platform shuts down. To increase this number, go to `config/experiment/bc_atari_pz/data_collection.yaml` and increase the `num_trials: 20` parameter.
 
 
 The trial datastore process will be store the trial data to disk at the following location: `.cogment_verse/trial_datastore/trial_datastore.db`.
@@ -54,7 +54,7 @@ A list of models available to disk will also be located at `.cogment_verse/model
 
 To list the currently available models and their available versions, go to the template notebook `trial_data/explore_model_registry.ipynb`. It contains instructions on the data available from the model registry.
 
-- To save a model to disk, make sure that the config parameter `run.archive_model` is set to `True`. See `config/adaptive_grid/behavior_cloning.yaml` for an example.
+- To save a model to disk, make sure that the config parameter `run.archive_model` is set to `True`. See `config/experiment/bc_atari_pz/behavior_cloning.yaml` for an example.
 - If no `run.model_id` is provided, it will randomly generate one.
 
 
