@@ -3,7 +3,6 @@ defaults:
   - override /services/actor:
       - ppo_atari_pz
   - override /services/environment: pong_pz
-  - override /run/experiment_tracker: simple
 
 run:
   class_name: actors.ppo_atari_pz.PPOSelfTraining
