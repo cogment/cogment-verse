@@ -10,8 +10,8 @@ run:
   seed: 3407
   num_epochs: 4
   num_iter: 1000
-  epoch_num_trials: 8
-  num_parallel_trials: 8
+  epoch_num_trials: 1
+  num_parallel_trials: 1
   learning_rate: 0.00025
   batch_size: 128
   buffer_size: 10000
