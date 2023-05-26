@@ -17,6 +17,9 @@ import time
 from multiprocessing import Queue
 from cogment_verse.run.sample_loader_worker import start_sample_loader_worker
 
+from cogment.model_registry_v2 import ModelRegistry
+
+from cogment_verse.services_directory import ServiceDirectory
 from cogment_verse.utils.import_class import import_class
 
 from .sample_producer_worker import start_sample_producer_worker
@@ -26,7 +29,7 @@ log = logging.getLogger(__name__)
 
 
 class RunSession:
-    def __init__(self, run_cfg, run_id, services_directory, model_registry):
+    def __init__(self, run_cfg, run_id, services_directory: ServiceDirectory, model_registry: ModelRegistry):
         self.run_id = run_id
         self._services_directory = services_directory
         self._step_idx = 0

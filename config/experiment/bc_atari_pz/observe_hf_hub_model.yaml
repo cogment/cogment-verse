@@ -33,16 +33,3 @@ run:
 
 # not working: https://huggingface.co/sb3/ppo-PongNoFrameskip-v4/tree/main
 # working: https://huggingface.co/ThomasSimonini/ppo-PongNoFrameskip-v4/tree/main
-
-
-# Notes
-# Two random actors can play
-# The BC actor can only play if it is the second actors.
-# It returns an action value of 0 at every step when it is in 1st.
-
-# Conclusion: It never moves when playing on the right, simply because it was trained with behavior cloning data playing from the left only.
-# LOOOOOOOOOOOOOOOOOOOOL
-
-# Result: it works.
-
-

@@ -13,4 +13,5 @@
 # limitations under the License.
 
 from .human_data_buffer import HumanDataBuffer
-from .torch_replay_buffer import TorchReplayBuffer, TorchReplayBufferSample
+from .rollout_buffer import RolloutBuffer
+from .torch_replay_buffer import PPOReplayBuffer, PPOReplayBufferSample, TorchReplayBuffer, TorchReplayBufferSample

@@ -17,8 +17,9 @@ import logging
 import sys
 
 import cogment
+from cogment.actor import ActorSession
 
-from ..services_directory import ServiceType
+from ..services_directory import ServiceDirectory, ServiceType
 from ..utils.get_implementation_name import get_implementation_name
 from ..utils.import_class import import_class
 from .cogment_py_sdk_process import CogmentPySdkProcess
@@ -28,7 +29,7 @@ log = logging.getLogger(__name__)
 
 def actor_main(
     actor_cfg,
-    services_directory,
+    services_directory: ServiceDirectory,
     name,  # pylint: disable=unused-argument
     on_ready,
     specs_filename,  # pylint: disable=unused-argument
@@ -47,7 +48,7 @@ def actor_main(
         context = cogment.Context(cog_settings=cog_settings, user_id="cogment_verse_actor")
         model_registry = await services_directory.get_model_registry(context)
 
-        async def impl_wrapper(actor_session):
+        async def impl_wrapper(actor_session: ActorSession):
             actor_session.model_registry = model_registry
             await actor.impl(actor_session)
 
