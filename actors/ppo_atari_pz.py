@@ -240,7 +240,7 @@ class PPOActor:
 
                 # Retrieve the model every N rollout steps
                 if (
-                    config.model_update_frequency is not None
+                    config.model_update_frequency != 0
                     and (event.observation.tick_id + 1) % config.model_update_frequency == 0
                 ):
                     model = await PPOModel.retrieve_model(actor_session.model_registry, config.model_id, -1)
@@ -360,9 +360,7 @@ class BasePPOTraining(ABC):
             player_actor_name = previous_actor_sample.observation.current_player
             actor_sample = sample.actors_data[player_actor_name]
 
-            if self._cfg.num_rollout_steps is not None and self.should_load_model(
-                sample.tick_id, self._cfg.num_rollout_steps, trial_done
-            ):
+            if self.should_load_model(sample.tick_id, self._cfg.num_rollout_steps, trial_done):
                 model = await PPOModel.retrieve_model(sample_producer_session.model_registry, self.model_id, -1)
                 model.network.eval()
 
@@ -1000,9 +998,7 @@ class HumanFeedbackPPOTraining(BasePPOTraining):
             trial_done = sample.trial_state == cogment.TrialState.ENDED
 
             # Load model
-            if self._cfg.num_rollout_steps is not None and self.should_load_model(
-                sample.tick_id, self._cfg.num_rollout_steps, trial_done
-            ):
+            if self.should_load_model(sample.tick_id, self._cfg.num_rollout_steps, trial_done):
                 model = await PPOModel.retrieve_model(sample_producer_session.model_registry, self.model_id, -1)
                 model.network.eval()
 

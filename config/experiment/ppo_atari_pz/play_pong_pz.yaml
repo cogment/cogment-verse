@@ -4,13 +4,14 @@ defaults:
       - ppo_atari_pz
   - override /services/environment: pong_pz
   - override /run: play
-  - override /services/experiment_tracker@run.experiment_tracker: simple
+  - override /run/experiment_tracker: simple
 run:
   players:
     - name: first_0
       implementation: actors.ppo_atari_pz.PPOActor
       agent_config:
-        model_id: gifted_tesla_0_model
+        model_id: wonderful_elbakyan_0_model
         model_iteration: -1
+        model_update_frequency: ~
     - name: second_0
       implementation: client
