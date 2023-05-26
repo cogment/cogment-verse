@@ -18,6 +18,7 @@ from .replay_buffers import (
     HumanDataBuffer,
     PPOReplayBuffer,
     PPOReplayBufferSample,
+    RolloutBuffer,
     TorchReplayBuffer,
     TorchReplayBufferSample,
 )

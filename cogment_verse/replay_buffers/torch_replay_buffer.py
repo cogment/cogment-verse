@@ -107,11 +107,11 @@ class PPOReplayBuffer:
         else:
             indices = np.random.choice(self.size(), size=num, replace=False)
         return PPOReplayBufferSample(
-            observation=self.observations[indices].to(self.device),
-            action=self.actions[indices].to(self.device),
-            adv=self.advs[indices].to(self.device),
-            value=self.values[indices].to(self.device),
-            log_prob=self.log_probs[indices].to(self.device),
+            observation=self.observations[indices].clone().to(self.device),
+            action=self.actions[indices].clone().to(self.device),
+            adv=self.advs[indices].clone().to(self.device),
+            value=self.values[indices].clone().to(self.device),
+            log_prob=self.log_probs[indices].clone().to(self.device),
         )
 
     def size(self):

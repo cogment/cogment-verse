@@ -28,7 +28,7 @@ from gym.spaces import Discrete, utils
 from omegaconf import DictConfig, ListConfig
 from torch.distributions.distribution import Distribution
 
-from cogment_verse import HumanDataBuffer, Model, PPOReplayBuffer
+from cogment_verse import HumanDataBuffer, Model, PPOReplayBuffer, RolloutBuffer
 from cogment_verse.run.run_session import RunSession
 from cogment_verse.run.sample_producer_worker import SampleProducerSession
 from cogment_verse.specs import (
@@ -316,15 +316,13 @@ class BasePPOTraining(ABC):
         self.scheduler = torch.optim.lr_scheduler.StepLR(self.network_optimizer, step_size=1000, gamma=0.1)
 
     @staticmethod
-    def is_time_to_load_model(sample_tick_id: int, num_rollout_steps: int, trial_done: bool) -> bool:
+    def should_load_model(step: int, num_rollout_steps: int, trial_done: bool) -> bool:
         """Load model from model registry if it matches predefined conditions regarding
         trial status and tick id"""
-        is_multiple_of_rollout = (sample_tick_id + 1) % num_rollout_steps == 0
-        is_not_trial_done = not trial_done
-        is_first_tick = sample_tick_id == 0
-        is_loaded = is_multiple_of_rollout and is_not_trial_done
-
-        return is_loaded or is_first_tick
+        is_multiple_of_rollout = (step + 1) % num_rollout_steps == 0
+        is_first_step = step == 0
+        is_loaded = is_multiple_of_rollout and not trial_done
+        return is_loaded or is_first_step
 
     async def sample_producer_impl(self, sample_producer_session: SampleProducerSession):
         """Collect sample from the trial"""
@@ -362,7 +360,7 @@ class BasePPOTraining(ABC):
             player_actor_name = previous_actor_sample.observation.current_player
             actor_sample = sample.actors_data[player_actor_name]
 
-            if self._cfg.num_rollout_steps is not None and self.is_time_to_load_model(
+            if self._cfg.num_rollout_steps is not None and self.should_load_model(
                 sample.tick_id, self._cfg.num_rollout_steps, trial_done
             ):
                 model = await PPOModel.retrieve_model(sample_producer_session.model_registry, self.model_id, -1)
@@ -386,7 +384,7 @@ class BasePPOTraining(ABC):
                 current_players.append(player_actor_name)
 
             # Compute values and log probs
-            if step % self._cfg.num_rollout_steps < self._cfg.num_rollout_steps and not trial_done:
+            if step % self._cfg.num_rollout_steps > 0 and not trial_done:
                 with torch.no_grad():
                     value, log_prob, _ = model.network.get_action_value(
                         observation=observation_value, action=action_value
@@ -593,53 +591,6 @@ class BasePPOTraining(ABC):
         advs.reverse()
 
         return advs
-
-
-class RolloutBuffer:
-    """Rollout buffer for PPO"""
-
-    def __init__(
-        self,
-        capacity: int,
-        observation_shape: tuple,
-        action_shape: tuple,
-        observation_dtype: torch.dtype = torch.float32,
-        action_dtype: torch.dtype = torch.float32,
-        reward_dtype: torch.dtype = torch.float32,
-    ) -> None:
-        self.capacity = capacity
-        self.observation_shape = observation_shape
-        self.action_shape = action_shape
-        self.observation_dtype = observation_dtype
-        self.action_dtype = action_dtype
-        self.reward_dtype = reward_dtype
-
-        self.observations = torch.zeros((self.capacity, *self.observation_shape), dtype=self.observation_dtype)
-        self.actions = torch.zeros((self.capacity, *self.action_shape), dtype=self.action_dtype)
-        self.rewards = torch.zeros((self.capacity,), dtype=self.reward_dtype)
-        self.dones = torch.zeros((self.capacity,), dtype=torch.float32)
-
-        self._ptr = 0
-        self.num_total = 0
-
-    def add(self, observation: torch.Tensor, action: torch.Tensor, reward: torch.Tensor, done: torch.Tensor) -> None:
-        """Add samples to rollout buffer"""
-        if self.num_total < self.capacity:
-            self.observations[self._ptr] = observation
-            self.actions[self._ptr] = action
-            self.rewards[self._ptr] = reward
-            self.dones[self._ptr] = done
-            self._ptr = (self._ptr + 1) % self.capacity
-            self.num_total += 1
-
-    def reset(self) -> None:
-        """Reset the rollout"""
-        self.observations = torch.zeros((self.capacity, *self.observation_shape), dtype=self.observation_dtype)
-        self.actions = torch.zeros((self.capacity, *self.action_shape), dtype=self.action_dtype)
-        self.rewards = torch.zeros((self.capacity,), dtype=self.reward_dtype)
-        self.dones = torch.zeros((self.capacity,), dtype=torch.float32)
-        self._ptr = 0
-        self.num_total = 0
 
 
 class PPOSelfTraining(BasePPOTraining):
@@ -1049,7 +1000,7 @@ class HumanFeedbackPPOTraining(BasePPOTraining):
             trial_done = sample.trial_state == cogment.TrialState.ENDED
 
             # Load model
-            if self._cfg.num_rollout_steps is not None and self.is_time_to_load_model(
+            if self._cfg.num_rollout_steps is not None and self.should_load_model(
                 sample.tick_id, self._cfg.num_rollout_steps, trial_done
             ):
                 model = await PPOModel.retrieve_model(sample_producer_session.model_registry, self.model_id, -1)
