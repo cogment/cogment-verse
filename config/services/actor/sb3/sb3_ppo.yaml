@@ -1,0 +1,4 @@
+# @package _global_.services.actor
+sb3_ppo:
+  class_name: actors.sb3.sb3_ppo_actor.SB3PPOActor
+  port: ${generate_port:actor_2}

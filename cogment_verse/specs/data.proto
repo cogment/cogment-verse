@@ -47,6 +47,7 @@ message AgentConfig {
   string model_id = 4;
   int32 model_iteration = 5;
   int32 model_update_frequency = 6;
+  optional HFHubModel hf_hub_model = 7;
 }
 
 message TrialConfig {

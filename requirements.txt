@@ -19,6 +19,8 @@ AutoROM~=0.4.2
 # actors
 torch==1.11.0
 numpy>=1.21.5,<1.22
+huggingface_sb3==1.0.7
+stable_baselines3==1.2.0
 
 # For testing
 black~=22.3.0

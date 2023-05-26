@@ -1,0 +1,48 @@
+# @package _global_
+defaults:
+  - override /services/actor:
+      - random
+      - sb3/sb3_ppo
+  - override /services/environment: pong_pz
+  # To save test trials to trial_datastore, uncomment command below
+  # - override /services/trial_datastore: local
+  - override /run/experiment_tracker: simple
+  - _self_
+
+run:
+  class_name: runs.play.PlayRun
+  observer: True
+  num_trials: 5
+  seed: 12
+  players:
+    # Right player
+    - name: player_1
+      implementation: actors.sb3.sb3_ppo_actor.SB3PPOActor
+      agent_config:
+        hf_hub_model:
+          repo_id: ThomasSimonini/ppo-PongNoFrameskip-v4 #sb3/ppo-PongNoFrameskip-v4
+          filename: ppo-PongNoFrameskip-v4.zip
+    # Left plyaer
+    - name: player_2
+      implementation: actors.sb3.sb3_ppo_actor.SB3PPOActor
+      agent_config:
+        hf_hub_model:
+          repo_id: ThomasSimonini/ppo-PongNoFrameskip-v4
+          filename: ppo-PongNoFrameskip-v4.zip
+
+
+# not working: https://huggingface.co/sb3/ppo-PongNoFrameskip-v4/tree/main
+# working: https://huggingface.co/ThomasSimonini/ppo-PongNoFrameskip-v4/tree/main
+
+
+# Notes
+# Two random actors can play
+# The BC actor can only play if it is the second actors.
+# It returns an action value of 0 at every step when it is in 1st.
+
+# Conclusion: It never moves when playing on the right, simply because it was trained with behavior cloning data playing from the left only.
+# LOOOOOOOOOOOOOOOOOOOOL
+
+# Result: it works.
+
+

@@ -19,7 +19,7 @@ run:
 
   # Training params
   data_augmentation:
-    type: all_players  # This is augmenting the training data to flip
+    type: single_player  # This is augmenting the training data to flip
     player: web_actor
 
   num_epochs: 10

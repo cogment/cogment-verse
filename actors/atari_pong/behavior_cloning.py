@@ -143,6 +143,10 @@ class BehaviorCloningActor:
         async for event in actor_session.all_events():
             if event.observation and event.type == cogment.EventType.ACTIVE:
                 observation = observation_space.deserialize(event.observation.observation)
+                if observation.current_player is not None and observation.current_player != actor_session.name:
+                    # Not the turn of the agent
+                    actor_session.do_action(action_space.serialize(action_space.create()))
+                    continue
 
                 observation_tensor = torch.tensor(observation.flat_value, dtype=self._dtype).view(1, -1)
 

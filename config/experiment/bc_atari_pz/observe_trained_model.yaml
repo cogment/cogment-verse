@@ -15,22 +15,24 @@ run:
   num_trials: 30
   seed: 12
   players:
+    # Right player
     - name: player_1
       implementation: actors.atari_pong.behavior_cloning.BehaviorCloningActor
       agent_config:
-        model_id: practical_lederberg_0_model # Change to desired model id (find it in .cogment_verse/model_registry)
+        model_id: great_lichterman_0_model # Change to desired model id (find it in .cogment_verse/model_registry)
         model_iteration: -1  # change to desired model version. -1 for latest version available.
-    - name: player_2
-      implementation: actors.atari_pong.behavior_cloning.BehaviorCloningActor
-      agent_config:
-        model_id: practical_lederberg_0_model # Change to desired model id (find it in .cogment_verse/model_registry)
-        model_iteration: -1  # change to desired model version. -1 for latest version available.
+    # Left plyaer
+    # - name: player_2
+    #   implementation: actors.atari_pong.behavior_cloning.BehaviorCloningActor
+    #   agent_config:
+    #     model_id: practical_lederberg_0_model # Change to desired model id (find it in .cogment_verse/model_registry)
+    #     model_iteration: -1  # change to desired model version. -1 for latest version available.
     # - name: player_1
     #   implementation: actors.random_actor.RandomActor
     #   seed: 0
-    # - name: player_2
-    #   implementation: actors.random_actor.RandomActor
-    #   seed: 1
+    - name: player_2
+      implementation: actors.random_actor.RandomActor
+      seed: 1
 
 
 
