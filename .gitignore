@@ -42,3 +42,10 @@ ngrok.yaml
 *.npz
 #pyenv
 .python-version
+
+*.ipynb_checkpoints/
+*.ipynb_output/
+
+# Visualization
+case_study/
+

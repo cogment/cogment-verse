@@ -161,7 +161,7 @@ class ClassicEnvironment(Environment):
 
         _current_player_pz_agent, current_player_actor_idx, current_player_actor_name = next_player()
 
-        pz_observation, _pz_reward, done, _, _ = pz_env.last()
+        pz_observation, _pz_reward, termination, truncation, _ = pz_env.last()
 
         rendered_frame = None
         if session_cfg.render:
@@ -188,7 +188,7 @@ class ClassicEnvironment(Environment):
                 pz_env.step(action.value)
 
                 _current_player_pz_agent, current_player_actor_idx, current_player_actor_name = next_player()
-                pz_observation, _pz_reward, done, _, _ = pz_env.last()
+                pz_observation, _pz_reward, termination, truncation, _ = pz_env.last()
 
                 observation = observation_space.create(
                     value=pz_observation["observation"],  # TODO Should only be sent to the current player
@@ -201,7 +201,7 @@ class ClassicEnvironment(Environment):
 
                 observations = [("*", observation_space.serialize(observation))]
 
-                for (rewarded_player_pz_agent, pz_reward) in pz_env.rewards.items():
+                for rewarded_player_pz_agent, pz_reward in pz_env.rewards.items():
                     if pz_reward == 0:
                         continue
                     rewarded_player_actor_name = next(
@@ -217,7 +217,7 @@ class ClassicEnvironment(Environment):
                         to=[rewarded_player_actor_name],
                     )
 
-                if done:
+                if termination or truncation:
                     # The trial ended
                     environment_session.end(observations)
                 elif event.type != cogment.EventType.ACTIVE:
@@ -288,7 +288,7 @@ class AtariEnvironment(Environment):
             # Observation
             gym_action = action_space.deserialize(action_value)
             pz_env.step(gym_action.value)
-            pz_observation, pz_reward, done, _, _ = pz_env.last()
+            pz_observation, pz_reward, termination, truncation, _ = pz_env.last()
 
             # Actor names
             pz_player_name = next(pz_agent_iterator)
@@ -308,8 +308,9 @@ class AtariEnvironment(Environment):
             observations = [("*", observation_space.serialize(observation))]
             # TODO: need to revise the actor name received the reward
             environment_session.add_reward(value=pz_reward, confidence=1.0, to=[actor_name])
-            if done:
+            if termination or truncation:
                 # The trial ended
+                # log.info("Environement done")
                 environment_session.end(observations)
             elif event.type != cogment.EventType.ACTIVE:
                 # The trial termination has been requested
@@ -372,7 +373,7 @@ class HumanFeedbackAtariEnvironment(Environment):
                 # Observation
                 gym_action = action_space.deserialize(action_value)
                 pz_env.step(gym_action.value)
-                pz_observation, pz_reward, done, _, _ = pz_env.last()
+                pz_observation, pz_reward, termination, truncation, _ = pz_env.last()
 
                 # Actor names for evaluator
                 rewarded_actor_name = actor_name
@@ -403,7 +404,8 @@ class HumanFeedbackAtariEnvironment(Environment):
 
             observations = [("*", observation_space.serialize(observation))]
             environment_session.add_reward(value=pz_reward, confidence=1.0, to=[rewarded_actor_name])
-            if done:
+
+            if termination or truncation:
                 # The trial ended
                 environment_session.end(observations)
             elif event.type != cogment.EventType.ACTIVE:

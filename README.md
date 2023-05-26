@@ -101,22 +101,34 @@ Here are a few examples:
 
 - Petting Zoo's [Atari Pong Environment](https://pettingzoo.farama.org/environments/atari/pong/)
 
-  Example #1: Self-training
+  Example #1: Play against RL agent
 
   ```console
-  $ python -m main +experiment=ppo_atari_pz/pong_pz
+  $ python -m main +experiment=ppo_atari_pz/play_pong_pz
   ```
 
-  Example #2: Training with human's demonstrations
+  Example #2: Observing RL agents playing against each other
+
+  ```console
+  $ python -m main +experiment=ppo_atari_pz/observe_play_pong_pz
+  ```
+
+  Example #3: Training with human's demonstrations
 
   ```console
   $ python -m main +experiment=ppo_atari_pz/hill_pong_pz
   ```
 
-  Example #3: Training with human's feedback
+  Example #4: Training with human's feedback
 
   ```console
   $ python -m main +experiment=ppo_atari_pz/hfb_pong_pz
+  ```
+
+  Example #5: Self-training
+
+  ```console
+  $ python -m main +experiment=ppo_atari_pz/pong_pz
   ```
 
   NOTE: Example 2&3 require users to open Chrome and navigate to http://localhost:8080 in order to provide either demonstrations or feedback.
