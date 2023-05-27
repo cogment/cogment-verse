@@ -13,13 +13,12 @@
 // limitations under the License.
 
 import { useCallback, useState } from "react";
-import { useDocumentKeypressListener, usePressedKeys } from "../hooks/usePressedKeys";
-import { useRealTimeUpdate } from "../hooks/useRealTimeUpdate";
+import { useDocumentKeypressListener, usePressedKeys } from "@cogment/cogment-verse-components";
+import { useRealTimeUpdate } from "@cogment/cogment-verse-components";
 import { TEACHER_ACTOR_CLASS } from "../utils/constants";
-import { Button } from "../components/Button";
-import { useJoystickState, Joystick } from "../components/Joystick";
-import { FpsCounter } from "../components/FpsCounter";
-import { KeyboardControlList } from "../components/KeyboardControlList";
+import { Button, useJoystickState, Joystick } from "@cogment/cogment-verse-components";
+import { FpsCounter } from "@cogment/cogment-verse-components";
+import { KeyboardControlList } from "@cogment/cogment-verse-components";
 import { serializePlayerAction, TEACHER_NOOP_ACTION, DType, Space } from "../utils/spaceSerialization";
 
 const ACTION_SPACE = new Space({

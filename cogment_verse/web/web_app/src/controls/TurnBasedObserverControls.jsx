@@ -13,10 +13,10 @@
 // limitations under the License.
 
 import { useCallback, useEffect, useState } from "react";
-import { useDocumentKeypressListener } from "../hooks/usePressedKeys";
+import { useDocumentKeypressListener } from "@cogment/cogment-verse-components";
 import { TEACHER_NOOP_ACTION } from "../utils/spaceSerialization";
-import { Button } from "../components/Button";
-import { KeyboardControlList } from "../components/KeyboardControlList";
+import { Button } from "@cogment/cogment-verse-components";
+import { KeyboardControlList } from "@cogment/cogment-verse-components";
 import { CountdownCircleTimer } from "react-countdown-circle-timer";
 
 const TURN_DURATION_SECS = 1;

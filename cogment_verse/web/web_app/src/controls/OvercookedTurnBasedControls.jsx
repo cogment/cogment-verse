@@ -14,11 +14,10 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { CountdownCircleTimer } from "react-countdown-circle-timer";
-import { Button } from "../components/Button";
-import { KeyboardControlList } from "../components/KeyboardControlList";
-import { useDocumentKeypressListener } from "../hooks/usePressedKeys";
+import { Button } from "@cogment/cogment-verse-components";
+import { KeyboardControlList } from "@cogment/cogment-verse-components";
+import { useDocumentKeypressListener } from "@cogment/cogment-verse-components";
 import { serializePlayerAction, Space } from "../utils/spaceSerialization";
-
 
 const TURN_DURATION_SECS = 5;
 
@@ -27,7 +26,6 @@ const ACTION_SPACE = new Space({
     n: 6,
   },
 });
-
 
 export const OvercookedTurnBasedEnvironments = ["environments.overcooked_adapter.OvercookedEnvironment/overcooked"];
 export const OvercookedTurnBasedControls = ({ sendAction, fps = 1, actorClass, observation, ...props }) => {
@@ -44,7 +42,6 @@ export const OvercookedTurnBasedControls = ({ sendAction, fps = 1, actorClass, o
   useEffect(() => {
     setTurnKey((turnKey) => turnKey + 1);
   }, [currentPlayer]);
-
 
   const up = useCallback(() => {
     if (!stepDisabled) {
@@ -94,7 +91,6 @@ export const OvercookedTurnBasedControls = ({ sendAction, fps = 1, actorClass, o
   }, [sendAction]);
   useDocumentKeypressListener("Shift", skip);
 
-
   return (
     <div {...props}>
       <div className="flex flex-row gap-1">
@@ -112,7 +108,9 @@ export const OvercookedTurnBasedControls = ({ sendAction, fps = 1, actorClass, o
               onComplete={skip}
             />
           </div>
-          <div className="flex-initial">{currentPlayer ? `Step to "${observation.currentPlayer}" turn` : "turn timer"}</div>
+          <div className="flex-initial">
+            {currentPlayer ? `Step to "${observation.currentPlayer}" turn` : "turn timer"}
+          </div>
         </Button>
         <Button className="flex-1" onClick={togglePause}>
           {paused ? "Resume" : "Pause"}

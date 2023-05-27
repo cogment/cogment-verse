@@ -14,11 +14,10 @@
 
 import { useCallback } from "react";
 import { cogSettings } from "../CogSettings";
-import { Countdown } from "../components/Countdown";
+import { Countdown, RenderedScreen } from "@cogment/cogment-verse-components";
 import { Inspector } from "../components/Inspector";
-import { Button } from "../components/Button";
-import { useJoinedTrial, TRIAL_STATUS } from "../hooks/useJoinTrial";
-import { RenderedScreen } from "../components/RenderedScreen";
+import { Button } from "@cogment/cogment-verse-components";
+import { useJoinedTrial, TRIAL_STATUS } from "@cogment/cogment-verse-components";
 import { Controls } from "../controls/Controls";
 import { ORCHESTRATOR_WEB_ENDPOINT } from "../utils/constants";
 import { useParams, useNavigate } from "react-router-dom";

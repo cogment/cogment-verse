@@ -14,12 +14,12 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { cogment_verse } from "../data_pb";
-import { useDocumentKeypressListener } from "../hooks/usePressedKeys";
-import { useRealTimeUpdate } from "../hooks/useRealTimeUpdate";
-import { Button } from "../components/Button";
-import { FpsCounter } from "../components/FpsCounter";
-import { KeyboardControlList } from "../components/KeyboardControlList";
-import { Switch } from "../components/Switch"
+import { useDocumentKeypressListener } from "@cogment/cogment-verse-components";
+import { useRealTimeUpdate } from "@cogment/cogment-verse-components";
+import { Button } from "@cogment/cogment-verse-components";
+import { FpsCounter } from "@cogment/cogment-verse-components";
+import { KeyboardControlList } from "@cogment/cogment-verse-components";
+import { Switch } from "@cogment/cogment-verse-components";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faThumbsUp, faThumbsDown, faMeh } from "@fortawesome/free-solid-svg-icons";
 import { serializePlayerAction, DType, Space } from "../utils/spaceSerialization";
@@ -35,25 +35,27 @@ const ACTION_SPACE = new Space({
   },
 });
 
-export const AtariPongPzHfbEnvironments = ["environments.pettingzoo_adapter.HumanFeedbackAtariEnvironment/pettingzoo.atari.pong_v3"];
+export const AtariPongPzHfbEnvironments = [
+  "environments.pettingzoo_adapter.HumanFeedbackAtariEnvironment/pettingzoo.atari.pong_v3",
+];
 export const AtariPongPzFeedback = ({ sendAction, fps = 30, actorClass, observation, tickId, ...props }) => {
   const [paused, setPaused] = useState(false);
   const [humanMode, setHumanMode] = useState(true);
   const [selectedFeedback, setFeedback] = useState(2);
   const [humanTurn, setHumanTurn] = useState(false);
-  const [playerPos, setPlayerPos] = useState('');
+  const [playerPos, setPlayerPos] = useState("");
   const [playerNameDisplay, setPlayerNameDisplay] = useState(false);
   const playerName = observation?.gamePlayerName;
   const currentPlayer = observation?.currentPlayer;
-  const gymAction = observation?.actionValue
-  const actionList = ['NONE', 'FIRE', "UP", 'DOWN', "FIRE UP", " FIRE DOWN"]
+  const gymAction = observation?.actionValue;
+  const actionList = ["NONE", "FIRE", "UP", "DOWN", "FIRE UP", " FIRE DOWN"];
 
   useEffect(() => {
     if (playerName) {
-      if (playerName.includes('first')) {
-        setPlayerPos('right');
+      if (playerName.includes("first")) {
+        setPlayerPos("right");
       } else {
-        setPlayerPos('left');
+        setPlayerPos("left");
       }
     }
   }, [playerName]);
@@ -78,7 +80,7 @@ export const AtariPongPzFeedback = ({ sendAction, fps = 30, actorClass, observat
   const toggleHuman = useCallback(() => setHumanMode((humanMode) => !humanMode), [setHumanMode]);
   useDocumentKeypressListener("p", togglePause);
   useDocumentKeypressListener("h", toggleHuman);
-  const { currentFps } = useRealTimeUpdate((dt) => { }, fps, paused);
+  const { currentFps } = useRealTimeUpdate((dt) => {}, fps, paused);
 
   if (!humanMode || !humanTurn || tickId % 3 != 0) {
     // Neural action
@@ -86,7 +88,6 @@ export const AtariPongPzFeedback = ({ sendAction, fps = 30, actorClass, observat
     sendAction(action);
   }
   const sendFeedback = (feedback) => {
-
     let action;
     if (feedback == "LIKE") {
       setFeedback(1);
@@ -99,37 +100,40 @@ export const AtariPongPzFeedback = ({ sendAction, fps = 30, actorClass, observat
       action = serializePlayerAction(ACTION_SPACE, [0.0]);
     }
     // TODO: replace sendAction by a proper add_reward function when it is available on JS SDK
-    setTimeout(() => { setFeedback(2) }, 150);
+    setTimeout(() => {
+      setFeedback(2);
+    }, 150);
     sendAction(action);
   };
-  const playerBox = 'opacity-90 py-1 rounded-full items-center text-white px-2  text-sm outline-none'
+  const playerBox = "opacity-90 py-1 rounded-full items-center text-white px-2  text-sm outline-none";
   const player1 = `bg-green-500 ${playerBox}`;
   const player2 = `bg-orange-500 ${playerBox}`;
   return (
     <div {...props}>
       {playerNameDisplay ? (
         <div className={"flex p-2 flex-row justify-center items-center"}>
-          <div className={playerPos == "right" ? (player1) : (player2)}>
-            {playerName}
-          </div>
-          <div className={`bg-purple-500 ${playerBox}`}>
-            {actionList[gymAction]}
-          </div>
+          <div className={playerPos == "right" ? player1 : player2}>{playerName}</div>
+          <div className={`bg-purple-500 ${playerBox}`}>{actionList[gymAction]}</div>
         </div>
-      ) : (<div></div>)}
+      ) : (
+        <div></div>
+      )}
       <div className="flex p-2 flex-row justify-center items-center">
         <div className="flex justify-center p-2">
           <Switch check={humanMode} onChange={toggleHuman} label="Human feedback" />
         </div>
-        {
-          humanMode && <div className="ml-5 text-center" style={{
-            paddingBottom: 10,
-            padingTop: 10,
-          }}>
+        {humanMode && (
+          <div
+            className="ml-5 text-center"
+            style={{
+              paddingBottom: 10,
+              padingTop: 10,
+            }}
+          >
             <button
               type="button"
               onClick={() => sendFeedback("LIKE")}
-            // disabled={selectedFeedback != 0}
+              // disabled={selectedFeedback != 0}
             >
               <FontAwesomeIcon
                 icon={faThumbsUp}
@@ -141,7 +145,7 @@ export const AtariPongPzFeedback = ({ sendAction, fps = 30, actorClass, observat
             <button
               type="button"
               onClick={() => sendFeedback("NEURAL")}
-            // disabled={selectedFeedback != 0}
+              // disabled={selectedFeedback != 0}
             >
               <FontAwesomeIcon
                 icon={faMeh}
@@ -153,7 +157,7 @@ export const AtariPongPzFeedback = ({ sendAction, fps = 30, actorClass, observat
             <button
               type="button"
               onClick={() => sendFeedback("DISLIKE")}
-            // disabled={selectedFeedback != 0}
+              // disabled={selectedFeedback != 0}
             >
               <FontAwesomeIcon
                 icon={faThumbsDown}
@@ -163,7 +167,7 @@ export const AtariPongPzFeedback = ({ sendAction, fps = 30, actorClass, observat
               />
             </button>
           </div>
-        }
+        )}
       </div>
 
       <div className="flex flex-row gap-1 p-3">
@@ -178,7 +182,6 @@ export const AtariPongPzFeedback = ({ sendAction, fps = 30, actorClass, observat
           ["h", "Feedback/Not Feedback"],
         ]}
       />
-    </div >
+    </div>
   );
-
 };

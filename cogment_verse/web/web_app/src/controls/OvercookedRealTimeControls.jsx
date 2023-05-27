@@ -13,29 +13,30 @@
 // limitations under the License.
 
 import { useCallback, useState } from "react";
-import { useDocumentKeypressListener, usePressedKeys } from "../hooks/usePressedKeys";
-import { useRealTimeUpdate } from "../hooks/useRealTimeUpdate";
-import { DPad, usePressedButtons, DPAD_BUTTONS } from "../components/DPad";
-import { Button } from "../components/Button";
-import { FpsCounter } from "../components/FpsCounter";
-import { KeyboardControlList } from "../components/KeyboardControlList";
+import { useDocumentKeypressListener, usePressedKeys } from "@cogment/cogment-verse-components";
+import { useRealTimeUpdate } from "@cogment/cogment-verse-components";
+import { DPad, useDPadPressedButtons, DPAD_BUTTONS } from "@cogment/cogment-verse-components";
+import { Button } from "@cogment/cogment-verse-components";
+import { FpsCounter } from "@cogment/cogment-verse-components";
+import { KeyboardControlList } from "@cogment/cogment-verse-components";
 import { serializePlayerAction, Space } from "../utils/spaceSerialization";
 
 const ACTION_SPACE = new Space({
-    discrete: {
-      n: 6,
-    },
-  });
+  discrete: {
+    n: 6,
+  },
+});
 
-
-export const OvercookedRealTimeEnvironments = ["environments.overcooked_adapter.OvercookedEnvironment/overcooked-real-time"];
+export const OvercookedRealTimeEnvironments = [
+  "environments.overcooked_adapter.OvercookedEnvironment/overcooked-real-time",
+];
 export const OvercookedRealTimeControls = ({ sendAction, fps = 10, actorClass, ...props }) => {
   const [paused, setPaused] = useState(false);
   const togglePause = useCallback(() => setPaused((paused) => !paused), [setPaused]);
   useDocumentKeypressListener("p", togglePause);
 
   const pressedKeys = usePressedKeys();
-  const { pressedButtons, isButtonPressed, setPressedButtons } = usePressedButtons();
+  const { pressedButtons, isButtonPressed, setPressedButtons } = useDPadPressedButtons();
   const [activeButtons, setActiveButtons] = useState([]);
 
   const computeAndSendAction = useCallback(
@@ -59,7 +60,7 @@ export const OvercookedRealTimeControls = ({ sendAction, fps = 10, actorClass, .
       } else if (pressedKeys.has("Enter")) {
         sendAction(serializePlayerAction(ACTION_SPACE, 5));
         return;
-      } else if (pressedKeys.has("Shift") ) {
+      } else if (pressedKeys.has("Shift")) {
         sendAction(serializePlayerAction(ACTION_SPACE, 4));
         return;
       }

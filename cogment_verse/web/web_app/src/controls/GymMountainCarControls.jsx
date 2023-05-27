@@ -13,13 +13,13 @@
 // limitations under the License.
 
 import { useCallback, useState } from "react";
-import { useDocumentKeypressListener, usePressedKeys } from "../hooks/usePressedKeys";
-import { useRealTimeUpdate } from "../hooks/useRealTimeUpdate";
+import { useDocumentKeypressListener, usePressedKeys } from "@cogment/cogment-verse-components";
+import { useRealTimeUpdate } from "@cogment/cogment-verse-components";
 import { TEACHER_ACTOR_CLASS } from "../utils/constants";
-import { DPad, usePressedButtons, DPAD_BUTTONS } from "../components/DPad";
-import { Button } from "../components/Button";
-import { FpsCounter } from "../components/FpsCounter";
-import { KeyboardControlList } from "../components/KeyboardControlList";
+import { DPad, useDPadPressedButtons, DPAD_BUTTONS } from "@cogment/cogment-verse-components";
+import { Button } from "@cogment/cogment-verse-components";
+import { FpsCounter } from "@cogment/cogment-verse-components";
+import { KeyboardControlList } from "@cogment/cogment-verse-components";
 import { serializePlayerAction, TEACHER_NOOP_ACTION, Space } from "../utils/spaceSerialization";
 
 const DEACTIVATED_BUTTONS_TEACHER = [DPAD_BUTTONS.UP];
@@ -38,7 +38,7 @@ export const GymMountainCarControls = ({ sendAction, fps = 30, actorClass, ...pr
   useDocumentKeypressListener("p", togglePause);
 
   const pressedKeys = usePressedKeys();
-  const { pressedButtons, isButtonPressed, setPressedButtons } = usePressedButtons();
+  const { pressedButtons, isButtonPressed, setPressedButtons } = useDPadPressedButtons();
   const [activeButtons, setActiveButtons] = useState([]);
 
   const computeAndSendAction = useCallback(

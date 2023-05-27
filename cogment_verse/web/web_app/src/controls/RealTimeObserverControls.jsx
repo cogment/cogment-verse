@@ -13,12 +13,12 @@
 // limitations under the License.
 
 import { useCallback, useState } from "react";
-import { useDocumentKeypressListener } from "../hooks/usePressedKeys";
-import { useRealTimeUpdate } from "../hooks/useRealTimeUpdate";
+import { useDocumentKeypressListener } from "@cogment/cogment-verse-components";
+import { useRealTimeUpdate } from "@cogment/cogment-verse-components";
 import { TEACHER_NOOP_ACTION } from "../utils/spaceSerialization";
-import { Button } from "../components/Button";
-import { FpsCounter } from "../components/FpsCounter";
-import { KeyboardControlList } from "../components/KeyboardControlList";
+import { Button } from "@cogment/cogment-verse-components";
+import { FpsCounter } from "@cogment/cogment-verse-components";
+import { KeyboardControlList } from "@cogment/cogment-verse-components";
 
 export const RealTimeObserverControls = ({ sendAction, fps = 30, ...props }) => {
   const [paused, setPaused] = useState(false);

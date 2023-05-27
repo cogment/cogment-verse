@@ -13,7 +13,7 @@
 // limitations under the License.
 
 import { useRouteError } from "react-router-dom";
-import { Button } from "../components/Button";
+import { Button } from "@cogment/cogment-verse-components";
 
 const Error = () => {
   const error = useRouteError();

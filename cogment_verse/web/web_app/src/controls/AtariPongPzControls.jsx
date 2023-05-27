@@ -14,13 +14,13 @@
 
 import { useCallback, useState, useEffect } from "react";
 import { cogment_verse } from "../data_pb";
-import { useDocumentKeypressListener, usePressedKeys } from "../hooks/usePressedKeys";
-import { useRealTimeUpdate } from "../hooks/useRealTimeUpdate";
+import { useDocumentKeypressListener, usePressedKeys } from "@cogment/cogment-verse-components";
+import { useRealTimeUpdate } from "@cogment/cogment-verse-components";
 import { createLookup } from "../utils/controlLookup";
 import { TEACHER_ACTOR_CLASS } from "../utils/constants";
-import { Button } from "../components/Button";
-import { FpsCounter } from "../components/FpsCounter";
-import { KeyboardControlList } from "../components/KeyboardControlList";
+import { Button } from "@cogment/cogment-verse-components";
+import { FpsCounter } from "@cogment/cogment-verse-components";
+import { KeyboardControlList } from "@cogment/cogment-verse-components";
 import { serializePlayerAction, TEACHER_NOOP_ACTION, Space } from "../utils/spaceSerialization";
 
 const ACTION_SPACE = new Space({
@@ -41,15 +41,14 @@ ATARI_LOOKUP.setAction(["LEFT"], serializePlayerAction(ACTION_SPACE, 5));
 export const AtariPongPzEnvironments = ["environments.pettingzoo_adapter.AtariEnvironment/pettingzoo.atari.pong_v3"];
 export const AtariPongPzControls = ({ sendAction, fps = 40, actorClass, observation, ...props }) => {
   const [paused, setPaused] = useState(false);
-  const [playerPos, setPlayerPos] = useState('left');
+  const [playerPos, setPlayerPos] = useState("left");
   const togglePause = useCallback(() => setPaused((paused) => !paused), [setPaused]);
   useDocumentKeypressListener("p", togglePause);
   const playerName = observation?.gamePlayerName;
-  const playerBox = 'opacity-90 py-2 rounded-full items-center text-white font-bold, px-5 text-base outline-none'
+  const playerBox = "opacity-90 py-2 rounded-full items-center text-white font-bold, px-5 text-base outline-none";
   const player1 = `bg-green-500 ${playerBox}`;
   const player2 = `bg-orange-500 ${playerBox}`;
   const pressedKeys = usePressedKeys();
-
 
   const computeAndSendAction = useCallback(
     (dt) => {

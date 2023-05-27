@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import classNames from "classnames";
+import clsx from "clsx";
 import { useCallback, useMemo, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCaretLeft, faCaretDown } from "@fortawesome/free-solid-svg-icons";
@@ -58,49 +58,45 @@ const TensorValue = ({ value, shape }) => {
 };
 
 const SpaceValue = ({ value, space, className, ...props }) => (
-  
-  <div className={classNames(className, "block font-mono")} {...props}>
+  <div className={clsx(className, "block font-mono")} {...props}>
     {space.discrete ? (
       <>
-        <h3 className={classNames(className, "font-mono")} {...props}>
-            type: {space.kind}(n={space.discrete.n}, start={space.discrete.start})
+        <h3 className={clsx(className, "font-mono")} {...props}>
+          type: {space.kind}(n={space.discrete.n}, start={space.discrete.start})
         </h3>
         value: <SingleValue value={value} />
       </>
     ) : space.box ? (
       <>
-        <h3 className={classNames(className, "font-mono")} {...props}>
-            type: {space.kind}(low.shape={space.box.low.shape}, high.shape={space.box.high.shape})
+        <h3 className={clsx(className, "font-mono")} {...props}>
+          type: {space.kind}(low.shape={space.box.low.shape}, high.shape={space.box.high.shape})
         </h3>
         value: <TensorValue value={value} shape={space.box.low.shape} />
       </>
     ) : space.multiBinary ? (
       <>
-        <h3 className={classNames(className, "font-mono")} {...props}>
-        type: {space.kind}(n={space.multiBinary.n.int32Data})
+        <h3 className={clsx(className, "font-mono")} {...props}>
+          type: {space.kind}(n={space.multiBinary.n.int32Data})
         </h3>
         value: <TensorValue value={value} shape={space.multiBinary.n.int32Data} />
       </>
     ) : space.multiDiscrete ? (
       <>
-        <h3 className={classNames(className, "font-mono")} {...props}>
-        type: {space.kind}(nvec={space.multiDiscrete.nvec.int32Data})
+        <h3 className={clsx(className, "font-mono")} {...props}>
+          type: {space.kind}(nvec={space.multiDiscrete.nvec.int32Data})
         </h3>
         value: <TensorValue value={value} shape={space.multiDiscrete.nvec.shape} />
       </>
     ) : space.dict ? (
       <div>
-        {
-          space.dict.spaces.map( ({key, space}) => (
-              <>
-                <h3 className={classNames(className, "font-semibold lowercase mt-1")} {...props}>
-                  {key}:
-                </h3>
-                <SpaceValue value={value[key]} space={space} />
-              </>
-          )
-          )
-        }
+        {space.dict.spaces.map(({ key, space }) => (
+          <>
+            <h3 className={clsx(className, "font-semibold lowercase mt-1")} {...props}>
+              {key}:
+            </h3>
+            <SpaceValue value={value[key]} space={space} />
+          </>
+        ))}
       </div>
     ) : (
       `Unsupported space [${JSON.stringify(space, null, `\t`)}]`
@@ -109,13 +105,13 @@ const SpaceValue = ({ value, space, className, ...props }) => (
 );
 
 const AttributeTitle = ({ className, children, ...props }) => (
-  <h3 className={classNames(className, "font-semibold bg-indigo-200 lowercase mt-1")} {...props}>
+  <h3 className={clsx(className, "font-semibold bg-indigo-200 lowercase mt-1")} {...props}>
     {children}
   </h3>
 );
 
 const AttributeValue = ({ className, children, ...props }) => (
-  <span className={classNames(className, "font-mono")} {...props}>
+  <span className={clsx(className, "font-mono")} {...props}>
     {children}
   </span>
 );
@@ -160,8 +156,8 @@ export const Inspector = ({ trialId, event, actorParams, className, ...props }) 
   const runId = actorParams?.config?.runId;
 
   return (
-    <div className={classNames(className, "flex flex-col items-stretch relative")} {...props}>
-      <button className={classNames("flex flex-row justify-between items-center p-1")} onClick={toggleVisible}>
+    <div className={clsx(className, "flex flex-col items-stretch relative")} {...props}>
+      <button className={clsx("flex flex-row justify-between items-center p-1")} onClick={toggleVisible}>
         <h1 className="font-mono text-lg font-semibold">
           {runId}/{trialId}
         </h1>
@@ -169,7 +165,7 @@ export const Inspector = ({ trialId, event, actorParams, className, ...props }) 
       </button>
       {visible ? (
         <div
-          className={classNames(
+          className={clsx(
             className,
             "flex flex-col items-start absolute p-2 bg-neutral-400/90 rounded-b z-10 top-full inset-x-0"
           )}

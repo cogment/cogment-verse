@@ -13,10 +13,10 @@
 // limitations under the License.
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useDocumentKeypressListener } from "../hooks/usePressedKeys";
+import { useDocumentKeypressListener } from "@cogment/cogment-verse-components";
 import { WEB_ACTOR_NAME } from "../utils/constants";
-import { Button } from "../components/Button";
-import { KeyboardControlList } from "../components/KeyboardControlList";
+import { Button } from "@cogment/cogment-verse-components";
+import { KeyboardControlList } from "@cogment/cogment-verse-components";
 import { CountdownCircleTimer } from "react-countdown-circle-timer";
 import {
   serializePlayerAction,

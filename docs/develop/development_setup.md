@@ -88,7 +88,7 @@ This perform to a full static build of the web app before launching the instance
 To start an autoreloading isntance of the webapp, set `services.web.dev` to `True`. e.g.
 
 ```console
-$ python -m main service.web.dev=True
+$ python -m main services.web.dev=True
 ```
 
 The web app will be served as an autoreloading server: any edit to the web app sources will be taken into account and cause a reload.

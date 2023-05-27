@@ -17,7 +17,7 @@ import { Link } from "react-router-dom";
 import { useActiveTrials } from "../hooks/useActiveTrials";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCircleNotch } from "@fortawesome/free-solid-svg-icons";
-import classNames from "classnames";
+import clsx from "clsx";
 
 import { cogSettings } from "../CogSettings";
 import { ORCHESTRATOR_WEB_ENDPOINT } from "../utils/constants";
@@ -27,7 +27,7 @@ const TrialStatePill = ({ state, trialId, ...otherProps }) => {
   if (state === TrialState.PENDING) {
     return (
       <Link
-        className={classNames(trialStatePillClassNames, "bg-emerald-500 hover:bg-emerald-800")}
+        className={clsx(trialStatePillClassNames, "bg-emerald-500 hover:bg-emerald-800")}
         to={`/play/${trialId}`}
         {...otherProps}
       >
@@ -36,13 +36,13 @@ const TrialStatePill = ({ state, trialId, ...otherProps }) => {
     );
   } else if (state === TrialState.RUNNING) {
     return (
-      <span className={classNames(trialStatePillClassNames, "bg-slate-600")} {...otherProps}>
+      <span className={clsx(trialStatePillClassNames, "bg-slate-600")} {...otherProps}>
         <FontAwesomeIcon icon={faCircleNotch} spin /> Trial running
       </span>
     );
   } else {
     return (
-      <span className={classNames(trialStatePillClassNames, "bg-red-600")} {...otherProps}>
+      <span className={clsx(trialStatePillClassNames, "bg-red-600")} {...otherProps}>
         {state}
       </span>
     );
@@ -56,7 +56,7 @@ const Trials = () => {
       <h1 className="text-xl font-semibold mt-5">Active trials</h1>
       <ul className="my-5 flex flex-col">
         {trials.map(({ trialId, state }, index) => (
-          <li key={index} className={classNames("flex flex-row items-center p-2", { "bg-slate-100": index % 2 === 0 })}>
+          <li key={index} className={clsx("flex flex-row items-center p-2", { "bg-slate-100": index % 2 === 0 })}>
             <div className="grow font-medium font-mono">{trialId}</div>
             <TrialStatePill state={state} trialId={trialId} />
           </li>

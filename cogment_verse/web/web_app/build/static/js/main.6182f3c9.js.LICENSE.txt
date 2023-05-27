@@ -1,0 +1,340 @@
+/*! ../../cogment/api/common_pb */
+
+/*! ../../cogment/api/common_pb.js */
+
+/*! ../../cogment/api/environment_pb.js */
+
+/*! ../../cogment/api/orchestrator_pb */
+
+/*! ../cogment/api/common_pb_2 */
+
+/*! ../lib/Utils */
+
+/*! ../util/minimal */
+
+/*! ./Actor */
+
+/*! ./ClientService */
+
+/*! ./CogSettings */
+
+/*! ./CogmentYaml */
+
+/*! ./Context */
+
+/*! ./Control */
+
+/*! ./Event */
+
+/*! ./Reward */
+
+/*! ./Session */
+
+/*! ./Trial */
+
+/*! ./TrialActor */
+
+/*! ./api/common_pb */
+
+/*! ./api/common_pb_2 */
+
+/*! ./api/orchestrator_pb */
+
+/*! ./api/orchestrator_pb_service */
+
+/*! ./cogment/index */
+
+/*! ./longbits */
+
+/*! ./reader */
+
+/*! ./reader_buffer */
+
+/*! ./roots */
+
+/*! ./rpc */
+
+/*! ./rpc/service */
+
+/*! ./src/index-minimal */
+
+/*! ./types */
+
+/*! ./util/minimal */
+
+/*! ./writer */
+
+/*! ./writer_buffer */
+
+/*! @improbable-eng/grpc-web */
+
+/*! @protobufjs/aspromise */
+
+/*! @protobufjs/base64 */
+
+/*! @protobufjs/eventemitter */
+
+/*! @protobufjs/float */
+
+/*! @protobufjs/inquire */
+
+/*! @protobufjs/pool */
+
+/*! @protobufjs/utf8 */
+
+/*! browser-headers */
+
+/*! google-protobuf */
+
+/*! google-protobuf/google/protobuf/any_pb.js */
+
+/*! protobufjs/minimal */
+
+/*! regenerator-runtime -- Copyright (c) 2014-present, Facebook, Inc. -- license (MIT): https://github.com/facebook/regenerator/blob/main/LICENSE */
+
+/*! tslib */
+
+/*!**********************!*\
+      !*** ./src/index.ts ***!
+      \**********************/
+
+/*!**************************!*\
+      !*** ./src/lib/Utils.ts ***!
+      \**************************/
+
+/*!******************************!*\
+      !*** ./src/cogment/Actor.ts ***!
+      \******************************/
+
+/*!******************************!*\
+      !*** ./src/cogment/Trial.ts ***!
+      \******************************/
+
+/*!******************************!*\
+      !*** ./src/cogment/index.ts ***!
+      \******************************/
+
+/*!********************************!*\
+      !*** ./src/cogment/Context.ts ***!
+      \********************************/
+
+/*!********************************!*\
+      !*** ./src/cogment/Control.ts ***!
+      \********************************/
+
+/*!********************************!*\
+      !*** ./src/cogment/Session.ts ***!
+      \********************************/
+
+/*!************************************!*\
+      !*** ./src/cogment/types/Event.ts ***!
+      \************************************/
+
+/*!************************************!*\
+      !*** ./src/cogment/types/index.ts ***!
+      \************************************/
+
+/*!*************************************!*\
+      !*** ./src/cogment/types/Reward.ts ***!
+      \*************************************/
+
+/*!**************************************!*\
+      !*** ./src/cogment/ClientService.ts ***!
+      \**************************************/
+
+/*!**************************************!*\
+      !*** ./src/cogment/api/common_pb.js ***!
+      \**************************************/
+
+/*!****************************************!*\
+      !*** ./src/cogment/api/common_pb_2.js ***!
+      \****************************************/
+
+/*!*****************************************!*\
+      !*** ./src/cogment/types/TrialActor.ts ***!
+      \*****************************************/
+
+/*!******************************************!*\
+      !*** ./src/cogment/types/CogSettings.ts ***!
+      \******************************************/
+
+/*!******************************************!*\
+      !*** ./src/cogment/types/CogmentYaml.ts ***!
+      \******************************************/
+
+/*!*******************************************!*\
+      !*** ./src/cogment/api/environment_pb.js ***!
+      \*******************************************/
+
+/*!********************************************!*\
+      !*** ./src/cogment/api/orchestrator_pb.js ***!
+      \********************************************/
+
+/*!************************************************!*\
+      !*** ../../../node_modules/tslib/tslib.es6.js ***!
+      \************************************************/
+
+/*!***************************************************!*\
+      !*** ../../../node_modules/protobufjs/minimal.js ***!
+      \***************************************************/
+
+/*!***************************************************!*\
+      !*** ../../../node_modules/protobufjs/src/rpc.js ***!
+      \***************************************************/
+
+/*!****************************************************!*\
+      !*** ./src/cogment/api/orchestrator_pb_service.js ***!
+      \****************************************************/
+
+/*!*****************************************************!*\
+      !*** ../../../node_modules/protobufjs/src/roots.js ***!
+      \*****************************************************/
+
+/*!******************************************************!*\
+      !*** ../../../node_modules/protobufjs/src/reader.js ***!
+      \******************************************************/
+
+/*!******************************************************!*\
+      !*** ../../../node_modules/protobufjs/src/writer.js ***!
+      \******************************************************/
+
+/*!*******************************************************!*\
+      !*** ../../../node_modules/@protobufjs/pool/index.js ***!
+      \*******************************************************/
+
+/*!*******************************************************!*\
+      !*** ../../../node_modules/@protobufjs/utf8/index.js ***!
+      \*******************************************************/
+
+/*!********************************************************!*\
+      !*** ../../../node_modules/@protobufjs/float/index.js ***!
+      \********************************************************/
+
+/*!*********************************************************!*\
+      !*** ../../../node_modules/@protobufjs/base64/index.js ***!
+      \*********************************************************/
+
+/*!**********************************************************!*\
+      !*** ../../../node_modules/@protobufjs/inquire/index.js ***!
+      \**********************************************************/
+
+/*!***********************************************************!*\
+      !*** ../../../node_modules/protobufjs/src/rpc/service.js ***!
+      \***********************************************************/
+
+/*!************************************************************!*\
+      !*** ../../../node_modules/@protobufjs/aspromise/index.js ***!
+      \************************************************************/
+
+/*!************************************************************!*\
+      !*** ../../../node_modules/protobufjs/src/util/minimal.js ***!
+      \************************************************************/
+
+/*!*************************************************************!*\
+      !*** ../../../node_modules/protobufjs/src/index-minimal.js ***!
+      \*************************************************************/
+
+/*!*************************************************************!*\
+      !*** ../../../node_modules/protobufjs/src/reader_buffer.js ***!
+      \*************************************************************/
+
+/*!*************************************************************!*\
+      !*** ../../../node_modules/protobufjs/src/util/longbits.js ***!
+      \*************************************************************/
+
+/*!*************************************************************!*\
+      !*** ../../../node_modules/protobufjs/src/writer_buffer.js ***!
+      \*************************************************************/
+
+/*!***************************************************************!*\
+      !*** ../../../node_modules/@protobufjs/eventemitter/index.js ***!
+      \***************************************************************/
+
+/*!****************************************************************!*\
+      !*** ../../../node_modules/google-protobuf/google-protobuf.js ***!
+      \****************************************************************/
+
+/*!***********************************************************************!*\
+      !*** ../../../node_modules/google-protobuf/google/protobuf/any_pb.js ***!
+      \***********************************************************************/
+
+/*!*************************************************************************!*\
+      !*** ../../../node_modules/browser-headers/dist/browser-headers.umd.js ***!
+      \*************************************************************************/
+
+/*!**********************************************************************************!*\
+      !*** ../../../node_modules/@improbable-eng/grpc-web/dist/grpc-web-client.umd.js ***!
+      \**********************************************************************************/
+
+/**
+ * @license React
+ * react-dom.production.min.js
+ *
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+/**
+ * @license React
+ * react-jsx-runtime.production.min.js
+ *
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+/**
+ * @license React
+ * react.production.min.js
+ *
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+/**
+ * @license React
+ * scheduler.production.min.js
+ *
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+/**
+ * @remix-run/router v1.6.2
+ *
+ * Copyright (c) Remix Software Inc.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.md file in the root directory of this source tree.
+ *
+ * @license MIT
+ */
+
+/**
+ * React Router DOM v6.11.2
+ *
+ * Copyright (c) Remix Software Inc.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.md file in the root directory of this source tree.
+ *
+ * @license MIT
+ */
+
+/**
+ * React Router v6.11.2
+ *
+ * Copyright (c) Remix Software Inc.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.md file in the root directory of this source tree.
+ *
+ * @license MIT
+ */
