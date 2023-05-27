@@ -13,12 +13,14 @@
 # limitations under the License.
 
 from __future__ import annotations
-from enum import Enum
 
+import gc
 import io
 import logging
+from enum import Enum
 
 import cogment
+import cv2
 import numpy as np
 import torch
 from gym.spaces import utils
@@ -31,50 +33,107 @@ torch.multiprocessing.set_sharing_strategy("file_system")
 log = logging.getLogger(__name__)
 
 
+def check_gc_tensor():
+    for obj in gc.get_objects():
+        try:
+            if torch.is_tensor(obj) or (hasattr(obj, 'data') and torch.is_tensor(obj.data)):
+                print(type(obj), obj.size())
+        except:
+            pass
+
+
+def count_gc_tensor() -> int:
+    count = 0
+    for obj in gc.get_objects():
+        try:
+            if torch.is_tensor(obj) or (hasattr(obj, 'data') and torch.is_tensor(obj.data)):
+                count += 1
+        except:
+            pass
+    return count
+
+
+def resize_frame(frame):
+    frame = frame[14:-5,5:-4]
+    frame = cv2.resize(frame, (84,84), interpolation = cv2.INTER_NEAREST)
+    frame = np.array(frame, dtype = np.uint8)
+    return frame
+
+
+def resize_obs(observation: np.ndarray) -> np.ndarray:
+    new_obs = observation.copy()[:, :, :4]
+    for i in range(new_obs.shape[2]):
+        new_obs[:, :, i] = resize_frame(new_obs[:, :, i])
+
+    return new_obs
+
+
 class DataAugmentationEnum(Enum):
     SINGLE_PLAYER = "single_player"
     ALL_PLAYERS = "all_players"
     FLIP = "flip"
 
 
-class BehaviorCloningModel(Model):
+class PongCNNModel(Model):
     def __init__(
         self,
         model_id,
         environment_implementation,
-        num_input,
+        input_shape,
         num_output,
-        policy_network_num_hidden_nodes=64,
+        network_num_hidden_nodes=64,
+        dtype=torch.float32,
+        device: str = "cpu",
         iteration=0,
     ):
         super().__init__(model_id, iteration)
 
-        self._dtype = torch.float
+        self._dtype = dtype
         self._environment_implementation = environment_implementation
-        self._num_input = num_input
+        self._input_shape = input_shape
         self._num_output = num_output
-        self._policy_network_num_hidden_nodes = policy_network_num_hidden_nodes
+        self._network_num_hidden_nodes = network_num_hidden_nodes
 
-        self.policy_network = torch.nn.Sequential(
-            torch.nn.Linear(num_input, policy_network_num_hidden_nodes, dtype=self._dtype),
-            torch.nn.BatchNorm1d(policy_network_num_hidden_nodes, dtype=self._dtype),
+        self.device = device
+        # self.network = torch.nn.Sequential(
+        #     torch.nn.Conv2d(num_input, network_num_hidden_nodes, dtype=self._dtype),
+        #     torch.nn.BatchNorm1d(network_num_hidden_nodes, dtype=self._dtype),
+        #     torch.nn.ReLU(),
+        #     torch.nn.Linear(network_num_hidden_nodes, network_num_hidden_nodes, dtype=self._dtype),
+        #     torch.nn.BatchNorm1d(network_num_hidden_nodes, dtype=self._dtype),
+        #     torch.nn.ReLU(),
+        #     torch.nn.Linear(network_num_hidden_nodes, num_output, dtype=self._dtype),
+        # )
+
+        self.network = torch.nn.Sequential(
+            torch.nn.Conv2d(input_shape[2], network_num_hidden_nodes, kernel_size=8, stride=4),
             torch.nn.ReLU(),
-            torch.nn.Linear(policy_network_num_hidden_nodes, policy_network_num_hidden_nodes, dtype=self._dtype),
-            torch.nn.BatchNorm1d(policy_network_num_hidden_nodes, dtype=self._dtype),
+            torch.nn.Conv2d(network_num_hidden_nodes, 2*network_num_hidden_nodes, kernel_size=4, stride=2),
             torch.nn.ReLU(),
-            torch.nn.Linear(policy_network_num_hidden_nodes, num_output, dtype=self._dtype),
+            torch.nn.Conv2d(2*network_num_hidden_nodes, 2*network_num_hidden_nodes, kernel_size=3, stride=1),
+            torch.nn.ReLU(),
+            torch.nn.Flatten(),
+            torch.nn.Linear(3136, 512),
+            torch.nn.ReLU(),
+            torch.nn.Linear(512, num_output)
         )
 
+        self.network.to(torch.device(self.device))
         self.total_samples = 0
+
+    def _calculate_flatten_size(self, input_shape):
+        dummy_input = torch.zeros(1, *input_shape)
+        flattened_size = self.network[:6](dummy_input).shape[1]
+        return flattened_size
 
     def get_model_user_data(self):
         return {
             "model_id": self.model_id,
             "iteration": self.iteration,
             "environment_implementation": self._environment_implementation,
-            "num_input": self._num_input,
+            "input_shape": self._input_shape,
             "num_output": self._num_output,
-            "policy_network_num_hidden_nodes": self._policy_network_num_hidden_nodes,
+            "network_num_hidden_nodes": self._network_num_hidden_nodes,
             "total_samples": self.total_samples,
         }
 
@@ -83,7 +142,7 @@ class BehaviorCloningModel(Model):
         stream = io.BytesIO()
         torch.save(
             (
-                model.policy_network.state_dict(),
+                model.network.cpu().state_dict(),
                 model.get_model_user_data(),
             ),
             stream,
@@ -91,19 +150,19 @@ class BehaviorCloningModel(Model):
         return stream.getvalue()
 
     @classmethod
-    def deserialize_model(cls, serialized_model) -> BehaviorCloningModel:
+    def deserialize_model(cls, serialized_model) -> PongCNNModel:
         stream = io.BytesIO(serialized_model)
-        (policy_network_state_dict, model_user_data) = torch.load(stream)
+        (network_state_dict, model_user_data) = torch.load(stream)
 
-        model = BehaviorCloningModel(
+        model = PongCNNModel(
             model_id=model_user_data["model_id"],
             iteration=model_user_data["iteration"],
             environment_implementation=model_user_data["environment_implementation"],
-            num_input=int(model_user_data["num_input"]),
+            input_shape=model_user_data["input_shape"],
             num_output=int(model_user_data["num_output"]),
-            policy_network_num_hidden_nodes=int(model_user_data["policy_network_num_hidden_nodes"]),
+            network_num_hidden_nodes=int(model_user_data["network_num_hidden_nodes"]),
         )
-        model.policy_network.load_state_dict(policy_network_state_dict)
+        model.network.load_state_dict(network_state_dict)
         model.total_samples = model_user_data["total_samples"]
         return model
 
@@ -127,18 +186,18 @@ class BehaviorCloningActor:
         # Get model
         if config.model_iteration == -1:
             latest_model = await actor_session.model_registry.track_latest_model(
-                name=config.model_id, deserialize_func=BehaviorCloningModel.deserialize_model
+                name=config.model_id, deserialize_func=PongCNNModel.deserialize_model
             )
             model, _ = await latest_model.get()
         else:
             serialized_model = await actor_session.model_registry.retrieve_model(
                 config.model_id, config.model_iteration
             )
-            model = BehaviorCloningModel.deserialize_model(serialized_model)
+            model = PongCNNModel.deserialize_model(serialized_model)
 
         log.info(f"Starting trial with model_id: {model.model_id} | iteration: {model.iteration}")
 
-        model.policy_network.eval()
+        model.network.eval()
 
         async for event in actor_session.all_events():
             if event.observation and event.type == cogment.EventType.ACTIVE:
@@ -148,13 +207,16 @@ class BehaviorCloningActor:
                     actor_session.do_action(action_space.serialize(action_space.create()))
                     continue
 
-                observation_tensor = torch.tensor(observation.flat_value, dtype=self._dtype).view(1, -1)
+                resized_obs = resize_obs(observation.value)
+
+                observation_tensor = torch.tensor(resized_obs, dtype=self._dtype)
+                observation_tensor = torch.unsqueeze(observation_tensor.permute((2, 0, 1)), dim=0).clone()
 
                 with torch.no_grad():
-                    scores = model.policy_network(observation_tensor)
+                    scores = model.network(observation_tensor)
                     probs = torch.softmax(scores, dim=-1)
-                discrete_action_tensor = torch.distributions.Categorical(probs).sample()
-                action = action_space.create(value=discrete_action_tensor.item())
+                action_value = torch.distributions.Categorical(probs).sample().cpu().item()
+                action = action_space.create(value=action_value)
                 actor_session.do_action(action_space.serialize(action))
 
 
@@ -167,14 +229,13 @@ class BehaviorCloningTrainingOffline:
         self._data_augmentation_type = DataAugmentationEnum(cfg.data_augmentation.type)
         self._data_augmentation_cfg = cfg.data_augmentation
 
-
         # Initializing a model
-        self.model = BehaviorCloningModel(
+        self.model = PongCNNModel(
             model_id="",
             environment_implementation=self._environment_specs.implementation,
-            num_input=utils.flatdim(self._environment_specs.get_observation_space().gym_space),
+            input_shape=(84, 84, 4),
             num_output=utils.flatdim(self._environment_specs.get_action_space().gym_space),
-            policy_network_num_hidden_nodes=self._cfg.policy_network.num_hidden_nodes,
+            network_num_hidden_nodes=self._cfg.network.num_hidden_nodes,
         )
 
     async def sample_producer(self, sample_producer_session):
@@ -191,6 +252,8 @@ class BehaviorCloningTrainingOffline:
         environment_specs = EnvironmentSpecs.deserialize(player_params.config.environment_specs)
         action_space = environment_specs.get_action_space()
         observation_space = environment_specs.get_observation_space()
+
+        log.debug(f"{torch.cuda.memory_allocated()} | Start memory allocated")
 
         async for sample in sample_producer_session.all_trial_samples():
 
@@ -209,10 +272,14 @@ class BehaviorCloningTrainingOffline:
                 if player_action.flat_value is None:
                     continue
 
-                actions.append(torch.tensor(player_action.flat_value, dtype=self._dtype))
+                resized_obs = resize_obs(player_observation.value)
+
+                actions.append(torch.tensor(player_action.flat_value, dtype=self._dtype).detach())
                 demonstrations.append(False)  # No teacher in our current scenario
-                observations.append(torch.tensor(player_observation.flat_value, dtype=self._dtype))
-                rewards.append(torch.tensor(player_reward if player_reward is not None else 0, dtype=self._dtype))
+                observations.append(torch.tensor(resized_obs, dtype=self._dtype).detach())
+                rewards.append(torch.tensor(player_reward if player_reward is not None else 0, dtype=self._dtype).detach())
+
+                log.debug(f"{torch.cuda.memory_allocated()} | After appending a sample to list")
 
             elif self._data_augmentation_type == DataAugmentationEnum.ALL_PLAYERS:
                 for player in players_params:
@@ -249,16 +316,22 @@ class BehaviorCloningTrainingOffline:
                 flipped_observation = observation_space.create(value=flipped_observation_tensor)
 
                 for obs in [player_observation, flipped_observation]:
-                    actions.append(torch.tensor(player_action.flat_value, dtype=self._dtype))
+                    actions.append(torch.tensor(player_action.flat_value, dtype=self._dtype).detach())
                     demonstrations.append(False)  # No teacher in our current scenario
-                    observations.append(torch.tensor(obs.flat_value, dtype=self._dtype))
-                    rewards.append(torch.tensor(player_reward if player_reward is not None else 0, dtype=self._dtype))
+                    observations.append(torch.tensor(obs.flat_value, dtype=self._dtype).detach())
+                    rewards.append(torch.tensor(player_reward if player_reward is not None else 0, dtype=self._dtype).detach())
 
             for action, demonstration, observation, reward in zip(actions, demonstrations, observations, rewards):
                 sample_producer_session.produce_sample((demonstration, observation, action, reward))
 
+            log.debug(f"{torch.cuda.memory_allocated()} | After producing all samples")
+
     async def impl(self, run_session):
         # assert self._environment_specs.num_players == 1
+
+        # global gc_tensor_count
+        # gc_tensor_count = count_gc_tensor()
+
 
         if self._cfg.model_id:
             model_id = self._cfg.model_id
@@ -267,7 +340,7 @@ class BehaviorCloningTrainingOffline:
             self._cfg.model_id = model_id
         self.model.model_id = model_id
 
-        serialized_model = BehaviorCloningModel.serialize_model(self.model)
+        serialized_model = PongCNNModel.serialize_model(self.model)
         iteration_info = await run_session.model_registry.publish_model(
             name=model_id,
             model=serialized_model,
@@ -280,7 +353,7 @@ class BehaviorCloningTrainingOffline:
 
         # Configure the optimizer
         optimizer = torch.optim.Adam(
-            self.model.policy_network.parameters(),
+            self.model.network.parameters(),
             lr=self._cfg.learning_rate,
         )
 
@@ -306,21 +379,27 @@ class BehaviorCloningTrainingOffline:
                 (trial_demonstration, trial_observation, trial_action, trial_reward) = sample
 
                 demonstrations.append(trial_demonstration)
-                observations.append(trial_observation)
-                actions.append(trial_action)
-                rewards.append(trial_reward)
+                observations.append(trial_observation.clone())
+                actions.append(trial_action.clone())
+                rewards.append(trial_reward.clone())
 
                 if len(observations) < self._cfg.batch_size:
                     continue
 
                 # Sample a batch of observations/actions
                 batch_indices = np.random.default_rng().integers(0, len(observations), self._cfg.batch_size)
-                batch_obs = torch.vstack([observations[i] for i in batch_indices])
-                batch_act = torch.vstack([actions[i] for i in batch_indices])
+                batch_obs = torch.vstack([torch.unsqueeze(observations[i], axis=0) for i in batch_indices]).permute(0, 3, 1, 2).detach()
+                batch_act = torch.vstack([actions[i] for i in batch_indices]).detach()
 
-                self.model.policy_network.train()
-                pred_policy = self.model.policy_network(batch_obs)
+                log.debug(f"{torch.cuda.memory_allocated()} | before training")
+
+                self.model.network.train()
+                # print(f"batch obs shape: {batch_obs.size()}")
+                # print(f"batch act shape: {batch_act.size()}")
+                pred_policy = self.model.network(batch_obs)
                 loss = loss_fn(pred_policy, batch_act)
+
+                log.debug(f"{torch.cuda.memory_allocated()} | After training")
 
                 model_updates += 1
 
@@ -331,7 +410,7 @@ class BehaviorCloningTrainingOffline:
 
                 # Publish the newly trained iteration every 100 steps
                 if step_idx % self._cfg.update_frequency == 0:
-                    serialized_model = BehaviorCloningModel.serialize_model(self.model)
+                    serialized_model = PongCNNModel.serialize_model(self.model)
                     iteration_info = await run_session.model_registry.store_model(
                         name=model_id,
                         model=serialized_model,
@@ -342,5 +421,9 @@ class BehaviorCloningTrainingOffline:
                         loss=loss.item(),
                         total_samples=len(observations),
                     )
+
+
+                # print(f"GC Tensors: {gc_tensor_count - count_gc_tensor()}")
+                # gc_tensor_count = count_gc_tensor()
 
             log.info(f"Epoch {epoch_idx+1} completed with {len(observations)} samples, {model_updates} model updates.")

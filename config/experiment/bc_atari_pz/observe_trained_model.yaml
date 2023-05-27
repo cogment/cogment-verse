@@ -19,7 +19,7 @@ run:
     - name: player_1
       implementation: actors.atari_pong.behavior_cloning.BehaviorCloningActor
       agent_config:
-        model_id: great_lichterman_0_model # Change to desired model id (find it in .cogment_verse/model_registry)
+        model_id: beautiful_kirch_0_model # Change to desired model id (find it in .cogment_verse/model_registry)
         model_iteration: -1  # change to desired model version. -1 for latest version available.
     # Left plyaer
     # - name: player_2
