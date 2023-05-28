@@ -10,7 +10,7 @@ repository: https://github.com/cogment/cogment-verse
 preferred-citation:
   type: "conference-paper"
   title: "Hiking up that HILL with Cogment-Verse: Train & Operate Multi-agent Systems Learning from Humans"
-  booktitle: "Proceedings of the 21st International Conference on Autonomous Agents and Multiagent Systems"
+  booktitle: "Proceedings of the 2023 International Conference on Autonomous Agents and Multiagent Systems"
   year: 2023
   authors:
     - affiliation: AI Redefined
