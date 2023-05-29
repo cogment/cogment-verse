@@ -1,0 +1,36 @@
+# @package _global_
+defaults:
+  - override /services/actor:
+      - random
+      - sb3/sb3_ppo
+  - override /services/environment: pong_pz
+  # To save test trials to trial_datastore, uncomment command below
+  # - override /services/trial_datastore: local
+  - override /run/experiment_tracker: simple
+  - _self_
+
+run:
+  class_name: runs.play.PlayRun
+  observer: False
+  num_trials: 5
+  seed: 12
+  players:
+    # Right player
+    - name: player_1
+      implementation: actors.sb3.sb3_ppo_actor.SB3PPOActor
+      agent_config:
+        hf_hub_model:
+          repo_id: ThomasSimonini/ppo-PongNoFrameskip-v4 #sb3/ppo-PongNoFrameskip-v4
+          filename: ppo-PongNoFrameskip-v4.zip
+    # Left plyaer
+    - name: player_2
+      implementation: client
+      # implementation: actors.sb3.sb3_ppo_actor.SB3PPOActor
+      # agent_config:
+      #   hf_hub_model:
+      #     repo_id: ThomasSimonini/ppo-PongNoFrameskip-v4
+      #     filename: ppo-PongNoFrameskip-v4.zip
+
+
+# not working: https://huggingface.co/sb3/ppo-PongNoFrameskip-v4/tree/main
+# working: https://huggingface.co/ThomasSimonini/ppo-PongNoFrameskip-v4/tree/main
