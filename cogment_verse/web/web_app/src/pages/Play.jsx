@@ -21,9 +21,11 @@ import { useJoinedTrial, TRIAL_STATUS } from "@cogment/cogment-verse-components"
 import { Controls } from "../controls/Controls";
 import { ORCHESTRATOR_WEB_ENDPOINT } from "../utils/constants";
 import { useParams, useNavigate } from "react-router-dom";
+import { WEB_BASE_URL } from "../utils/constants";
 
 const BETWEEN_TIMEOUT = 1000;
 const JOIN_TIMEOUT = 5000;
+const DEFAULT_SCREEN_SRC = `${WEB_BASE_URL}/assets/cogment-splash.png`;
 
 const ErrorCard = ({ error }) => (
   <div className="border-l-8 border-red-600 bg-white rounded p-5 shadow-md">
@@ -62,6 +64,7 @@ const Play = () => {
       <Inspector trialId={trialId} event={event} actorParams={actorParams} className="my-2" />
       <RenderedScreen
         observation={event.observation}
+        splashScreenSrc={DEFAULT_SCREEN_SRC}
         overlay={
           trialStatus === TRIAL_STATUS.JOINING ? (
             <Countdown duration={JOIN_TIMEOUT} />

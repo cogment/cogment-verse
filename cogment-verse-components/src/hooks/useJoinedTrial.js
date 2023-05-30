@@ -24,9 +24,6 @@ export const TRIAL_STATUS = {
 };
 
 export const useJoinedTrial = (cogSettings, cogmentOrchestratorWebEndpoint, trialId, timeout = 5000) => {
-  console.log("in useJoinedTrial - React=", React);
-  console.log("in useJoinedTrial - useState=", useState);
-
   const [[status, error], setTrialStatus] = useState([TRIAL_STATUS.JOINING, null]);
   const [event, setEvent] = useState({
     observation: undefined,

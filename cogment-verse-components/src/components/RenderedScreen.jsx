@@ -25,9 +25,7 @@ function bufferToBase64(buf) {
   return btoa(binstr);
 }
 
-const DEFAULT_SCREEN_SRC = `${process.env.PUBLIC_URL}/assets/cogment-splash.png`;
-
-export const RenderedScreen = ({ observation, overlay, className, ...props }) => {
+export const RenderedScreen = ({ observation, overlay, className, splashScreenSrc, ...props }) => {
   const canvasRef = useRef();
   const teacherOverride = observation?.overriddenPlayers != null && observation.overriddenPlayers.length > 0;
 
@@ -49,7 +47,7 @@ export const RenderedScreen = ({ observation, overlay, className, ...props }) =>
       <img
         className={clsx(styles.canvas, { blur: overlay != null })}
         ref={canvasRef}
-        src={DEFAULT_SCREEN_SRC}
+        src={splashScreenSrc}
         alt="current observation rendered pixels"
       />
       {overlay ? <div className={styles.overlay}>{overlay}</div> : null}

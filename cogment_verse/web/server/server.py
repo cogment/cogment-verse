@@ -35,7 +35,7 @@ def create_app():
 
     orchestrator_web_endpoint = web_app_cfg["orchestrator_web_endpoint"]
     homepage_content = homepage_content.replace(
-        'ORCHESTRATOR_WEB_ENDPOINT=""', f'ORCHESTRATOR_WEB_ENDPOINT="{orchestrator_web_endpoint}"'
+        'ORCHESTRATOR_WEB_ENDPOINT = ""', f'ORCHESTRATOR_WEB_ENDPOINT = "{orchestrator_web_endpoint}"'
     )
 
     async def homepage(_request):

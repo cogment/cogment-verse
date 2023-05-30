@@ -59,7 +59,7 @@ class WebProcess(CogmentVerseProcess):
         # TODO find a better way to detect a rebuild is needed
         if not os.path.isdir(WEB_BUILD_DIR) or web_cfg.get("build", False):
             log.info("Installing web app dependencies using `npm install`...")
-            npm_command(["install", "--no-audit"], WEB_SOURCES_DIR)
+            npm_command(["install", "--no-audit", "--install-links"], WEB_SOURCES_DIR)
 
             generate(specs_filename, WEB_SOURCES_DIR, True)
 

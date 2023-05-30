@@ -15,31 +15,27 @@
   "module": "dist/index.js",
   "scripts": {
     "build:js": "node build.js",
-    "build:css": "npx tailwindcss -i ./src/index.css -o ./build/static/style.css --minify",
-    "build": "npm run build:js && npm run build:css"
+    "build": "npm run build:js",
+    "prepack": "npm run build"
+  },
+  "dependencies": {
+    "@fortawesome/fontawesome-svg-core": "^6.4.0",
+    "@fortawesome/free-solid-svg-icons": "^6.4.0",
+    "@fortawesome/react-fontawesome": "^0.2.0",
+    "clsx": "^1.2.1",
+    "react-countdown-circle-timer": "^3.0.8",
+    "react-router-dom": "^6.11.0"
   },
   "peerDependencies": {
-    "clsx": "^1.2.1",
-    "react-countdown-circle-timer": "^3.0.8",
-    "@fortawesome/fontawesome-svg-core": "^6.4.0",
-    "@fortawesome/free-solid-svg-icons": "^6.4.0",
-    "@fortawesome/react-fontawesome": "^0.2.0",
     "@cogment/cogment-js-sdk": "^2.1.0",
-    "react-router-dom": "^6.11.0",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "react-dom": "^18.2.0",
+    "react": "^18.2.0"
   },
   "devDependencies": {
-    "clsx": "^1.2.1",
-    "react-countdown-circle-timer": "^3.0.8",
-    "@fortawesome/fontawesome-svg-core": "^6.4.0",
-    "@fortawesome/free-solid-svg-icons": "^6.4.0",
-    "@fortawesome/react-fontawesome": "^0.2.0",
     "@cogment/cogment-js-sdk": "^2.1.0",
-    "react-router-dom": "^6.11.0",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
+    "esbuild-css-modules-plugin": "^2.7.1",
     "esbuild": "^0.17.19",
-    "esbuild-css-modules-plugin": "^2.7.1"
+    "react-dom": "^18.2.0",
+    "react": "^18.2.0"
   }
 }

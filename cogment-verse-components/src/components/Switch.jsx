@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import React from "react";
 import styles from "./Switch.module.css";
 import clsx from "clsx";
 

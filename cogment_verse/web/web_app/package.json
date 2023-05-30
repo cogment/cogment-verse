@@ -1,10 +1,9 @@
 {
   "name": "cogment_verse_web",
   "version": "0.1.0",
-  "private": true,
   "dependencies": {
     "@cogment/cogment-js-sdk": "^2.1.0",
-    "@cogment/cogment-verse-components": "/Users/cloderic/Dev/cogment-verse/cogment-verse-components",
+    "@cogment/cogment-verse-components": "../../../cogment-verse-components",
     "@fortawesome/fontawesome-svg-core": "^6.4.0",
     "@fortawesome/free-solid-svg-icons": "^6.4.0",
     "@fortawesome/react-fontawesome": "^0.2.0",
@@ -13,23 +12,19 @@
     "react-countdown-circle-timer": "^3.0.8",
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.11.0",
-    "react-scripts": "^5.0.1",
-    "tmp": "^0.2.1",
-    "typescript": "^4.4.3",
-    "uglify-js": "^3.17.4",
-    "web-vitals": "^1.1.2"
+    "tailwindcss": "^3.3.2"
   },
   "devDependencies": {
-    "autoprefixer": "^10.4.4",
-    "postcss": "^8.4.12",
+    "esbuild": "0.17.17",
+    "esbuild-css-modules-plugin": "2.7.1",
     "prettier": "^2.4.1",
-    "tailwindcss": "^3.0.24"
+    "yaml": "^2.3.1"
   },
   "scripts": {
     "cogment_generate": "npx cogment-js-sdk-generate cogment.yaml",
-    "start": "react-scripts start",
-    "build": "npm run cogment_generate && react-scripts build",
-    "eject": "react-scripts eject",
+    "build:js": "node build.js",
+    "build:css": "npx tailwindcss -i ./src/index.css -o ./build/static/style.css --minify",
+    "build": "npm run build:js && npm run build:css",
     "lint": "npx prettier --check .",
     "lint_fix": "npx prettier -w ."
   },
