@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 
 export const useRealTimeUpdate = (sendAction, fps = 30, paused = true) => {
   const [currentFps, setCurrentFps] = useState(fps);

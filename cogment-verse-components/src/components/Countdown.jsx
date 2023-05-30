@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { useEffect } from "react";
+import React, { useEffect } from "react";
 import { CountdownCircleTimer } from "react-countdown-circle-timer";
 
 export const Countdown = ({ onAfterCountdown, duration = 1000 }) => {

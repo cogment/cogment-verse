@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { useDocumentEventListener } from "../hooks/useDocumentEventListener";
 import styles from "./Joystick.module.css";
 import clsx from "clsx";
