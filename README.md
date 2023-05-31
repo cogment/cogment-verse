@@ -14,6 +14,7 @@ Simply clone the repo and start training.
 - Develop
   - [Development Setup](/docs/develop/development_setup.md)
   - [Docker](/docs/develop/docker.md)
+  - [Petting Zoo](/docs/develop/petting_zoo.md)
   - [Isaac Gym](/docs/develop/isaac_gym.md)
 - Deploy
   - [Tunnel unsing ngrok](/docs/deploy/tunnel_using_ngrok.md)
@@ -43,19 +44,27 @@ Simply clone the repo and start training.
    $ source .venv/bin/activate
    ```
 
-5. Install the python dependencies. For petting zoo's Atari games, [additional installation](/docs/develop/development_setup.md#petting-zoo-atari-games) is required after this step
+5. Install the python dependencies.
+
    ```console
    $ pip install -r requirements.txt
-   $ pip install SuperSuit==3.7.0
    ```
-6. In another terminal, launch a mlflow server on port 3000
+
+6. Depending on the environment you want to use, you might need to take additional steps.
+
+   - [Petting Zoo](/docs/develop/petting_zoo.md)
+   - [Isaac Gym](/docs/develop/isaac_gym.md)
+
+7. In another terminal, launch a mlflow server on port 3000
+
    ```console
    $ source .venv/bin/activate
    $ python -m simple_mlflow
    ```
-7. Start the default Cogment Verse run using `python -m main`
-8. Open Chrome (other web browser might work but haven't tested) and navigate to http://localhost:8080/
-9. Play the game!
+
+8. Start the default Cogment Verse run using `python -m main`
+9. Open Chrome (other web browser might work but haven't tested) and navigate to http://localhost:8080/
+10. Play the game!
 
 That's the basic setup for Cogment Verse, you are now ready to train AI agents.
 
