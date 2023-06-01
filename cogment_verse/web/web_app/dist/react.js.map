@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../src/react/index.js"],
+  "sourcesContent": ["export {\n  Children,\n  Component,\n  Fragment,\n  Profiler,\n  PureComponent,\n  StrictMode,\n  Suspense,\n  cloneElement,\n  createContext,\n  createElement,\n  createFactory,\n  createRef,\n  forwardRef,\n  isValidElement,\n  lazy,\n  memo,\n  startTransition,\n  unstable_act,\n  useCallback,\n  useContext,\n  useDebugValue,\n  useDeferredValue,\n  useEffect,\n  useId,\n  useImperativeHandle,\n  useInsertionEffect,\n  useLayoutEffect,\n  useMemo,\n  useReducer,\n  useRef,\n  useState,\n  useSyncExternalStore,\n  useTransition,\n  version,\n} from \"react\";\n\nimport React from \"react\";\nexport default React;\n"],
+  "mappings": "+CAAA,IAAAA,EAmCO,OAEPA,EAAkB,OACXC,EAAQ,EAAAC",
+  "names": ["import_react", "react_default", "React"]
+}

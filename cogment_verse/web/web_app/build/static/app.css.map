@@ -1,7 +1,0 @@
-{
-  "version": 3,
-  "sources": ["../../src/index.css"],
-  "sourcesContent": ["@tailwind base;\n@tailwind components;\n@tailwind utilities;\n\nbody {\n  margin: 0;\n  font-family: -apple-system, BlinkMacSystemFont, \"Segoe UI\", \"Roboto\", \"Oxygen\", \"Ubuntu\", \"Cantarell\", \"Fira Sans\",\n    \"Droid Sans\", \"Helvetica Neue\", sans-serif;\n  -webkit-font-smoothing: antialiased;\n  -moz-osx-font-smoothing: grayscale;\n}\n\ncode {\n  font-family: source-code-pro, Menlo, Monaco, Consolas, \"Courier New\", monospace;\n}\n"],
-  "mappings": "AAAA,eACA,qBACA,oBAEA,KAJA,SAME,oIAEA,mCACA,kCAGF,KACE",
-  "names": []
-}

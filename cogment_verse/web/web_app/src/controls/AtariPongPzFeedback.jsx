@@ -22,8 +22,8 @@ import { KeyboardControlList } from "@cogment/cogment-verse-components";
 import { Switch } from "@cogment/cogment-verse-components";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faThumbsUp, faThumbsDown, faMeh } from "@fortawesome/free-solid-svg-icons";
-import { serializePlayerAction, DType, Space } from "../utils/spaceSerialization";
-import { EVALUATOR_ACTOR_CLASS, WEB_ACTOR_NAME } from "../utils/constants";
+import { serializePlayerAction, DType, Space } from "../shared/utils/spaceSerialization";
+import { EVALUATOR_ACTOR_CLASS, WEB_ACTOR_NAME } from "../shared/utils/constants";
 
 const ACTION_SPACE = new Space({
   box: {

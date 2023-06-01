@@ -15,7 +15,7 @@
 import { useCallback, useState } from "react";
 import { useDocumentKeypressListener, usePressedKeys } from "@cogment/cogment-verse-components";
 import { useRealTimeUpdate } from "@cogment/cogment-verse-components";
-import { TEACHER_ACTOR_CLASS } from "../../../cogment_verse/web/web_app/src/utils/constants";
+import { TEACHER_ACTOR_CLASS } from "../../../cogment_verse/web/web_app/src/shared/utils/constants";
 import { Button } from "@cogment/cogment-verse-components";
 import { FpsCounter } from "@cogment/cogment-verse-components";
 import { KeyboardControlList } from "@cogment/cogment-verse-components";
@@ -23,7 +23,7 @@ import {
   serializePlayerAction,
   TEACHER_NOOP_ACTION,
   Space,
-} from "../../../cogment_verse/web/web_app/src/utils/spaceSerialization";
+} from "../../../cogment_verse/web/web_app/src/shared/utils/spaceSerialization";
 
 const ACTION_SPACE = new Space({
   discrete: {

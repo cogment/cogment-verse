@@ -14,7 +14,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useDocumentKeypressListener } from "@cogment/cogment-verse-components";
-import { WEB_ACTOR_NAME } from "../utils/constants";
+import { WEB_ACTOR_NAME } from "../shared/utils/constants";
 import { Button } from "@cogment/cogment-verse-components";
 import { KeyboardControlList } from "@cogment/cogment-verse-components";
 import { CountdownCircleTimer } from "react-countdown-circle-timer";
@@ -24,7 +24,7 @@ import {
   DType,
   deserializeObservationActionMask,
   Space,
-} from "../utils/spaceSerialization";
+} from "../shared/utils/spaceSerialization";
 
 const TURN_DURATION_SECS = 1;
 const COLUMNS = [0, 1, 2, 3, 4, 5, 6];

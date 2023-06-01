@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../src/react-dom/client/index.js"],
+  "sourcesContent": ["export { createRoot, hydrateRoot } from \"react-dom/client\";\n"],
+  "mappings": "kFAAA,IAAAA,EAAwC",
+  "names": ["import_client"]
+}

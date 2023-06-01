@@ -19,7 +19,7 @@ import { DPad, useDPadPressedButtons, DPAD_BUTTONS } from "@cogment/cogment-vers
 import { Button } from "@cogment/cogment-verse-components";
 import { FpsCounter } from "@cogment/cogment-verse-components";
 import { KeyboardControlList } from "@cogment/cogment-verse-components";
-import { serializePlayerAction, Space } from "../utils/spaceSerialization";
+import { serializePlayerAction, Space } from "../shared/utils/spaceSerialization";
 
 const ACTION_SPACE = new Space({
   discrete: {

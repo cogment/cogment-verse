@@ -14,7 +14,7 @@
 
 <<<<<<< HEAD
 import { useMemo } from "react";
-import { EVALUATOR_ACTOR_CLASS, OBSERVER_ACTOR_CLASS, PLAYER_ACTOR_CLASS, TEACHER_ACTOR_CLASS } from "../utils/constants";
+import { EVALUATOR_ACTOR_CLASS, OBSERVER_ACTOR_CLASS, PLAYER_ACTOR_CLASS, TEACHER_ACTOR_CLASS } from "../shared/utils/constants";
 import { AtariPitfallControls, AtariPitfallEnvironments } from "./AtariPitfallControls";
 import { AtariPongPzControls, AtariPongPzEnvironments } from "./AtariPongPzControls";
 import { AtariPongPzFeedback, AtariPongPzHfbEnvironments } from "./AtariPongPzFeedback";

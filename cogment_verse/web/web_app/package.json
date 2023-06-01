@@ -3,7 +3,6 @@
   "version": "0.1.0",
   "dependencies": {
     "@cogment/cogment-js-sdk": "^2.1.0",
-    "@cogment/cogment-verse-components": "../../../cogment-verse-components",
     "@fortawesome/fontawesome-svg-core": "^6.4.0",
     "@fortawesome/free-solid-svg-icons": "^6.4.0",
     "@fortawesome/react-fontawesome": "^0.2.0",
@@ -18,16 +17,15 @@
     "esbuild": "0.17.17",
     "esbuild-css-modules-plugin": "2.7.1",
     "prettier": "^2.4.1",
+    "shx": "^0.3.4",
     "yaml": "^2.3.1"
   },
   "scripts": {
-    "old____start": "react-scripts start",
-    "old____build": "npm run cogment_generate && react-scripts build",
-    "old____eject": "react-scripts eject",
     "cogment_generate": "npx cogment-js-sdk-generate cogment.yaml",
+    "build:clean": "shx rm -rf ./dist && shx mkdir ./dist",
     "build:js": "node build.js",
-    "build:css": "npx tailwindcss -i ./src/index.css -o ./build/static/style.css --minify",
-    "build": "npm run build:js && npm run build:css",
+    "build:css": "npx tailwindcss -i ./src/app/index.css -o ./dist/style.css --minify",
+    "build": "npm run build:clean && npm run build:js && npm run build:css",
     "lint": "npx prettier --check .",
     "lint_fix": "npx prettier -w ."
   },

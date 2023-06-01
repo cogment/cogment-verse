@@ -147,5 +147,3 @@ class EnvironmentSpecs:
 
         with open(specs_filename, "w", encoding="utf-8") as f:
             yaml.safe_dump(MessageToDict(self._pb, preserving_proto_field_name=True), f)
-
-

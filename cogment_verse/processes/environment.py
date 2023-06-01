@@ -14,7 +14,7 @@
 
 # pylint: disable=W0611
 
-from shutil import copy
+from shutil import copytree
 import asyncio
 import logging
 import os
@@ -53,11 +53,7 @@ def environment_main(
 
     # Copy the environment web components
     web_components_dir = os.path.join(work_dir, "web_components", "environments", env_implementation_name)
-    os.makedirs(web_components_dir, exist_ok=True)
-    copy(
-        os.path.join(env.get_web_components_dir(), env_specs.web_components_file),
-        os.path.join(web_components_dir, env_specs.web_components_file)
-    )
+    copytree(os.path.join(env.get_web_components_dir()), os.path.join(web_components_dir), dirs_exist_ok=True)
 
     async def environment_main_async():
         context = cogment.Context(cog_settings=cog_settings, user_id="cogment_verse_environment")

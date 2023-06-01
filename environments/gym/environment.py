@@ -31,6 +31,7 @@ WEB_COMPONENTS = {
     "MountainCar-v0": "GymMountainCar.js",
 }
 
+
 class Environment:
     def __init__(self, cfg):
         self.gym_env_name = cfg.env_name

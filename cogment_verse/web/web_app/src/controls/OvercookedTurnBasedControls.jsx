@@ -17,7 +17,7 @@ import { CountdownCircleTimer } from "react-countdown-circle-timer";
 import { Button } from "@cogment/cogment-verse-components";
 import { KeyboardControlList } from "@cogment/cogment-verse-components";
 import { useDocumentKeypressListener } from "@cogment/cogment-verse-components";
-import { serializePlayerAction, Space } from "../utils/spaceSerialization";
+import { serializePlayerAction, Space } from "../shared/utils/spaceSerialization";
 
 const TURN_DURATION_SECS = 5;
 

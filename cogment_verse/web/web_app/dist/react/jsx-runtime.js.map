@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../src/react/jsx-runtime/index.js"],
+  "sourcesContent": ["export { jsx, jsxs } from \"react/jsx-runtime\";\n"],
+  "mappings": "kFAAA,IAAAA,EAA0B",
+  "names": ["import_jsx_runtime"]
+}

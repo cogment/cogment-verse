@@ -108,7 +108,9 @@ class App:
                         create_actor_service(work_dir, SPEC_FILEPATH, actor_service_cfg, self.services_directory)
                     )
             elif service_type == ServiceType.WEB.value:
-                self.services_process.append(create_web_service(work_dir, SPEC_FILEPATH, self.services_directory, services_cfg))
+                self.services_process.append(
+                    create_web_service(work_dir, SPEC_FILEPATH, self.services_directory, services_cfg)
+                )
                 self.services_directory.add(
                     service_type=ServiceType.ACTOR,
                     service_name=HUMAN_ACTOR_IMPL,

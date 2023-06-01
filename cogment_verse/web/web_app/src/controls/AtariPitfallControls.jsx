@@ -14,10 +14,10 @@
 
 import { useCallback, useState } from "react";
 import { useDocumentKeypressListener, usePressedKeys, useRealTimeUpdate } from "@cogment/cogment-verse-components";
-import { createLookup } from "../utils/controlLookup";
-import { TEACHER_ACTOR_CLASS } from "../utils/constants";
+import { createLookup } from "../shared/utils/controlLookup";
+import { TEACHER_ACTOR_CLASS } from "../shared/utils/constants";
 import { Button, FpsCounter, KeyboardControlList } from "@cogment/cogment-verse-components";
-import { serializePlayerAction, TEACHER_NOOP_ACTION, Space } from "../utils/spaceSerialization";
+import { serializePlayerAction, TEACHER_NOOP_ACTION, Space } from "../shared/utils/spaceSerialization";
 
 const ACTION_SPACE = new Space({
   discrete: {

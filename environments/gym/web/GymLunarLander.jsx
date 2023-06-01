@@ -13,18 +13,15 @@
 // limitations under the License.
 
 import { useCallback, useState } from "react";
-import { useDocumentKeypressListener, usePressedKeys } from "@cogment/cogment-verse-components";
-import { useRealTimeUpdate } from "@cogment/cogment-verse-components";
-import { TEACHER_ACTOR_CLASS } from "../../../cogment_verse/web/web_app/src/utils/constants";
-import { DPad, useDPadPressedButtons, DPAD_BUTTONS } from "@cogment/cogment-verse-components";
-import { Button } from "@cogment/cogment-verse-components";
-import { FpsCounter } from "@cogment/cogment-verse-components";
-import { KeyboardControlList } from "@cogment/cogment-verse-components";
-import {
-  serializePlayerAction,
-  TEACHER_NOOP_ACTION,
-  Space,
-} from "../../../cogment_verse/web/web_app/src/utils/spaceSerialization";
+import { useDocumentKeypressListener, usePressedKeys } from "@cogment/cogment-verse";
+import { useRealTimeUpdate } from "@cogment/cogment-verse";
+import { TEACHER_ACTOR_CLASS } from "@cogment/cogment-verse";
+import { DPad, useDPadPressedButtons, DPAD_BUTTONS } from "@cogment/cogment-verse";
+import { Button } from "@cogment/cogment-verse";
+import { FpsCounter } from "@cogment/cogment-verse";
+import { KeyboardControlList } from "@cogment/cogment-verse";
+import { serializePlayerAction, TEACHER_NOOP_ACTION, Space } from "@cogment/cogment-verse";
+import { Play } from "@cogment/cogment-verse";
 
 const DEACTIVATED_BUTTONS_TEACHER = [];
 const DEACTIVATED_BUTTONS_PLAYER = [DPAD_BUTTONS.UP];
@@ -35,10 +32,7 @@ const ACTION_SPACE = new Space({
   },
 });
 
-export const Environments = ["environments.gym.environment.Environment/LunarLander-v2"];
-
-export const Controls = ({ sendAction, fps = 20, actorClass, ...props }) => {
-  console.log("in GymLunarLander render");
+const Controls = ({ sendAction, fps = 20, actorClass, ...props }) => {
   const isTeacher = actorClass === TEACHER_ACTOR_CLASS;
   const [paused, setPaused] = useState(false);
   const togglePause = useCallback(() => setPaused((paused) => !paused), [setPaused]);
@@ -107,3 +101,9 @@ export const Controls = ({ sendAction, fps = 20, actorClass, ...props }) => {
     </div>
   );
 };
+
+const PlayGymLunarLander = (props) => {
+  return <Play {...props} controls={Controls} />;
+};
+
+export default PlayGymLunarLander;

@@ -15,12 +15,12 @@
 import { useCallback, useState } from "react";
 import { useDocumentKeypressListener, usePressedKeys } from "@cogment/cogment-verse-components";
 import { useRealTimeUpdate } from "@cogment/cogment-verse-components";
-import { createLookup } from "../utils/controlLookup";
-import { TEACHER_ACTOR_CLASS } from "../utils/constants";
+import { createLookup } from "../shared/utils/controlLookup";
+import { TEACHER_ACTOR_CLASS } from "../shared/utils/constants";
 import { Button } from "@cogment/cogment-verse-components";
 import { FpsCounter } from "@cogment/cogment-verse-components";
 import { KeyboardControlList } from "@cogment/cogment-verse-components";
-import { TEACHER_NOOP_ACTION, serializePlayerAction, Space } from "../utils/spaceSerialization";
+import { TEACHER_NOOP_ACTION, serializePlayerAction, Space } from "../shared/utils/spaceSerialization";
 
 const ACTION_SPACE = new Space({
   discrete: {
