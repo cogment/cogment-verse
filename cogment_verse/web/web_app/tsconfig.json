@@ -17,5 +17,5 @@
     "jsx": "react-jsx",
     "downlevelIteration": true
   },
-  "include": ["src", "../../../environments/gym/web/GymCartPole.jsx"]
+  "include": ["src"]
 }

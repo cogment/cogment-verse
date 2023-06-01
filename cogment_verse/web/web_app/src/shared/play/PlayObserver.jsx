@@ -12,16 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { useCallback, useEffect, useState } from "react";
-import { useDocumentKeypressListener } from "@cogment/cogment-verse-components";
-import { TEACHER_NOOP_ACTION } from "../shared/utils/spaceSerialization";
-import { Button } from "@cogment/cogment-verse-components";
-import { KeyboardControlList } from "@cogment/cogment-verse-components";
-import { CountdownCircleTimer } from "react-countdown-circle-timer";
+import { useCallback, useState } from "react";
+import { useDocumentKeypressListener, useRealTimeUpdate } from "../hooks";
+import { TEACHER_NOOP_ACTION } from "../utils/spaceSerialization";
+import { Button, FpsCounter, KeyboardControlList, SimplePlay } from "../components";
 
 const TURN_DURATION_SECS = 1;
 
-export const TurnBasedObserverControls = ({ sendAction, observation, actorClass, ...props }) => {
+export const TurnBasedObserverControls = ({ sendAction, observation, actorParams, ...props }) => {
   const currentPlayer = observation?.currentPlayer;
 
   const [paused, setPaused] = useState(false);
@@ -72,4 +70,44 @@ export const TurnBasedObserverControls = ({ sendAction, observation, actorClass,
       />
     </div>
   );
+};
+
+export const RealTimeObserverControls = ({ sendAction, fps = 30, actorParams, ...props }) => {
+  const [paused, setPaused] = useState(false);
+  const togglePause = useCallback(() => setPaused((paused) => !paused), [setPaused]);
+  useDocumentKeypressListener("p", togglePause);
+
+  const computeAndSendAction = useCallback(
+    (dt) => {
+      sendAction(TEACHER_NOOP_ACTION);
+    },
+    [sendAction]
+  );
+
+  const { currentFps } = useRealTimeUpdate(computeAndSendAction, fps, paused);
+
+  return (
+    <div {...props}>
+      <div className="flex flex-row gap-1">
+        <Button className="flex-1" onClick={togglePause}>
+          {paused ? "Resume" : "Pause"}
+        </Button>
+        <FpsCounter className="flex-none w-fit" value={currentFps} />
+      </div>
+      <KeyboardControlList items={[["p", "Pause/Unpause"]]} />
+    </div>
+  );
+};
+
+export const ObserverControls = ({ actorParams, ...props }) => {
+  const turnBased = actorParams?.config?.environmentSpecs?.turnBased || false;
+
+  if (turnBased) {
+    return <TurnBasedObserverControls actorParams={actorParams} {...props} />;
+  }
+  return <RealTimeObserverControls actorParams={actorParams} {...props} />;
+};
+
+export const PlayObserver = (props) => {
+  return <SimplePlay {...props} controls={ObserverControls} />;
 };

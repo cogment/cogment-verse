@@ -12,16 +12,25 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { useCallback, useState } from "react";
-import { useDocumentKeypressListener, usePressedKeys } from "@cogment/cogment-verse";
-import { useRealTimeUpdate } from "@cogment/cogment-verse";
-import { TEACHER_ACTOR_CLASS } from "@cogment/cogment-verse";
-import { DPad, useDPadPressedButtons, DPAD_BUTTONS } from "@cogment/cogment-verse";
-import { Button } from "@cogment/cogment-verse";
-import { FpsCounter } from "@cogment/cogment-verse";
-import { KeyboardControlList } from "@cogment/cogment-verse";
-import { serializePlayerAction, TEACHER_NOOP_ACTION, Space } from "@cogment/cogment-verse";
-import { Play } from "@cogment/cogment-verse";
+import React, { useCallback, useState } from "react";
+import {
+  useDocumentKeypressListener,
+  usePressedKeys,
+  PlayObserver,
+  useRealTimeUpdate,
+  TEACHER_ACTOR_CLASS,
+  OBSERVER_ACTOR_CLASS,
+  DPad,
+  useDPadPressedButtons,
+  DPAD_BUTTONS,
+  Button,
+  FpsCounter,
+  KeyboardControlList,
+  serializePlayerAction,
+  TEACHER_NOOP_ACTION,
+  Space,
+  SimplePlay,
+} from "@cogment/cogment-verse";
 
 const DEACTIVATED_BUTTONS_TEACHER = [];
 const DEACTIVATED_BUTTONS_PLAYER = [DPAD_BUTTONS.UP];
@@ -32,8 +41,10 @@ const ACTION_SPACE = new Space({
   },
 });
 
-const Controls = ({ sendAction, fps = 20, actorClass, ...props }) => {
-  const isTeacher = actorClass === TEACHER_ACTOR_CLASS;
+const GymLunarLanderControls = ({ sendAction, fps = 20, actorParams, ...props }) => {
+  const actorClassName = actorParams?.className;
+
+  const isTeacher = actorClassName === TEACHER_ACTOR_CLASS;
   const [paused, setPaused] = useState(false);
   const togglePause = useCallback(() => setPaused((paused) => !paused), [setPaused]);
   useDocumentKeypressListener("p", togglePause);
@@ -102,8 +113,13 @@ const Controls = ({ sendAction, fps = 20, actorClass, ...props }) => {
   );
 };
 
-const PlayGymLunarLander = (props) => {
-  return <Play {...props} controls={Controls} />;
+const PlayGymLunarLander = ({ actorParams, ...props }) => {
+  const actorClassName = actorParams?.className;
+
+  if (actorClassName === OBSERVER_ACTOR_CLASS) {
+    return <PlayObserver actorParams={actorParams} {...props} />;
+  }
+  return <SimplePlay actorParams={actorParams} {...props} controls={GymLunarLanderControls} />;
 };
 
 export default PlayGymLunarLander;

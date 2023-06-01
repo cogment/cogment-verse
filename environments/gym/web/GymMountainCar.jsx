@@ -12,15 +12,25 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { useCallback, useState } from "react";
-import { useDocumentKeypressListener, usePressedKeys } from "@cogment/cogment-verse-components";
-import { useRealTimeUpdate } from "@cogment/cogment-verse-components";
-import { TEACHER_ACTOR_CLASS } from "../utils/constants";
-import { DPad, useDPadPressedButtons, DPAD_BUTTONS } from "@cogment/cogment-verse-components";
-import { Button } from "@cogment/cogment-verse-components";
-import { FpsCounter } from "@cogment/cogment-verse-components";
-import { KeyboardControlList } from "@cogment/cogment-verse-components";
-import { serializePlayerAction, TEACHER_NOOP_ACTION, Space } from "../utils/spaceSerialization";
+import React, { useCallback, useState } from "react";
+import {
+  useDocumentKeypressListener,
+  usePressedKeys,
+  PlayObserver,
+  useRealTimeUpdate,
+  TEACHER_ACTOR_CLASS,
+  OBSERVER_ACTOR_CLASS,
+  DPad,
+  useDPadPressedButtons,
+  DPAD_BUTTONS,
+  Button,
+  FpsCounter,
+  KeyboardControlList,
+  serializePlayerAction,
+  TEACHER_NOOP_ACTION,
+  Space,
+  SimplePlay,
+} from "@cogment/cogment-verse";
 
 const DEACTIVATED_BUTTONS_TEACHER = [DPAD_BUTTONS.UP];
 const DEACTIVATED_BUTTONS_PLAYER = [DPAD_BUTTONS.UP, DPAD_BUTTONS.DOWN];
@@ -30,9 +40,10 @@ const ACTION_SPACE = new Space({
   },
 });
 
-export const Environments = ["environments.gym.environment.Environment/MountainCar-v0"];
-export const Controls = ({ sendAction, fps = 30, actorClass, ...props }) => {
-  const isTeacher = actorClass === TEACHER_ACTOR_CLASS;
+export const GymMountainCarControls = ({ sendAction, fps = 30, actorParams, ...props }) => {
+  const actorClassName = actorParams?.className;
+
+  const isTeacher = actorClassName === TEACHER_ACTOR_CLASS;
   const [paused, setPaused] = useState(false);
   const togglePause = useCallback(() => setPaused((paused) => !paused), [setPaused]);
   useDocumentKeypressListener("p", togglePause);
@@ -93,3 +104,14 @@ export const Controls = ({ sendAction, fps = 30, actorClass, ...props }) => {
     </div>
   );
 };
+
+const PlayGymMountainCar = ({ actorParams, ...props }) => {
+  const actorClassName = actorParams?.className;
+
+  if (actorClassName === OBSERVER_ACTOR_CLASS) {
+    return <PlayObserver actorParams={actorParams} {...props} />;
+  }
+  return <SimplePlay actorParams={actorParams} {...props} controls={GymMountainCarControls} />;
+};
+
+export default PlayGymMountainCar;

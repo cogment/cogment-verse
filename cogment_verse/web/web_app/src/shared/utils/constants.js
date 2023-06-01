@@ -19,5 +19,8 @@ export const PLAYER_ACTOR_CLASS = "player";
 export const OBSERVER_ACTOR_CLASS = "observer";
 export const EVALUATOR_ACTOR_CLASS = "evaluator";
 
+export const BETWEEN_TRIALS_TIMEOUT = 1000;
+export const JOIN_TRIAL_TIMEOUT = 5000;
+
 export const ORCHESTRATOR_WEB_ENDPOINT = window.ORCHESTRATOR_WEB_ENDPOINT;
 export const WEB_BASE_URL = window.location.origin;

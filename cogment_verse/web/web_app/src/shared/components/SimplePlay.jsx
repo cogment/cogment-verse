@@ -1,4 +1,4 @@
-// Copyright 2022 AI Redefined Inc. <dev+cogment@ai-r.com>
+// Copyright 2023 AI Redefined Inc. <dev+cogment@ai-r.com>
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,16 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { cogSettings } from "../../CogSettings";
 import { Countdown } from "./Countdown";
 import { Button } from "./Button";
-import { useJoinedTrial, TRIAL_STATUS } from "../hooks/useJoinedTrial";
+import { TRIAL_STATUS } from "../hooks/useJoinedTrial";
 import { RenderedScreen } from "./RenderedScreen";
 import { Inspector } from "./Inspector";
-import { ORCHESTRATOR_WEB_ENDPOINT } from "../utils/constants";
-
-const BETWEEN_TIMEOUT = 1000;
-const JOIN_TIMEOUT = 5000;
+import { JOIN_TRIAL_TIMEOUT, BETWEEN_TRIALS_TIMEOUT } from "../utils";
 
 const ErrorCard = ({ error }) => (
   <div className="border-l-8 border-red-600 bg-white rounded p-5 shadow-md">
@@ -39,20 +35,18 @@ const ErrorCard = ({ error }) => (
   </div>
 );
 
-const DefaultControls = () => <div>blop</div>;
+const DefaultControls = () => null;
 
-export const Play = ({ trialId, onTrialEnd, controls = DefaultControls }) => {
-  const [trialStatus, actorParams, event, sendAction, trialError] = useJoinedTrial(
-    cogSettings,
-    ORCHESTRATOR_WEB_ENDPOINT,
-    trialId,
-    JOIN_TIMEOUT
-  );
-
-  const implementation = actorParams?.config?.environmentSpecs?.implementation || undefined;
-  const componentFile = actorParams?.config?.environmentSpecs?.webComponentsFile || undefined;
-  const turnBased = actorParams?.config?.environmentSpecs?.turnBased || false;
-  const actorClassName = actorParams?.className;
+export const SimplePlay = ({
+  trialId,
+  trialStatus,
+  actorParams,
+  event,
+  sendAction,
+  trialError,
+  onNextTrial,
+  controls = DefaultControls,
+}) => {
   const Controls = controls;
 
   return (
@@ -62,9 +56,9 @@ export const Play = ({ trialId, onTrialEnd, controls = DefaultControls }) => {
         observation={event.observation}
         overlay={
           trialStatus === TRIAL_STATUS.JOINING ? (
-            <Countdown duration={JOIN_TIMEOUT} />
+            <Countdown duration={JOIN_TRIAL_TIMEOUT} />
           ) : trialStatus === TRIAL_STATUS.ENDED ? (
-            <Countdown onAfterCountdown={onTrialEnd} duration={BETWEEN_TIMEOUT} />
+            <Countdown onAfterCountdown={onNextTrial} duration={BETWEEN_TRIALS_TIMEOUT} />
           ) : trialStatus === TRIAL_STATUS.ERROR ? (
             <ErrorCard error={trialError} />
           ) : null
@@ -73,13 +67,10 @@ export const Play = ({ trialId, onTrialEnd, controls = DefaultControls }) => {
       <div className="p-2 flex flex-col gap-2">
         {trialStatus === TRIAL_STATUS.ONGOING ? (
           <Controls
-            actorClass={actorClassName}
-            implementation={implementation}
+            actorParams={actorParams}
             sendAction={sendAction}
-            turnBased={turnBased}
             observation={event.observation}
             tickId={event.tickId}
-            componentFile={componentFile}
           />
         ) : null}
       </div>

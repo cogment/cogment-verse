@@ -28,7 +28,7 @@ import { GymLunarLanderControls, GymLunarLanderEnvironments } from "./GymLunarLa
 import { GymMountainCarControls, GymMountainCarEnvironments } from "./GymMountainCarControls";
 import { OvercookedRealTimeControls, OvercookedRealTimeEnvironments } from "./OvercookedRealTimeControls";
 import { OvercookedTurnBasedControls, OvercookedTurnBasedEnvironments } from "./OvercookedTurnBasedControls";
-import { RealTimeObserverControls } from "./RealTimeObserverControls";
+import { RealTimeObserverControls } from "../shared/play/RealTimeObserverControls";
 import { TetrisControls, TetrisEnvironments } from "./TetrisControls";
 import { TurnBasedObserverControls } from "./TurnBasedObserverControls";
 =======

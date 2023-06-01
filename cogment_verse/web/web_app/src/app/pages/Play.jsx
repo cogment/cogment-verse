@@ -14,21 +14,77 @@
 
 import { useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { DynamicallyImportedComponent } from "../../shared";
-import { WEB_BASE_URL } from "../../shared/utils/constants";
+import {
+  DynamicallyImportedComponent,
+  JOIN_TRIAL_TIMEOUT,
+  OBSERVER_ACTOR_CLASS,
+  ORCHESTRATOR_WEB_ENDPOINT,
+  PlayObserver,
+  SimplePlay,
+  useJoinedTrial,
+  WEB_BASE_URL,
+} from "../../shared";
+import { cogSettings } from "../../CogSettings";
 
 const Play = () => {
   const { trialId } = useParams();
   const navigate = useNavigate();
   const redirectToPlayAny = useCallback(() => navigate(".."), [navigate]);
 
-  return (
-    <DynamicallyImportedComponent
-      moduleUrl={`${WEB_BASE_URL}/components/environments/environments.gym.environment.Environment/LunarLander-v2/GymLunarLander.js`}
-      trialId={trialId}
-      onTrialEnd={redirectToPlayAny}
-    />
+  const [trialStatus, actorParams, event, sendAction, trialError] = useJoinedTrial(
+    cogSettings,
+    ORCHESTRATOR_WEB_ENDPOINT,
+    trialId,
+    JOIN_TRIAL_TIMEOUT
   );
+
+  if (actorParams == null) {
+    return (
+      <SimplePlay
+        trialId={trialId}
+        trialStatus={trialStatus}
+        actorParams={actorParams}
+        event={event}
+        sendAction={sendAction}
+        trialError={trialError}
+        onNextTrial={redirectToPlayAny}
+      />
+    );
+  }
+
+  const implementation = actorParams?.config?.environmentSpecs?.implementation || undefined;
+  const componentFile = actorParams?.config?.environmentSpecs?.webComponentsFile || undefined;
+
+  if (implementation != null && componentFile != null) {
+    return (
+      <DynamicallyImportedComponent
+        moduleUrl={`${WEB_BASE_URL}/components/environments/${implementation}/${componentFile}`}
+        trialId={trialId}
+        trialStatus={trialStatus}
+        actorParams={actorParams}
+        event={event}
+        sendAction={sendAction}
+        trialError={trialError}
+        onNextTrial={redirectToPlayAny}
+      />
+    );
+  }
+
+  const actorClassName = actorParams?.className;
+
+  if (actorClassName === OBSERVER_ACTOR_CLASS) {
+    return (
+      <PlayObserver
+        trialId={trialId}
+        trialStatus={trialStatus}
+        actorParams={actorParams}
+        event={event}
+        sendAction={sendAction}
+        trialError={trialError}
+        onNextTrial={redirectToPlayAny}
+      />
+    );
+  } else throw new Error(`No web component defined for environment "${implementation}"`);
 };
 
 export default Play;

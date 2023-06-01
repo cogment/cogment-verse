@@ -21,7 +21,7 @@ export { KeyboardControlList } from "./KeyboardControlList";
 export { Link } from "./Link";
 export { RenderedScreen } from "./RenderedScreen";
 export { Switch } from "./Switch";
-export { Play } from "./Play";
+export { SimplePlay } from "./SimplePlay";
 export { createDynamicModuleComponent } from "./DynamicModuleComponent";
 export { DynamicallyImportedComponent } from "./DynamicallyImportedComponent";
 export { Error } from "./Error";

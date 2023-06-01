@@ -1,5 +1,5 @@
 {
-  "name": "cogment_verse_web",
+  "name": "@cogment/cogment-verse",
   "version": "0.1.0",
   "dependencies": {
     "@cogment/cogment-js-sdk": "^2.1.0",
@@ -14,8 +14,9 @@
     "tailwindcss": "^3.3.2"
   },
   "devDependencies": {
-    "esbuild": "0.17.17",
     "esbuild-css-modules-plugin": "2.7.1",
+    "esbuild": "0.17.17",
+    "minimist": "1.2.0",
     "prettier": "^2.4.1",
     "shx": "^0.3.4",
     "yaml": "^2.3.1"

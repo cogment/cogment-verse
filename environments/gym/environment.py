@@ -26,7 +26,7 @@ os.environ["SDL_VIDEODRIVER"] = "dummy"
 
 WEB_COMPONENTS = {
     "CartPole-v1": "GymCartPole.js",
-    "LunarLander-v2": "index.js",
+    "LunarLander-v2": "GymLunarLander.js",
     "LunarLanderContinuous-v2": "GymLunarLanderContinuous.js",
     "MountainCar-v0": "GymMountainCar.js",
 }
