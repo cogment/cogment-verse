@@ -10,10 +10,11 @@ uvicorn==0.17.6
 boto3==1.26.123
 
 # environments
-gym[box2d,classic_control, mujoco]>=0.25,<0.26
-PettingZoo[atari, classic]~=1.22.2,<1.23
+# gym[box2d,classic_control, mujoco]>=0.26,<0.27
+gym[all]>=0.26,<0.27
+PettingZoo[atari, classic]~=1.23.1
 tinyscaler~=1.2.4
-Gymnasium~=0.26.3
+Gymnasium>=0.28,<0.29
 AutoROM~=0.4.2
 
 
@@ -24,7 +25,7 @@ numpy>=1.21.5,<1.22
 # For testing
 black~=22.3.0
 pylint~=2.14
-pytest~=6.2.5
+pytest>=7.0,<8.0
 pytest-benchmark~=4.0.0
 pytest-timeout~=2.1.0
 
