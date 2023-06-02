@@ -32,7 +32,7 @@ log = logging.getLogger(__name__)
 
 
 def get_pz_player(observation: np.ndarray, actor_names: list) -> Tuple[str, int]:
-    """Get name and index for the petting zoo player. Note that it works specifically to Atari game"""
+    """Get name and index for the PettingZoo player. Note that it works specifically to Atari game"""
     num_agents = len(actor_names)
     indicators = observation[0, 0, -num_agents:]
     idx = int(np.where(indicators)[0])
@@ -120,7 +120,7 @@ class Environment(ABC):
 
 
 class ClassicEnvironment(Environment):
-    """Classic petting zoo e.g., connect four, Hanabi etc."""
+    """Classic PettingZoo e.g., connect four, Hanabi etc."""
 
     async def impl(self, environment_session):
         actors = environment_session.get_active_actors()
@@ -166,7 +166,7 @@ class ClassicEnvironment(Environment):
         rendered_frame = None
         if session_cfg.render:
             if "rgb_array" not in pz_env.metadata["render_modes"]:
-                log.warning(f"Petting Zoo environment [{self.env_class_name}] doesn't support rendering to pixels")
+                log.warning(f"PettingZoo environment [{self.env_class_name}] doesn't support rendering to pixels")
                 return
             rendered_frame = pz_env.render()
 
@@ -267,7 +267,7 @@ class AtariEnvironment(Environment):
         rendered_frame = None
         if session_cfg.render:
             if "rgb_array" not in pz_env.metadata["render_modes"]:
-                log.warning(f"Petting Zoo environment [{self.env_class_name}] doesn't support rendering to pixels")
+                log.warning(f"PettingZoo environment [{self.env_class_name}] doesn't support rendering to pixels")
                 return
             rendered_frame = pz_env.render()
 
@@ -349,7 +349,7 @@ class HumanFeedbackAtariEnvironment(Environment):
         # Render the pixel for UI
         rendered_frame = None
         if session_cfg.render and "rgb_array" not in pz_env.metadata["render_modes"]:
-            log.warning(f"Petting Zoo environment [{self.env_class_name}] doesn't support rendering to pixels")
+            log.warning(f"PettingZoo environment [{self.env_class_name}] doesn't support rendering to pixels")
             return
         rendered_frame = pz_env.render()
 

@@ -14,7 +14,7 @@ Simply clone the repo and start training.
 - Develop
   - [Development Setup](/docs/develop/development_setup.md)
   - [Docker](/docs/develop/docker.md)
-  - [Petting Zoo](/docs/develop/petting_zoo.md)
+  - [PettingZoo](/docs/develop/pettingzoo.md)
   - [Isaac Gym](/docs/develop/isaac_gym.md)
 - Deploy
   - [Tunnel unsing ngrok](/docs/deploy/tunnel_using_ngrok.md)
@@ -52,7 +52,7 @@ Simply clone the repo and start training.
 
 6. Depending on the environment you want to use, you might need to take additional steps.
 
-   - [Petting Zoo](/docs/develop/petting_zoo.md)
+   - [PettingZoo](/docs/develop/pettingzoo.md)
    - [Isaac Gym](/docs/develop/isaac_gym.md)
 
 7. In another terminal, launch a mlflow server on port 3000
@@ -96,7 +96,7 @@ Here are a few examples:
 
   This one is completely _headless_ (training doens't involve interaction with a human player). It will take a little while to run, you can monitor the progress using mlflow at <http://localhost:3000>
 
-- Launch an DQN self training run with the [Connect Four Petting Zoo environment](https://www.pettingzoo.ml/classic/connect_four)
+- Launch an DQN self training run with the [Connect Four PettingZoo environment](https://www.pettingzoo.ml/classic/connect_four)
 
   ```console
   $ python -m main +experiment=simple_dqn/connect_four
@@ -108,7 +108,7 @@ Here are a few examples:
   $ python -m main +experiment=simple_dqn/connect_four +run.hill_training_trials_ratio=0.05
   ```
 
-- Petting Zoo's [Atari Pong Environment](https://pettingzoo.farama.org/environments/atari/pong/)
+- PettingZoo's [Atari Pong Environment](https://pettingzoo.farama.org/environments/atari/pong/)
 
   Example #1: Play against RL agent
 
