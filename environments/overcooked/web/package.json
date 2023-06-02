@@ -1,10 +1,12 @@
 {
-  "name": "@cogment/cogment_verse_gym",
+  "name": "@cogment/cogment_verse_overcooked",
   "version": "0.1.0",
   "scripts": {
     "build": "node build.js"
   },
-  "dependencies": {},
+  "dependencies": {
+    "react-countdown-circle-timer": "^3.2.1"
+  },
   "devDependencies": {
     "esbuild": "0.17.17",
     "esbuild-css-modules-plugin": "2.7.1"

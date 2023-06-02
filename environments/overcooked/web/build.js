@@ -20,13 +20,7 @@ const NODE_ENV = process.env.NODE_ENV || "production";
 esbuild
   .build({
     logLevel: "info",
-    entryPoints: [
-      "./Atari.jsx",
-      "./LunarLander.jsx",
-      "./CartPole.jsx",
-      "./LunarLanderContinuous.jsx",
-      "./MountainCar.jsx",
-    ],
+    entryPoints: ["./OvercookedRealTime.jsx", "./OvercookedTurnBased.jsx"],
     target: "es2020",
     format: "esm",
     bundle: true,

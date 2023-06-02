@@ -30,10 +30,10 @@ os.environ["SDL_VIDEODRIVER"] = "dummy"
 log = logging.getLogger(__name__)
 
 
-class OvercookedEnvironment:
+class Environment:
     def __init__(self, cfg):
         self.cfg = cfg
-        self.gym_env_name = cfg.env_name
+        self.impl_name = cfg.env_name
 
         base_mdp = OvercookedGridworld.from_layout_name(self.cfg.layout)
         env = OvercookedEnv.from_mdp(base_mdp, **DEFAULT_ENV_PARAMS)
@@ -44,10 +44,14 @@ class OvercookedEnvironment:
             turn_based=self.cfg.turn_based,
             observation_space=gym_env.observation_space,
             action_space=gym_env.action_space,
+            web_components_file="OvercookedRealTime.js" if self.impl_name.endswith("real-time") else "OvercookedTurnBased.js",
         )
 
+    def get_web_components_dir(self):
+        return os.path.join(os.path.abspath(os.path.dirname(__file__)), "web", "dist")
+
     def get_implementation_name(self):
-        return self.gym_env_name
+        return self.impl_name
 
     def get_environment_specs(self):
         return self.env_specs

@@ -14,10 +14,16 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { CountdownCircleTimer } from "react-countdown-circle-timer";
-import { Button } from "@cogment/cogment-verse-components";
-import { KeyboardControlList } from "@cogment/cogment-verse-components";
-import { useDocumentKeypressListener } from "@cogment/cogment-verse-components";
-import { serializePlayerAction, Space } from "../shared/utils/spaceSerialization";
+import {
+  Button,
+  KeyboardControlList,
+  OBSERVER_ACTOR_CLASS,
+  PlayObserver,
+  serializePlayerAction,
+  SimplePlay,
+  Space,
+  useDocumentKeypressListener,
+} from "@cogment/cogment-verse";
 
 const TURN_DURATION_SECS = 5;
 
@@ -27,11 +33,9 @@ const ACTION_SPACE = new Space({
   },
 });
 
-export const OvercookedTurnBasedEnvironments = ["environments.overcooked_adapter.OvercookedEnvironment/overcooked"];
 export const OvercookedTurnBasedControls = ({ sendAction, fps = 1, actorClass, observation, ...props }) => {
   const currentPlayer = observation?.currentPlayer;
   const [paused, setPaused] = useState(false);
-  const [waitingForAction, setWaitingForAction] = useState(true);
 
   const togglePause = useCallback(() => setPaused((paused) => !paused), [setPaused]);
   useDocumentKeypressListener("p", togglePause);
@@ -128,3 +132,14 @@ export const OvercookedTurnBasedControls = ({ sendAction, fps = 1, actorClass, o
     </div>
   );
 };
+
+const PlayOvercookedTurnBased = ({ actorParams, ...props }) => {
+  const actorClassName = actorParams?.className;
+
+  if (actorClassName === OBSERVER_ACTOR_CLASS) {
+    return <PlayObserver actorParams={actorParams} {...props} />;
+  }
+  return <SimplePlay actorParams={actorParams} {...props} controls={OvercookedTurnBasedControls} />;
+};
+
+export default PlayOvercookedTurnBased;

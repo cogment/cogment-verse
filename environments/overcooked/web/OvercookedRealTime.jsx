@@ -13,13 +13,22 @@
 // limitations under the License.
 
 import { useCallback, useState } from "react";
-import { useDocumentKeypressListener, usePressedKeys } from "@cogment/cogment-verse-components";
-import { useRealTimeUpdate } from "@cogment/cogment-verse-components";
-import { DPad, useDPadPressedButtons, DPAD_BUTTONS } from "@cogment/cogment-verse-components";
-import { Button } from "@cogment/cogment-verse-components";
-import { FpsCounter } from "@cogment/cogment-verse-components";
-import { KeyboardControlList } from "@cogment/cogment-verse-components";
-import { serializePlayerAction, Space } from "../shared/utils/spaceSerialization";
+import {
+  Button,
+  DPAD_BUTTONS,
+  DPad,
+  FpsCounter,
+  KeyboardControlList,
+  OBSERVER_ACTOR_CLASS,
+  PlayObserver,
+  serializePlayerAction,
+  SimplePlay,
+  Space,
+  useDocumentKeypressListener,
+  useDPadPressedButtons,
+  usePressedKeys,
+  useRealTimeUpdate,
+} from "@cogment/cogment-verse";
 
 const ACTION_SPACE = new Space({
   discrete: {
@@ -27,9 +36,6 @@ const ACTION_SPACE = new Space({
   },
 });
 
-export const OvercookedRealTimeEnvironments = [
-  "environments.overcooked_adapter.OvercookedEnvironment/overcooked-real-time",
-];
 export const OvercookedRealTimeControls = ({ sendAction, fps = 10, actorClass, ...props }) => {
   const [paused, setPaused] = useState(false);
   const togglePause = useCallback(() => setPaused((paused) => !paused), [setPaused]);
@@ -96,3 +102,14 @@ export const OvercookedRealTimeControls = ({ sendAction, fps = 10, actorClass, .
     </div>
   );
 };
+
+const PlayOvercookedRealTime = ({ actorParams, ...props }) => {
+  const actorClassName = actorParams?.className;
+
+  if (actorClassName === OBSERVER_ACTOR_CLASS) {
+    return <PlayObserver actorParams={actorParams} {...props} />;
+  }
+  return <SimplePlay actorParams={actorParams} {...props} controls={OvercookedRealTimeControls} />;
+};
+
+export default PlayOvercookedRealTime;
