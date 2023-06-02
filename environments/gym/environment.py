@@ -35,6 +35,7 @@ WEB_COMPONENTS = {
     "MountainCar": "MountainCar.js",
 }
 
+
 class Environment:
     def __init__(self, cfg):
         self.gym_env_name = cfg.env_name
@@ -52,9 +53,15 @@ class Environment:
             )
 
         web_components_file = None
-        matching_web_components= [ web_component for (env_name_prefix, web_component) in WEB_COMPONENTS.items() if self.gym_env_name.startswith(env_name_prefix) ]
+        matching_web_components = [
+            web_component
+            for (env_name_prefix, web_component) in WEB_COMPONENTS.items()
+            if self.gym_env_name.startswith(env_name_prefix)
+        ]
         if len(matching_web_components) > 1:
-            log.warning(f"While configuring gym environment [{self.gym_env_name}] found more that one matching web components [{matching_web_components}], picking the first one.")
+            log.warning(
+                f"While configuring gym environment [{self.gym_env_name}] found more that one matching web components [{matching_web_components}], picking the first one."
+            )
         if len(matching_web_components) > 0:
             web_components_file = matching_web_components[0]
 

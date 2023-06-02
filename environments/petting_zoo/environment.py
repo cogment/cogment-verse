@@ -67,10 +67,12 @@ class PzEnvType(Enum):
     CLASSIC = "classic"
     ATARI = "atari"
 
+
 WEB_COMPONENTS = {
     "pettingzoo.atari.pong_v3": "AtariPong.js",
     "pettingzoo.classic.connect_four_v3": "ConnectFour.js",
 }
+
 
 class Environment(ABC):
     def __init__(self, cfg):
@@ -105,9 +107,15 @@ class Environment(ABC):
                     )
 
         web_components_file = None
-        matching_web_components= [ web_component for (env_name_prefix, web_component) in WEB_COMPONENTS.items() if self.env_class_name.startswith(env_name_prefix) ]
+        matching_web_components = [
+            web_component
+            for (env_name_prefix, web_component) in WEB_COMPONENTS.items()
+            if self.env_class_name.startswith(env_name_prefix)
+        ]
         if len(matching_web_components) > 1:
-            log.warning(f"While configuring petting zoo environment [{self.env_class_name}] found more that one matching web components [{matching_web_components}], picking the first one.")
+            log.warning(
+                f"While configuring petting zoo environment [{self.env_class_name}] found more that one matching web components [{matching_web_components}], picking the first one."
+            )
         if len(matching_web_components) > 0:
             web_components_file = matching_web_components[0]
 

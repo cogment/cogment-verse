@@ -44,7 +44,9 @@ class Environment:
             turn_based=self.cfg.turn_based,
             observation_space=gym_env.observation_space,
             action_space=gym_env.action_space,
-            web_components_file="OvercookedRealTime.js" if self.impl_name.endswith("real-time") else "OvercookedTurnBased.js",
+            web_components_file="OvercookedRealTime.js"
+            if self.impl_name.endswith("real-time")
+            else "OvercookedTurnBased.js",
         )
 
     def get_web_components_dir(self):
