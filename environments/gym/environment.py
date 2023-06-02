@@ -40,17 +40,7 @@ class Environment:
     def __init__(self, cfg):
         self.gym_env_name = cfg.env_name
 
-        gym_env = gym.make(self.gym_env_name, new_step_api=True, full_action_space=True)
-
-        available_render_modes = gym_env.metadata["render_modes"]
-        if "single_rgb_array" in available_render_modes:
-            self._render_mode = "single_rgb_array"
-        elif "rgb_array" in available_render_modes:
-            self._render_mode = "rgb_array"
-        else:
-            raise RuntimeError(
-                f"No render mode available for {self.gym_env_name}: looking for either 'single_rgb_array' or 'rgb_array', got [{available_render_modes}]"
-            )
+        gym_env = gym.make(self.gym_env_name, new_step_api=True)
 
         web_components_file = None
         matching_web_components = [
@@ -72,6 +62,23 @@ class Environment:
             action_space=gym_env.action_space,
             web_components_file=web_components_file,
         )
+
+        if self.gym_env_name.startswith("ALE"):
+            # Atari environment
+            self._make_gym_env = lambda render: gym.make(
+                self.gym_env_name,
+                render_mode="rgb_array" if render else None,
+                new_step_api=True,
+                full_action_space=True,
+            )
+            self._render_gym_env = lambda gym_env: gym_env.render(mode="rgb_array")
+        else:
+            self._make_gym_env = lambda render: gym.make(
+                self.gym_env_name,
+                render_mode="single_rgb_array" if render else None,
+                new_step_api=True,
+            )
+            self._render_gym_env = lambda gym_env: gym_env.render()
 
     def get_web_components_dir(self):
         return os.path.join(os.path.abspath(os.path.dirname(__file__)), "web", "dist")
@@ -105,12 +112,7 @@ class Environment:
 
         session_cfg = environment_session.config
 
-        gym_env = gym.make(
-            self.gym_env_name,
-            render_mode=self._render_mode if session_cfg.render else None,
-            new_step_api=True,
-            full_action_space=True,
-        )
+        gym_env = self._make_gym_env(session_cfg.render)
         observation_space = self.env_specs.get_observation_space(session_cfg.render_width)
         action_space = self.env_specs.get_action_space()
 
@@ -118,8 +120,7 @@ class Environment:
 
         observation = observation_space.create(
             value=gym_observation,
-            # Passing `mode` seems to be required for (some?) Atari games
-            rendered_frame=gym_env.render(mode=self._render_mode) if session_cfg.render else None,
+            rendered_frame=self._render_gym_env(gym_env) if session_cfg.render else None,
         )
 
         environment_session.start([("*", observation_space.serialize(observation))])
@@ -148,8 +149,7 @@ class Environment:
 
                 observation = observation_space.create(
                     value=gym_observation,
-                    # Passing `mode` seems to be required for (some?) Atari games
-                    rendered_frame=gym_env.render(mode=self._render_mode) if session_cfg.render else None,
+                    rendered_frame=self._render_gym_env(gym_env) if session_cfg.render else None,
                     overridden_players=overridden_players,
                 )
 
