@@ -12,10 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import logging
 from abc import ABC, abstractmethod
 from enum import Enum
 from typing import Tuple
+import logging
+import os
 
 import cogment
 import gymnasium as gymna
@@ -66,6 +67,10 @@ class PzEnvType(Enum):
     CLASSIC = "classic"
     ATARI = "atari"
 
+WEB_COMPONENTS = {
+    "pettingzoo.atari.pong_v3": "AtariPong.js",
+    "pettingzoo.classic.connect_four_v3": "ConnectFour.js",
+}
 
 class Environment(ABC):
     def __init__(self, cfg):
@@ -79,9 +84,9 @@ class Environment(ABC):
         pz_env = self.env_class.env()
         if self.env_type == PzEnvType.ATARI:
             pz_env = atari_env_wrapper(pz_env)
-            serilization_format = SerializationFormat.NPY
+            serialization_format = SerializationFormat.NPY
         elif self.env_type == PzEnvType.CLASSIC:
-            serilization_format = SerializationFormat.STRUCTURED
+            serialization_format = SerializationFormat.STRUCTURED
         else:
             raise ValueError("Petting zoo environment type does not exist")
 
@@ -99,14 +104,25 @@ class Environment(ABC):
                         "Petting zoo environment with heterogeneous action/observation spaces are not supported yet"
                     )
 
+        web_components_file = None
+        matching_web_components= [ web_component for (env_name_prefix, web_component) in WEB_COMPONENTS.items() if self.env_class_name.startswith(env_name_prefix) ]
+        if len(matching_web_components) > 1:
+            log.warning(f"While configuring petting zoo environment [{self.env_class_name}] found more that one matching web components [{matching_web_components}], picking the first one.")
+        if len(matching_web_components) > 0:
+            web_components_file = matching_web_components[0]
+
         assert num_players >= 1
         self.env_specs = EnvironmentSpecs.create_homogeneous(
             num_players=num_players,
             observation_space=observation_space,
             action_space=action_space,
             turn_based=self.env_type in [PzEnvType.CLASSIC],
-            serilization_format=serilization_format,
+            serialization_format=serialization_format,
+            web_components_file=web_components_file,
         )
+
+    def get_web_components_dir(self):
+        return os.path.join(os.path.abspath(os.path.dirname(__file__)), "web", "dist")
 
     def get_implementation_name(self):
         return self.env_class_name

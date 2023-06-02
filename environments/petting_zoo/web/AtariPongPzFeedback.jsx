@@ -13,17 +13,21 @@
 // limitations under the License.
 
 import { useCallback, useEffect, useState } from "react";
-import { cogment_verse } from "../data_pb";
-import { useDocumentKeypressListener } from "@cogment/cogment-verse-components";
-import { useRealTimeUpdate } from "@cogment/cogment-verse-components";
-import { Button } from "@cogment/cogment-verse-components";
-import { FpsCounter } from "@cogment/cogment-verse-components";
-import { KeyboardControlList } from "@cogment/cogment-verse-components";
-import { Switch } from "@cogment/cogment-verse-components";
+import {
+  Button,
+  DType,
+  FpsCounter,
+  KeyboardControlList,
+  serializePlayerAction,
+  Space,
+  Switch,
+  useDocumentKeypressListener,
+  useRealTimeUpdate,
+  WEB_ACTOR_NAME,
+} from "@cogment/cogment-verse";
+
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faThumbsUp, faThumbsDown, faMeh } from "@fortawesome/free-solid-svg-icons";
-import { serializePlayerAction, DType, Space } from "../shared/utils/spaceSerialization";
-import { EVALUATOR_ACTOR_CLASS, WEB_ACTOR_NAME } from "../shared/utils/constants";
 
 const ACTION_SPACE = new Space({
   box: {
@@ -35,9 +39,6 @@ const ACTION_SPACE = new Space({
   },
 });
 
-export const AtariPongPzHfbEnvironments = [
-  "environments.pettingzoo_adapter.HumanFeedbackAtariEnvironment/pettingzoo.atari.pong_v3",
-];
 export const AtariPongPzFeedback = ({ sendAction, fps = 30, actorClass, observation, tickId, ...props }) => {
   const [paused, setPaused] = useState(false);
   const [humanMode, setHumanMode] = useState(true);

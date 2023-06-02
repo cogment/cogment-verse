@@ -13,18 +13,21 @@
 // limitations under the License.
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useDocumentKeypressListener } from "@cogment/cogment-verse-components";
-import { WEB_ACTOR_NAME } from "../shared/utils/constants";
-import { Button } from "@cogment/cogment-verse-components";
-import { KeyboardControlList } from "@cogment/cogment-verse-components";
 import { CountdownCircleTimer } from "react-countdown-circle-timer";
 import {
-  serializePlayerAction,
-  TEACHER_NOOP_ACTION,
-  DType,
+  Button,
   deserializeObservationActionMask,
+  DType,
+  KeyboardControlList,
+  OBSERVER_ACTOR_CLASS,
+  PlayObserver,
+  serializePlayerAction,
+  SimplePlay,
   Space,
-} from "../shared/utils/spaceSerialization";
+  TEACHER_NOOP_ACTION,
+  useDocumentKeypressListener,
+  WEB_ACTOR_NAME,
+} from "@cogment/cogment-verse";
 
 const TURN_DURATION_SECS = 1;
 const COLUMNS = [0, 1, 2, 3, 4, 5, 6];
@@ -43,9 +46,6 @@ const ACTION_MASK_SPACE = new Space({
   },
 });
 
-export const ConnectFourEnvironments = [
-  "environments.pettingzoo_adapter.ClassicEnvironment/pettingzoo.classic.connect_four_v3",
-];
 export const ConnectFourControls = ({ sendAction, observation, actorClass, ...props }) => {
   const currentPlayer = observation?.currentPlayer;
   const [turnKey, setTurnKey] = useState(0);
@@ -115,3 +115,14 @@ export const ConnectFourControls = ({ sendAction, observation, actorClass, ...pr
     </div>
   );
 };
+
+const PlayConnectFour = ({ actorParams, ...props }) => {
+  const actorClassName = actorParams?.className;
+
+  if (actorClassName === OBSERVER_ACTOR_CLASS) {
+    return <PlayObserver actorParams={actorParams} {...props} />;
+  }
+  return <SimplePlay actorParams={actorParams} {...props} controls={ConnectFourControls} />;
+};
+
+export default PlayConnectFour;

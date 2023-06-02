@@ -12,16 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { useCallback, useState, useEffect } from "react";
-import { cogment_verse } from "../data_pb";
-import { useDocumentKeypressListener, usePressedKeys } from "@cogment/cogment-verse-components";
-import { useRealTimeUpdate } from "@cogment/cogment-verse-components";
-import { createLookup } from "../shared/utils/controlLookup";
-import { TEACHER_ACTOR_CLASS } from "../shared/utils/constants";
-import { Button } from "@cogment/cogment-verse-components";
-import { FpsCounter } from "@cogment/cogment-verse-components";
-import { KeyboardControlList } from "@cogment/cogment-verse-components";
-import { serializePlayerAction, TEACHER_NOOP_ACTION, Space } from "../shared/utils/spaceSerialization";
+import { useCallback, useState } from "react";
+import {
+  Button,
+  createLookup,
+  FpsCounter,
+  KeyboardControlList,
+  serializePlayerAction,
+  Space,
+  TEACHER_ACTOR_CLASS,
+  TEACHER_NOOP_ACTION,
+  useDocumentKeypressListener,
+  usePressedKeys,
+  useRealTimeUpdate,
+} from "@cogment/cogment-verse";
 
 const ACTION_SPACE = new Space({
   discrete: {
@@ -38,7 +42,6 @@ ATARI_LOOKUP.setAction(["DOWN"], serializePlayerAction(ACTION_SPACE, 3));
 ATARI_LOOKUP.setAction(["RIGHT"], serializePlayerAction(ACTION_SPACE, 4));
 ATARI_LOOKUP.setAction(["LEFT"], serializePlayerAction(ACTION_SPACE, 5));
 
-export const AtariPongPzEnvironments = ["environments.pettingzoo_adapter.AtariEnvironment/pettingzoo.atari.pong_v3"];
 export const AtariPongPzControls = ({ sendAction, fps = 40, actorClass, observation, ...props }) => {
   const [paused, setPaused] = useState(false);
   const [playerPos, setPlayerPos] = useState("left");
