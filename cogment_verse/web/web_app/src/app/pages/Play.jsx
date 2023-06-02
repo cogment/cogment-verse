@@ -21,9 +21,9 @@ import {
   ORCHESTRATOR_WEB_ENDPOINT,
   PlayObserver,
   SimplePlay,
-  useJoinedTrial,
   WEB_BASE_URL,
 } from "../../shared";
+import { useJoinedTrial } from "../hooks/useJoinedTrial";
 import { cogSettings } from "../../CogSettings";
 
 const Play = () => {

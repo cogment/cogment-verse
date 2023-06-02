@@ -14,10 +14,9 @@
 
 import { Countdown } from "./Countdown";
 import { Button } from "./Button";
-import { TRIAL_STATUS } from "../hooks/useJoinedTrial";
 import { RenderedScreen } from "./RenderedScreen";
 import { Inspector } from "./Inspector";
-import { JOIN_TRIAL_TIMEOUT, BETWEEN_TRIALS_TIMEOUT } from "../utils";
+import { JOIN_TRIAL_TIMEOUT, BETWEEN_TRIALS_TIMEOUT, TRIAL_STATUS } from "../utils";
 
 const ErrorCard = ({ error }) => (
   <div className="border-l-8 border-red-600 bg-white rounded p-5 shadow-md">

@@ -14,14 +14,7 @@
 
 import { Context } from "@cogment/cogment-js-sdk";
 import React, { useEffect, useRef, useState } from "react";
-import { WEB_ACTOR_NAME, PLAYER_ACTOR_CLASS } from "../utils";
-
-export const TRIAL_STATUS = {
-  JOINING: "JOINING",
-  ONGOING: "ONGOING",
-  ENDED: "ENDED",
-  ERROR: "ERROR",
-};
+import { WEB_ACTOR_NAME, PLAYER_ACTOR_CLASS, TRIAL_STATUS } from "../../shared/utils";
 
 export const useJoinedTrial = (cogSettings, cogmentOrchestratorWebEndpoint, trialId, timeout = 5000) => {
   const [[status, error], setTrialStatus] = useState([TRIAL_STATUS.JOINING, null]);

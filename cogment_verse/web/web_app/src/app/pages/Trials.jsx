@@ -14,7 +14,7 @@
 
 import { TrialState } from "@cogment/cogment-js-sdk";
 import { Link } from "react-router-dom";
-import { useActiveTrials } from "../../shared/hooks/useActiveTrials";
+import { useActiveTrials } from "../hooks/useActiveTrials";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCircleNotch } from "@fortawesome/free-solid-svg-icons";
 import clsx from "clsx";

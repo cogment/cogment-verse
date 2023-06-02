@@ -13,7 +13,7 @@
 // limitations under the License.
 
 import { redirect } from "react-router-dom";
-import { retrievePendingTrials } from "../../shared/utils/retrievePendingTrials";
+import { retrievePendingTrials } from "../utils/retrievePendingTrials";
 
 import { cogSettings } from "../../CogSettings";
 import { ORCHESTRATOR_WEB_ENDPOINT } from "../../shared/utils/constants";

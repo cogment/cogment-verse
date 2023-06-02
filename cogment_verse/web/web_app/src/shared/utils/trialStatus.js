@@ -1,0 +1,6 @@
+export const TRIAL_STATUS = {
+  JOINING: "JOINING",
+  ONGOING: "ONGOING",
+  ENDED: "ENDED",
+  ERROR: "ERROR",
+};
