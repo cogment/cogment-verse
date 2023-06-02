@@ -18,7 +18,7 @@ export const createLookup = () => {
     if (controls.length === 0) {
       return NOOP;
     }
-    return controls.join("+");
+    return controls.sort().join("+");
   };
 
   const actionMap = {};

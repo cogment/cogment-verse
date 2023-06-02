@@ -41,7 +41,7 @@ const ACTION_SPACE = new Space({
   },
 });
 
-const GymLunarLanderControls = ({ sendAction, fps = 20, actorParams, ...props }) => {
+const LunarLanderControls = ({ sendAction, fps = 20, actorParams, ...props }) => {
   const actorClassName = actorParams?.className;
 
   const isTeacher = actorClassName === TEACHER_ACTOR_CLASS;
@@ -113,13 +113,13 @@ const GymLunarLanderControls = ({ sendAction, fps = 20, actorParams, ...props })
   );
 };
 
-const PlayGymLunarLander = ({ actorParams, ...props }) => {
+const PlayLunarLander = ({ actorParams, ...props }) => {
   const actorClassName = actorParams?.className;
 
   if (actorClassName === OBSERVER_ACTOR_CLASS) {
     return <PlayObserver actorParams={actorParams} {...props} />;
   }
-  return <SimplePlay actorParams={actorParams} {...props} controls={GymLunarLanderControls} />;
+  return <SimplePlay actorParams={actorParams} {...props} controls={LunarLanderControls} />;
 };
 
-export default PlayGymLunarLander;
+export default PlayLunarLander;

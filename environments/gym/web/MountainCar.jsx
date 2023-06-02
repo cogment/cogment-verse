@@ -40,7 +40,7 @@ const ACTION_SPACE = new Space({
   },
 });
 
-export const GymMountainCarControls = ({ sendAction, fps = 30, actorParams, ...props }) => {
+export const MountainCarControls = ({ sendAction, fps = 30, actorParams, ...props }) => {
   const actorClassName = actorParams?.className;
 
   const isTeacher = actorClassName === TEACHER_ACTOR_CLASS;
@@ -105,13 +105,13 @@ export const GymMountainCarControls = ({ sendAction, fps = 30, actorParams, ...p
   );
 };
 
-const PlayGymMountainCar = ({ actorParams, ...props }) => {
+const PlayMountainCar = ({ actorParams, ...props }) => {
   const actorClassName = actorParams?.className;
 
   if (actorClassName === OBSERVER_ACTOR_CLASS) {
     return <PlayObserver actorParams={actorParams} {...props} />;
   }
-  return <SimplePlay actorParams={actorParams} {...props} controls={GymMountainCarControls} />;
+  return <SimplePlay actorParams={actorParams} {...props} controls={MountainCarControls} />;
 };
 
-export default PlayGymMountainCar;
+export default PlayMountainCar;

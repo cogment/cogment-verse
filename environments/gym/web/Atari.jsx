@@ -13,11 +13,22 @@
 // limitations under the License.
 
 import { useCallback, useState } from "react";
-import { useDocumentKeypressListener, usePressedKeys, useRealTimeUpdate } from "@cogment/cogment-verse-components";
-import { createLookup } from "../shared/utils/controlLookup";
-import { TEACHER_ACTOR_CLASS } from "../shared/utils/constants";
-import { Button, FpsCounter, KeyboardControlList } from "@cogment/cogment-verse-components";
-import { serializePlayerAction, TEACHER_NOOP_ACTION, Space } from "../shared/utils/spaceSerialization";
+import {
+  Button,
+  createLookup,
+  FpsCounter,
+  KeyboardControlList,
+  OBSERVER_ACTOR_CLASS,
+  PlayObserver,
+  serializePlayerAction,
+  SimplePlay,
+  Space,
+  TEACHER_ACTOR_CLASS,
+  TEACHER_NOOP_ACTION,
+  useDocumentKeypressListener,
+  usePressedKeys,
+  useRealTimeUpdate,
+} from "@cogment/cogment-verse";
 
 const ACTION_SPACE = new Space({
   discrete: {
@@ -46,8 +57,9 @@ ATARI_LOOKUP.setAction(["UP", "LEFT", "FIRE"], serializePlayerAction(ACTION_SPAC
 ATARI_LOOKUP.setAction(["DOWN", "RIGHT", "FIRE"], serializePlayerAction(ACTION_SPACE, 16));
 ATARI_LOOKUP.setAction(["DOWN", "LEFT", "FIRE"], serializePlayerAction(ACTION_SPACE, 17));
 
-export const AtariPitfallEnvironments = ["environments.gym.environment.Environment/ALE/Pitfall-v5"];
-export const AtariPitfallControls = ({ sendAction, fps = 30, actorClass, ...props }) => {
+const AtariControls = ({ sendAction, fps = 30, actorParams, ...props }) => {
+  const actorClassName = actorParams?.className;
+
   const [paused, setPaused] = useState(false);
   const togglePause = useCallback(() => setPaused((paused) => !paused), [setPaused]);
   useDocumentKeypressListener("p", togglePause);
@@ -56,7 +68,7 @@ export const AtariPitfallControls = ({ sendAction, fps = 30, actorClass, ...prop
 
   const computeAndSendAction = useCallback(
     (dt) => {
-      if (pressedKeys.size === 0 && actorClass === TEACHER_ACTOR_CLASS) {
+      if (pressedKeys.size === 0 && actorClassName === TEACHER_ACTOR_CLASS) {
         sendAction(TEACHER_NOOP_ACTION);
         return;
       }
@@ -79,7 +91,7 @@ export const AtariPitfallControls = ({ sendAction, fps = 30, actorClass, ...prop
       const action = ATARI_LOOKUP.getAction(controls);
       sendAction(action);
     },
-    [pressedKeys, sendAction, actorClass]
+    [pressedKeys, sendAction, actorClassName]
   );
 
   const { currentFps } = useRealTimeUpdate(computeAndSendAction, fps, paused);
@@ -94,11 +106,22 @@ export const AtariPitfallControls = ({ sendAction, fps = 30, actorClass, ...prop
       </div>
       <KeyboardControlList
         items={[
-          ["Left/Right/Down/Up Arrows", "Move the character"],
-          ["Space", "Jump"],
+          ["Left/Right/Down/Up Arrows", "Move"],
+          ["Space", "Action"],
           ["p", "Pause/Unpause"],
         ]}
       />
     </div>
   );
 };
+
+const PlayAtari = ({ actorParams, ...props }) => {
+  const actorClassName = actorParams?.className;
+
+  if (actorClassName === OBSERVER_ACTOR_CLASS) {
+    return <PlayObserver actorParams={actorParams} {...props} />;
+  }
+  return <SimplePlay actorParams={actorParams} {...props} controls={AtariControls} />;
+};
+
+export default PlayAtari;

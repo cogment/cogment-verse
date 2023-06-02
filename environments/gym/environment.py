@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
 import os
 
 import cogment
@@ -21,26 +22,41 @@ import numpy as np
 from cogment_verse.constants import PLAYER_ACTOR_CLASS, TEACHER_ACTOR_CLASS
 from cogment_verse.specs import EnvironmentSpecs
 
+log = logging.getLogger(__name__)
+
 # configure pygame to use a dummy video server to be able to render headlessly
 os.environ["SDL_VIDEODRIVER"] = "dummy"
 
 WEB_COMPONENTS = {
-    "CartPole-v1": "GymCartPole.js",
-    "LunarLander-v2": "GymLunarLander.js",
-    "LunarLanderContinuous-v2": "GymLunarLanderContinuous.js",
-    "MountainCar-v0": "GymMountainCar.js",
+    "ALE/": "Atari.js",
+    "CartPole": "CartPole.js",
+    "LunarLander": "LunarLander.js",
+    "LunarLanderContinuous": "LunarLanderContinuous.js",
+    "MountainCar": "MountainCar.js",
 }
-
 
 class Environment:
     def __init__(self, cfg):
         self.gym_env_name = cfg.env_name
 
-        gym_env = gym.make(self.gym_env_name, new_step_api=True)
+        gym_env = gym.make(self.gym_env_name, new_step_api=True, full_action_space=True)
+
+        available_render_modes = gym_env.metadata["render_modes"]
+        if "single_rgb_array" in available_render_modes:
+            self._render_mode = "single_rgb_array"
+        elif "rgb_array" in available_render_modes:
+            self._render_mode = "rgb_array"
+        else:
+            raise RuntimeError(
+                f"No render mode available for {self.gym_env_name}: looking for either 'single_rgb_array' or 'rgb_array', got [{available_render_modes}]"
+            )
 
         web_components_file = None
-        if self.gym_env_name in WEB_COMPONENTS:
-            web_components_file = WEB_COMPONENTS[self.gym_env_name]
+        matching_web_components= [ web_component for (env_name_prefix, web_component) in WEB_COMPONENTS.items() if self.gym_env_name.startswith(env_name_prefix) ]
+        if len(matching_web_components) > 1:
+            log.warning(f"While configuring gym environment [{self.gym_env_name}] found more that one matchin web components [{matching_web_components}], picking the first one.")
+        if len(matching_web_components) > 0:
+            web_components_file = matching_web_components[0]
 
         self.env_specs = EnvironmentSpecs.create_homogeneous(
             num_players=1,
@@ -83,7 +99,10 @@ class Environment:
         session_cfg = environment_session.config
 
         gym_env = gym.make(
-            self.gym_env_name, render_mode="single_rgb_array" if session_cfg.render else None, new_step_api=True
+            self.gym_env_name,
+            render_mode=self._render_mode if session_cfg.render else None,
+            new_step_api=True,
+            full_action_space=True,
         )
         observation_space = self.env_specs.get_observation_space(session_cfg.render_width)
         action_space = self.env_specs.get_action_space()
@@ -92,7 +111,8 @@ class Environment:
 
         observation = observation_space.create(
             value=gym_observation,
-            rendered_frame=gym_env.render() if session_cfg.render else None,
+            # Passing `mode` seems to be required for (some?) Atari games
+            rendered_frame=gym_env.render(mode=self._render_mode) if session_cfg.render else None,
         )
 
         environment_session.start([("*", observation_space.serialize(observation))])
@@ -121,7 +141,8 @@ class Environment:
 
                 observation = observation_space.create(
                     value=gym_observation,
-                    rendered_frame=gym_env.render() if session_cfg.render else None,
+                    # Passing `mode` seems to be required for (some?) Atari games
+                    rendered_frame=gym_env.render(mode=self._render_mode) if session_cfg.render else None,
                     overridden_players=overridden_players,
                 )
 

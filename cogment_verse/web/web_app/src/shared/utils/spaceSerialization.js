@@ -27,6 +27,9 @@ export const TEACHER_NOOP_ACTION = new TeacherAction({});
 const serializeNdArray = (dtype, shape, flattenedArray) => {
   let arrayValue;
   switch (dtype) {
+    case DType.DTYPE_UINT8:
+      arrayValue = new Uint8Array(flattenedArray);
+      break;
     case DType.DTYPE_INT8:
       arrayValue = new Int8Array(flattenedArray);
       break;
@@ -57,12 +60,15 @@ const deserializeNdArray = (serializedArray) => {
   const rawData = serializedArray.rawData;
   let typedArray;
   switch (dtype) {
+    case DType.DTYPE_UINT8:
+      typedArray = new Uint8Array(rawData.buffer, rawData.byteOffset, length);
+      break;
     case DType.DTYPE_INT8:
       typedArray = new Int8Array(rawData.buffer, rawData.byteOffset, length);
       break;
     case DType.DTYPE_INT32:
       if (rawData.byteOffset % 4 !== 0) {
-        // original buffer is not aligne, we need to copy
+        // original buffer is not aligned, we need to copy
         const alignedData = Uint8Array.from(rawData);
         typedArray = new Int32Array(alignedData.buffer, alignedData.byteOffset, length);
       } else {
@@ -72,7 +78,7 @@ const deserializeNdArray = (serializedArray) => {
     case DType.DTYPE_FLOAT64:
     case DType.DTYPE_FLOAT32:
       if (rawData.byteOffset % 4 !== 0) {
-        // original buffer is not aligne, we need to copy
+        // original buffer is not aligned, we need to copy
         const alignedData = Uint8Array.from(rawData);
         typedArray = new Float32Array(alignedData.buffer, alignedData.byteOffset, length);
       } else {

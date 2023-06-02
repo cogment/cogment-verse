@@ -42,7 +42,7 @@ const ACTION_SPACE = new Space({
   },
 });
 
-export const GymLunarLanderContinuousControls = ({ sendAction, fps = 20, actorParams, ...props }) => {
+export const LunarLanderContinuousControls = ({ sendAction, fps = 20, actorParams, ...props }) => {
   const actorClassName = actorParams?.className;
 
   const isTeacher = actorClassName === TEACHER_ACTOR_CLASS;
@@ -126,13 +126,13 @@ export const GymLunarLanderContinuousControls = ({ sendAction, fps = 20, actorPa
   );
 };
 
-const PlayGymLunarLanderContinuous = ({ actorParams, ...props }) => {
+const PlayLunarLanderContinuous = ({ actorParams, ...props }) => {
   const actorClassName = actorParams?.className;
 
   if (actorClassName === OBSERVER_ACTOR_CLASS) {
     return <PlayObserver actorParams={actorParams} {...props} />;
   }
-  return <SimplePlay actorParams={actorParams} {...props} controls={GymLunarLanderContinuousControls} />;
+  return <SimplePlay actorParams={actorParams} {...props} controls={LunarLanderContinuousControls} />;
 };
 
-export default PlayGymLunarLanderContinuous;
+export default PlayLunarLanderContinuous;

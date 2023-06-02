@@ -22,10 +22,11 @@ esbuild
   .build({
     logLevel: "info",
     entryPoints: [
-      "./GymLunarLander.jsx",
-      "./GymCartPole.jsx",
-      "./GymLunarLanderContinuous.jsx",
-      "./GymMountainCar.jsx",
+      "./Atari.jsx",
+      "./LunarLander.jsx",
+      "./CartPole.jsx",
+      "./LunarLanderContinuous.jsx",
+      "./MountainCar.jsx",
     ],
     target: "es2020",
     format: "esm",
