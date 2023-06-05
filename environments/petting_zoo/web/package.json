@@ -10,7 +10,6 @@
     "react-countdown-circle-timer": "^3.2.1"
   },
   "devDependencies": {
-    "esbuild": "0.17.17",
-    "esbuild-css-modules-plugin": "2.7.1"
+    "esbuild": "0.17.17"
   }
 }

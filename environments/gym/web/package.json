@@ -6,7 +6,6 @@
   },
   "dependencies": {},
   "devDependencies": {
-    "esbuild": "0.17.17",
-    "esbuild-css-modules-plugin": "2.7.1"
+    "esbuild": "0.17.17"
   }
 }

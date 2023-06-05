@@ -13,7 +13,6 @@
 // limitations under the License.
 
 const esbuild = require("esbuild");
-const cssModulesPlugin = require("esbuild-css-modules-plugin");
 
 const NODE_ENV = process.env.NODE_ENV || "production";
 
@@ -29,7 +28,6 @@ esbuild
     metafile: true,
     jsx: "automatic",
     outdir: "dist",
-    plugins: [cssModulesPlugin()],
     external: ["react", "react-dom", "@cogment/cogment-verse"],
     define: {
       "process.env.NODE_ENV": `"${NODE_ENV}"`,
