@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from data_pb2 import Observation as PbObservation  # pylint: disable=import-error
-from gym.spaces import Dict, utils
+from gymnasium.spaces import Dict, utils
 
 from cogment_verse.constants import DEFAULT_RENDERED_WIDTH
 

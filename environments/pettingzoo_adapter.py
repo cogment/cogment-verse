@@ -23,7 +23,7 @@ import numpy as np
 import supersuit as ss
 from cogment.environment import EnvironmentSession
 
-from cogment_verse.constants import EVALUATOR_ACTOR_CLASS, PLAYER_ACTOR_CLASS, TEACHER_ACTOR_CLASS, WEB_ACTOR_NAME
+from cogment_verse.constants import EVALUATOR_ACTOR_CLASS, PLAYER_ACTOR_CLASS, WEB_ACTOR_NAME
 from cogment_verse.specs import EnvironmentSpecs
 from cogment_verse.specs.ndarray_serialization import SerializationFormat, deserialize_ndarray
 from cogment_verse.utils import import_class
@@ -31,8 +31,8 @@ from cogment_verse.utils import import_class
 log = logging.getLogger(__name__)
 
 
-def get_pz_player(observation: np.ndarray, actor_names: list) -> Tuple[str, int]:
-    """Get name and index for the petting zoo player. Note that it works specifically to Atari game"""
+def get_player(observation: np.ndarray, actor_names: list) -> Tuple[str, int]:
+    """Get name and index for the PettingZoo player. Note that it works specifically to Atari game"""
     num_agents = len(actor_names)
     indicators = observation[0, 0, -num_agents:]
     idx = int(np.where(indicators)[0])
@@ -46,6 +46,7 @@ def get_rl_agent(current_pz_agent_name: str, actor_names: list) -> Tuple[str, in
     if len(actor_names) == 1:
         return (actor_names[0], 0)
     idx = [count for (count, agent_name) in enumerate(actor_names) if agent_name == current_pz_agent_name][0]
+
     return (actor_names[idx], idx)
 
 
@@ -62,41 +63,42 @@ def atari_env_wrapper(env: gymna.Env) -> gymna.Env:
     return env
 
 
-class PzEnvType(Enum):
-    CLASSIC = "classic"
+class PettingZooEnvType(Enum):
     ATARI = "atari"
+    CLASSIC = "classic"
+    MPE = "mpe"
 
 
 class Environment(ABC):
     def __init__(self, cfg):
         self.env_class_name = cfg.env_class_name
         self.env_type_str = self.env_class_name.split(".")[1]
-        if self.env_type_str not in [pz_env_type.value for pz_env_type in PzEnvType]:
+        if self.env_type_str not in [env_type.value for env_type in PettingZooEnvType]:
             raise RuntimeError(f"PettingZoo adapter does not support environments of type [{self.env_type_str}]")
 
-        self.env_type = PzEnvType(self.env_type_str)
+        self.env_type = PettingZooEnvType(self.env_type_str)
         self.env_class = import_class(self.env_class_name)
-        pz_env = self.env_class.env()
-        if self.env_type == PzEnvType.ATARI:
-            pz_env = atari_env_wrapper(pz_env)
+        env = self.env_class.env()
+        if self.env_type == PettingZooEnvType.ATARI:
+            env = atari_env_wrapper(env)
             serilization_format = SerializationFormat.NPY
-        elif self.env_type == PzEnvType.CLASSIC:
+        elif self.env_type in [PettingZooEnvType.CLASSIC, PettingZooEnvType.MPE]:
             serilization_format = SerializationFormat.STRUCTURED
         else:
-            raise ValueError("Petting zoo environment type does not exist")
+            raise ValueError(f"PettingZoo environment type [{self.env_type_str}] does not exist")
 
         num_players = 0
         observation_space = None
         action_space = None
-        for player in pz_env.possible_agents:
+        for player in env.possible_agents:
             num_players += 1
             if observation_space is None:
-                observation_space = pz_env.observation_space(player)
-                action_space = pz_env.action_space(player)
+                observation_space = env.observation_space(player)
+                action_space = env.action_space(player)
             else:
-                if observation_space != pz_env.observation_space(player) or action_space != pz_env.action_space(player):
+                if observation_space != env.observation_space(player) or action_space != env.action_space(player):
                     raise RuntimeError(
-                        "Petting zoo environment with heterogeneous action/observation spaces are not supported yet"
+                        "PettingZoo environment with heterogeneous action/observation spaces are not supported yet"
                     )
 
         assert num_players >= 1
@@ -104,7 +106,7 @@ class Environment(ABC):
             num_players=num_players,
             observation_space=observation_space,
             action_space=action_space,
-            turn_based=self.env_type in [PzEnvType.CLASSIC],
+            turn_based=self.env_type in [PettingZooEnvType.CLASSIC],
             serilization_format=serilization_format,
         )
 
@@ -120,7 +122,7 @@ class Environment(ABC):
 
 
 class ClassicEnvironment(Environment):
-    """Classic petting zoo e.g., connect four, Hanabi etc."""
+    """Classic PettingZoo e.g., connect four, Hanabi etc."""
 
     async def impl(self, environment_session):
         actors = environment_session.get_active_actors()
@@ -131,44 +133,36 @@ class ClassicEnvironment(Environment):
         ]
         assert len(player_actors) == self.env_specs.num_players  # pylint: disable=no-member
 
-        # No support for teachers
-        teacher_actors = [
-            (actor_idx, actor.actor_name)
-            for (actor_idx, actor) in enumerate(actors)
-            if actor.actor_class_name == TEACHER_ACTOR_CLASS
-        ]
-        assert len(teacher_actors) == 0
-
         session_cfg = environment_session.config
 
-        pz_env = self.env_class.env(render_mode="rgb_array")
+        env = self.env_class.env(render_mode="rgb_array")
         observation_space = self.env_specs.get_observation_space(session_cfg.render_width)
         action_space = self.env_specs.get_action_space()
 
-        pz_env.reset(seed=session_cfg.seed)
+        env.reset(seed=session_cfg.seed)
 
-        pz_agent_iterator = iter(pz_env.agent_iter())
+        agent_iter = iter(env.agent_iter())
 
         def next_player():
-            nonlocal pz_agent_iterator
-            current_player_pz_agent = next(pz_agent_iterator)
+            nonlocal agent_iter
+            current_player_agent = next(agent_iter)
             current_player_actor_idx, current_player_actor_name = next(
                 (player_actor_idx, player_actor_name)
-                for (player_pz_agent, (player_actor_idx, player_actor_name)) in zip(pz_env.agents, player_actors)
-                if player_pz_agent == current_player_pz_agent
+                for (player_pz_agent, (player_actor_idx, player_actor_name)) in zip(env.agents, player_actors)
+                if player_pz_agent == current_player_agent
             )
-            return (current_player_pz_agent, current_player_actor_idx, current_player_actor_name)
+            return (current_player_agent, current_player_actor_idx, current_player_actor_name)
 
         _current_player_pz_agent, current_player_actor_idx, current_player_actor_name = next_player()
 
-        pz_observation, _pz_reward, termination, truncation, _ = pz_env.last()
+        pz_observation, _pz_reward, termination, truncation, _ = env.last()
 
         rendered_frame = None
         if session_cfg.render:
-            if "rgb_array" not in pz_env.metadata["render_modes"]:
-                log.warning(f"Petting Zoo environment [{self.env_class_name}] doesn't support rendering to pixels")
+            if "rgb_array" not in env.metadata["render_modes"]:
+                log.warning(f"PettingZoo environment [{self.env_class_name}] doesn't support rendering to pixels")
                 return
-            rendered_frame = pz_env.render()
+            rendered_frame = env.render()
 
         observation = observation_space.create(
             value=pz_observation["observation"],  # TODO Should only be sent to the current player
@@ -185,15 +179,15 @@ class ClassicEnvironment(Environment):
                     event.actions[current_player_actor_idx].action,
                 )
 
-                pz_env.step(action.value)
+                env.step(action.value)
 
                 _current_player_pz_agent, current_player_actor_idx, current_player_actor_name = next_player()
-                pz_observation, _pz_reward, termination, truncation, _ = pz_env.last()
+                pz_observation, _reward, termination, truncation, _ = env.last()
 
                 observation = observation_space.create(
                     value=pz_observation["observation"],  # TODO Should only be sent to the current player
                     action_mask=pz_observation["action_mask"],  # TODO Should only be sent to the current player
-                    rendered_frame=pz_env.render()
+                    rendered_frame=env.render()
                     if session_cfg.render
                     else None,  # TODO Should only be sent to observers
                     current_player=current_player_actor_name,
@@ -201,18 +195,18 @@ class ClassicEnvironment(Environment):
 
                 observations = [("*", observation_space.serialize(observation))]
 
-                for rewarded_player_pz_agent, pz_reward in pz_env.rewards.items():
-                    if pz_reward == 0:
+                for rewarded_player_pz_agent, reward in env.rewards.items():
+                    if reward == 0:
                         continue
                     rewarded_player_actor_name = next(
                         player_actor_name
                         for (player_pz_agent, (player_actor_idx, player_actor_name)) in zip(
-                            pz_env.agents, player_actors
+                            env.agents, player_actors
                         )
                         if player_pz_agent == rewarded_player_pz_agent
                     )
                     environment_session.add_reward(
-                        value=pz_reward,
+                        value=reward,
                         confidence=1.0,
                         to=[rewarded_player_actor_name],
                     )
@@ -227,7 +221,7 @@ class ClassicEnvironment(Environment):
                     # The trial is active
                     environment_session.produce_observations(observations)
 
-        pz_env.close()
+        env.close()
 
 
 class AtariEnvironment(Environment):
@@ -238,38 +232,38 @@ class AtariEnvironment(Environment):
         session_cfg = environment_session.config
 
         # Initialize environment
-        pz_env = self.env_class.env(render_mode="rgb_array") if session_cfg.render else self.env_class.env()
-        pz_env = atari_env_wrapper(pz_env) if self.env_type_str == "atari" else pz_env
+        env = self.env_class.env(render_mode="rgb_array") if session_cfg.render else self.env_class.env()
+        env = atari_env_wrapper(env) if self.env_type_str == "atari" else env
         observation_space = self.env_specs.get_observation_space(session_cfg.render_width)
         action_space = self.env_specs.get_action_space()
 
         # Reset environment
-        pz_env.reset(seed=session_cfg.seed)
-        pz_agent_iterator = iter(pz_env.agent_iter())
-        pz_observation, _, _, _, _ = pz_env.last()
+        env.reset(seed=session_cfg.seed)
+        agent_iter = iter(env.agent_iter())
+        pz_observation, _, _, _, _ = env.last()
 
-        if len(pz_env.agents) != len(actor_names) and len(actor_names) > 1:
-            raise ValueError(f"Number of actors does not match environments requirement ({len(pz_env.agents)} actors)")
+        if len(env.agents) != len(actor_names) and len(actor_names) > 1:
+            raise ValueError(f"Number of actors does not match environments requirement ({len(env.agents)} actors)")
 
         pz_player_names = (
-            {agent_name: 0 for agent_name in pz_env.agents}
-            if len(actor_names) == 1 and len(pz_env.agents) > len(actor_names)
-            else {agent_name: count for (count, agent_name) in enumerate(pz_env.agents)}
+            {agent_name: 0 for agent_name in env.agents}
+            if len(actor_names) == 1 and len(env.agents) > len(actor_names)
+            else {agent_name: count for (count, agent_name) in enumerate(env.agents)}
         )
 
         assert len(web_actor_idx) < 2
-        human_player_name = pz_env.agents[web_actor_idx[0]] if web_actor_idx else ""
-        pz_player_name = next(pz_agent_iterator)
+        human_player_name = env.agents[web_actor_idx[0]] if web_actor_idx else ""
+        pz_player_name = next(agent_iter)
         actor_idx = pz_player_names[pz_player_name]
         actor_name = actor_names[actor_idx]
 
         # Render the pixel for UI
         rendered_frame = None
         if session_cfg.render:
-            if "rgb_array" not in pz_env.metadata["render_modes"]:
-                log.warning(f"Petting Zoo environment [{self.env_class_name}] doesn't support rendering to pixels")
+            if "rgb_array" not in env.metadata["render_modes"]:
+                log.warning(f"PettingZoo environment [{self.env_class_name}] doesn't support rendering to pixels")
                 return
-            rendered_frame = pz_env.render()
+            rendered_frame = env.render()
 
         observation = observation_space.create(
             value=pz_observation,
@@ -282,16 +276,16 @@ class AtariEnvironment(Environment):
         async for event in environment_session.all_events():
             if not event.actions:
                 continue
+
             # Action
-            action_value = event.actions[actor_idx].action
+            action_value = action_space.deserialize(event.actions[actor_idx].action).value
 
             # Observation
-            gym_action = action_space.deserialize(action_value)
-            pz_env.step(gym_action.value)
-            pz_observation, pz_reward, termination, truncation, _ = pz_env.last()
+            env.step(action_value)
+            pz_observation, pz_reward, termination, truncation, _ = env.last()
 
             # Actor names
-            pz_player_name = next(pz_agent_iterator)
+            pz_player_name = next(agent_iter)
             actor_idx = pz_player_names[pz_player_name]
             actor_name = actor_names[actor_idx]
 
@@ -303,7 +297,7 @@ class AtariEnvironment(Environment):
             )
             rendered_frame = None
             if session_cfg.render:
-                rendered_frame = pz_env.render()
+                rendered_frame = env.render()
 
             observations = [("*", observation_space.serialize(observation))]
             # TODO: need to revise the actor name received the reward
@@ -318,7 +312,7 @@ class AtariEnvironment(Environment):
             else:
                 # The trial is active
                 environment_session.produce_observations(observations)
-        pz_env.close()
+        env.close()
 
 
 class HumanFeedbackAtariEnvironment(Environment):
@@ -349,7 +343,7 @@ class HumanFeedbackAtariEnvironment(Environment):
         # Render the pixel for UI
         rendered_frame = None
         if session_cfg.render and "rgb_array" not in pz_env.metadata["render_modes"]:
-            log.warning(f"Petting Zoo environment [{self.env_class_name}] doesn't support rendering to pixels")
+            log.warning(f"PettingZoo environment [{self.env_class_name}] doesn't support rendering to pixels")
             return
         rendered_frame = pz_env.render()
 

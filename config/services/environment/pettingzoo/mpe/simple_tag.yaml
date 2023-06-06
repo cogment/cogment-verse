@@ -1,0 +1,11 @@
+# @package _global_.services.environment
+class_name: environments.pettingzoo.mpe_adapter.MpeEnvironment
+env_class_name: pettingzoo.mpe.simple_tag_v3
+port: ${generate_port:environments.pettingzoo.mpe_adapter.MpeEnvironment}
+
+# Environment Parameters
+num_good: 1 # Should be defined in run.
+num_adversaries: 3 # Should be defined in run.
+num_obstacles: 2
+max_cycles: 500
+continuous_actions: False

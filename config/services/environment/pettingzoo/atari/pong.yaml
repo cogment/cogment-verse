@@ -1,3 +1,4 @@
+# @package _global_.services.environment
 class_name: environments.pettingzoo_adapter.AtariEnvironment
 env_class_name: pettingzoo.atari.pong_v3
 port: ${generate_port:environments.pettingzoo_adapter.AtariEnvironment}

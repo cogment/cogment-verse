@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from data_pb2 import ObserverAction, PlayerAction, TeacherAction  # pylint: disable=import-error
-from gym.spaces import utils
+from gymnasium.spaces import utils
 
 from ..constants import OBSERVER_ACTOR_CLASS, PLAYER_ACTOR_CLASS, TEACHER_ACTOR_CLASS
 from .ndarray_serialization import deserialize_ndarray, serialize_ndarray

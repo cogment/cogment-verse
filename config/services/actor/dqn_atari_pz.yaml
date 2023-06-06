@@ -1,3 +1,0 @@
-dqn_atari_pz:
-  class_name: actors.dqn_atari_pz.DQNActor
-  port: ${generate_port:actors.dqn_atari_pz.DQNActor}

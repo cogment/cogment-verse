@@ -1,9 +1,8 @@
 # @package _global_
 defaults:
   - override /services/actor:
-      - ppo_atari_pz
-      - ppo_atari_pz
-  - override /services/environment: pong_pz_hfb
+      - pettingzoo/atari/ppo_atari_pz
+  - override /services/environment: pettingzoo/atari/pong_human_feedback
   - override /run/experiment_tracker: simple
 
 run:
