@@ -38,7 +38,7 @@ from cogment_verse.specs import (
     WEB_ACTOR_NAME,
     AgentConfig,
     EnvironmentConfig,
-    EnvironmentSpecs,
+    EnvironmentActorSpecs,
     cog_settings,
 )
 
@@ -217,7 +217,7 @@ class PPOActor:
         torch.manual_seed(config.seed)
 
         # Get observation and action space
-        environment_specs = EnvironmentSpecs.deserialize(config.environment_specs)
+        environment_specs = EnvironmentActorSpecs.deserialize(config.environment_specs)
         observation_space = environment_specs.get_observation_space()
         action_space = environment_specs.get_action_space(seed=config.seed)
 
@@ -288,7 +288,7 @@ class BasePPOTraining(ABC):
         "logging_interval": 100,
     }
 
-    def __init__(self, environment_specs: EnvironmentSpecs, cfg: Union[ListConfig, DictConfig]) -> None:
+    def __init__(self, environment_specs: EnvironmentActorSpecs, cfg: Union[ListConfig, DictConfig]) -> None:
         super().__init__()
         self._dtype = torch.float32
         self._environment_specs = environment_specs
@@ -332,7 +332,7 @@ class BasePPOTraining(ABC):
             if actor_params.class_name == PLAYER_ACTOR_CLASS
         }
         actor_names = list(actor_params.keys())
-        player_environment_specs = EnvironmentSpecs.deserialize(actor_params[actor_names[0]].config.environment_specs)
+        player_environment_specs = EnvironmentActorSpecs.deserialize(actor_params[actor_names[0]].config.environment_specs)
         player_observation_space = player_environment_specs.get_observation_space()
         player_action_space = player_environment_specs.get_action_space()
         num_players = player_environment_specs.num_players
@@ -970,7 +970,7 @@ class HumanFeedbackPPOTraining(BasePPOTraining):
             if actor_params.class_name == PLAYER_ACTOR_CLASS
         }
         actor_names = list(actor_params.keys())
-        player_environment_specs = EnvironmentSpecs.deserialize(actor_params[actor_names[0]].config.environment_specs)
+        player_environment_specs = EnvironmentActorSpecs.deserialize(actor_params[actor_names[0]].config.environment_specs)
         player_observation_space = player_environment_specs.get_observation_space()
         player_action_space = player_environment_specs.get_action_space()
         num_players = player_environment_specs.num_players

@@ -28,7 +28,7 @@ from torch.distributions.normal import Normal
 from cogment_verse import Model, TorchReplayBuffer, TorchReplayBufferSample
 from cogment_verse.run.run_session import RunSession
 from cogment_verse.run.sample_producer_worker import SampleProducerSession
-from cogment_verse.specs import PLAYER_ACTOR_CLASS, AgentConfig, EnvironmentConfig, EnvironmentSpecs, cog_settings
+from cogment_verse.specs import PLAYER_ACTOR_CLASS, AgentConfig, EnvironmentConfig, EnvironmentActorSpecs, cog_settings
 
 torch.multiprocessing.set_sharing_strategy("file_system")
 
@@ -270,7 +270,7 @@ class SACActor:
         actor_session.start()
         config = actor_session.config
 
-        environment_specs = EnvironmentSpecs.deserialize(config.environment_specs)
+        environment_specs = EnvironmentActorSpecs.deserialize(config.environment_specs)
         observation_space = environment_specs.get_observation_space()
         action_space = environment_specs.get_action_space()
         assert isinstance(action_space.gym_space, Box)
@@ -332,7 +332,7 @@ class SACTraining:
     action_bias: torch.Tensor
     replay_buffer: TorchReplayBuffer
 
-    def __init__(self, environment_specs: EnvironmentSpecs, cfg: EnvironmentConfig) -> None:
+    def __init__(self, environment_specs: EnvironmentActorSpecs, cfg: EnvironmentConfig) -> None:
         super().__init__()
         self._dtype = torch.float
         self._environment_specs = environment_specs
@@ -399,7 +399,7 @@ class SACTraining:
 
         player_actor_params = sample_producer_session.trial_info.parameters.actors[0]
         player_actor_name = player_actor_params.name
-        player_environment_specs = EnvironmentSpecs.deserialize(player_actor_params.config.environment_specs)
+        player_environment_specs = EnvironmentActorSpecs.deserialize(player_actor_params.config.environment_specs)
         player_observation_space = player_environment_specs.get_observation_space()
         player_action_space = player_environment_specs.get_action_space()
 

@@ -18,18 +18,19 @@ import yaml
 from data_pb2 import EnvironmentSpecs as PbEnvironmentSpecs  # pylint: disable=import-error
 from google.protobuf.json_format import MessageToDict, ParseDict
 
-from ..constants import DEFAULT_RENDERED_WIDTH, PLAYER_ACTOR_CLASS
+from ..constants import PLAYER_ACTOR_CLASS, ActorSpecType
 from .action_space import ActionSpace
 from .ndarray_serialization import SerializationFormat
 from .observation_space import ObservationSpace
 from .spaces_serialization import deserialize_gym_space, serialize_gym_space
 
 
-class EnvironmentSpecs:
+class EnvironmentActorSpecs:
     """
-    Representation of the specification of an environment within Cogment Verse
-
+    Representation of the specification of an environment within cogment verse for a specific observation space.
     Properties:
+        actor_spec:
+            The name of the agent role.
         implementation:
             The name of the implementation for the environment.
         num_players:
@@ -40,14 +41,30 @@ class EnvironmentSpecs:
 
     def __init__(self, environment_specs_pb):
         """
-        EnvironmentSpecs constructor.
-        Shouldn't be called directly, prefer the factory function such as EnvironmentSpecs.deserialize or EnvironmentSpecs.create_homogeneous.
+        EnvironmentActorSpecs constructor.
+        Shouldn't be called directly, prefer the factory function such as EnvironmentActorSpecs.deserialize or EnvironmentActorSpecs.create.
         """
         self._pb = environment_specs_pb
+
+    def __str__(self):
+        result = f"EnvironmentActorSpecs: actor_spec = {self.actor_spec}, implementation = {self.implementation}"
+        result += f", num_players = {self.num_players}, turn_based = {self.turn_based}"
+        return result
+
+    @property
+    def actor_spec(self):
+        if hasattr(self._pb, "actor_spec"):
+            return ActorSpecType.from_config(self._pb.actor_spec)
+        else:
+            return ActorSpecType.DEFAULT  # Backwards compatibility with single environment specs setup
 
     @property
     def implementation(self):
         return self._pb.implementation
+
+    @implementation.setter
+    def implementation(self, implementation: str):
+        self._pb.implementation = implementation
 
     @property
     def num_players(self):
@@ -57,22 +74,18 @@ class EnvironmentSpecs:
     def turn_based(self):
         return self._pb.turn_based
 
-    def get_observation_space(self, render_width=DEFAULT_RENDERED_WIDTH):
+    def get_observation_space(self, render_width=1024):
         """
         Build an instance of the observation space for this environment
-
         Parameters:
             render_width: optional
                 maximum width for the serialized rendered frame in observation
-
-        NOTE: In the future we'll want to support different observation space per agent role
         """
         return ObservationSpace(deserialize_gym_space(self._pb.observation_space), render_width)
 
     def get_action_space(self, actor_class=PLAYER_ACTOR_CLASS, seed=None):
         """
         Build an instance of the action space for this environment
-
         Parameters:
             actor_class: optional
                 the class of the actor for which we want to retrieve the action space.
@@ -83,12 +96,13 @@ class EnvironmentSpecs:
         return ActionSpace(deserialize_gym_space(self._pb.action_space), actor_class, seed)
 
     @classmethod
-    def create_homogeneous(
+    def create(
         cls,
         num_players,
         turn_based,
         observation_space,
         action_space,
+        actor_spec=PLAYER_ACTOR_CLASS,
         serilization_format=SerializationFormat.STRUCTURED,
     ):
         """
@@ -98,8 +112,9 @@ class EnvironmentSpecs:
             PbEnvironmentSpecs(
                 num_players=num_players,
                 turn_based=turn_based,
-                observation_space=serialize_gym_space(observation_space, serilization_format),
-                action_space=serialize_gym_space(action_space, serilization_format),
+                observation_space=serialize_gym_space(observation_space),
+                action_space=serialize_gym_space(action_space),
+                actor_spec=actor_spec,
             )
         )
 
@@ -121,18 +136,21 @@ class EnvironmentSpecs:
         """
         Factory function building an EnvironmentSpecs from cogment_version work dir cache
         """
+        pb_specs = []
+        specs_directory = os.path.join(work_dir, "environment_specs", f"{env_name}")
 
-        specs_filename = os.path.join(work_dir, "environment_specs", f"{env_name}.yaml")
-
-        with open(specs_filename, "r", encoding="utf-8") as f:
-            return cls.deserialize(ParseDict(yaml.safe_load(f), PbEnvironmentSpecs()))
+        for file in os.listdir(specs_directory):
+            if file.endswith(".yaml"):
+                specs_filename = os.path.join(work_dir, "environment_specs", f"{env_name}", file)
+                with open(specs_filename, "r", encoding="utf-8") as f:
+                    pb_specs.append(ParseDict(yaml.safe_load(f), PbEnvironmentSpecs()))
+        return cls.deserialize(pb_specs)
 
     def save(self, work_dir, env_name):
         """
         Saving to cogment_version work dir cache
         """
-
-        specs_filename = os.path.join(work_dir, "environment_specs", f"{env_name}.yaml")
+        specs_filename = os.path.join(work_dir, "environment_specs", f"{env_name}", f"{self._pb.actor_spec}.yaml")
         os.makedirs(os.path.dirname(specs_filename), exist_ok=True)
 
         self._pb.implementation = env_name

@@ -38,7 +38,7 @@ def run_main(
     async def run_main_async():
         # Importing 'specs' only in the subprocess (i.e. where generate has been properly executed)
         # pylint: disable-next=import-outside-toplevel
-        from cogment_verse.specs import EnvironmentSpecs, cog_settings
+        from cogment_verse.specs import EnvironmentActorSpecs, cog_settings
 
         _run_cfg = run_cfg
         run_cls = import_class(_run_cfg.class_name)
@@ -49,7 +49,7 @@ def run_main(
         enviroment_impl_name = _run_cfg.get("environment", registered_environment_impl_names[0])
 
         try:
-            environment_specs = EnvironmentSpecs.load(work_dir, enviroment_impl_name)
+            environment_specs = EnvironmentActorSpecs.load(work_dir, enviroment_impl_name)
         except Exception as error:
             raise RuntimeError(f"Unable to start run, unknown environment: '{enviroment_impl_name}'") from error
 

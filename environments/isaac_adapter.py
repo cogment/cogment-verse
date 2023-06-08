@@ -23,7 +23,7 @@ import numpy as np
 import torch
 
 from cogment_verse.constants import PLAYER_ACTOR_CLASS, TEACHER_ACTOR_CLASS
-from cogment_verse.specs import EnvironmentSpecs
+from cogment_verse.specs import EnvironmentActorSpecs
 
 # configure pygame to use a dummy video server to be able to render headlessly
 os.environ["SDL_VIDEODRIVER"] = "dummy"
@@ -40,7 +40,7 @@ class Environment:
             sim_device="cuda:0",
             rl_device="cuda:0",
         )
-        self.env_specs = EnvironmentSpecs.create_homogeneous(
+        self.env_specs = EnvironmentActorSpecs.create_homogeneous(
             num_players=1,
             turn_based=False,
             observation_space=self.gym_env.observation_space,

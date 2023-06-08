@@ -30,7 +30,7 @@ from gym.spaces import Discrete, utils
 
 from cogment_verse import Model, TorchReplayBuffer  # pylint: disable=abstract-class-instantiated
 from cogment_verse.constants import HUMAN_ACTOR_IMPL, PLAYER_ACTOR_CLASS, WEB_ACTOR_NAME
-from cogment_verse.specs import AgentConfig, EnvironmentConfig, EnvironmentSpecs, cog_settings
+from cogment_verse.specs import AgentConfig, EnvironmentConfig, EnvironmentActorSpecs, cog_settings
 
 torch.multiprocessing.set_sharing_strategy("file_system")
 
@@ -140,7 +140,7 @@ class SimpleDQNActor:
 
         rng = np.random.default_rng(config.seed if config.seed is not None else 0)
 
-        environment_specs = EnvironmentSpecs.deserialize(config.environment_specs)
+        environment_specs = EnvironmentActorSpecs.deserialize(config.environment_specs)
         observation_space = environment_specs.get_observation_space()
         action_space = environment_specs.get_action_space(seed=rng.integers(9999))
 
@@ -219,7 +219,7 @@ class SimpleDQNTraining:
         player_actor_params = sample_producer_session.trial_info.parameters.actors[0]
 
         player_actor_name = player_actor_params.name
-        player_environment_specs = EnvironmentSpecs.deserialize(player_actor_params.config.environment_specs)
+        player_environment_specs = EnvironmentActorSpecs.deserialize(player_actor_params.config.environment_specs)
         player_observation_space = player_environment_specs.get_observation_space()
         player_action_space = player_environment_specs.get_action_space()
 
@@ -462,10 +462,10 @@ class SimpleDQNSelfPlayTraining:
         players_params = {
             actor_params.name: {
                 "params": actor_params,
-                "observation_space": EnvironmentSpecs.deserialize(
+                "observation_space": EnvironmentActorSpecs.deserialize(
                     actor_params.config.environment_specs
                 ).get_observation_space(),
-                "action_space": EnvironmentSpecs.deserialize(actor_params.config.environment_specs).get_action_space(),
+                "action_space": EnvironmentActorSpecs.deserialize(actor_params.config.environment_specs).get_action_space(),
             }
             for actor_params in sample_producer_session.trial_info.parameters.actors
             if actor_params.class_name == PLAYER_ACTOR_CLASS

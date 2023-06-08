@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from enum import Enum
 import os
 
 COGMENT_VERSION = "v2.13.1"
@@ -36,3 +37,25 @@ FUNCTIONAL_TEST_DIR = os.path.join(TEST_DIR, "functional")
 
 DEFAULT_RENDERED_WIDTH = 1024
 MAX_RENDERED_WIDTH = 2048
+
+
+class ActorClass(Enum):
+    TEACHER = "teacher"
+    PLAYER = "player"
+    OBSERVER = "observer"
+    EVALUATOR = "evaluator"
+
+
+class ActorSpecType(Enum):
+    """ Used to associate different environment specs to different actors.
+    """
+    ADAPTIVE_GRID = "grid_env"
+    ASSIST_AI = "assist_env"
+    DEFAULT = "player"
+
+    @classmethod
+    def from_config(cls, actor_spec: str):
+        try:
+            return cls(actor_spec)
+        except ValueError:
+            raise ValueError(f"Agent role ({actor_spec}) is not a supported role: [{','.join([role.value for role in ActorSpecType])}]")

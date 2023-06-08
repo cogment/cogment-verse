@@ -32,7 +32,7 @@ from cogment_verse.specs import (
     WEB_ACTOR_NAME,
     AgentConfig,
     EnvironmentConfig,
-    EnvironmentSpecs,
+    EnvironmentActorSpecs,
     cog_settings,
 )
 
@@ -127,7 +127,7 @@ class SimpleBCActor:
 
         config = actor_session.config
 
-        environment_specs = EnvironmentSpecs.deserialize(config.environment_specs)
+        environment_specs = EnvironmentActorSpecs.deserialize(config.environment_specs)
         observation_space = environment_specs.get_observation_space()
         action_space = environment_specs.get_action_space(seed=config.seed)
 
@@ -187,7 +187,7 @@ class SimpleBCTraining:
         player_params = players_params[0]
         teacher_params = teachers_params[0]
 
-        environment_specs = EnvironmentSpecs.deserialize(player_params.config.environment_specs)
+        environment_specs = EnvironmentActorSpecs.deserialize(player_params.config.environment_specs)
         action_space = environment_specs.get_action_space()
         observation_space = environment_specs.get_observation_space()
 
