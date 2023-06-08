@@ -8,6 +8,7 @@
   - [Docker](/docs/develop/docker.md)
   - [Petting Zoo](/docs/develop/petting_zoo.md)
   - [Isaac Gym](/docs/develop/isaac_gym.md)
+  - [Overcooked AI](/docs/develop/overcooked_ai.md)
 - Deploy
   - [Tunnel unsing ngrok](/docs/deploy/tunnel_using_ngrok.md)
 - Experimental results 🚧
