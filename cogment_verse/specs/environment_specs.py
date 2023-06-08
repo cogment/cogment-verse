@@ -57,6 +57,10 @@ class EnvironmentSpecs:
     def turn_based(self):
         return self._pb.turn_based
 
+    @property
+    def web_components_file(self):
+        return self._pb.web_components_file
+
     def get_observation_space(self, render_width=DEFAULT_RENDERED_WIDTH):
         """
         Build an instance of the observation space for this environment
@@ -89,7 +93,8 @@ class EnvironmentSpecs:
         turn_based,
         observation_space,
         action_space,
-        serilization_format=SerializationFormat.STRUCTURED,
+        web_components_file=None,
+        serialization_format=SerializationFormat.STRUCTURED,
     ):
         """
         Factory function building an homogenous EnvironmentSpecs, ie  with all actors having the same action and observation spaces.
@@ -98,8 +103,9 @@ class EnvironmentSpecs:
             PbEnvironmentSpecs(
                 num_players=num_players,
                 turn_based=turn_based,
-                observation_space=serialize_gym_space(observation_space, serilization_format),
-                action_space=serialize_gym_space(action_space, serilization_format),
+                observation_space=serialize_gym_space(observation_space, serialization_format),
+                action_space=serialize_gym_space(action_space, serialization_format),
+                web_components_file=web_components_file,
             )
         )
 

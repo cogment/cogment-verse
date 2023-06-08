@@ -20,16 +20,16 @@ from spaces_pb2 import Box, Dict, Discrete, MultiBinary, MultiDiscrete, Space  #
 from .ndarray_serialization import SerializationFormat, deserialize_ndarray, serialize_ndarray
 
 
-def serialize_gym_space(gym_space, serilization_format=SerializationFormat.STRUCTURED):
-    if isinstance(gym_space, (gym.spaces.Discrete)):
+def serialize_gym_space(gym_space, serialization_format=SerializationFormat.STRUCTURED):
+    if isinstance(gym_space, (gym.spaces.Discrete, gymnasium.spaces.Discrete)):
         return Space(discrete=Discrete(n=gym_space.n, start=gym_space.start))
     if isinstance(gym_space, (gym.spaces.Box)):
         low = gym_space.low
         high = gym_space.high
         return Space(
             box=Box(
-                low=serialize_ndarray(low, serilization_format=serilization_format),
-                high=serialize_ndarray(high, serilization_format=serilization_format),
+                low=serialize_ndarray(low, serialization_format=serialization_format),
+                high=serialize_ndarray(high, serialization_format=serialization_format),
             )
         )
 
@@ -40,12 +40,12 @@ def serialize_gym_space(gym_space, serilization_format=SerializationFormat.STRUC
             size = np.array([gym_space.n], dtype=np.dtype("int32"))
         else:
             size = np.array(gym_space.n, dtype=np.dtype("int32"))
-        return Space(multi_binary=MultiBinary(n=serialize_ndarray(size, serilization_format=serilization_format)))
+        return Space(multi_binary=MultiBinary(n=serialize_ndarray(size, serialization_format=serialization_format)))
 
     if isinstance(gym_space, (gym.spaces.MultiDiscrete)):
         nvec = gym_space.nvec
         return Space(
-            multi_discrete=MultiDiscrete(nvec=serialize_ndarray(nvec, serilization_format=serilization_format))
+            multi_discrete=MultiDiscrete(nvec=serialize_ndarray(nvec, serialization_format=serialization_format))
         )
 
     if isinstance(gym_space, (gym.spaces.Dict)):

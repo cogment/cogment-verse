@@ -26,7 +26,12 @@ def create_large_nd_array(seed=12, dtype=np.float32):
 
 def create_large_int_nd_array(seed=12, dtype=np.int32):
     np.random.seed(seed)
-    return np.random.randint(-500, 500, (10, 10, 10), dtype=dtype) * 1000 - 500
+    return np.random.randint(-500, 500, (10, 10, 10), dtype=dtype)
+
+
+def create_large_uint_nd_array(seed=12, dtype=np.uint32):
+    np.random.seed(seed)
+    return np.random.randint(0, 250, (10, 10, 10), dtype=dtype)
 
 
 @pytest.mark.benchmark(group="serialize_ndarray")
@@ -77,6 +82,15 @@ def test_serialize_ndarray_structured(benchmark):
 @pytest.mark.benchmark(group="serialize_ndarray")
 def test_serialize_ndarray_structured_int32(benchmark):
     array = create_large_int_nd_array(seed=12, dtype=np.int32)
+    serialized_array = benchmark(serialize_ndarray, array, SerializationFormat.STRUCTURED)
+
+    deserialized_array = deserialize_ndarray(serialized_array)
+    assert np.array_equal(array, deserialized_array)
+
+
+@pytest.mark.benchmark(group="serialize_ndarray")
+def test_serialize_ndarray_structured_uint8(benchmark):
+    array = create_large_uint_nd_array(seed=67, dtype=np.uint8)
     serialized_array = benchmark(serialize_ndarray, array, SerializationFormat.STRUCTURED)
 
     deserialized_array = deserialize_ndarray(serialized_array)

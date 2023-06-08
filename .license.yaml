@@ -14,5 +14,5 @@ license:
     - "**/CogSettings.js"
     - "**/CogTypes.d.ts"
     - "**/node_modules"
-    - "**/build"
+    - "**/dist"
     - "**/.cogment_verse"

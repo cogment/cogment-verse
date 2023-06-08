@@ -1,4 +1,3 @@
-# @package _global_.services.environment
-class_name: environments.pettingzoo_adapter.HumanFeedbackAtariEnvironment
+class_name: environments.petting_zoo.environment.HumanFeedbackAtariEnvironment
 env_class_name: pettingzoo.atari.pong_v3
-port: ${generate_port:environments.pettingzoo_adapter.HumanFeedbackAtariEnvironment}
+port: ${generate_port:environments.petting_zoo.environment.HumanFeedbackAtariEnvironment}
