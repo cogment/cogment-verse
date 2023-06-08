@@ -15,16 +15,21 @@
 import logging
 import shutil
 import subprocess
+import os
 
 NPM_BIN = shutil.which("npm")
 
 log = logging.getLogger(__name__)
 
 
-def npm_command(args, cwd):
+def npm_command(args, cwd, env=None):
     try:
         args = [NPM_BIN, *args]
-        res = subprocess.run(args, cwd=cwd, capture_output=True, check=True)
+        env = {
+            **os.environ,
+            **(env if env is not None else {}),
+        }
+        res = subprocess.run(args, cwd=cwd, capture_output=True, check=True, env=env)
         log.debug(f"Call to {args} returned {res.stdout.decode('utf-8')}")
     except subprocess.CalledProcessError as err:
         log.error(

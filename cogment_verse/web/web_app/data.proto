@@ -25,6 +25,7 @@ message EnvironmentSpecs {
   int32 num_players = 3;
   spaces.Space observation_space = 4;
   spaces.Space action_space = 5;
+  string web_components_file = 6;
 }
 
 message EnvironmentConfig {
