@@ -13,8 +13,17 @@
 // limitations under the License.
 
 const esbuild = require("esbuild");
+const fs = require("fs");
+const path = require("path");
 
 const NODE_ENV = process.env.NODE_ENV || "production";
+
+const OUT_DIR = "dist";
+
+// Clean the output directory
+for (const file of fs.readdirSync(path.join(__dirname, OUT_DIR))) {
+  fs.unlinkSync(path.join(__dirname, OUT_DIR, file));
+}
 
 esbuild
   .build({
@@ -28,7 +37,7 @@ esbuild
     metafile: true,
     splitting: true,
     jsx: "automatic",
-    outdir: "dist",
+    outdir: OUT_DIR,
     external: ["react", "react-dom", "@cogment/cogment-verse"],
     define: {
       "process.env.NODE_ENV": `"${NODE_ENV}"`,
