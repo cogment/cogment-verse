@@ -35,6 +35,7 @@ esbuild
     minify: true,
     sourcemap: true,
     metafile: true,
+    splitting: true,
     jsx: "automatic",
     outdir: OUT_DIR,
     external: ["react", "react-dom", "@cogment/cogment-verse"],
