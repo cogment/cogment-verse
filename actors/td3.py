@@ -29,7 +29,7 @@ from gym.spaces import Box, utils
 from torch import nn
 
 from cogment_verse import Model, TorchReplayBuffer
-from cogment_verse.specs import PLAYER_ACTOR_CLASS, AgentConfig, EnvironmentConfig, EnvironmentActorSpecs, cog_settings
+from cogment_verse.specs import PLAYER_ACTOR_CLASS, AgentConfig, EnvironmentConfig, ActorSpecs, cog_settings
 
 torch.multiprocessing.set_sharing_strategy("file_system")
 
@@ -201,7 +201,7 @@ class TD3Actor:
 
         config = actor_session.config
 
-        environment_specs = EnvironmentActorSpecs.deserialize(config.environment_specs)
+        environment_specs = ActorSpecs.deserialize(config.environment_specs)
         observation_space = environment_specs.get_observation_space()
         action_space = environment_specs.get_action_space(seed=config.seed)
 
@@ -254,7 +254,7 @@ class TD3Training:
         player_actor_params = sample_producer_session.trial_info.parameters.actors[0]
 
         player_actor_name = player_actor_params.name
-        player_environment_specs = EnvironmentActorSpecs.deserialize(player_actor_params.config.environment_specs)
+        player_environment_specs = ActorSpecs.deserialize(player_actor_params.config.environment_specs)
         player_observation_space = player_environment_specs.get_observation_space()
         player_action_space = player_environment_specs.get_action_space()
 

@@ -47,7 +47,7 @@ def test_serialize_connect4_observation_space():
 
 
 def test_serialize_cartpole_observation_space():
-    env = gym.make("CartPole-v1", new_step_api=True)
+    env = gym.make("CartPole-v1")
 
     gym_space = env.observation_space
 

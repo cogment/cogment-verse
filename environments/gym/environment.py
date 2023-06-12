@@ -16,10 +16,10 @@ import logging
 import os
 
 import cogment
-import gym
+import gymnasium as gym
 import numpy as np
 
-from cogment_verse.constants import PLAYER_ACTOR_CLASS, TEACHER_ACTOR_CLASS
+from cogment_verse.constants import PLAYER_ACTOR_CLASS, TEACHER_ACTOR_CLASS, ActorSpecType
 from cogment_verse.specs import EnvironmentSpecs
 
 log = logging.getLogger(__name__)
@@ -40,7 +40,7 @@ class Environment:
     def __init__(self, cfg):
         self.gym_env_name = cfg.env_name
 
-        gym_env = gym.make(self.gym_env_name, new_step_api=True)
+        gym_env = gym.make(self.gym_env_name)
 
         web_components_file = None
         matching_web_components = [
@@ -68,15 +68,13 @@ class Environment:
             self._make_gym_env = lambda render: gym.make(
                 self.gym_env_name,
                 render_mode="rgb_array" if render else None,
-                new_step_api=True,
                 full_action_space=True,
             )
             self._render_gym_env = lambda gym_env: gym_env.render(mode="rgb_array")
         else:
             self._make_gym_env = lambda render: gym.make(
                 self.gym_env_name,
-                render_mode="single_rgb_array" if render else None,
-                new_step_api=True,
+                render_mode="rgb_array" if render else None,
             )
             self._render_gym_env = lambda gym_env: gym_env.render()
 
@@ -113,10 +111,10 @@ class Environment:
         session_cfg = environment_session.config
 
         gym_env = self._make_gym_env(session_cfg.render)
-        observation_space = self.env_specs.get_observation_space(session_cfg.render_width)
-        action_space = self.env_specs.get_action_space()
+        observation_space = self.env_specs[ActorSpecType.DEFAULT.value].get_observation_space(session_cfg.render_width)
+        action_space = self.env_specs[ActorSpecType.DEFAULT.value].get_action_space()
 
-        gym_observation, _info = gym_env.reset(seed=session_cfg.seed, return_info=True)
+        gym_observation, _info = gym_env.reset(seed=session_cfg.seed)
 
         observation = observation_space.create(
             value=gym_observation,

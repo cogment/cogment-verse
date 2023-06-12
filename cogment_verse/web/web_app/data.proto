@@ -19,13 +19,19 @@ package cogment_verse;
 import "ndarray.proto";
 import "spaces.proto";
 
+
+message ActorSpecs {
+  string spec_type = 1;
+  spaces.Space observation_space = 2;
+  spaces.Space action_space = 3;
+  string web_components_file = 4;
+}
+
 message EnvironmentSpecs {
   string implementation = 1;
   bool turn_based = 2;
   int32 num_players = 3;
-  spaces.Space observation_space = 4;
-  spaces.Space action_space = 5;
-  string web_components_file = 6;
+  repeated ActorSpecs actor_specs = 4;
 }
 
 message EnvironmentConfig {
@@ -44,10 +50,11 @@ message HFHubModel {
 message AgentConfig {
   string run_id = 1;
   EnvironmentSpecs environment_specs = 2;
-  uint32 seed = 3;
-  string model_id = 4;
-  int32 model_iteration = 5;
-  int32 model_update_frequency = 6;
+  string spec_type = 3;
+  uint32 seed = 4;
+  string model_id = 5;
+  int32 model_iteration = 6;
+  int32 model_update_frequency = 7;
 }
 
 message TrialConfig {

@@ -21,7 +21,7 @@ from .ndarray_serialization import SerializationFormat, deserialize_ndarray, ser
 
 
 def serialize_gym_space(gym_space, serialization_format=SerializationFormat.STRUCTURED):
-    if isinstance(gym_space, (gym.spaces.Discrete, gymnasium.spaces.Discrete)):
+    if isinstance(gym_space, gym.spaces.Discrete):
         return Space(discrete=Discrete(n=gym_space.n, start=gym_space.start))
     if isinstance(gym_space, (gym.spaces.Box)):
         low = gym_space.low
@@ -33,7 +33,7 @@ def serialize_gym_space(gym_space, serialization_format=SerializationFormat.STRU
             )
         )
 
-    if isinstance(gym_space, (gym.spaces.MultiBinary)):
+    if isinstance(gym_space, gym.spaces.MultiBinary):
         if isinstance(gym_space.n, np.ndarray):
             size = gym_space.n
         elif isinstance(gym_space.n, int):

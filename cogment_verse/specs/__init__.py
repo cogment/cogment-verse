@@ -25,4 +25,5 @@ from cogment_verse.constants import (
 )
 
 from .encode_rendered_frame import encode_rendered_frame
-from .single_env_specs import EnvironmentActorSpecs
+from .environment_specs import EnvironmentSpecs
+from .actor_specs import ActorSpecs

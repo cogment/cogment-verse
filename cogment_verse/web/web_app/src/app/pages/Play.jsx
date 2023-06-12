@@ -53,7 +53,10 @@ const Play = () => {
   }
 
   const implementation = actorParams?.config?.environmentSpecs?.implementation || undefined;
-  const componentFile = actorParams?.config?.environmentSpecs?.webComponentsFile || undefined;
+  // const componentFile = actorParams?.config?.environmentSpecs?.actorSpecs?.webComponentsFile || undefined;
+  const componentFile = actorParams?.config?.environmentSpecs?.find((spec) => spec.agentRole === event.observation?.currentPlayer?.actorClass) || undefined;
+
+  console.log("componentFile: " + componentFile)
 
   if (implementation != null && componentFile != null) {
     return (

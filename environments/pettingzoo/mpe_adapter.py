@@ -24,7 +24,7 @@ import supersuit as ss
 from cogment.environment import EnvironmentSession
 
 from cogment_verse.constants import EVALUATOR_ACTOR_CLASS, PLAYER_ACTOR_CLASS, WEB_ACTOR_NAME
-from cogment_verse.specs import EnvironmentActorSpecs
+from cogment_verse.specs import ActorSpecs
 from cogment_verse.specs.ndarray_serialization import SerializationFormat, deserialize_ndarray
 from cogment_verse.utils import import_class
 from environments.pettingzoo.utils import PettingZooEnvType
@@ -101,7 +101,7 @@ class MpeEnvironment:
             )
 
         assert len(env.possible_agents) >= 1
-        self.env_specs = EnvironmentActorSpecs.create_homogeneous(
+        self.env_specs = ActorSpecs.create_homogeneous(
             num_players=len(env.possible_agents),
             observation_space=env.observation_space(env.possible_agents[0]),
             action_space=env.action_space(env.possible_agents[0]),

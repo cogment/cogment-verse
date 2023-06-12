@@ -117,7 +117,7 @@ const AttributeValue = ({ className, children, ...props }) => (
 );
 
 const ObservationInspector = ({ event, actorParams }) => {
-  const serializedObservationSpace = actorParams?.config?.environmentSpecs?.observationSpace;
+  const serializedObservationSpace = actorParams?.config?.environmentSpecs?.actorSpecs?.observationSpace;
   const { observationSpace, actionMaskSpace } = useMemo(
     () => deserializeObservationSpace(serializedObservationSpace),
     [serializedObservationSpace]

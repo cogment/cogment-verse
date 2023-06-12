@@ -14,7 +14,7 @@
 
 import cogment
 
-from cogment_verse.specs import PLAYER_ACTOR_CLASS, EnvironmentActorSpecs
+from cogment_verse.specs import PLAYER_ACTOR_CLASS, ActorSpecs
 
 
 class RandomActor:
@@ -28,7 +28,7 @@ class RandomActor:
         actor_session.start()
 
         config = actor_session.config
-        environment_specs = EnvironmentActorSpecs.deserialize(config.environment_specs)
+        environment_specs = ActorSpecs.deserialize(config.environment_specs)
         observation_space = environment_specs.get_observation_space()
         action_space = environment_specs.get_action_space()
 

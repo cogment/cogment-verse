@@ -23,7 +23,7 @@ from gym.spaces import Discrete, utils
 
 from cogment_verse import Model
 from cogment_verse.constants import PLAYER_ACTOR_CLASS
-from cogment_verse.specs import AgentConfig, EnvironmentConfig, EnvironmentActorSpecs, cog_settings
+from cogment_verse.specs import AgentConfig, EnvironmentConfig, ActorSpecs, cog_settings
 
 torch.multiprocessing.set_sharing_strategy("file_system")
 
@@ -136,7 +136,7 @@ class SimpleA2CActor:
 
         config = actor_session.config
 
-        environment_specs = EnvironmentActorSpecs.deserialize(config.environment_specs)
+        environment_specs = ActorSpecs.deserialize(config.environment_specs)
         observation_space = environment_specs.get_observation_space()
         action_space = environment_specs.get_action_space(seed=config.seed)
 
@@ -191,7 +191,7 @@ class SimpleA2CTraining:
         player_actor_params = sample_producer_session.trial_info.parameters.actors[0]
 
         player_actor_name = player_actor_params.name
-        player_environment_specs = EnvironmentActorSpecs.deserialize(player_actor_params.config.environment_specs)
+        player_environment_specs = ActorSpecs.deserialize(player_actor_params.config.environment_specs)
         player_observation_space = player_environment_specs.get_observation_space()
         player_action_space = player_environment_specs.get_action_space()
 
