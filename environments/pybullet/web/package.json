@@ -1,0 +1,11 @@
+{
+  "name": "@cogment/cogment_verse_gym",
+  "version": "0.1.0",
+  "scripts": {
+    "build": "node build.js"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "esbuild": "0.17.17"
+  }
+}

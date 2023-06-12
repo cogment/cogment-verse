@@ -1,4 +1,4 @@
 # @package _global_.services.environment
-class_name: environments.pybullet_adapter.Environment
+class_name: environments.pybullet.environment.Environment
 env_name: 'PandaReach-v3'
-port: ${generate_port:environments.pybullet_adapter.Environment}
+port: ${generate_port:environments.pybullet.environment.Environment}

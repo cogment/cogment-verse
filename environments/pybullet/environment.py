@@ -40,6 +40,9 @@ class Environment:
             action_space=gym_env.action_space,
         )
 
+    def get_web_components_dir(self):
+        return os.path.join(os.path.abspath(os.path.dirname(__file__)), "web", "dist")
+
     def get_implementation_name(self):
         return self.gym_env_name
 

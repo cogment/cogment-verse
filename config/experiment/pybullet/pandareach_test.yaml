@@ -3,11 +3,12 @@ defaults:
   - override /services/actor:
       - random
   - override /services/environment: pybullet/PandaReach-v3
-run: 
-  observer: True 
+
+run:
+  observer: True
   class_name: runs.play.PlayRun
   num_trials: 5
   seed: 12
   players:
-    - name: player_2
+    - name: player_1
       implementation: actors.random_actor.RandomActor
