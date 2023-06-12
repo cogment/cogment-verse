@@ -1,4 +1,4 @@
-# Copyright 2022 AI Redefined Inc. <dev+cogment@ai-r.com>
+# Copyright 2023 AI Redefined Inc. <dev+cogment@ai-r.com>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,8 +14,10 @@
 
 # pylint: disable=W0611
 
+from shutil import copytree
 import asyncio
 import logging
+import os
 import sys
 
 import cogment
@@ -46,7 +48,12 @@ def environment_main(
     env_implementation_name = get_implementation_name(env)
 
     # Generate the environment specs if needed.
-    env.get_environment_specs().save(work_dir, env_implementation_name)
+    env_specs = env.get_environment_specs()
+    env_specs.save(work_dir, env_implementation_name)
+
+    # Copy the environment web components
+    web_components_dir = os.path.join(work_dir, "web_components", "environments", env_implementation_name)
+    copytree(os.path.join(env.get_web_components_dir()), os.path.join(web_components_dir), dirs_exist_ok=True)
 
     async def environment_main_async():
         context = cogment.Context(cog_settings=cog_settings, user_id="cogment_verse_environment")

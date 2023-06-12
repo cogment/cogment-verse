@@ -1,4 +1,4 @@
-# Copyright 2022 AI Redefined Inc. <dev+cogment@ai-r.com>
+# Copyright 2023 AI Redefined Inc. <dev+cogment@ai-r.com>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -79,7 +79,7 @@ def test_default_experiment(_prepare_config):
             "-m",
             "tests.functional.test_experiments",
             "run=headless_play",
-            "services/experiment_tracker@run.experiment_tracker=simple",
+            "run/experiment_tracker=simple",
         ]
     )
     proc.communicate()

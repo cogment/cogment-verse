@@ -1,4 +1,4 @@
-# Copyright 2022 AI Redefined Inc. <dev+cogment@ai-r.com>
+# Copyright 2023 AI Redefined Inc. <dev+cogment@ai-r.com>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -48,6 +48,7 @@ DTYPE_FROM_PB_DTYPE = {
 }
 
 DOUBLE_DTYPES = frozenset(["float32", "float64"])
+UINT32_DTYPES = frozenset(["uint8"])
 INT32_DTYPES = frozenset(["int8", "int32"])
 INT64_DTYPES = frozenset(["int64"])
 
@@ -58,12 +59,12 @@ class SerializationFormat(Enum):
     STRUCTURED = 3
 
 
-def serialize_ndarray(nd_array, serilization_format=SerializationFormat.RAW):
+def serialize_ndarray(nd_array, serialization_format=SerializationFormat.RAW):
     str_dtype = str(nd_array.dtype)
     pb_dtype = PB_DTYPE_FROM_DTYPE.get(str_dtype, DTYPE_UNKNOWN)
 
     # SerializationFormat.RAW
-    if serilization_format is SerializationFormat.RAW:
+    if serialization_format is SerializationFormat.RAW:
         return Array(
             shape=nd_array.shape,
             dtype=pb_dtype,
@@ -71,7 +72,7 @@ def serialize_ndarray(nd_array, serilization_format=SerializationFormat.RAW):
         )
 
     # SerializationFormat.NPY
-    if serilization_format is SerializationFormat.NPY:
+    if serialization_format is SerializationFormat.NPY:
         buffer = io.BytesIO()
         np.save(buffer, nd_array, allow_pickle=False)
         return Array(
@@ -87,6 +88,12 @@ def serialize_ndarray(nd_array, serilization_format=SerializationFormat.RAW):
             dtype=pb_dtype,
             double_data=nd_array.ravel(order="C").tolist(),
         )
+    if str_dtype in UINT32_DTYPES:
+        return Array(
+            shape=nd_array.shape,
+            dtype=pb_dtype,
+            uint32_data=nd_array.ravel(order="C").tolist(),
+        )
     if str_dtype in INT32_DTYPES:
         return Array(
             shape=nd_array.shape,
@@ -100,7 +107,9 @@ def serialize_ndarray(nd_array, serilization_format=SerializationFormat.RAW):
             int64_data=nd_array.ravel(order="C").tolist(),
         )
 
-    raise RuntimeError(f"[{str_dtype}] is not a supported numpy dtype for serialization format [{format}]")
+    raise RuntimeError(
+        f"[{str_dtype}] is not a supported numpy dtype for serialization format [{serialization_format}]"
+    )
 
 
 def deserialize_ndarray(pb_array):
@@ -118,9 +127,13 @@ def deserialize_ndarray(pb_array):
     # SerializationFormat.STRUCTURED
     if str_dtype in DOUBLE_DTYPES:
         return np.array(pb_array.double_data, dtype=dtype).reshape(shape, order="C")
+    if str_dtype in UINT32_DTYPES:
+        return np.array(pb_array.uint32_data, dtype=dtype).reshape(shape, order="C")
     if str_dtype in INT32_DTYPES:
         return np.array(pb_array.int32_data, dtype=dtype).reshape(shape, order="C")
     if str_dtype in INT64_DTYPES:
         return np.array(pb_array.int64_data, dtype=dtype).reshape(shape, order="C")
 
-    raise RuntimeError(f"[{str_dtype}] is not a supported numpy dtype for serialization format [{format}]")
+    raise RuntimeError(
+        f"[{str_dtype}] is not a supported numpy dtype for serialization format [SerializationFormat.STRUCTURED]"
+    )

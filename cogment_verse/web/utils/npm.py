@@ -1,4 +1,4 @@
-# Copyright 2022 AI Redefined Inc. <dev+cogment@ai-r.com>
+# Copyright 2023 AI Redefined Inc. <dev+cogment@ai-r.com>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,16 +15,21 @@
 import logging
 import shutil
 import subprocess
+import os
 
 NPM_BIN = shutil.which("npm")
 
 log = logging.getLogger(__name__)
 
 
-def npm_command(args, cwd):
+def npm_command(args, cwd, env=None):
     try:
         args = [NPM_BIN, *args]
-        res = subprocess.run(args, cwd=cwd, capture_output=True, check=True)
+        env = {
+            **os.environ,
+            **(env if env is not None else {}),
+        }
+        res = subprocess.run(args, cwd=cwd, capture_output=True, check=True, env=env)
         log.debug(f"Call to {args} returned {res.stdout.decode('utf-8')}")
     except subprocess.CalledProcessError as err:
         log.error(
