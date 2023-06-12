@@ -1,4 +1,4 @@
-# Copyright 2022 AI Redefined Inc. <dev+cogment@ai-r.com>
+# Copyright 2023 AI Redefined Inc. <dev+cogment@ai-r.com>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -67,7 +67,7 @@ class HumanDataBuffer:
                 self.feedback = np.zeros((self.capacity, 1), dtype=np.float32)
             self._ptr = 0
             self.num_total = 0
-            self._rng = np.random.default_rng(self.seed)
+            self.count = 0
 
     def add(self, observation: np.ndarray, action: np.ndarray, feedback: Union[np.ndarray, None] = None) -> None:
         """Add new sample to buffer"""
@@ -82,12 +82,25 @@ class HumanDataBuffer:
         if self.num_total % self.saving_iter == 0:
             self.save_buffer()
 
+    def add_multi_samples(self, trial_obs: list, trial_act: list) -> None:
+        for obs, act in zip(trial_obs, trial_act):
+            self.add(observation=obs, action=act)
+
+        self.count += 1
+
+    def add_multi_samples_with_hb(self, trial_obs: list, trial_act: list, trial_hb: list) -> None:
+        for obs, act, feedback in zip(trial_obs, trial_act, trial_hb):
+            self.add(observation=obs, action=act, feedback=feedback)
+
+        self.count += 1
+
     def sample(self, num_samples: int) -> Tuple[np.ndarray, np.ndarray]:
         """Select randomly the samples"""
+        np.random.seed(self.seed + self.count)
         if self.num_total < num_samples:
             indices = range(self.num_total)
         else:
-            indices = self._rng.choice(self.num_total, size=num_samples, replace=False)
+            indices = np.random.choice(self.num_total, size=num_samples, replace=False)
 
         return (self.observations[indices], self.actions[indices])
 

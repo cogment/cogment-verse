@@ -1,4 +1,4 @@
-# Copyright 2022 AI Redefined Inc. <dev+cogment@ai-r.com>
+# Copyright 2023 AI Redefined Inc. <dev+cogment@ai-r.com>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -108,7 +108,9 @@ class App:
                         create_actor_service(work_dir, SPEC_FILEPATH, actor_service_cfg, self.services_directory)
                     )
             elif service_type == ServiceType.WEB.value:
-                self.services_process.append(create_web_service(SPEC_FILEPATH, self.services_directory, services_cfg))
+                self.services_process.append(
+                    create_web_service(work_dir, SPEC_FILEPATH, self.services_directory, services_cfg)
+                )
                 self.services_directory.add(
                     service_type=ServiceType.ACTOR,
                     service_name=HUMAN_ACTOR_IMPL,

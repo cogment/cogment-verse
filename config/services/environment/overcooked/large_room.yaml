@@ -1,0 +1,8 @@
+# @package _global_.services.environment
+class_name: environments.overcooked.environment.Environment
+env_name: overcooked
+port: ${generate_port:environments.overcooked.environment.Environment}
+
+layout: large_room
+turn_based: True
+num_players: 2

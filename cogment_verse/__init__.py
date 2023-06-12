@@ -1,4 +1,4 @@
-# Copyright 2022 AI Redefined Inc. <dev+cogment@ai-r.com>
+# Copyright 2023 AI Redefined Inc. <dev+cogment@ai-r.com>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,4 +14,11 @@
 
 from .app import App
 from .model import Model
-from .replay_buffers import HumanDataBuffer, TorchReplayBuffer, TorchReplayBufferSample
+from .replay_buffers import (
+    HumanDataBuffer,
+    PPOReplayBuffer,
+    PPOReplayBufferSample,
+    RolloutBuffer,
+    TorchReplayBuffer,
+    TorchReplayBufferSample,
+)

@@ -1,4 +1,4 @@
-# Copyright 2022 AI Redefined Inc. <dev+cogment@ai-r.com>
+# Copyright 2023 AI Redefined Inc. <dev+cogment@ai-r.com>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -33,3 +33,6 @@ DEFAULT_CONFIG_NAME = "config"
 
 TEST_DIR = os.path.join(ROOT_DIR, "tests")
 FUNCTIONAL_TEST_DIR = os.path.join(TEST_DIR, "functional")
+
+DEFAULT_RENDERED_WIDTH = 1024
+MAX_RENDERED_WIDTH = 2048

@@ -31,6 +31,7 @@ build_docker:
     - source .venv/bin/activate
     - pip install -r requirements.txt
     - pip install SuperSuit==3.7.0
+    - pip install -r overcooked_requirements.txt
   cache:
     # pip's cache
     - paths:
@@ -55,11 +56,12 @@ pylint:
   script:
     - pylint --recursive=y .
 
-apache_licenses_check:
-  stage: lint
-  image: registry.gitlab.com/ai-r/apache-license-checker:latest
+licenses_checker:
+  stage: build
+  needs: []
+  image: registry.gitlab.com/ai-r/cogment/license-checker:latest
   script:
-    - apache-license-checker
+    - license-checker
 
 pytest:
   stage: test

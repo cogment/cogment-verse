@@ -1,4 +1,4 @@
-# Copyright 2022 AI Redefined Inc. <dev+cogment@ai-r.com>
+# Copyright 2023 AI Redefined Inc. <dev+cogment@ai-r.com>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,6 +16,106 @@ import numpy as np
 import torch
 
 torch.multiprocessing.set_sharing_strategy("file_system")
+
+
+class PPOReplayBufferSample:
+    """PPO replay buffer's sample"""
+
+    def __init__(
+        self,
+        observation: torch.Tensor,
+        action: torch.Tensor,
+        adv: torch.Tensor,
+        value: torch.Tensor,
+        log_prob: torch.Tensor,
+    ):
+        self.observation = observation
+        self.action = action
+        self.adv = adv
+        self.value = value
+        self.log_prob = log_prob
+
+    def size(self) -> int:
+        """get sample size"""
+        return self.observation.size(dim=0)
+
+
+class PPOReplayBuffer:
+    """Replay buffer for PPO"""
+
+    observations: torch.Tensor
+    actions: torch.Tensor
+    advs: torch.Tensor
+    values: torch.Tensor
+    log_probs: torch.Tensor
+
+    def __init__(
+        self,
+        capacity: int,
+        observation_shape: tuple,
+        action_shape: tuple,
+        device: torch.device,
+        seed: int = 0,
+        dtype: torch.dtype = torch.float32,
+    ):
+        self.capacity = capacity
+        self.observation_shape = observation_shape
+        self.action_shape = action_shape
+        self.dtype = dtype
+        self.device = device
+        self.seed = seed
+
+        # Initialize data storage
+        self.observations = torch.zeros((self.capacity, *self.observation_shape), dtype=self.dtype)
+        self.actions = torch.zeros((self.capacity, *self.action_shape), dtype=self.dtype)
+        self.advs = torch.zeros((self.capacity, 1), dtype=self.dtype)
+        self.values = torch.zeros((self.capacity, 1), dtype=self.dtype)
+        self.log_probs = torch.zeros((self.capacity, 1), dtype=self.dtype)
+        self._ptr = 0
+        self.num_total = 0
+        self.count = 0
+
+    def add(
+        self,
+        observation: torch.Tensor,
+        action: torch.Tensor,
+        adv: torch.Tensor,
+        value: torch.Tensor,
+        log_prob: torch.Tensor,
+    ) -> None:
+        self.observations[self._ptr] = observation
+        self.actions[self._ptr] = action
+        self.advs[self._ptr] = adv
+        self.values[self._ptr] = value
+        self.log_probs[self._ptr] = log_prob
+        self._ptr = (self._ptr + 1) % self.capacity
+        self.num_total += 1
+
+    def add_multi_samples(
+        self, trial_obs: list, trial_act: list, trial_adv: list, trial_val: list, trial_log_prob: list
+    ) -> None:
+        for obs, act, adv, val, log_prob in zip(trial_obs, trial_act, trial_adv, trial_val, trial_log_prob):
+            self.add(observation=obs, action=act, adv=adv, value=val, log_prob=log_prob)
+
+        self.count += 1
+
+    def sample(self, num) -> PPOReplayBufferSample:
+        np.random.seed(self.seed + self.count)
+        size = self.size()
+        if size < num:
+            indices = range(size)
+        else:
+            indices = np.random.choice(self.size(), size=num, replace=False)
+        return PPOReplayBufferSample(
+            observation=self.observations[indices].clone().to(self.device),
+            action=self.actions[indices].clone().to(self.device),
+            adv=self.advs[indices].clone().to(self.device),
+            value=self.values[indices].clone().to(self.device),
+            log_prob=self.log_probs[indices].clone().to(self.device),
+        )
+
+    def size(self):
+        return self.num_total if self.num_total < self.capacity else self.capacity
 
 
 class TorchReplayBufferSample:
@@ -78,11 +178,11 @@ class TorchReplayBuffer:
             indices = self._rng.choice(self.size(), size=num, replace=False)
 
         return TorchReplayBufferSample(
-            observation=self.observation[indices],
-            next_observation=self.next_observation[indices],
-            action=self.action[indices],
-            reward=self.reward[indices],
-            done=self.done[indices],
+            observation=self.observation[indices].clone(),
+            next_observation=self.next_observation[indices].clone(),
+            action=self.action[indices].clone(),
+            reward=self.reward[indices].clone(),
+            done=self.done[indices].clone(),
         )
 
     def size(self):

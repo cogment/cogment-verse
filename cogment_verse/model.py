@@ -1,4 +1,4 @@
-# Copyright 2022 AI Redefined Inc. <dev+cogment@ai-r.com>
+# Copyright 2023 AI Redefined Inc. <dev+cogment@ai-r.com>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,6 +17,8 @@
 from __future__ import annotations
 
 import abc
+
+from cogment.model_registry_v2 import ModelRegistry
 
 
 class Model:
@@ -56,7 +58,7 @@ class Model:
         """
 
     @classmethod
-    async def retrieve_model(cls, model_registry, model_id, iteration) -> Model:
+    async def retrieve_model(cls, model_registry: ModelRegistry, model_id, iteration) -> Model:
         """
         Retrieve and deserialize a specific or latest model iteration from the model registry.
         If the configuration is set to retrieve iteration -1, the latest model is tracked.

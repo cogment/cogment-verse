@@ -1,4 +1,4 @@
-# Copyright 2022 AI Redefined Inc. <dev+cogment@ai-r.com>
+# Copyright 2023 AI Redefined Inc. <dev+cogment@ai-r.com>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -164,7 +164,7 @@ class SimpleA2CActor:
 class SimpleA2CTraining:
     default_cfg = {
         "seed": 10,
-        "num_epochs": 500,
+        "num_epochs": 10,
         "epoch_num_trials": 10,
         "num_parallel_trials": 8,
         "discount_factor": 0.99,

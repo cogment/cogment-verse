@@ -1,4 +1,4 @@
-class_name: environments.gym_adapter.Environment
+class_name: environments.gym.environment.Environment
 env_name: Hopper-v4
-port: ${generate_port:environments.gym_adapter.Environment}
+port: ${generate_port:environments.gym.environment.Environment}
 
