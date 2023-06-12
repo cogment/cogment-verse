@@ -15,72 +15,19 @@
 import asyncio
 import logging
 import sys
-from multiprocessing import Process, Queue
-from typing import Awaitable, Callable
+from multiprocessing import Process
 
 import cogment
-from cogment.datastore import Datastore, DatastoreSample
-from cogment.model_registry_v2 import ModelRegistry
 
 from cogment_verse.services_directory import ServiceDirectory
 
 log = logging.getLogger(__name__)
 
 
-class SampleQueueEvent:
-    def __init__(self, trial_id=None, trial_idx=None, sample=None, done=False):
-        self.trial_id = trial_id
-        self.trial_idx = trial_idx
-        self.sample = sample
-        self.done = done
-
-
-class SampleProducerSession:
-    def __init__(
-        self,
-        datastore: Datastore,
-        trial_idx: int,
-        trial_info: list,
-        sample_queue: Queue,
-        model_registry: ModelRegistry,
-        impl: Callable[["SampleProducerSession"], Awaitable],
-    ):
-        self.trial_idx = trial_idx
-        self.datastore = datastore
-        self.trial_info = trial_info
-        self.sample_queue = sample_queue
-        self.model_registry = model_registry
-        self.impl = impl
-
-    def produce_sample(self, sample):
-        self.sample_queue.put(
-            SampleQueueEvent(trial_id=self.trial_info.trial_id, trial_idx=self.trial_idx, sample=sample)
-        )
-
-    def all_trial_samples(self) -> DatastoreSample:
-        return self.datastore.all_samples([self.trial_info])
-
-    def create_task(self):
-        async def wrapped_impl():
-            try:
-                await self.impl(self)
-            except KeyboardInterrupt:
-                # This one is ignored, it's logged at a bunch of different places
-                pass
-            except Exception as error:
-                log.error(
-                    f"Uncaught error occured during the sample production for trial [{self.trial_info.trial_id}]",
-                    exc_info=error,
-                )
-                raise
-
-        return asyncio.create_task(wrapped_impl())
-
-
 async def async_sample_producer_worker(trial_started_queue, sample_queue, impl, services_directory: ServiceDirectory):
     # Importing 'specs' only in the subprocess (i.e. where generate has been properly executed)
     # pylint: disable-next=import-outside-toplevel
-    from cogment_verse.specs import cog_settings
+    from cogment_verse.specs import cog_settings, SampleProducerSession, SampleQueueEvent
 
     context = cogment.Context(cog_settings=cog_settings, user_id="cogment_verse_sample_producer")
     datastore = await services_directory.get_datastore(context)

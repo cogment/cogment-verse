@@ -37,7 +37,7 @@ def actor_main(
 ):
     # Importing 'specs' only in the subprocess (i.e. where generate has been properly executed)
     # pylint: disable-next=import-outside-toplevel
-    from cogment_verse.specs import cog_settings
+    from cogment_verse.specs import cog_settings, ActorSessionHelper
 
     async def actor_main_async():
         actor_cls = import_class(actor_cfg.class_name)
@@ -49,7 +49,7 @@ def actor_main(
         model_registry = await services_directory.get_model_registry(context)
 
         async def impl_wrapper(actor_session: ActorSession):
-            actor_session.model_registry = model_registry
+            ActorSessionHelper.mixin(actor_session, model_registry)
             await actor.impl(actor_session)
 
         context.register_actor(

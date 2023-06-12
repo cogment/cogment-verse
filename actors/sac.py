@@ -27,8 +27,14 @@ from torch.distributions.normal import Normal
 
 from cogment_verse import Model, TorchReplayBuffer, TorchReplayBufferSample
 from cogment_verse.run.run_session import RunSession
-from cogment_verse.run.sample_producer_worker import SampleProducerSession
-from cogment_verse.specs import PLAYER_ACTOR_CLASS, AgentConfig, EnvironmentConfig, EnvironmentSpecs, cog_settings
+from cogment_verse.specs import (
+    PLAYER_ACTOR_CLASS,
+    AgentConfig,
+    EnvironmentConfig,
+    EnvironmentSpecs,
+    cog_settings,
+    SampleProducerSession,
+)
 
 torch.multiprocessing.set_sharing_strategy("file_system")
 

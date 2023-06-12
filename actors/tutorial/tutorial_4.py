@@ -26,13 +26,11 @@ from gym.spaces import utils
 
 from cogment_verse import Model
 from cogment_verse.specs import (
-    ActorSessionHelper,
     AgentConfig,
     cog_settings,
     EnvironmentConfig,
     HUMAN_ACTOR_IMPL,
     PLAYER_ACTOR_CLASS,
-    SampleProducerSessionHelper,
     TEACHER_ACTOR_CLASS,
     WEB_ACTOR_NAME,
 )
@@ -124,29 +122,27 @@ class SimpleBCActor:
         return [PLAYER_ACTOR_CLASS]
 
     async def impl(self, actor_session):
-        actor_session_helper = ActorSessionHelper(actor_session)
-
         actor_session.start()
 
         # Get model
         model = await SimpleBCModel.retrieve_model(
             actor_session.model_registry,
-            actor_session_helper.config.model_id,
-            actor_session_helper.config.model_iteration,
+            actor_session.config.model_id,
+            actor_session.config.model_iteration,
         )
         model.policy_network.eval()
 
         log.info(f"Starting trial with model v{model.iteration}")
 
         async for event in actor_session.all_events():
-            observation = actor_session_helper.get_observation(event)
+            observation = actor_session.get_observation(event)
             if observation and event.type == cogment.EventType.ACTIVE:
                 observation_tensor = torch.tensor(observation.flat_value, dtype=self._dtype)
                 scores = model.policy_network(observation_tensor.view(1, -1))
                 probs = torch.softmax(scores, dim=-1)
                 discrete_action_tensor = torch.distributions.Categorical(probs).sample()
-                action = actor_session_helper.get_action_space().create(value=discrete_action_tensor.item())
-                actor_session.do_action(actor_session_helper.get_action_space().serialize(action))
+                action = actor_session.get_action_space().create(value=discrete_action_tensor.item())
+                actor_session.do_action(actor_session.get_action_space().serialize(action))
 
 
 class SimpleBCTraining:
@@ -169,15 +165,13 @@ class SimpleBCTraining:
         self._cfg = cfg
 
     async def sample_producer(self, sample_producer_session):
-        session_helper = SampleProducerSessionHelper(sample_producer_session=sample_producer_session)
-
         # Making sure we have the right assumptions
-        assert len(session_helper.player_actors) == 1
-        assert len(session_helper.teacher_actors) == 1
+        assert len(sample_producer_session.player_actors) == 1
+        assert len(sample_producer_session.teacher_actors) == 1
 
         async for sample in sample_producer_session.all_trial_samples():
-            [player_observation] = session_helper.get_player_observations(sample)
-            [player_action] = session_helper.get_player_actions(sample)
+            [player_observation] = sample_producer_session.get_player_observations(sample)
+            [player_action] = sample_producer_session.get_player_actions(sample)
 
             if player_action.flat_value is None:
                 # TODO figure out why we get into this situation

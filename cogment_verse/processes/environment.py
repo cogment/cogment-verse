@@ -40,7 +40,7 @@ def environment_main(
 ):
     # Importing 'specs' only in the subprocess (i.e. where generate has been properly executed)
     # pylint: disable-next=import-outside-toplevel
-    from cogment_verse.specs import cog_settings
+    from cogment_verse.specs import cog_settings, EnvironmentSessionHelper
 
     environment_cls = import_class(environment_cfg.class_name)
     env = environment_cls(environment_cfg)
@@ -58,7 +58,8 @@ def environment_main(
     async def environment_main_async():
         context = cogment.Context(cog_settings=cog_settings, user_id="cogment_verse_environment")
 
-        async def wrapped_impl(environment_session):
+        async def impl_wrapper(environment_session):
+            EnvironmentSessionHelper.mixin(environment_session, env_specs)
             try:
                 await env.impl(environment_session)
             except KeyboardInterrupt:
@@ -71,7 +72,7 @@ def environment_main(
                 )
                 raise
 
-        context.register_environment(impl_name=env_implementation_name, impl=wrapped_impl)
+        context.register_environment(impl_name=env_implementation_name, impl=impl_wrapper)
 
         log.info(f"Environment [{env_implementation_name}] starting on port [{environment_cfg.port}]...")
 

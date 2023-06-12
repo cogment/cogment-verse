@@ -19,7 +19,7 @@ import cogment
 import gym
 import numpy as np
 
-from cogment_verse.specs import EnvironmentSpecs, EnvironmentSessionHelper
+from cogment_verse.specs import EnvironmentSpecs
 
 log = logging.getLogger(__name__)
 
@@ -89,14 +89,10 @@ class Environment:
         return self.env_specs
 
     async def impl(self, environment_session):
-        session_helper = EnvironmentSessionHelper(
-            environment_session=environment_session, environment_specs=self.env_specs
-        )
-
         # Making sure we have the right assumptions
-        assert len(session_helper.player_actors) == 1
-        assert len(session_helper.teacher_actors) <= 1
-        [player_actor_name] = session_helper.player_actors
+        assert len(environment_session.player_actors) == 1
+        assert len(environment_session.teacher_actors) <= 1
+        [player_actor_name] = environment_session.player_actors
 
         session_cfg = environment_session.config
 
@@ -104,7 +100,7 @@ class Environment:
 
         gym_observation, _info = gym_env.reset(seed=session_cfg.seed, return_info=True)
 
-        observation_space = session_helper.get_observation_space(player_actor_name)
+        observation_space = environment_session.get_observation_space(player_actor_name)
         observation = observation_space.create(
             value=gym_observation,
             rendered_frame=self._render_gym_env(gym_env) if session_cfg.render else None,
@@ -112,7 +108,7 @@ class Environment:
         environment_session.start([("*", observation_space.serialize(observation))])
 
         async for event in environment_session.all_events():
-            player_actions = session_helper.get_player_actions(event)
+            player_actions = environment_session.get_player_actions(event)
 
             if player_actions:
                 assert len(player_actions) == 1
@@ -126,7 +122,7 @@ class Environment:
 
                 gym_observation, reward, terminated, truncated, _info = gym_env.step(action_value)
 
-                observation = session_helper.get_observation_space(player_action.actor_name).create(
+                observation = environment_session.get_observation_space(player_action.actor_name).create(
                     value=gym_observation,
                     rendered_frame=self._render_gym_env(gym_env) if session_cfg.render else None,
                     overridden_players=[player_action.actor_name] if player_action.is_overriden else [],

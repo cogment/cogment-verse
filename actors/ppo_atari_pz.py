@@ -30,16 +30,16 @@ from torch.distributions.distribution import Distribution
 
 from cogment_verse import HumanDataBuffer, Model, PPOReplayBuffer, RolloutBuffer
 from cogment_verse.run.run_session import RunSession
-from cogment_verse.run.sample_producer_worker import SampleProducerSession
 from cogment_verse.specs import (
+    AgentConfig,
+    cog_settings,
+    EnvironmentConfig,
+    EnvironmentSpecs,
     EVALUATOR_ACTOR_CLASS,
     HUMAN_ACTOR_IMPL,
     PLAYER_ACTOR_CLASS,
+    SampleProducerSession,
     WEB_ACTOR_NAME,
-    AgentConfig,
-    EnvironmentConfig,
-    EnvironmentSpecs,
-    cog_settings,
 )
 
 torch.multiprocessing.set_sharing_strategy("file_system")
