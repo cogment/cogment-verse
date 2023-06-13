@@ -13,6 +13,7 @@
 # limitations under the License.
 
 from abc import ABC, abstractmethod
+from typing import Any
 
 from ..constants import PLAYER_ACTOR_CLASS, TEACHER_ACTOR_CLASS, OBSERVER_ACTOR_CLASS, EVALUATOR_ACTOR_CLASS
 
@@ -76,32 +77,27 @@ class SessionHelper(ABC):
         self.environment_specs = environment_specs
         self.observation_space = environment_specs.get_observation_space(render_width)
 
-    def get_observation_space(self, _actor_idx_or_name):
+    def get_observation_space(self, _actor_name):
+        # TODO take the _actor_name into account
         return self.observation_space
 
-    def get_actor_idx(self, actor_idx_or_name):
-        if isinstance(actor_idx_or_name, int):
-            return actor_idx_or_name
-
-        actor_idx = self.actor_idxs.get(actor_idx_or_name)
+    def _get_actor_idx(self, actor_name: str):
+        actor_idx = self.actor_idxs.get(actor_name)
 
         if actor_idx is None:
-            raise RuntimeError(f"No actor with name {actor_idx_or_name} found!")
+            raise RuntimeError(f"No actor with name [{actor_name}] found!")
 
         return actor_idx
 
-    def get_actor_name(self, actor_idx_or_name):
-        if isinstance(actor_idx_or_name, int):
-            return self.actor_infos[actor_idx_or_name].actor_name
-
-        return actor_idx_or_name
-
-    def get_actor_class_name(self, actor_idx_or_name):
-        actor_idx = self.get_actor_idx(actor_idx_or_name)
+    def get_actor_class_name(self, actor_name: str):
+        actor_idx = self._get_actor_idx(actor_name)
         return self.actor_infos[actor_idx].actor_class_name
 
-    def get_action_space(self, actor_idx_or_name):
-        return self.environment_specs.get_action_space(self.get_actor_class_name(actor_idx_or_name))
+    def _get_action_space_from_actor_idx(self, actor_idx: int):
+        return self.environment_specs.get_action_space(self.actor_infos[actor_idx].actor_class_name)
+
+    def get_action_space(self, actor_name: str):
+        return self.environment_specs.get_action_space(self.get_actor_class_name(actor_name))
 
     def _list_actors_by_class(self, actor_class_name):
         return [
@@ -125,8 +121,23 @@ class SessionHelper(ABC):
         return self._list_actors_by_class(EVALUATOR_ACTOR_CLASS)
 
     @abstractmethod
-    def get_action(self, tick_data, actor_idx_or_name):
+    def get_action(self, tick_data: Any, actor_name: str):
         pass
 
-    def get_player_actions(self, tick_data):
-        return [PlayerAction(self, actor_name, tick_data) for actor_name in self.player_actors]
+    def get_player_action(self, tick_data: Any, actor_name: str = None):
+        if actor_name is None:
+            actions = [PlayerAction(self, actor_name, tick_data) for actor_name in self.player_actors]
+            if len(actions) == 0:
+                raise RuntimeError("No player actors")
+            if len(actions) > 1:
+                raise RuntimeError("More than 1 player actor, please provide an actor name")
+            return actions[0]
+
+        actions = [
+            PlayerAction(self, actor_name, tick_data)
+            for player_actor_name in self.player_actors
+            if player_actor_name == actor_name
+        ]
+        if len(actions) == 0:
+            raise RuntimeError(f"No player actors having name [{actor_name}]")
+        return actions[0]

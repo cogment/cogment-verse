@@ -108,12 +108,9 @@ class Environment:
         environment_session.start([("*", observation_space.serialize(observation))])
 
         async for event in environment_session.all_events():
-            player_actions = environment_session.get_player_actions(event)
+            player_action = environment_session.get_player_action(event)
 
-            if player_actions:
-                assert len(player_actions) == 1
-                [player_action] = player_actions
-
+            if player_action:
                 action_value = player_action.value
 
                 # Clipped action and send to gym environment

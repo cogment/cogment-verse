@@ -16,6 +16,7 @@ import asyncio
 import logging
 from typing import Awaitable, Callable
 from multiprocessing import Queue
+from typing import Any
 
 from cogment.datastore import Datastore, DatastoreSample
 from cogment.model_registry_v2 import ModelRegistry
@@ -87,22 +88,35 @@ class SampleProducerSession(SessionHelper):
 
         return asyncio.create_task(wrapped_impl())
 
-    def get_observation(self, tick_data, actor_idx_or_name):
+    def get_observation(self, tick_data: Any, actor_name: str):
         # For sample producers, tick_datas are samples
         sample = tick_data
 
-        actor_name = self.get_actor_name(actor_idx_or_name)
         observation_space = self.get_observation_space(actor_name)
 
         return observation_space.deserialize(sample.actors_data[actor_name].observation)
 
-    def get_player_observations(self, tick_data):
-        return [self.get_observation(tick_data, actor_name) for actor_name in self.player_actors]
+    def get_player_observations(self, tick_data: Any, actor_name: str = None):
+        if actor_name is None:
+            observations = [self.get_observation(tick_data, actor_name) for player_actor_name in self.player_actors]
+            if len(observations) == 0:
+                raise RuntimeError("No player actors")
+            if len(observations) > 1:
+                raise RuntimeError("More than 1 player actor, please provide an actor name")
+            return observations[0]
 
-    def get_action(self, tick_data, actor_idx_or_name):
+        observations = [
+            self.get_observation(tick_data, actor_name)
+            for player_actor_name in self.player_actors
+            if player_actor_name == actor_name
+        ]
+        if len(observations) == 0:
+            raise RuntimeError(f"No player actors having name [{actor_name}]")
+        return observations[0]
+
+    def get_action(self, tick_data: Any, actor_name: str):
         # For sample producers, tick_datas are samples
         sample = tick_data
 
-        actor_name = self.get_actor_name(actor_idx_or_name)
         action_space = self.get_action_space(actor_name)
         return action_space.deserialize(sample.actors_data[actor_name].action)

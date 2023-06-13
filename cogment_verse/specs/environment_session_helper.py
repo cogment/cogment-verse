@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import Any
+
 from .session_helper import SessionHelper
 
 
@@ -42,23 +44,23 @@ class EnvironmentSessionHelper(SessionHelper):
             render_width=environment_session.config.render_width,
         )
 
-    def get_action(self, tick_data, actor_idx_or_name):
+    def get_action(self, tick_data: Any, actor_name: str):
         # For environments, tick_datas are events
         event = tick_data
 
         if not event.actions:
             return None
 
-        actor_idx = self.get_actor_idx(actor_idx_or_name)
-        action_space = self.get_action_space(actor_idx)
+        actor_idx = self._get_actor_idx(actor_name)
+        action_space = self._get_action_space_from_actor_idx(actor_idx)
 
         return action_space.deserialize(
             event.actions[actor_idx].action,
         )
 
-    def get_player_actions(self, tick_data):
+    def get_player_action(self, tick_data: Any, actor_name=None):
         event = tick_data
         if not event.actions:
-            return []
+            return None
 
-        return super().get_player_actions(tick_data)
+        return super().get_player_action(tick_data, actor_name)

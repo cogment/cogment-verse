@@ -170,8 +170,8 @@ class SimpleBCTraining:
         assert len(sample_producer_session.teacher_actors) == 1
 
         async for sample in sample_producer_session.all_trial_samples():
-            [player_observation] = sample_producer_session.get_player_observations(sample)
-            [player_action] = sample_producer_session.get_player_actions(sample)
+            player_observation = sample_producer_session.get_player_observations(sample)
+            player_action = sample_producer_session.get_player_action(sample)
 
             if player_action.flat_value is None:
                 # TODO figure out why we get into this situation
