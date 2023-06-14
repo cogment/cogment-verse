@@ -90,12 +90,13 @@ class Environment:
     async def impl(self, environment_session):
         actors = environment_session.get_active_actors()
         player_actors = [
-            (actor_idx, actor.actor_name)
+            (actor_idx, actor.actor_name, actor.actor_class_name)
             for (actor_idx, actor) in enumerate(actors)
             if actor.actor_class_name == PLAYER_ACTOR_CLASS
         ]
         assert len(player_actors) == 1
-        [(player_actor_idx, player_actor_name)] = player_actors
+        [(player_actor_idx, player_actor_name, player_actor_class)] = player_actors
+        player_spec_type = ActorSpecType.from_config(player_actor_class)
 
         teacher_actors = [
             (actor_idx, actor.actor_name)
@@ -111,8 +112,8 @@ class Environment:
         session_cfg = environment_session.config
 
         gym_env = self._make_gym_env(session_cfg.render)
-        observation_space = self.env_specs[ActorSpecType.DEFAULT.value].get_observation_space(session_cfg.render_width)
-        action_space = self.env_specs[ActorSpecType.DEFAULT.value].get_action_space()
+        observation_space = self.env_specs[player_spec_type].get_observation_space(session_cfg.render_width)
+        action_space = self.env_specs[player_spec_type].get_action_space()
 
         gym_observation, _info = gym_env.reset(seed=session_cfg.seed)
 

@@ -19,6 +19,8 @@ export const PLAYER_ACTOR_CLASS = "player";
 export const OBSERVER_ACTOR_CLASS = "observer";
 export const EVALUATOR_ACTOR_CLASS = "evaluator";
 
+export const DEFAULT_SPEC_TYPE = PLAYER_ACTOR_CLASS
+
 export const BETWEEN_TRIALS_TIMEOUT = 1000;
 export const JOIN_TRIAL_TIMEOUT = 5000;
 

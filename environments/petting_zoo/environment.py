@@ -12,19 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
+import os
 from abc import ABC, abstractmethod
 from enum import Enum
 from typing import Tuple
-import logging
-import os
 
 import cogment
-import gymnasium as gymna
+import gymnasium as gym
 import numpy as np
 import supersuit as ss
 from cogment.environment import EnvironmentSession
+from data_pb2 import Player
 
-from cogment_verse.constants import EVALUATOR_ACTOR_CLASS, PLAYER_ACTOR_CLASS, WEB_ACTOR_NAME
+from cogment_verse.constants import EVALUATOR_ACTOR_CLASS, PLAYER_ACTOR_CLASS, WEB_ACTOR_NAME, ActorSpecType
 from cogment_verse.specs import ActorSpecs
 from cogment_verse.specs.ndarray_serialization import SerializationFormat, deserialize_ndarray
 from cogment_verse.utils import import_class
@@ -51,7 +52,7 @@ def get_rl_agent(current_pz_agent_name: str, actor_names: list) -> Tuple[str, in
     return (actor_names[idx], idx)
 
 
-def atari_env_wrapper(env: gymna.Env) -> gymna.Env:
+def atari_env_wrapper(env: gym.Env) -> gym.Env:
     """Wrapper for atari env"""
     env = ss.max_observation_v0(env, 2)
     env = ss.frame_skip_v0(env, 4)
@@ -160,8 +161,8 @@ class ClassicEnvironment(Environment):
         session_cfg = environment_session.config
 
         env = self.env_class.env(render_mode="rgb_array")
-        observation_space = self.env_specs.get_observation_space(session_cfg.render_width)
-        action_space = self.env_specs.get_action_space()
+        observation_space = self.env_specs[ActorSpecType.DEFAULT].get_observation_space(session_cfg.render_width)
+        action_space = self.env_specs[ActorSpecType.DEFAULT].get_action_space()
 
         env.reset(seed=session_cfg.seed)
 
@@ -175,9 +176,9 @@ class ClassicEnvironment(Environment):
                 for (player_pz_agent, (player_actor_idx, player_actor_name)) in zip(env.agents, player_actors)
                 if player_pz_agent == current_player_agent
             )
-            return (current_player_agent, current_player_actor_idx, current_player_actor_name)
+            return Player(index=current_player_actor_idx, name=current_player_actor_name, spec_type=ActorSpecType.DEFAULT.value)
 
-        _current_player_pz_agent, current_player_actor_idx, current_player_actor_name = next_player()
+        current_player = next_player()
 
         pz_observation, _pz_reward, termination, truncation, _ = env.last()
 
@@ -192,7 +193,7 @@ class ClassicEnvironment(Environment):
             value=pz_observation["observation"],  # TODO Should only be sent to the current player
             action_mask=pz_observation["action_mask"],  # TODO Should only be sent to the current player
             rendered_frame=rendered_frame,  # TODO Should only be sent to observers
-            current_player=current_player_actor_name,
+            current_player=current_player,
         )
 
         environment_session.start([("*", observation_space.serialize(observation))])
@@ -200,12 +201,12 @@ class ClassicEnvironment(Environment):
         async for event in environment_session.all_events():
             if event.actions:
                 action = action_space.deserialize(
-                    event.actions[current_player_actor_idx].action,
+                    event.actions[current_player.index].action,
                 )
 
                 env.step(action.value)
 
-                _current_player_pz_agent, current_player_actor_idx, current_player_actor_name = next_player()
+                current_player = next_player()
                 pz_observation, _reward, termination, truncation, _ = env.last()
 
                 observation = observation_space.create(
@@ -214,7 +215,7 @@ class ClassicEnvironment(Environment):
                     rendered_frame=env.render()
                     if session_cfg.render
                     else None,  # TODO Should only be sent to observers
-                    current_player=current_player_actor_name,
+                    current_player=current_player,
                 )
 
                 observations = [("*", observation_space.serialize(observation))]
@@ -258,8 +259,8 @@ class AtariEnvironment(Environment):
         # Initialize environment
         env = self.env_class.env(render_mode="rgb_array") if session_cfg.render else self.env_class.env()
         env = atari_env_wrapper(env) if self.env_type_str == "atari" else env
-        observation_space = self.env_specs.get_observation_space(session_cfg.render_width)
-        action_space = self.env_specs.get_action_space()
+        observation_space = self.env_specs[ActorSpecType.DEFAULT].get_observation_space(session_cfg.render_width)
+        action_space = self.env_specs[ActorSpecType.DEFAULT].get_action_space()
 
         # Reset environment
         env.reset(seed=session_cfg.seed)
@@ -281,6 +282,9 @@ class AtariEnvironment(Environment):
         actor_idx = pz_player_names[pz_player_name]
         actor_name = actor_names[actor_idx]
 
+        human_player = Player(index=web_actor_idx[0], name=human_player_name, spec_type=ActorSpecType.DEFAULT.value)
+        current_player = Player(index=actor_idx, name=actor_name, spec_type=ActorSpecType.DEFAULT.value)
+
         # Render the pixel for UI
         rendered_frame = None
         if session_cfg.render:
@@ -292,8 +296,8 @@ class AtariEnvironment(Environment):
         observation = observation_space.create(
             value=pz_observation,
             rendered_frame=rendered_frame,
-            current_player=actor_name,
-            game_player_name=human_player_name,
+            current_player=current_player,
+            human_player=human_player,
         )
 
         environment_session.start([("*", observation_space.serialize(observation))])
@@ -312,12 +316,13 @@ class AtariEnvironment(Environment):
             pz_player_name = next(agent_iter)
             actor_idx = pz_player_names[pz_player_name]
             actor_name = actor_names[actor_idx]
+            current_player = Player(index=actor_idx, name=actor_name, spec_type=ActorSpecType.DEFAULT.value)
 
             observation = observation_space.create(
                 value=pz_observation,
                 rendered_frame=rendered_frame,
-                current_player=actor_name,
-                game_player_name=human_player_name,
+                current_player=current_player,
+                human_player=human_player,
             )
             rendered_frame = None
             if session_cfg.render:
@@ -349,8 +354,8 @@ class HumanFeedbackAtariEnvironment(Environment):
         # Initialize environment
         pz_env = self.env_class.env(render_mode="rgb_array") if session_cfg.render else self.env_class.env()
         pz_env = atari_env_wrapper(pz_env) if self.env_type_str == "atari" else pz_env
-        observation_space = self.env_specs.get_observation_space(session_cfg.render_width)
-        action_space = self.env_specs.get_action_space()
+        observation_space = self.env_specs[ActorSpecType.DEFAULT].get_observation_space(session_cfg.render_width)
+        action_space = self.env_specs[ActorSpecType.DEFAULT].get_action_space()
 
         # Reset environment
         pz_env.reset(seed=session_cfg.seed)
@@ -363,6 +368,7 @@ class HumanFeedbackAtariEnvironment(Environment):
         pz_player_name = next(pz_agent_iterator)
         actor_idx = pz_player_names[pz_player_name]
         actor_name = actor_names[actor_idx]
+        current_player = Player(index=actor_idx, name=actor_name, spec_type=ActorSpecType.DEFAULT.value)
 
         # Render the pixel for UI
         rendered_frame = None
@@ -375,8 +381,8 @@ class HumanFeedbackAtariEnvironment(Environment):
         observation = observation_space.create(
             value=pz_observation,
             rendered_frame=rendered_frame,
-            current_player=actor_name,
-            game_player_name=actor_name,
+            current_player=current_player,
+            human_player=current_player,
             action_value=0,
         )
         environment_session.start([("*", observation_space.serialize(observation))])
@@ -395,8 +401,11 @@ class HumanFeedbackAtariEnvironment(Environment):
 
                 # Actor names for evaluator
                 rewarded_actor_name = actor_name
+                reward_actor = Player(index=actor_idx, name=rewarded_actor_name, spec_type=ActorSpecType.DEFAULT.value)
+
                 actor_idx = -1
                 actor_name = actor_names[actor_idx]
+                current_player = Player(index=actor_idx, name=actor_name, spec_type=ActorSpecType.DEFAULT.value)
 
                 # Pixel frame display on UI
                 rendered_frame = None
@@ -408,6 +417,7 @@ class HumanFeedbackAtariEnvironment(Environment):
                 pz_player_name = next(pz_agent_iterator)
                 actor_idx = pz_player_names[pz_player_name]
                 actor_name = actor_names[actor_idx]
+                current_player = Player(index=actor_idx, name=actor_name, spec_type=ActorSpecType.DEFAULT.value)
             else:
                 # Raise an error if the actor class is invalid
                 raise ValueError("Actor class is invalid")
@@ -415,8 +425,8 @@ class HumanFeedbackAtariEnvironment(Environment):
             observation = observation_space.create(
                 value=pz_observation,
                 rendered_frame=rendered_frame,
-                current_player=actor_name,
-                game_player_name=rewarded_actor_name,
+                current_player=current_player,
+                human_player=reward_actor,
                 action_value=gym_action.value,
             )
 

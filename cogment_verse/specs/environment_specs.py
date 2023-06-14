@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import List, Optional
+from typing import List, Optional, Union
 
 import yaml
 from cogment_verse.specs.actor_specs import ActorSpecs
@@ -49,15 +49,18 @@ class EnvironmentSpecs:
             pass
             # self._actor_specs[ActorSpecType.DEFAULT] = actor_specs
 
-    def __getitem__(self, spec_type: ActorSpecType) -> ActorSpecs:
+    def __getitem__(self, spec_type: Union[ActorSpecType, str]) -> ActorSpecs:
+        if isinstance(spec_type, ActorSpecType):
+            spec_type = spec_type.value
+
         if spec_type in self._actor_specs:
             return self._actor_specs[spec_type]
         else:
-            raise ValueError(f"Actor specs type ({spec_type.value}) is not added to the environment specs: [{','.join([spec_type.value for spec_type in self._actor_specs.keys()])}]")
+            raise ValueError(f"Actor specs type ({spec_type}) is not in the environment specs types: [{', '.join([spec_type for spec_type in self._actor_specs.keys()])}]")
 
     def __add__(self, actor_specs: ActorSpecs):
-        if actor_specs.spec_type not in self._actor_specs:
-            self._actor_specs[actor_specs.spec_type] = actor_specs
+        if actor_specs.spec_type.value not in self._actor_specs:
+            self._actor_specs[actor_specs.spec_type.value] = actor_specs
 
     # def remove(self, spec):
     #     self._actor_specs.pop(spec.actor_spec, None)
@@ -90,6 +93,20 @@ class EnvironmentSpecs:
             num_players=self.num_players,
             actor_specs=[actor_specs.serialize() for _, actor_specs in self._actor_specs.items()]
         )
+
+    @classmethod
+    def create_heterogeneous(
+        cls,
+        num_players,
+        turn_based,
+        actor_specs: List[ActorSpecs] = [],
+    ):
+        return cls.deserialize(PbEnvironmentSpecs(
+            num_players=num_players,
+            turn_based=turn_based,
+            actor_specs=[spec.serialize() for spec in actor_specs],
+        ))
+
 
     @classmethod
     def create_homogeneous(

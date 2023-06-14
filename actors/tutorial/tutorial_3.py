@@ -21,9 +21,10 @@ import cogment
 import torch
 
 ############ TUTORIAL STEP 3 ############
-from gym.spaces import utils
+from gymnasium.spaces import utils
 
 from cogment_verse import Model
+from cogment_verse.constants import ActorSpecType
 from cogment_verse.specs import (
     HUMAN_ACTOR_IMPL,
     PLAYER_ACTOR_CLASS,
@@ -31,7 +32,7 @@ from cogment_verse.specs import (
     WEB_ACTOR_NAME,
     AgentConfig,
     EnvironmentConfig,
-    ActorSpecs,
+    EnvironmentSpecs,
     cog_settings,
 )
 
@@ -131,9 +132,10 @@ class SimpleBCActor:
         config = actor_session.config
 
         ############ TUTORIAL STEP 3 ############
-        environment_specs = ActorSpecs.deserialize(config.environment_specs)
-        action_space = environment_specs.get_action_space(seed=config.seed)
-        observation_space = environment_specs.get_observation_space()
+        spec_type = ActorSpecType.from_config(config.spec_type)
+        environment_specs = EnvironmentSpecs.deserialize(config.environment_specs)
+        action_space = environment_specs[spec_type].get_action_space(seed=config.seed)
+        observation_space = environment_specs[spec_type].get_observation_space()
 
         # Get model
         model = await SimpleBCModel.retrieve_model(
@@ -172,6 +174,7 @@ class SimpleBCTraining:
         self._dtype = torch.float
         self._environment_specs = environment_specs
         self._cfg = cfg
+        self._spec_type = ActorSpecType.DEFAULT
 
     async def sample_producer(self, sample_producer_session):
         assert len(sample_producer_session.trial_info.parameters.actors) == 2
@@ -191,9 +194,9 @@ class SimpleBCTraining:
         player_params = players_params[0]
         teacher_params = teachers_params[0]
 
-        environment_specs = ActorSpecs.deserialize(player_params.config.environment_specs)
-        action_space = environment_specs.get_action_space()
-        observation_space = environment_specs.get_observation_space()
+        environment_specs = EnvironmentSpecs.deserialize(player_params.config.environment_specs)
+        action_space = environment_specs[self._spec_type].get_action_space()
+        observation_space = environment_specs[self._spec_type].get_observation_space()
 
         async for sample in sample_producer_session.all_trial_samples():
             observation_tensor = torch.tensor(
@@ -227,8 +230,8 @@ class SimpleBCTraining:
         model = SimpleBCModel(
             model_id,
             environment_implementation=self._environment_specs.implementation,
-            num_input=utils.flatdim(self._environment_specs.get_observation_space().gym_space),
-            num_output=utils.flatdim(self._environment_specs.get_action_space().gym_space),
+            num_input=utils.flatdim(self._environment_specs[self._spec_type].get_observation_space().gym_space),
+            num_output=utils.flatdim(self._environment_specs[self._spec_type].get_action_space().gym_space),
             policy_network_num_hidden_nodes=self._cfg.policy_network.num_hidden_nodes,
         )
         serialized_model = SimpleBCModel.serialize_model(model)
@@ -258,6 +261,7 @@ class SimpleBCTraining:
                 config=AgentConfig(
                     run_id=run_session.run_id,
                     environment_specs=self._environment_specs.serialize(),
+                    spec_type=self._spec_type.value,
                     ############ TUTORIAL STEP 3 ############
                     model_id=model_id,
                     model_iteration=-1,
@@ -273,6 +277,7 @@ class SimpleBCTraining:
                 config=AgentConfig(
                     run_id=run_session.run_id,
                     environment_specs=self._environment_specs.serialize(),
+                    spec_type=self._spec_type.value,
                 ),
             )
 

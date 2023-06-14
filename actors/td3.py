@@ -25,11 +25,12 @@ import cogment
 import numpy as np
 import torch
 import torch.nn.functional as F
-from gym.spaces import Box, utils
+from gymnasium.spaces import Box, utils
 from torch import nn
 
 from cogment_verse import Model, TorchReplayBuffer
-from cogment_verse.specs import PLAYER_ACTOR_CLASS, AgentConfig, EnvironmentConfig, ActorSpecs, cog_settings
+from cogment_verse.constants import ActorSpecType
+from cogment_verse.specs import PLAYER_ACTOR_CLASS, AgentConfig, EnvironmentConfig, EnvironmentSpecs, cog_settings
 
 torch.multiprocessing.set_sharing_strategy("file_system")
 
@@ -200,10 +201,10 @@ class TD3Actor:
         actor_session.start()
 
         config = actor_session.config
-
-        environment_specs = ActorSpecs.deserialize(config.environment_specs)
-        observation_space = environment_specs.get_observation_space()
-        action_space = environment_specs.get_action_space(seed=config.seed)
+        spec_type = ActorSpecType.from_config(config.spec_type)
+        actor_specs = EnvironmentSpecs.deserialize(config.environment_specs)[spec_type]
+        observation_space = actor_specs.get_observation_space()
+        action_space = actor_specs.get_action_space(seed=config.seed)
 
         assert isinstance(action_space.gym_space, Box)
 
@@ -249,14 +250,15 @@ class TD3Training:
         self._dtype = torch.float
         self._environment_specs = environment_specs
         self._cfg = cfg
+        self._spec_type = ActorSpecType.DEFAULT
 
     async def sample_producer_impl(self, sample_producer_session):
         player_actor_params = sample_producer_session.trial_info.parameters.actors[0]
 
         player_actor_name = player_actor_params.name
-        player_environment_specs = ActorSpecs.deserialize(player_actor_params.config.environment_specs)
-        player_observation_space = player_environment_specs.get_observation_space()
-        player_action_space = player_environment_specs.get_action_space()
+        player_environment_specs = EnvironmentSpecs.deserialize(player_actor_params.config.environment_specs)
+        player_observation_space = player_environment_specs[self._spec_type].get_observation_space()
+        player_action_space = player_environment_specs[self._spec_type].get_action_space()
 
         observation = None
         action = None
@@ -299,14 +301,14 @@ class TD3Training:
         model_id = f"{run_session.run_id}_model"
 
         assert self._environment_specs.num_players == 1
-        assert isinstance(self._environment_specs.get_action_space().gym_space, Box)
+        assert isinstance(self._environment_specs[self._spec_type].get_action_space().gym_space, Box)
 
         model = TD3Model(
             model_id,
             environment_implementation=self._environment_specs.implementation,
-            num_input=utils.flatdim(self._environment_specs.get_observation_space().gym_space),
-            num_output=utils.flatdim(self._environment_specs.get_action_space().gym_space),
-            max_action=float(self._environment_specs.get_action_space().gym_space.high[0]),
+            num_input=utils.flatdim(self._environment_specs[self._spec_type].get_observation_space().gym_space),
+            num_output=utils.flatdim(self._environment_specs[self._spec_type].get_action_space().gym_space),
+            max_action=float(self._environment_specs[self._spec_type].get_action_space().gym_space.high[0]),
             expl_noise=float(self._cfg.expl_noise),
             random_steps=int(self._cfg.random_steps),
             time_steps=0,
@@ -331,9 +333,9 @@ class TD3Training:
 
         replay_buffer = TorchReplayBuffer(
             capacity=self._cfg.buffer_size,
-            observation_shape=(utils.flatdim(self._environment_specs.get_observation_space().gym_space),),
+            observation_shape=(utils.flatdim(self._environment_specs[self._spec_type].get_observation_space().gym_space),),
             observation_dtype=self._dtype,
-            action_shape=(utils.flatdim(self._environment_specs.get_action_space().gym_space),),
+            action_shape=(utils.flatdim(self._environment_specs[self._spec_type].get_action_space().gym_space),),
             action_dtype=self._dtype,  # check
             reward_dtype=self._dtype,
             seed=self._cfg.seed,
@@ -368,6 +370,7 @@ class TD3Training:
                                     model_iteration=-1,
                                     model_update_frequency=self._cfg.policy_freq,
                                     environment_specs=self._environment_specs.serialize(),
+                                    spec_type=self._spec_type.value,
                                 ),
                             )
                         ],

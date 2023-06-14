@@ -62,12 +62,18 @@ message TrialConfig {
 
 message Observation {
   nd_array.Array value = 1;
-  optional string current_player = 2; // active player for multi-agent turn-based environments
+  optional Player current_player = 2; // active player for multi-agent turn-based environments
   optional nd_array.Array action_mask = 3;
   optional bytes rendered_frame = 4;
   repeated string overridden_players = 5;  // list of players that provided an action that was overriden during the last tick
-  optional string game_player_name = 6;
+  optional Player human_player = 6;
   optional int32 action_value = 7;
+}
+
+message Player {
+  int32 index = 1;
+  string name = 2;
+  string spec_type = 3;
 }
 
 message PlayerAction {

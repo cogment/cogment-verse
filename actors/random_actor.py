@@ -13,8 +13,9 @@
 # limitations under the License.
 
 import cogment
+from cogment_verse.constants import ActorSpecType
 
-from cogment_verse.specs import PLAYER_ACTOR_CLASS, ActorSpecs
+from cogment_verse.specs import PLAYER_ACTOR_CLASS, EnvironmentSpecs
 
 
 class RandomActor:
@@ -28,16 +29,16 @@ class RandomActor:
         actor_session.start()
 
         config = actor_session.config
-        environment_specs = ActorSpecs.deserialize(config.environment_specs)
-        observation_space = environment_specs.get_observation_space()
-        action_space = environment_specs.get_action_space()
+        environment_specs = EnvironmentSpecs.deserialize(config.environment_specs)
+        observation_space = environment_specs[config.spec_type].get_observation_space()
+        action_space = environment_specs[config.spec_type].get_action_space()
 
         action_space.gym_space.seed(config.seed if config.seed is not None else 0)
 
         async for event in actor_session.all_events():
             if event.observation and event.type == cogment.EventType.ACTIVE:
                 observation = observation_space.deserialize(event.observation.observation)
-                if observation.current_player is not None and observation.current_player != actor_session.name:
+                if observation.current_player is not None and observation.current_player.name != actor_session.name:
                     # Not the turn of the agent
                     actor_session.do_action(action_space.serialize(action_space.create()))
                     continue

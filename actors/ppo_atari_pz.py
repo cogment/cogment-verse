@@ -24,11 +24,12 @@ import cogment
 import numpy as np
 import torch
 from cogment.actor import ActorSession
-from gym.spaces import Discrete, utils
+from gymnasium.spaces import Discrete, utils
 from omegaconf import DictConfig, ListConfig
 from torch.distributions.distribution import Distribution
 
 from cogment_verse import HumanDataBuffer, Model, PPOReplayBuffer, RolloutBuffer
+from cogment_verse.constants import ActorSpecType
 from cogment_verse.run.run_session import RunSession
 from cogment_verse.run.sample_producer_worker import SampleProducerSession
 from cogment_verse.specs import (
@@ -38,7 +39,7 @@ from cogment_verse.specs import (
     WEB_ACTOR_NAME,
     AgentConfig,
     EnvironmentConfig,
-    ActorSpecs,
+    EnvironmentSpecs,
     cog_settings,
 )
 
@@ -217,9 +218,10 @@ class PPOActor:
         torch.manual_seed(config.seed)
 
         # Get observation and action space
-        environment_specs = ActorSpecs.deserialize(config.environment_specs)
-        observation_space = environment_specs.get_observation_space()
-        action_space = environment_specs.get_action_space(seed=config.seed)
+        spec_type = ActorSpecType.from_config(config.spec_type)
+        actor_specs = EnvironmentSpecs.deserialize(config.environment_specs)[spec_type]
+        observation_space = actor_specs.get_observation_space()
+        action_space = actor_specs.get_action_space(seed=config.seed)
 
         # Get model
         model = await PPOModel.retrieve_model(actor_session.model_registry, config.model_id, config.model_iteration)
@@ -232,7 +234,7 @@ class PPOActor:
             if event.observation and event.type == cogment.EventType.ACTIVE:
                 if (
                     event.observation.observation.HasField("current_player")
-                    and event.observation.observation.current_player != actor_session.name
+                    and event.observation.observation.current_player.name != actor_session.name
                 ):
                     # Not the turn of the agent
                     actor_session.do_action(action_space.serialize(action_space.create()))
@@ -288,11 +290,12 @@ class BasePPOTraining(ABC):
         "logging_interval": 100,
     }
 
-    def __init__(self, environment_specs: ActorSpecs, cfg: Union[ListConfig, DictConfig]) -> None:
+    def __init__(self, environment_specs: EnvironmentSpecs, cfg: Union[ListConfig, DictConfig]) -> None:
         super().__init__()
         self._dtype = torch.float32
         self._environment_specs = environment_specs
         self._cfg = cfg
+        self._spec_type = ActorSpecType.DEFAULT
         available_device = get_device(self._cfg.device)
         self._torch_device = torch.device(available_device)
         self.returns = 0
@@ -303,7 +306,7 @@ class BasePPOTraining(ABC):
         self.model = PPOModel(
             model_id="",
             environment_implementation=self._environment_specs.implementation,
-            num_actions=utils.flatdim(self._environment_specs.get_action_space().gym_space),
+            num_actions=utils.flatdim(self._environment_specs[self._spec_type].get_action_space().gym_space),
             input_shape=tuple(self._cfg.image_size),
             num_policy_outputs=1,
             n_iter=self._cfg.num_epochs,
@@ -332,9 +335,9 @@ class BasePPOTraining(ABC):
             if actor_params.class_name == PLAYER_ACTOR_CLASS
         }
         actor_names = list(actor_params.keys())
-        player_environment_specs = ActorSpecs.deserialize(actor_params[actor_names[0]].config.environment_specs)
-        player_observation_space = player_environment_specs.get_observation_space()
-        player_action_space = player_environment_specs.get_action_space()
+        player_environment_specs = EnvironmentSpecs.deserialize(actor_params[actor_names[0]].config.environment_specs)
+        player_observation_space = player_environment_specs[self._spec_type].get_observation_space()
+        player_action_space = player_environment_specs[self._spec_type].get_action_space()
         num_players = player_environment_specs.num_players
         obs_shape = tuple(self._cfg.image_size)[::-1]
 
@@ -357,7 +360,7 @@ class BasePPOTraining(ABC):
             # Trail status
             trial_done = sample.trial_state == cogment.TrialState.ENDED
             previous_actor_sample = sample.actors_data[player_actor_name]
-            player_actor_name = previous_actor_sample.observation.current_player
+            player_actor_name = previous_actor_sample.observation.current_player.name
             actor_sample = sample.actors_data[player_actor_name]
 
             if self.should_load_model(sample.tick_id, self._cfg.num_rollout_steps, trial_done):
@@ -631,6 +634,7 @@ class PPOSelfTraining(BasePPOTraining):
                 config=AgentConfig(
                     run_id=run_session.run_id,
                     environment_specs=self._environment_specs.serialize(),
+                    spec_type=self._spec_type.value,
                     model_id=model_id,
                     model_iteration=iteration_info.iteration,
                     seed=self._cfg.seed + trial_idx + iter_idx * self._cfg.epoch_num_trials,
@@ -800,6 +804,7 @@ class HillPPOTraining(BasePPOTraining):
                         config=AgentConfig(
                             run_id=run_session.run_id,
                             environment_specs=self._environment_specs.serialize(),
+                            spec_type=self._spec_type.value,
                             model_iteration=iteration_info.iteration,
                             seed=self._cfg.seed + trial_idx + iter_idx * self._cfg.epoch_num_trials,
                         ),
@@ -813,6 +818,7 @@ class HillPPOTraining(BasePPOTraining):
                         config=AgentConfig(
                             run_id=run_session.run_id,
                             environment_specs=self._environment_specs.serialize(),
+                            spec_type=self._spec_type.value,
                             model_id=model_id,
                             model_iteration=iteration_info.iteration,
                             seed=self._cfg.seed + trial_idx + iter_idx * self._cfg.epoch_num_trials,
@@ -970,9 +976,9 @@ class HumanFeedbackPPOTraining(BasePPOTraining):
             if actor_params.class_name == PLAYER_ACTOR_CLASS
         }
         actor_names = list(actor_params.keys())
-        player_environment_specs = ActorSpecs.deserialize(actor_params[actor_names[0]].config.environment_specs)
-        player_observation_space = player_environment_specs.get_observation_space()
-        player_action_space = player_environment_specs.get_action_space()
+        player_environment_specs = EnvironmentSpecs.deserialize(actor_params[actor_names[0]].config.environment_specs)
+        player_observation_space = player_environment_specs[self._spec_type].get_observation_space()
+        player_action_space = player_environment_specs[self._spec_type].get_action_space()
         num_players = player_environment_specs.num_players
         obs_shape = tuple(self._cfg.image_size)[::-1]
 
@@ -1004,7 +1010,7 @@ class HumanFeedbackPPOTraining(BasePPOTraining):
 
             # Actor names
             previous_actor_sample = sample.actors_data[player_actor_name]
-            player_actor_name = previous_actor_sample.observation.current_player
+            player_actor_name = previous_actor_sample.observation.current_player.name
             actor_sample = sample.actors_data[player_actor_name]
 
             # Collect data
@@ -1149,6 +1155,7 @@ class HumanFeedbackPPOTraining(BasePPOTraining):
                     config=AgentConfig(
                         run_id=run_session.run_id,
                         environment_specs=self._environment_specs.serialize(),
+                        spec_type=self._spec_type.value,
                         model_id=model_id,
                         model_iteration=iteration_info.iteration,
                         seed=self._cfg.seed + trial_idx + iter_idx * self._cfg.epoch_num_trials,
@@ -1162,7 +1169,11 @@ class HumanFeedbackPPOTraining(BasePPOTraining):
                 name=WEB_ACTOR_NAME,
                 class_name=EVALUATOR_ACTOR_CLASS,
                 implementation=HUMAN_ACTOR_IMPL,
-                config=AgentConfig(run_id=run_session.run_id, environment_specs=self._environment_specs.serialize()),
+                config=AgentConfig(
+                    run_id=run_session.run_id,
+                    environment_specs=self._environment_specs.serialize(),
+                    spec_type=self._spec_type.value,
+                ),
             )
             actors.append(actor)
 

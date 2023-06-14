@@ -83,15 +83,15 @@ class ActorSpecs:
         observation_space,
         action_space,
         web_components_file,
-        spec_type=ActorSpecType.DEFAULT.value,
+        spec_type=ActorSpecType.DEFAULT,
         serialization_format=SerializationFormat.STRUCTURED,
     ):
         """
-        Factory function building an homogenous EnvironmentSpecs, ie  with all actors having the same action and observation spaces.
+        Factory function building an ActorSpecs.
         """
         return cls.deserialize(
             PbActorSpecs(
-                spec_type=spec_type,
+                spec_type=spec_type.value,
                 observation_space=serialize_gym_space(observation_space, serialization_format),
                 action_space=serialize_gym_space(action_space, serialization_format),
                 web_components_file=web_components_file,
@@ -105,11 +105,11 @@ class ActorSpecs:
         return self._pb
 
     @classmethod
-    def deserialize(cls, environment_specs_pb):
+    def deserialize(cls, actor_specs_pb):
         """
-        Factory function building an EnvironmentSpecs instance from a EnvironmentSpecs protobuf message
+        Factory function building an ActorSpecs instance from a ActorSpecs protobuf message
         """
-        return cls(environment_specs_pb)
+        return cls(actor_specs_pb)
 
 
     # TODO: remove because handled by EnvironmentSpecs now.

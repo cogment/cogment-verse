@@ -3,19 +3,23 @@ defaults:
   - override /services/actor:
       - random
   - override /services/environment: pettingzoo/mpe/simple_tag
-  - override /run: observe
   - override /run/experiment_tracker: simple
+
 run:
   observer: True
   players:
     - name: good_0
       implementation: actors.random_actor.RandomActor
+      spec_type: mpe_good
     - name: good_1
       implementation: actors.random_actor.RandomActor
+      spec_type: mpe_good
     # - name: adversary_0
     #   implementation: actors.random_actor.RandomActor
+    #   spec_type: mpe_adversary
     # - name: adversary_1
     #   implementation: actors.random_actor.RandomActor
+    #   spec_type: mpe_adversary
 
 
 services:

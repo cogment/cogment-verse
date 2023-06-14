@@ -49,13 +49,11 @@ class ActorClass(Enum):
 class ActorSpecType(Enum):
     """ Used to associate different environment specs to different actors.
     """
-    ADAPTIVE_GRID = "grid_env"
-    ASSIST_AI = "assist_env"
     DEFAULT = "player"
 
     @classmethod
-    def from_config(cls, actor_spec: str):
+    def from_config(cls, spec_type_str: str):
         try:
-            return cls(actor_spec)
+            return cls(spec_type_str)
         except ValueError:
-            raise ValueError(f"Agent role ({actor_spec}) is not a supported role: [{','.join([role.value for role in ActorSpecType])}]")
+            raise ValueError(f"Spec type ({spec_type_str}) is not a supported type: [{','.join([spec.value for spec in ActorSpecType])}]")

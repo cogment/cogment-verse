@@ -16,6 +16,7 @@ import logging
 
 import cogment
 from google.protobuf.json_format import ParseDict
+from cogment_verse.constants import ActorSpecType
 
 from cogment_verse.specs import (
     HUMAN_ACTOR_IMPL,
@@ -30,13 +31,14 @@ from cogment_verse.specs import (
 log = logging.getLogger(__name__)
 
 
-def extend_actor_config(actor_config_template, run_id, environment_specs, seed):
+def extend_actor_config(actor_config_template, run_id, environment_specs, spec_type, seed):
     config = AgentConfig()
     if actor_config_template is not None:
         ParseDict(actor_config_template, config)
     config.run_id = run_id
     # pylint: disable=no-member
     config.environment_specs.CopyFrom(environment_specs)
+    config.spec_type = spec_type
     config.seed = seed
     return config
 
@@ -73,6 +75,10 @@ class PlayRun:
             )
 
         players_cfg = self._cfg.players[: self._environment_specs.num_players]
+
+        print(f"self._cfg.players: {self._cfg.players}")
+        print(f"players_cfg: {players_cfg}")
+
         run_session.log_params(
             **{
                 f"actor_{actor_idx}_implementation": actor_params.implementation
@@ -99,32 +105,36 @@ class PlayRun:
                     if has_human_actor:
                         raise RuntimeError("Can't have more than one human involved in the trial")
                     # Human actor
+                    spec_type = actor_params.get("spec_type", ActorSpecType.DEFAULT.value)
                     actors_params.append(
                         cogment.ActorParameters(
                             cog_settings,
                             name=WEB_ACTOR_NAME,
-                            class_name=PLAYER_ACTOR_CLASS,
+                            class_name=spec_type,
                             implementation=HUMAN_ACTOR_IMPL,
                             config=extend_actor_config(
                                 actor_config_template=actor_params.get("agent_config", None),
                                 run_id=run_session.run_id,
                                 environment_specs=self._environment_specs.serialize(),
+                                spec_type=spec_type,
                                 seed=self._cfg.seed * (trial_idx + 1) * (actor_idx + 1),
                             ),
                         )
                     )
                     has_human_actor = True
                 else:
+                    spec_type = actor_params.get("spec_type", ActorSpecType.DEFAULT.value)
                     actors_params.append(
                         cogment.ActorParameters(
                             cog_settings,
                             name=actor_params.name,
-                            class_name=PLAYER_ACTOR_CLASS,
+                            class_name=spec_type,
                             implementation=actor_params.implementation,
                             config=extend_actor_config(
                                 actor_config_template=actor_params.get("agent_config", None),
                                 run_id=run_session.run_id,
                                 environment_specs=self._environment_specs.serialize(),
+                                spec_type=spec_type,
                                 seed=self._cfg.seed * (trial_idx + 1) * (actor_idx + 1),
                             ),
                         )
@@ -134,6 +144,7 @@ class PlayRun:
                 if has_human_actor:
                     raise RuntimeError("Can't have more than one human involved in the trial")
                 # Add an observer agent
+                spec_type = actor_params.get("spec_type", OBSERVER_ACTOR_CLASS)
                 actors_params.append(
                     cogment.ActorParameters(
                         cog_settings,
@@ -143,6 +154,7 @@ class PlayRun:
                         config=AgentConfig(
                             run_id=run_session.run_id,
                             environment_specs=self._environment_specs.serialize(),
+                            spec_type=spec_type,
                             seed=(self._cfg.seed + 100) * trial_idx,
                         ),
                     )

@@ -22,13 +22,14 @@ from typing import Tuple
 import cogment
 import torch
 import torch.nn.functional as F
-from gym.spaces import Box, utils
+from gymnasium.spaces import Box, utils
 from torch.distributions.normal import Normal
 
 from cogment_verse import Model, TorchReplayBuffer, TorchReplayBufferSample
+from cogment_verse.constants import ActorSpecType
 from cogment_verse.run.run_session import RunSession
 from cogment_verse.run.sample_producer_worker import SampleProducerSession
-from cogment_verse.specs import PLAYER_ACTOR_CLASS, AgentConfig, EnvironmentConfig, ActorSpecs, cog_settings
+from cogment_verse.specs import PLAYER_ACTOR_CLASS, AgentConfig, EnvironmentConfig, EnvironmentSpecs, cog_settings
 
 torch.multiprocessing.set_sharing_strategy("file_system")
 
@@ -270,9 +271,10 @@ class SACActor:
         actor_session.start()
         config = actor_session.config
 
-        environment_specs = ActorSpecs.deserialize(config.environment_specs)
-        observation_space = environment_specs.get_observation_space()
-        action_space = environment_specs.get_action_space()
+        spec_type = ActorSpecType.from_config(config.spec_type)
+        actor_specs = EnvironmentSpecs.deserialize(config.environment_specs)[spec_type]
+        observation_space = actor_specs.get_observation_space()
+        action_space = actor_specs.get_action_space()
         assert isinstance(action_space.gym_space, Box)
 
         # Seed
@@ -332,18 +334,19 @@ class SACTraining:
     action_bias: torch.Tensor
     replay_buffer: TorchReplayBuffer
 
-    def __init__(self, environment_specs: ActorSpecs, cfg: EnvironmentConfig) -> None:
+    def __init__(self, environment_specs: EnvironmentSpecs, cfg: EnvironmentConfig) -> None:
         super().__init__()
         self._dtype = torch.float
         self._environment_specs = environment_specs
         self._cfg = cfg
+        self._spec_type = ActorSpecType.DEFAULT
         self._device = torch.device(self._cfg.device)
         self.returns = 0
 
         # Model
         torch.manual_seed(self._cfg.seed)
-        observation_gym_space = self._environment_specs.get_observation_space().gym_space
-        action_gym_space = self._environment_specs.get_action_space().gym_space
+        observation_gym_space = self._environment_specs[self._spec_type].get_observation_space().gym_space
+        action_gym_space = self._environment_specs[self._spec_type].get_action_space().gym_space
         action_min = action_gym_space.low
         action_max = action_gym_space.high
         self.action_scale = torch.tensor((action_max - action_min) / 2.0, dtype=self._dtype)
@@ -382,9 +385,9 @@ class SACTraining:
         # Replay buffer
         self.replay_buffer = TorchReplayBuffer(
             capacity=self._cfg.buffer_size,
-            observation_shape=(utils.flatdim(self._environment_specs.get_observation_space().gym_space),),
+            observation_shape=(utils.flatdim(self._environment_specs[self._spec_type].get_observation_space().gym_space),),
             observation_dtype=self._dtype,
-            action_shape=(utils.flatdim(self._environment_specs.get_action_space().gym_space),),
+            action_shape=(utils.flatdim(self._environment_specs[self._spec_type].get_action_space().gym_space),),
             action_dtype=self._dtype,
             reward_dtype=self._dtype,
             seed=self._cfg.seed,
@@ -399,9 +402,9 @@ class SACTraining:
 
         player_actor_params = sample_producer_session.trial_info.parameters.actors[0]
         player_actor_name = player_actor_params.name
-        player_environment_specs = ActorSpecs.deserialize(player_actor_params.config.environment_specs)
-        player_observation_space = player_environment_specs.get_observation_space()
-        player_action_space = player_environment_specs.get_action_space()
+        player_environment_specs = EnvironmentSpecs.deserialize(player_actor_params.config.environment_specs)
+        player_observation_space = player_environment_specs[self._spec_type].get_observation_space()
+        player_action_space = player_environment_specs[self._spec_type].get_action_space()
 
         observation = None
         action = None
@@ -441,7 +444,7 @@ class SACTraining:
         # Initializing a model
         model_id = f"{run_session.run_id}_model"
         assert self._environment_specs.num_players == 1
-        assert isinstance(self._environment_specs.get_action_space().gym_space, Box)
+        assert isinstance(self._environment_specs[self._spec_type].get_action_space().gym_space, Box)
 
         self.model.model_id = model_id
         _, version_info = await run_session.model_registry.publish_initial_version(self.model)
@@ -463,6 +466,7 @@ class SACTraining:
                 config=AgentConfig(
                     run_id=run_session.run_id,
                     environment_specs=self._environment_specs.serialize(),
+                    spec_type=self._spec_type.value,
                     model_id=model_id,
                     model_iteration=version_info["iteration"],
                     seed=self._cfg.seed + trial_idx,

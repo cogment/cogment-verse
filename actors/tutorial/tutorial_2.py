@@ -18,6 +18,7 @@ import cogment
 
 ############ TUTORIAL STEP 2 ############
 import torch
+from cogment_verse.constants import ActorSpecType
 
 from cogment_verse.specs import (
     HUMAN_ACTOR_IMPL,
@@ -26,7 +27,7 @@ from cogment_verse.specs import (
     WEB_ACTOR_NAME,
     AgentConfig,
     EnvironmentConfig,
-    ActorSpecs,
+    EnvironmentSpecs,
     cog_settings,
 )
 
@@ -49,9 +50,9 @@ class SimpleBCActor:
         actor_session.start()
 
         config = actor_session.config
-
-        environment_specs = ActorSpecs.deserialize(config.environment_specs)
-        action_space = environment_specs.get_action_space(seed=config.seed)
+        spec_type = ActorSpecType.from_config(config.spec_type)
+        environment_specs = EnvironmentSpecs.deserialize(config.environment_specs)
+        action_space = environment_specs[spec_type].get_action_space(seed=config.seed)
 
         async for event in actor_session.all_events():
             if event.observation and event.type == cogment.EventType.ACTIVE:

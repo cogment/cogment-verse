@@ -26,11 +26,11 @@ import time
 import cogment
 import numpy as np
 import torch
-from gym.spaces import Discrete, utils
+from gymnasium.spaces import Discrete, utils
 
 from cogment_verse import Model, TorchReplayBuffer  # pylint: disable=abstract-class-instantiated
-from cogment_verse.constants import HUMAN_ACTOR_IMPL, PLAYER_ACTOR_CLASS, WEB_ACTOR_NAME
-from cogment_verse.specs import AgentConfig, EnvironmentConfig, ActorSpecs, cog_settings
+from cogment_verse.constants import HUMAN_ACTOR_IMPL, PLAYER_ACTOR_CLASS, WEB_ACTOR_NAME, ActorSpecType
+from cogment_verse.specs import AgentConfig, EnvironmentConfig, ActorSpecs, cog_settings, EnvironmentSpecs
 
 torch.multiprocessing.set_sharing_strategy("file_system")
 
@@ -128,6 +128,7 @@ class SimpleDQNModel(Model):
 
 class SimpleDQNActor:
     def __init__(self, _cfg):
+        self._cfg = _cfg
         self._dtype = torch.float
 
     def get_actor_classes(self):
@@ -137,12 +138,12 @@ class SimpleDQNActor:
         actor_session.start()
 
         config = actor_session.config
+        spec_type = ActorSpecType.from_config(config.spec_type)
 
         rng = np.random.default_rng(config.seed if config.seed is not None else 0)
-
-        environment_specs = ActorSpecs.deserialize(config.environment_specs)
-        observation_space = environment_specs.get_observation_space()
-        action_space = environment_specs.get_action_space(seed=rng.integers(9999))
+        actor_specs = EnvironmentSpecs.deserialize(config.environment_specs)[spec_type]
+        observation_space = actor_specs.get_observation_space()
+        action_space = actor_specs.get_action_space(seed=rng.integers(9999))
 
         assert isinstance(action_space.gym_space, Discrete)
 
@@ -155,7 +156,7 @@ class SimpleDQNActor:
         async for event in actor_session.all_events():
             if event.observation and event.type == cogment.EventType.ACTIVE:
                 observation = observation_space.deserialize(event.observation.observation)
-                if observation.current_player is not None and observation.current_player != actor_session.name:
+                if observation.current_player is not None and observation.current_player.name != actor_session.name:
                     # Not the turn of the agent
                     actor_session.do_action(action_space.serialize(action_space.create()))
                     continue
@@ -212,16 +213,18 @@ class SimpleDQNTraining:
         super().__init__()
         self._device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self._dtype = torch.float
+        self._spec_type = ActorSpecType.DEFAULT
         self._environment_specs = environment_specs
         self._cfg = cfg
+
 
     async def sample_producer_impl(self, sample_producer_session):
         player_actor_params = sample_producer_session.trial_info.parameters.actors[0]
 
         player_actor_name = player_actor_params.name
-        player_environment_specs = ActorSpecs.deserialize(player_actor_params.config.environment_specs)
-        player_observation_space = player_environment_specs.get_observation_space()
-        player_action_space = player_environment_specs.get_action_space()
+        player_environment_specs = EnvironmentSpecs.deserialize(player_actor_params.config.environment_specs)
+        player_observation_space = player_environment_specs[self._spec_type].get_observation_space()
+        player_action_space = player_environment_specs[self._spec_type].get_action_space()
 
         observation = None
         action = None
@@ -264,8 +267,8 @@ class SimpleDQNTraining:
         model_id = f"{run_session.run_id}_model"
 
         assert self._environment_specs.num_players == 1
-        action_space = self._environment_specs.get_action_space()
-        observation_space = self._environment_specs.get_observation_space()
+        action_space = self._environment_specs[self._spec_type].get_action_space()
+        observation_space = self._environment_specs[self._spec_type].get_observation_space()
         assert isinstance(action_space.gym_space, Discrete)
 
         epsilon_schedule = create_linear_schedule(
@@ -344,6 +347,7 @@ class SimpleDQNTraining:
                                     model_iteration=-1,
                                     model_update_frequency=self._cfg.model_update_frequency,
                                     environment_specs=self._environment_specs.serialize(),
+                                    spec_type=self._spec_type.value,
                                 ),
                             )
                         ],
@@ -454,6 +458,7 @@ class SimpleDQNSelfPlayTraining:
         super().__init__()
         self._device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self._dtype = torch.float
+        self._spec_type = ActorSpecType.DEFAULT
         self._environment_specs = environment_specs
         self._cfg = cfg
         self._rng = np.random.default_rng(self._cfg.seed)
@@ -484,7 +489,7 @@ class SimpleDQNSelfPlayTraining:
                 # This can happen when there is several "end-of-trial" samples
                 continue
 
-            current_player_actor = previous_player_actor_sample.observation.current_player
+            current_player_actor = previous_player_actor_sample.observation.current_player.name
             current_player_params = players_params[current_player_actor]
             current_player_partial_sample = players_partial_sample[current_player_actor]
 
@@ -536,8 +541,8 @@ class SimpleDQNSelfPlayTraining:
         model_id = f"{run_session.run_id}_model"
 
         assert self._environment_specs.num_players == 2
-        action_space = self._environment_specs.get_action_space()
-        observation_space = self._environment_specs.get_observation_space()
+        action_space = self._environment_specs[self._spec_type].get_action_space()
+        observation_space = self._environment_specs[self._spec_type].get_observation_space()
         assert isinstance(action_space.gym_space, Discrete)
 
         epsilon_schedule = create_linear_schedule(
@@ -597,6 +602,7 @@ class SimpleDQNSelfPlayTraining:
                     config=AgentConfig(
                         run_id=run_session.run_id,
                         environment_specs=self._environment_specs.serialize(),
+                        spec_type=self._spec_type.value,
                     ),
                 )
             return cogment.ActorParameters(
@@ -613,6 +619,7 @@ class SimpleDQNSelfPlayTraining:
                     model_iteration=iteration,
                     model_update_frequency=self._cfg.model_update_frequency,
                     environment_specs=self._environment_specs.serialize(),
+                    spec_type=self._spec_type.value,
                 ),
             )
 

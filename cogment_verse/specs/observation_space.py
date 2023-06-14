@@ -38,7 +38,7 @@ class Observation:
         rendered_frame: optional
             Environmnent's rendered frame as a numpy array of RGB pixels
         current_player: optional
-            Name of the current player. `None` for single player environments.
+            pb message Player. `None` for single player environments.
         overridden_players:
             List of players whose actions where overriden by a teacher actor.
     """
@@ -53,7 +53,7 @@ class Observation:
         rendered_frame=None,
         current_player=None,
         overridden_players=None,
-        game_player_name=None,
+        human_player=None,
         action_value=None,
     ):
         """
@@ -70,7 +70,7 @@ class Observation:
             assert rendered_frame is None
             assert current_player is None
             assert overridden_players is None
-            assert game_player_name is None
+            assert human_player is None
             assert action_value is None
             self._pb_observation = pb_observation
             return
@@ -82,7 +82,7 @@ class Observation:
         self._pb_observation = PbObservation(
             current_player=current_player,
             overridden_players=overridden_players,
-            game_player_name=game_player_name,
+            human_player=human_player,
             action_value=action_value,
         )
 
@@ -159,11 +159,11 @@ class Observation:
         return overridden_players
 
     @property
-    def game_player_name(self):
-        if not self._pb_observation.HasField("game_player_name"):
+    def human_player(self):
+        if not self._pb_observation.HasField("human_player"):
             return None
 
-        return self._pb_observation.game_player_name
+        return self._pb_observation.human_player
 
     @property
     def action_value(self):
@@ -213,7 +213,7 @@ class ObservationSpace:
         rendered_frame=None,
         current_player=None,
         overridden_players=None,
-        game_player_name=None,
+        human_player=None,
         action_value=None,
     ):
         """
@@ -227,7 +227,7 @@ class ObservationSpace:
             rendered_frame=rendered_frame,
             current_player=current_player,
             overridden_players=overridden_players,
-            game_player_name=game_player_name,
+            human_player=human_player,
             action_value=action_value,
         )
 
@@ -258,7 +258,7 @@ class ObservationSpace:
             rendered_frame=serialized_rendered_frame,
             overridden_players=observation.overridden_players,
             current_player=observation.current_player,
-            game_player_name=observation.game_player_name,
+            human_player=observation.human_player,
             action_value=observation.action_value,
         )
 

@@ -1,7 +1,7 @@
 # @package _global_.services.environment
-class_name: environments.pettingzoo.mpe_adapter.MpeEnvironment
+class_name: environments.petting_zoo.mpe_environment.MpeEnvironment
 env_class_name: pettingzoo.mpe.simple_tag_v3
-port: ${generate_port:environments.pettingzoo.mpe_adapter.MpeEnvironment}
+port: ${generate_port:environments.petting_zoo.mpe_environment.MpeEnvironment}
 
 # Environment Parameters
 num_good: 1 # Should be defined in run.

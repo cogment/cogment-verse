@@ -19,11 +19,11 @@ import logging
 
 import cogment
 import torch
-from gym.spaces import Discrete, utils
+from gymnasium.spaces import Discrete, utils
 
 from cogment_verse import Model
-from cogment_verse.constants import PLAYER_ACTOR_CLASS
-from cogment_verse.specs import AgentConfig, EnvironmentConfig, ActorSpecs, cog_settings
+from cogment_verse.constants import PLAYER_ACTOR_CLASS, ActorSpecType
+from cogment_verse.specs import AgentConfig, EnvironmentConfig, EnvironmentSpecs, cog_settings
 
 torch.multiprocessing.set_sharing_strategy("file_system")
 
@@ -136,9 +136,10 @@ class SimpleA2CActor:
 
         config = actor_session.config
 
-        environment_specs = ActorSpecs.deserialize(config.environment_specs)
-        observation_space = environment_specs.get_observation_space()
-        action_space = environment_specs.get_action_space(seed=config.seed)
+        spec_type = ActorSpecType.from_config(config.spec_type)
+        actor_specs = EnvironmentSpecs.deserialize(config.environment_specs)[spec_type]
+        observation_space = actor_specs.get_observation_space()
+        action_space = actor_specs.get_action_space(seed=config.seed)
 
         # Get model
         model = await SimpleA2CModel.retrieve_model(
@@ -181,6 +182,7 @@ class SimpleA2CTraining:
         self._dtype = torch.float
         self._environment_specs = environment_specs
         self._cfg = cfg
+        self._spec_type = ActorSpecType.DEFAULT
 
     async def trial_sample_sequences_producer_impl(self, sample_producer_session):
         observation = []
@@ -191,9 +193,9 @@ class SimpleA2CTraining:
         player_actor_params = sample_producer_session.trial_info.parameters.actors[0]
 
         player_actor_name = player_actor_params.name
-        player_environment_specs = ActorSpecs.deserialize(player_actor_params.config.environment_specs)
-        player_observation_space = player_environment_specs.get_observation_space()
-        player_action_space = player_environment_specs.get_action_space()
+        player_environment_specs = EnvironmentSpecs.deserialize(player_actor_params.config.environment_specs)
+        player_observation_space = player_environment_specs[self._spec_type].get_observation_space()
+        player_action_space = player_environment_specs[self._spec_type].get_action_space()
 
         async for sample in sample_producer_session.all_trial_samples():
             if sample.trial_state == cogment.TrialState.ENDED:
@@ -221,13 +223,13 @@ class SimpleA2CTraining:
         model_id = f"{run_session.run_id}_model"
 
         assert self._environment_specs.num_players == 1
-        assert isinstance(self._environment_specs.get_action_space().gym_space, Discrete)
+        assert isinstance(self._environment_specs[self._spec_type].get_action_space().gym_space, Discrete)
 
         model = SimpleA2CModel(
             model_id,
             environment_implementation=self._environment_specs.implementation,
-            num_input=utils.flatdim(self._environment_specs.get_observation_space().gym_space),
-            num_output=utils.flatdim(self._environment_specs.get_action_space().gym_space),
+            num_input=utils.flatdim(self._environment_specs[self._spec_type].get_observation_space().gym_space),
+            num_output=utils.flatdim(self._environment_specs[self._spec_type].get_action_space().gym_space),
             actor_network_num_hidden_nodes=self._cfg.actor_network.num_hidden_nodes,
             critic_network_num_hidden_nodes=self._cfg.critic_network.num_hidden_nodes,
             dtype=self._dtype,
@@ -284,6 +286,7 @@ class SimpleA2CTraining:
                                         model_id=model_id,
                                         model_iteration=iteration_info.iteration,
                                         environment_specs=self._environment_specs.serialize(),
+                                        spec_type=self._spec_type.value,
                                     ),
                                 )
                             ],

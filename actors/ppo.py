@@ -22,13 +22,14 @@ from typing import List, Tuple, Union
 import cogment
 import numpy as np
 import torch
-from gym.spaces import Box, utils
+from gymnasium.spaces import Box, utils
 from torch.distributions.normal import Normal
 
 from cogment_verse import Model
+from cogment_verse.constants import ActorSpecType
 from cogment_verse.run.run_session import RunSession
 from cogment_verse.run.sample_producer_worker import SampleProducerSession
-from cogment_verse.specs import PLAYER_ACTOR_CLASS, AgentConfig, EnvironmentConfig, ActorSpecs, cog_settings
+from cogment_verse.specs import PLAYER_ACTOR_CLASS, AgentConfig, EnvironmentConfig, EnvironmentSpecs, cog_settings
 
 torch.multiprocessing.set_sharing_strategy("file_system")
 
@@ -315,9 +316,10 @@ class PPOActor:
 
         config = actor_session.config
 
-        environment_specs = ActorSpecs.deserialize(config.environment_specs)
-        observation_space = environment_specs.get_observation_space()
-        action_space = environment_specs.get_action_space()
+        spec_type = ActorSpecType.from_config(config.spec_type)
+        actor_specs = EnvironmentSpecs.deserialize(config.environment_specs)[spec_type]
+        observation_space = actor_specs.get_observation_space()
+        action_space = actor_specs.get_action_space()
 
         assert isinstance(action_space.gym_space, Box)
         assert config.environment_specs.num_players == 1
@@ -385,19 +387,20 @@ class PPOTraining:
         "state_norm": False,
     }
 
-    def __init__(self, environment_specs: ActorSpecs, cfg: EnvironmentConfig) -> None:
+    def __init__(self, environment_specs: EnvironmentSpecs, cfg: EnvironmentConfig) -> None:
         super().__init__()
         self._dtype = torch.float
         self._environment_specs = environment_specs
         self._cfg = cfg
+        self._spec_type = ActorSpecType.DEFAULT
         self._device = torch.device(self._cfg.device)
         self.returns = 0
 
         self.model = PPOModel(
             model_id="",
             environment_implementation=self._environment_specs.implementation,
-            num_input=utils.flatdim(self._environment_specs.get_observation_space().gym_space),
-            num_output=utils.flatdim(self._environment_specs.get_action_space().gym_space),
+            num_input=utils.flatdim(self._environment_specs[self._spec_type].get_observation_space().gym_space),
+            num_output=utils.flatdim(self._environment_specs[self._spec_type].get_action_space().gym_space),
             learning_rate=self._cfg.learning_rate,
             n_iter=self._cfg.num_epochs,
             policy_network_hidden_nodes=self._cfg.policy_network.num_hidden_nodes,
@@ -419,9 +422,9 @@ class PPOTraining:
         player_actor_params = sample_producer_session.trial_info.parameters.actors[0]
 
         player_actor_name = player_actor_params.name
-        player_environment_specs = ActorSpecs.deserialize(player_actor_params.config.environment_specs)
-        player_observation_space = player_environment_specs.get_observation_space()
-        player_action_space = player_environment_specs.get_action_space()
+        player_environment_specs = EnvironmentSpecs.deserialize(player_actor_params.config.environment_specs)
+        player_observation_space = player_environment_specs[self._spec_type].get_observation_space()
+        player_action_space = player_environment_specs[self._spec_type].get_action_space()
 
         async for sample in sample_producer_session.all_trial_samples():
             if sample.trial_state == cogment.TrialState.ENDED:
@@ -450,7 +453,7 @@ class PPOTraining:
         model_id = f"{run_session.run_id}_model"
 
         assert self._environment_specs.num_players == 1
-        assert isinstance(self._environment_specs.get_action_space().gym_space, Box)
+        assert isinstance(self._environment_specs[self._spec_type].get_action_space().gym_space, Box)
         assert self._cfg.num_steps >= self._cfg.batch_size
 
         # Initalize model
@@ -479,6 +482,7 @@ class PPOTraining:
                 config=AgentConfig(
                     run_id=run_session.run_id,
                     environment_specs=self._environment_specs.serialize(),
+                    spec_type=self._spec_type.value,
                     model_id=model_id,
                     model_iteration=iteration_info.iteration,
                 ),

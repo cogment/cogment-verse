@@ -19,6 +19,7 @@ import {
   JOIN_TRIAL_TIMEOUT,
   OBSERVER_ACTOR_CLASS,
   ORCHESTRATOR_WEB_ENDPOINT,
+  DEFAULT_SPEC_TYPE,
   PlayObserver,
   SimplePlay,
   WEB_BASE_URL,
@@ -52,10 +53,20 @@ const Play = () => {
     );
   }
 
-  const implementation = actorParams?.config?.environmentSpecs?.implementation || undefined;
-  // const componentFile = actorParams?.config?.environmentSpecs?.actorSpecs?.webComponentsFile || undefined;
-  const componentFile = actorParams?.config?.environmentSpecs?.find((spec) => spec.agentRole === event.observation?.currentPlayer?.actorClass) || undefined;
 
+
+
+  const specType = event.observation?.currentPlayer?.specType || DEFAULT_SPEC_TYPE
+
+  console.log("currentPlayer spec_type: " + specType)
+  console.log("environmentSpecs: " + actorParams?.config?.environmentSpecs)
+
+  const environmentSpecs = actorParams?.config?.environmentSpecs?.actorSpecs?.find((spec) => spec.specType === specType) || undefined;
+  const implementation = actorParams?.config?.environmentSpecs?.implementation || undefined;
+  const componentFile = environmentSpecs?.webComponentsFile || undefined;
+
+  console.log("environmentSpecs.specType: " + environmentSpecs?.specType)
+  console.log("implementation: " + implementation)
   console.log("componentFile: " + componentFile)
 
   if (implementation != null && componentFile != null) {
