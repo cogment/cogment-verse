@@ -16,7 +16,6 @@ run:
       spec_type: mpe_good
     - name: good_2
       implementation: client
-      # spec_type: player
     - name: adversary_0
       implementation: actors.random_actor.RandomActor
       spec_type: mpe_adversary
@@ -36,4 +35,5 @@ services:
     num_good: 3
     num_adversaries: 4
     num_obstacles: 2
+    web_actor_spec: mpe_good
 

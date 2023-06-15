@@ -31,7 +31,7 @@ esbuild
     entryPoints: [
       "./AtariPong.jsx",
       "./ConnectFour.jsx",
-      "./SimpleTag.jsx"
+      "./SimpleTag.jsx",
     ],
     target: "es2020",
     format: "esm",

@@ -1,22 +1,20 @@
-import { useCallback, useState } from "react";
 import {
   Button,
   DPAD_BUTTONS,
-  useDPadPressedButtons,
-  createLookup,
+  DPad,
   FpsCounter,
   KeyboardControlList,
-  serializePlayerAction,
-  Space,
-  TEACHER_ACTOR_CLASS,
-  TEACHER_NOOP_ACTION,
   OBSERVER_ACTOR_CLASS,
+  PlayObserver,
+  SimplePlay,
+  Space,
+  serializePlayerAction,
+  useDPadPressedButtons,
   useDocumentKeypressListener,
   usePressedKeys,
-  useRealTimeUpdate,
-  SimplePlay,
-  PlayObserver,
+  useRealTimeUpdate
 } from "@cogment/cogment-verse";
+import { useCallback, useState } from "react";
 
 const ACTION_SPACE = new Space({
   discrete: {
@@ -26,7 +24,6 @@ const ACTION_SPACE = new Space({
 
 export const SimpleTagControls = ({ sendAction, fps = 40, actorClass, observation, ...props }) => {
 
-  const hello = 1;
   console.log("actorClass: " + actorClass)
 
   const [paused, setPaused] = useState(false);
@@ -59,7 +56,7 @@ export const SimpleTagControls = ({ sendAction, fps = 40, actorClass, observatio
       setActiveButtons([]);
       sendAction(serializePlayerAction(ACTION_SPACE, 0));
     },
-    [isButtonPressed, pressedKeys, sendAction, setActiveButtons, isTeacher]
+    [isButtonPressed, pressedKeys, sendAction, setActiveButtons]
   );
 
   const { currentFps } = useRealTimeUpdate(computeAndSendAction, fps, paused);

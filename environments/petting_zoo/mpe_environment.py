@@ -97,6 +97,7 @@ class MpeEnvironment:
         self.env_type = PettingZooEnvType(self.env_type_str)
         assert self.env_type == PettingZooEnvType.MPE
         self.env_class = import_class(self.env_class_name)
+        self._web_actor_spec = MpeSpecType.from_config(cfg.web_actor_spec)
 
         self.player_classes = [PLAYER_ACTOR_CLASS] + MpeSpecType.values
 
@@ -191,8 +192,11 @@ class MpeEnvironment:
             for (actor_idx, actor) in enumerate(actors)
             if actor.actor_class_name in self.player_classes
         ]
-        print(f"player_actors: {player_actors}")
+        print(f"player_actors: {player_actors}")'
+        # Web actor index in cogment actors
         web_actor_idx = [actor_idx for actor_idx, actor_name, _ in player_actors if actor_name == WEB_ACTOR_NAME]
+        # Web actor index in pettingzoo env actors
+        pz_web_actor_idx = 
         print(f"web_actor_idx: {web_actor_idx}")
         session_cfg = environment_session.config
 
@@ -228,11 +232,12 @@ class MpeEnvironment:
             else {agent_name: count for (count, agent_name) in enumerate(env.agents)}
         )
 
-        assert len(web_actor_idx) < 2
+        assert len(web_actor_idx) < 2, "Multiple web actors are currently not supported for this environment."
+
         human_player_name = env.agents[web_actor_idx[0]] if web_actor_idx else ""
         pz_player_name = next(agent_iter)
+
         actor_idx = pz_player_names[pz_player_name]
-        print(f"actor_idx: {actor_idx}")
         actor_name = player_actors[actor_idx][1]
         actor_class_name = player_actors[actor_idx][2]
 
@@ -240,6 +245,7 @@ class MpeEnvironment:
         human_player = Player(index=web_actor_idx[0], name=human_player_name, spec_type=actor_class_name) if web_actor_idx else None
         current_player = Player(index=actor_idx, name=actor_name, spec_type=actor_class_name)
 
+        print(f"human player | {(human_player.index, human_player.name, human_player.spec_type)}")
         print(f"before loop | pz_player_names: {pz_player_names} | pz_player_name: {pz_player_name} | current_player: {(current_player.index, current_player.name, current_player.spec_type)}")
 
         # Render the pixel for UI
@@ -288,7 +294,6 @@ class MpeEnvironment:
             if not event.actions:
                 continue
 
-
             # Action
             print(f"event loop | actor: {(actor_idx, actor_name, actor_class_name)}")
             actor_spec_type = MpeSpecType.from_config(actor_class_name)
@@ -307,7 +312,6 @@ class MpeEnvironment:
             print(f"action: {action}")
             action_value = action.value
             print(f"action_value: {action_value}")
-
 
             # Observation (for next player)
             env.step(action_value)
