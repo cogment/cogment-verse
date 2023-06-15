@@ -13,10 +13,11 @@
 # limitations under the License.
 
 import logging
+import os
+import re
 from abc import ABC, abstractmethod
 from enum import Enum
-import os
-from typing import Tuple
+from typing import List, Tuple
 
 import cogment
 import numpy as np
@@ -32,6 +33,13 @@ from environments.petting_zoo.utils import PettingZooEnvType
 
 log = logging.getLogger(__name__)
 
+WEB_COMPONENTS = {
+    "pettingzoo.mpe.simple_tag_v3": "SimpleTag.js",
+}
+
+
+GOOD_ACTOR_PREFIX = "agent"
+ADVERSARY_ACTOR_PREFIX = "adversary"
 
 # TODO: Move to utils
 def is_homogeneous(env) -> bool:
@@ -49,12 +57,10 @@ def is_homogeneous(env) -> bool:
                 return False
     return True
 
-
-WEB_COMPONENTS = {
-    "pettingzoo.atari.pong_v3": "AtariPong.js",
-    "pettingzoo.classic.connect_four_v3": "ConnectFour.js",
-}
-
+def get_strings_with_prefix(strings, prefix):
+    pattern = r'^' + prefix
+    matches = [string for string in strings if re.match(pattern, string)]
+    return matches
 
 
 class MpeSpecType(Enum):
@@ -69,7 +75,13 @@ class MpeSpecType(Enum):
         try:
             return cls(spec_type_str)
         except ValueError:
-            raise ValueError(f"Actor specs type ({spec_type_str}) is not a supported type: [{', '.join([spec_type.value for spec_type in MpeSpecType])}]")
+            raise ValueError(f"Actor specs type ({spec_type_str}) is not a supported type: [{', '.join(MpeSpecType.values)}]")
+
+    @classmethod
+    @property
+    def values(self) -> List[str]:
+        """ Return list of all values available in the enum """
+        return list(spec_type.value for spec_type in MpeSpecType)
 
 
 class MpeEnvironment:
@@ -86,6 +98,9 @@ class MpeEnvironment:
         assert self.env_type == PettingZooEnvType.MPE
         self.env_class = import_class(self.env_class_name)
 
+        self.player_classes = [PLAYER_ACTOR_CLASS] + MpeSpecType.values
+
+
         print(f"env cfg: {cfg}")
 
         env = self.env_class.env(
@@ -98,10 +113,10 @@ class MpeEnvironment:
 
         print(f"env.agents: {env.possible_agents}")
 
-        if not is_homogeneous(env):
-            raise RuntimeError(
-                "PettingZoo environment with heterogeneous action/observation spaces are not supported yet"
-            )
+        # if not is_homogeneous(env):
+        #     raise RuntimeError(
+        #         "PettingZoo environment with heterogeneous action/observation spaces are not supported yet"
+        #     )
 
         web_components_file = None
         matching_web_components = [
@@ -109,25 +124,41 @@ class MpeEnvironment:
             for (env_name_prefix, web_component) in WEB_COMPONENTS.items()
             if self.env_class_name.startswith(env_name_prefix)
         ]
+
+        print(f"web component: {matching_web_components}")
+
         if len(matching_web_components) > 1:
             log.warning(
-                f"While configuring petting zoo environment [{self.env_class_name}] found more that one matching web components [{matching_web_components}], picking the first one."
+                f"While configuring petting zoo environment [{self.env_class_name}] found more that one matchingoofy_diffie_0_0g web components [{matching_web_components}], picking the first one."
             )
         if len(matching_web_components) > 0:
             web_components_file = matching_web_components[0]
 
 
+        print(f"obs spaces: {env.observation_spaces}")
+        print(f"Good obs space: {env.observation_spaces[get_strings_with_prefix(env.possible_agents, GOOD_ACTOR_PREFIX)[0]]}")
+        print(f"Adversary obs space: {env.observation_spaces[get_strings_with_prefix(env.possible_agents, ADVERSARY_ACTOR_PREFIX)[0]]}")
+
+
         assert len(env.possible_agents) >= 1
+
+        self.player_specs = ActorSpecs.create(
+            observation_space=env.observation_spaces[get_strings_with_prefix(env.possible_agents, GOOD_ACTOR_PREFIX)[0]],
+            action_space=env.action_spaces[get_strings_with_prefix(env.possible_agents, GOOD_ACTOR_PREFIX)[0]],
+            web_components_file=web_components_file,
+            spec_type=MpeSpecType.DEFAULT,
+        )
+
         self.good_specs = ActorSpecs.create(
-            observation_space=env.observation_space(env.possible_agents[0]),
-            action_space=env.action_space(env.possible_agents[0]),
+            observation_space=env.observation_spaces[get_strings_with_prefix(env.possible_agents, GOOD_ACTOR_PREFIX)[0]],
+            action_space=env.action_spaces[get_strings_with_prefix(env.possible_agents, GOOD_ACTOR_PREFIX)[0]],
             web_components_file=web_components_file,
             spec_type=MpeSpecType.GOOD,
         )
 
         self.adversary_specs = ActorSpecs.create(
-            observation_space=env.observation_space(env.possible_agents[0]),
-            action_space=env.action_space(env.possible_agents[0]),
+            observation_space=env.observation_spaces[get_strings_with_prefix(env.possible_agents, ADVERSARY_ACTOR_PREFIX)[0]],
+            action_space=env.action_spaces[get_strings_with_prefix(env.possible_agents, ADVERSARY_ACTOR_PREFIX)[0]],
             web_components_file=web_components_file,
             spec_type=MpeSpecType.ADVERSARY,
         )
@@ -135,7 +166,7 @@ class MpeEnvironment:
         self.env_specs = EnvironmentSpecs.create_heterogeneous(
             num_players=sum([self.env_cfg.num_good, self.env_cfg.num_adversaries]),
             turn_based=False,
-            actor_specs=[self.good_specs, self.adversary_specs]
+            actor_specs=[self.player_specs, self.good_specs, self.adversary_specs]
         )
 
     def get_web_components_dir(self):
@@ -158,8 +189,9 @@ class MpeEnvironment:
         player_actors = [
             (actor_idx, actor.actor_name, actor.actor_class_name)
             for (actor_idx, actor) in enumerate(actors)
-            if actor.actor_class_name == PLAYER_ACTOR_CLASS
+            if actor.actor_class_name in self.player_classes
         ]
+        print(f"player_actors: {player_actors}")
         web_actor_idx = [actor_idx for actor_idx, actor_name, _ in player_actors if actor_name == WEB_ACTOR_NAME]
         print(f"web_actor_idx: {web_actor_idx}")
         session_cfg = environment_session.config
@@ -202,9 +234,13 @@ class MpeEnvironment:
         actor_idx = pz_player_names[pz_player_name]
         print(f"actor_idx: {actor_idx}")
         actor_name = player_actors[actor_idx][1]
+        actor_class_name = player_actors[actor_idx][2]
+
         # TODO: adapt spec type
-        human_player = Player(index=web_actor_idx[0], name=human_player_name, spec_type=ActorSpecType.DEFAULT.value) if web_actor_idx else None
-        current_player = Player(index=actor_idx, name=actor_name, spec_type=ActorSpecType.DEFAULT.value)
+        human_player = Player(index=web_actor_idx[0], name=human_player_name, spec_type=actor_class_name) if web_actor_idx else None
+        current_player = Player(index=actor_idx, name=actor_name, spec_type=actor_class_name)
+
+        print(f"before loop | pz_player_names: {pz_player_names} | pz_player_name: {pz_player_name} | current_player: {(current_player.index, current_player.name, current_player.spec_type)}")
 
         # Render the pixel for UI
         rendered_frame = None
@@ -214,15 +250,14 @@ class MpeEnvironment:
                 return
             rendered_frame = env.render()
 
-
         initial_observations = []
-        for actor_idx, actor in enumerate(actors):
-            if actor.actor_class_name == MpeSpecType.GOOD.value:
+        for _, actor in enumerate(actors):
+            if actor.actor_class_name in [MpeSpecType.GOOD.value, MpeSpecType.DEFAULT.value]:
                 observation = good_observation_space.create(
                     value=pz_observation,
                     rendered_frame=None,
                     current_player=current_player,
-                    game_player_name=human_player,
+                    human_player=human_player,
                 )
                 initial_observations.append((actor.actor_name, good_observation_space.serialize(observation)))
 
@@ -231,7 +266,7 @@ class MpeEnvironment:
                     value=pz_observation,
                     rendered_frame=None,
                     current_player=current_player,
-                    game_player_name=human_player,
+                    human_player=human_player,
                 )
                 initial_observations.append((actor.actor_name, adversary_observation_space.serialize(observation)))
 
@@ -240,7 +275,7 @@ class MpeEnvironment:
                     value=pz_observation,
                     rendered_frame=rendered_frame,
                     current_player=current_player,
-                    game_player_name=human_player,
+                    human_player=human_player,
                 )
                 initial_observations.append((actor.actor_name, good_observation_space.serialize(observation)))
 
@@ -253,32 +288,53 @@ class MpeEnvironment:
             if not event.actions:
                 continue
 
+
             # Action
+            print(f"event loop | actor: {(actor_idx, actor_name, actor_class_name)}")
+            actor_spec_type = MpeSpecType.from_config(actor_class_name)
+            action_space = self.env_specs[actor_class_name].get_action_space()
 
-            actor_spec_type = MpeSpecType.from_config()
-            action_value = good_action_space.deserialize(event.actions[actor_idx].action).value
+            # Debugging
+            log.debug(f"Environment Adapter | current player idx, name: {(current_player.index, current_player.name, current_player.spec_type)}")
+            log.debug(f"RecvEvent | num action: {len(event.actions)}")
+            for idx, action in enumerate(event.actions):
+                if action.actor_index in [idx for idx, name, _class in player_actors]:
+                    log.debug(f"RecvAction | actor: {player_actors[action.actor_index]} | value: {action_space.deserialize(action.action).value} | tick_id: {action.tick_id} | status: {action.status}")
+                else:
+                    log.debug(f"RecvAction | actor: {(idx, actor.actor_name, actor.actor_class_name)} | value: None because observer | tick_id: {action.tick_id} | status: {action.status}")
 
-            # Observation
+            action = action_space.deserialize(event.actions[actor_idx].action)
+            print(f"action: {action}")
+            action_value = action.value
+            print(f"action_value: {action_value}")
+
+
+            # Observation (for next player)
             env.step(action_value)
             pz_observation, pz_reward, termination, truncation, _ = env.last()
 
-            # Actor names
+            # Iterate to next player
             pz_player_name = next(agent_iter)
             actor_idx = pz_player_names[pz_player_name]
             actor_name = player_actors[actor_idx][1]
+            actor_class_name = player_actors[actor_idx][2]
             current_player = Player(index=actor_idx, name=actor_name, spec_type=ActorSpecType.DEFAULT.value)
 
-            observation = good_observation_space.create(
+            observation_space = self.env_specs[actor_class_name].get_observation_space()
+
+            observation = observation_space.create(
                 value=pz_observation,
                 rendered_frame=rendered_frame,
                 current_player=current_player,
-                game_player_name=human_player,
+                human_player=human_player,
             )
             rendered_frame = None
             if session_cfg.render:
                 rendered_frame = env.render()
 
-            observations = [("*", good_observation_space.serialize(observation))]
+            # TODO send specific observations to each actor class.
+            observations = [("*", observation_space.serialize(observation))]
+
             # TODO: need to revise the actor name received the reward
             environment_session.add_reward(value=pz_reward, confidence=1.0, to=[actor_name])
             if termination or truncation:

@@ -39,3 +39,17 @@ actor_classes:
     observation:
       space: cogment_verse.Observation
     config_type: cogment_verse.AgentConfig
+
+  - name: mpe_good
+    action:
+      space: cogment_verse.PlayerAction
+    observation:
+      space: cogment_verse.Observation
+    config_type: cogment_verse.AgentConfig
+
+  - name: mpe_adversary
+    action:
+      space: cogment_verse.PlayerAction
+    observation:
+      space: cogment_verse.Observation
+    config_type: cogment_verse.AgentConfig

@@ -16,6 +16,7 @@ import cogment
 from cogment_verse.constants import ActorSpecType
 
 from cogment_verse.specs import PLAYER_ACTOR_CLASS, EnvironmentSpecs
+from environments.petting_zoo.mpe_environment import MpeSpecType
 
 
 class RandomActor:
@@ -23,7 +24,7 @@ class RandomActor:
         pass
 
     def get_actor_classes(self):
-        return [PLAYER_ACTOR_CLASS]
+        return [PLAYER_ACTOR_CLASS] + MpeSpecType.values
 
     async def impl(self, actor_session):
         actor_session.start()

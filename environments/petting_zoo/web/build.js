@@ -28,7 +28,11 @@ for (const file of fs.readdirSync(path.join(__dirname, OUT_DIR))) {
 esbuild
   .build({
     logLevel: "info",
-    entryPoints: ["./AtariPong.jsx", "./ConnectFour.jsx"],
+    entryPoints: [
+      "./AtariPong.jsx",
+      "./ConnectFour.jsx",
+      "./SimpleTag.jsx"
+    ],
     target: "es2020",
     format: "esm",
     bundle: true,

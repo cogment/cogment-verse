@@ -71,7 +71,7 @@ class PlayRun:
         # We ignore additional actor configs
         if self._environment_specs.num_players > len(self._cfg.players):
             raise RuntimeError(
-                f"Expecting at least {self._environment_specs.num_players} configured actors, got {len(self._cfg.players)}"
+                f"Expecting at least {self._environment_specs.num_players} configured actors, got {len(self._cfg.players)}. Verify the experiment and environment configuration files. Players registered: [{', '.join([player['name'] for player in self._cfg.players])}]"
             )
 
         players_cfg = self._cfg.players[: self._environment_specs.num_players]

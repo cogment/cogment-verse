@@ -59,13 +59,15 @@ const Play = () => {
   const specType = event.observation?.currentPlayer?.specType || DEFAULT_SPEC_TYPE
 
   console.log("currentPlayer spec_type: " + specType)
-  console.log("environmentSpecs: " + actorParams?.config?.environmentSpecs)
+  console.log("environmentSpecs: " + actorParams?.config?.environmentSpecs?.actorSpecs)
 
-  const environmentSpecs = actorParams?.config?.environmentSpecs?.actorSpecs?.find((spec) => spec.specType === specType) || undefined;
+  const actorSpecs = actorParams?.config?.environmentSpecs?.actorSpecs?.find((spec) => spec.specType === specType) || undefined;
   const implementation = actorParams?.config?.environmentSpecs?.implementation || undefined;
-  const componentFile = environmentSpecs?.webComponentsFile || undefined;
+  const componentFile = actorSpecs?.webComponentsFile || undefined;
 
-  console.log("environmentSpecs.specType: " + environmentSpecs?.specType)
+  console.log("actorSpecs: " + actorSpecs)
+
+  console.log("environmentSpecs.specType: " + actorSpecs?.specType)
   console.log("implementation: " + implementation)
   console.log("componentFile: " + componentFile)
 

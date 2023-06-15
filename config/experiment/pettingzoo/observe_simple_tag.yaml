@@ -6,7 +6,7 @@ defaults:
   - override /run/experiment_tracker: simple
 
 run:
-  observer: True
+  # observer: True
   players:
     - name: good_0
       implementation: actors.random_actor.RandomActor
@@ -14,17 +14,26 @@ run:
     - name: good_1
       implementation: actors.random_actor.RandomActor
       spec_type: mpe_good
-    # - name: adversary_0
-    #   implementation: actors.random_actor.RandomActor
-    #   spec_type: mpe_adversary
-    # - name: adversary_1
-    #   implementation: actors.random_actor.RandomActor
-    #   spec_type: mpe_adversary
+    - name: good_2
+      implementation: client
+      # spec_type: player
+    - name: adversary_0
+      implementation: actors.random_actor.RandomActor
+      spec_type: mpe_adversary
+    - name: adversary_1
+      implementation: actors.random_actor.RandomActor
+      spec_type: mpe_adversary
+    - name: adversary_2
+      implementation: actors.random_actor.RandomActor
+      spec_type: mpe_adversary
+    - name: adversary_3
+      implementation: actors.random_actor.RandomActor
+      spec_type: mpe_adversary
 
 
 services:
   environment:
-    num_good: 2
-    num_adversaries: 0
+    num_good: 3
+    num_adversaries: 4
     num_obstacles: 2
 
