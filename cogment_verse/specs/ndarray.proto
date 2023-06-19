@@ -34,4 +34,5 @@ message Array {
   repeated double double_data = 5;
   repeated sint32 int32_data = 6;
   repeated sint64 int64_data = 7;
+  repeated uint32 uint32_data = 8;
 }

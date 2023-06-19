@@ -31,7 +31,7 @@ def test_serialize_connect4_observation_space():
     env.reset()
 
     gym_space = env.observation_space("player_0")
-    pb_space = serialize_gym_space(gym_space, serilization_format=SerializationFormat.STRUCTURED)
+    pb_space = serialize_gym_space(gym_space, serialization_format=SerializationFormat.STRUCTURED)
 
     assert len(pb_space.dict.spaces) == 2
     assert pb_space.dict.spaces[0].key == "action_mask"
@@ -51,7 +51,7 @@ def test_serialize_cartpole_observation_space():
 
     gym_space = env.observation_space
 
-    pb_space = serialize_gym_space(gym_space, serilization_format=SerializationFormat.STRUCTURED)
+    pb_space = serialize_gym_space(gym_space, serialization_format=SerializationFormat.STRUCTURED)
 
     assert pb_space.box.high.shape == [4]
     assert pb_space.box.low.shape == [4]
@@ -71,7 +71,7 @@ def test_serialize_overcooked_observation_space():
     gym_env = Overcooked(base_env=env, featurize_fn=env.featurize_state_mdp)
     gym_space = gym_env.observation_space
 
-    pb_space = serialize_gym_space(gym_space, serilization_format=SerializationFormat.STRUCTURED)
+    pb_space = serialize_gym_space(gym_space, serialization_format=SerializationFormat.STRUCTURED)
 
     assert pb_space.box.high.shape == [96]
     assert pb_space.box.low.shape == [96]
@@ -109,7 +109,7 @@ def test_serialize_custom_observation_space():
         }
     )
 
-    pb_space = serialize_gym_space(gym_space, serilization_format=SerializationFormat.STRUCTURED)
+    pb_space = serialize_gym_space(gym_space, serialization_format=SerializationFormat.STRUCTURED)
 
     assert len(pb_space.dict.spaces) == 2
     assert pb_space.dict.spaces[0].key == "ext_controller"

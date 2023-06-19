@@ -16,6 +16,7 @@ Simply clone the repo and start training.
   - [Docker](/docs/develop/docker.md)
   - [Petting Zoo](/docs/develop/petting_zoo.md)
   - [Isaac Gym](/docs/develop/isaac_gym.md)
+  - [Overcooked AI](/docs/develop/overcooked_ai.md)
 - Deploy
   - [Tunnel unsing ngrok](/docs/deploy/tunnel_using_ngrok.md)
 - Experimental results 🚧
@@ -54,6 +55,7 @@ Simply clone the repo and start training.
 
    - [Petting Zoo](/docs/develop/petting_zoo.md)
    - [Isaac Gym](/docs/develop/isaac_gym.md)
+   - [Overcooked AI](/docs/develop/overcooked_ai.md)
 
 7. In another terminal, launch a mlflow server on port 3000
 

@@ -10,13 +10,11 @@ uvicorn==0.17.6
 boto3==1.26.123
 
 # environments
-# gym[box2d,classic_control, mujoco]>=0.26,<0.27
-gym[all]>=0.26,<0.27
+Gymnasium[box2d,classic_control,mujoco,atari]~=0.28.1
 PettingZoo[atari, classic]~=1.23.1
 tinyscaler~=1.2.4
-Gymnasium>=0.28,<0.29
+SuperSuit~=3.8.0
 AutoROM~=0.4.2
-
 
 # actors
 torch==1.11.0

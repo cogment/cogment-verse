@@ -57,15 +57,17 @@ NOTE: The other commands are the same as the [PDB debugger](https://docs.python.
 
 ## Developing the web app
 
-Cogment Verse includes a web app designed for human-in-the-loop learning developed with React.
+Cogment Verse includes a modular web app designed for human-in-the-loop learning developed with React.
 
 To develop the web app, you'll need to install [Node.JS v16](https://nodejs.org/) or above.
 
-Sources for the web app can be found in `/cogment_verse/web/web_app`.
+The _host_ web app is included in the "core" cogment_verse package in `/cogment_verse/web/web_app`.
+
+Each environment provides its own web app _plugin_ that defines how it is rendered and how the player can interact with it. Environment _plugins_ are React components that leverages the `@cogment/cogment_verse` SDK defined in `/cogment_verse/web/web_app/src/shared`. Full documentation on how to develop your own environment plugin is a work in progress, in the meantime take a look at the built-in plugins e.g. in `/environments/gym/web`.
 
 ### Prebuilt web app - Default
 
-When running a default instance of Cogment Verse, the prebuilt web app, located in `/cogment_verse/web/web_app/build` is used. e.g.
+When running a default instance of Cogment Verse, the prebuilt web app, located in `/cogment_verse/web/web_app/dist` is used. e.g.
 
 ```console
 $ python -m main
@@ -83,15 +85,7 @@ $ python -m main services.web.build=True
 
 This perform to a full static build of the web app before launching the instance.
 
-### Development "autoreload" mode
-
-To start an autoreloading isntance of the webapp, set `services.web.dev` to `True`. e.g.
-
-```console
-$ python -m main service.web.dev=True
-```
-
-The web app will be served as an autoreloading server: any edit to the web app sources will be taken into account and cause a reload.
+> ⚠️ only the _host_ webapp is rebuilt in that way, changes to the environment _plugins_ need to be rebuilt separately, usually by running `npm run build` in their directory.
 
 ## Testing
 

@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" href="{{ url_for('assets', path='favicon.ico') }}" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="theme-color" content="#000000" />
+    <meta name="description" content="Cogment Verse Webapp" />
+    <link rel="apple-touch-icon" href="{{ url_for('assets', path='logo192.png') }}" />
+    <link rel="manifest" href="{{ url_for('assets', path='manifest.json') }}" />
+    <title>Cogment Verse</title>
+    <link href="{{ url_for('dist', path='style.css') }}" rel="stylesheet" />
+    <link href="{{ url_for('dist', path='app.css') }}" rel="stylesheet" />
+    <script type="importmap">
+      {
+        "imports": {
+          "@cogment/cogment-verse": "{{ url_for('dist', path='shared.js') }}",
+          "react": "{{ url_for('dist', path='react.js') }}",
+          "react/jsx-runtime": "{{ url_for('dist', path='react/jsx-runtime.js') }}",
+          "react-dom/client": "{{ url_for('dist', path='react-dom/client.js') }}"
+        }
+      }
+    </script>
+    <script type="module" defer="defer" src="{{ url_for('dist', path='shared.js') }}"></script>
+    <script type="module" defer="defer" src="{{ url_for('dist', path='app.js') }}"></script>
+  </head>
+  <body>
+    <noscript>You need to enable JavaScript to run this app.</noscript>
+    <div id="root"></div>
+    <script>
+      window.ORCHESTRATOR_WEB_ENDPOINT = "{{ orchestrator_web_endpoint }}";
+    </script>
+  </body>
+</html>
