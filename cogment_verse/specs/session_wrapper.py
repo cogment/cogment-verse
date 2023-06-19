@@ -14,28 +14,48 @@
 
 from abc import ABC, abstractmethod
 from typing import Any
+from collections.abc import Sequence
+
+from numpy import ndarray
+from cogment.session import ActorInfo
 
 from ..constants import PLAYER_ACTOR_CLASS, TEACHER_ACTOR_CLASS, OBSERVER_ACTOR_CLASS, EVALUATOR_ACTOR_CLASS
+from .action_space import Action
+from .action_space import ActionSpace
+from .environment_specs import EnvironmentSpecs
+from .observation_space import ObservationSpace
 
 
 class PlayerAction:
-    def __init__(self, session_helper, actor_name, tick_data):
-        self.session_helper = session_helper
+    """
+    Wrapper around the action of a player at a given tick providing easy access to the "effective" action.
+
+    If the player action was overriden by a teacher actor, the effective action is the override, otherwise it's the original action
+    """
+
+    def __init__(self, session_wrapper: "SessionWrapper", actor_name: str, tick_data: Any):
+        self.session_wrapper = session_wrapper
         self.actor_name = actor_name
         self.tick_data = tick_data
 
     @property
-    def original(self):
-        return self.session_helper.get_action(self.tick_data, self.actor_name)
+    def original(self) -> Action:
+        """
+        Returns the original action of the player
+        """
+        return self.session_wrapper.get_action(self.tick_data, self.actor_name)
 
     @property
     def override(self):
-        if len(self.session_helper.teacher_actors) == 0:
+        """
+        If the player's action was overriden by a teacher actor, returns it, returns `None` otherwise
+        """
+        if len(self.session_wrapper.teacher_actors) == 0:
             return None
 
-        num_player_actors = len(self.session_helper.player_actors)
-        for teacher_actor_name in self.session_helper.teacher_actors:
-            action = self.session_helper.get_action(self.tick_data, teacher_actor_name)
+        num_player_actors = len(self.session_wrapper.player_actors)
+        for teacher_actor_name in self.session_wrapper.teacher_actors:
+            action = self.session_wrapper.get_action(self.tick_data, teacher_actor_name)
 
             if action.value is None:
                 continue
@@ -48,10 +68,16 @@ class PlayerAction:
 
     @property
     def is_overriden(self):
+        """
+        Check if the action was overriden by a teacher actor
+        """
         return self.override is not None
 
     @property
-    def value(self):
+    def value(self) -> ndarray:
+        """
+        Value of the effective action
+        """
         override = self.override
         if override is not None:
             return override.value
@@ -59,7 +85,10 @@ class PlayerAction:
         return self.original.value
 
     @property
-    def flat_value(self):
+    def flat_value(self) -> ndarray:
+        """
+        Flattened value of the effective action
+        """
         override = self.override
         if override is not None:
             return override.flat_value
@@ -67,8 +96,12 @@ class PlayerAction:
         return self.original.flat_value
 
 
-class SessionHelper(ABC):
-    def __init__(self, actor_infos, environment_specs, render_width=None):
+class SessionWrapper(ABC):
+    """
+    Cogment Verse abstract session helper, shared between the environment session and the sample producer session.
+    """
+
+    def __init__(self, actor_infos: Sequence[ActorInfo], environment_specs: EnvironmentSpecs, render_width=None):
         # Mapping actor_idx to actor_info
         self.actor_infos = actor_infos
         # Mapping actor_name to actor_idx
@@ -78,11 +111,11 @@ class SessionHelper(ABC):
         self.environment_specs = environment_specs
         self.observation_space = environment_specs.get_observation_space(render_width)
 
-    def get_observation_space(self, _actor_name):
+    def get_observation_space(self, _actor_name: str) -> ObservationSpace:
         # TODO take the _actor_name into account
         return self.observation_space
 
-    def _get_actor_idx(self, actor_name: str):
+    def _get_actor_idx(self, actor_name: str) -> int:
         actor_idx = self.actor_idxs.get(actor_name)
 
         if actor_idx is None:
@@ -90,46 +123,75 @@ class SessionHelper(ABC):
 
         return actor_idx
 
-    def get_actor_class_name(self, actor_name: str):
+    def get_actor_class_name(self, actor_name: str) -> str:
         actor_idx = self._get_actor_idx(actor_name)
         return self.actor_infos[actor_idx].actor_class_name
 
-    def _get_action_space_from_actor_idx(self, actor_idx: int):
+    def _get_action_space_from_actor_idx(self, actor_idx: int) -> ActionSpace:
         return self.environment_specs.get_action_space(self.actor_infos[actor_idx].actor_class_name)
 
-    def get_action_space(self, actor_name: str):
+    def get_action_space(self, actor_name: str) -> ActionSpace:
         return self.environment_specs.get_action_space(self.get_actor_class_name(actor_name))
 
-    def _list_actors_by_class(self, actor_class_name):
+    def _list_actors_by_class(self, actor_class_name: str) -> Sequence[str]:
         return [
             actor_info.actor_name for actor_info in self.actor_infos if actor_info.actor_class_name == actor_class_name
         ]
 
     @property
-    def player_actors(self):
+    def player_actors(self) -> Sequence[str]:
+        """
+        List player actors in the current trial
+        """
         return self._list_actors_by_class(PLAYER_ACTOR_CLASS)
 
     @property
-    def teacher_actors(self):
+    def teacher_actors(self) -> Sequence[str]:
+        """
+        List teacher actors in the current trial
+        """
         return self._list_actors_by_class(TEACHER_ACTOR_CLASS)
 
     @property
-    def observer_actors(self):
+    def observer_actors(self) -> Sequence[str]:
+        """
+        List observer actors in the current trial
+        """
         return self._list_actors_by_class(OBSERVER_ACTOR_CLASS)
 
     @property
-    def evaluator_actors(self):
+    def evaluator_actors(self) -> Sequence[str]:
+        """
+        List evaluator actors in the current trial
+        """
         return self._list_actors_by_class(EVALUATOR_ACTOR_CLASS)
 
     @abstractmethod
-    def get_action(self, tick_data: Any, actor_name: str):
+    def get_action(self, tick_data: Any, actor_name: str) -> Action:
+        """
+        Return the cogment verse action of a given actor at a tick.
+
+        If no action, returns None.
+        """
         raise NotImplementedError
 
     @abstractmethod
     def get_observation(self, tick_data: Any, actor_name: str):
+        """
+        Return the cogment verse observation of a given actor at a tick.
+
+        If no observation, returns None.
+        """
         raise NotImplementedError
 
-    def get_player_actions(self, tick_data: Any, actor_name: str = None):
+    def get_player_actions(self, tick_data: Any, actor_name: str = None) -> PlayerAction:
+        """
+        Return the cogment verse player action of a given actor at a tick.
+
+        If only a single player actor is present, no `actor_name` is required.
+
+        If no action, returns None.
+        """
         if actor_name is None:
             actions = [PlayerAction(self, actor_name, tick_data) for actor_name in self.player_actors]
             if len(actions) == 0:

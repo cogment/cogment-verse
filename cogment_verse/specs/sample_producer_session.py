@@ -16,14 +16,16 @@ import asyncio
 import logging
 from typing import Awaitable, Callable
 from multiprocessing import Queue
-from typing import Any
+from typing import Any, AsyncIterator
 
 from cogment.datastore import Datastore, DatastoreSample
 from cogment.model_registry_v2 import ModelRegistry
 from cogment.session import ActorInfo
 
+from .action_space import Action
+from .observation_space import Observation
 from .environment_specs import EnvironmentSpecs
-from .session_helper import SessionHelper
+from .session_wrapper import SessionWrapper
 
 log = logging.getLogger(__name__)
 
@@ -36,7 +38,7 @@ class SampleQueueEvent:
         self.done = done
 
 
-class SampleProducerSession(SessionHelper):
+class SampleProducerSession(SessionWrapper):
     def __init__(
         self,
         datastore: Datastore,
@@ -64,15 +66,11 @@ class SampleProducerSession(SessionHelper):
             environment_specs=environment_specs,
         )
 
-    def produce_sample(self, sample):
-        self.sample_queue.put(
-            SampleQueueEvent(trial_id=self.trial_info.trial_id, trial_idx=self.trial_idx, sample=sample)
-        )
-
-    def all_trial_samples(self) -> DatastoreSample:
-        return self.datastore.all_samples([self.trial_info])
-
     def create_task(self):
+        """
+        For internal use, create an asyncio task for the sample producer
+        """
+
         async def wrapped_impl():
             try:
                 await self.impl(self)
@@ -88,7 +86,27 @@ class SampleProducerSession(SessionHelper):
 
         return asyncio.create_task(wrapped_impl())
 
-    def get_observation(self, tick_data: Any, actor_name: str):
+    def produce_sample(self, sample: Any):
+        """
+        Produce a sample, putting them in the queue for the current trial runner
+        """
+        self.sample_queue.put(
+            SampleQueueEvent(trial_id=self.trial_info.trial_id, trial_idx=self.trial_idx, sample=sample)
+        )
+
+    def all_trial_samples(self) -> AsyncIterator[DatastoreSample]:
+        """
+        Iterator over the samples of the current trial
+        """
+        return self.datastore.all_samples([self.trial_info])
+
+    def get_observation(self, tick_data: Any, actor_name: str) -> Observation:
+        """
+        Return the cogment verse observation of a given actor at a tick.
+
+        If no observation, returns None.
+        """
+
         # For sample producers, tick_datas are samples
         sample = tick_data
 
@@ -96,7 +114,32 @@ class SampleProducerSession(SessionHelper):
 
         return observation_space.deserialize(sample.actors_data[actor_name].observation)
 
-    def get_action(self, tick_data: Any, actor_name: str):
+    def get_player_observation(self, tick_data: Any, actor_name: str = None) -> Observation:
+        """
+        Return the cogment verse observation of a given player actor at a tick.
+
+        If only a single player actor is present, no `actor_name` is required.
+
+        If no action, returns None.
+        """
+        if actor_name is None:
+            observations = [self.get_observation(tick_data, actor_name) for player_actor_name in self.player_actors]
+            if len(observations) == 0:
+                raise RuntimeError("No player actors")
+            if len(observations) > 1:
+                raise RuntimeError("More than 1 player actor, please provide an actor name")
+            return observations[0]
+
+        observations = [
+            self.get_observation(tick_data, actor_name)
+            for player_actor_name in self.player_actors
+            if player_actor_name == actor_name
+        ]
+        if len(observations) == 0:
+            raise RuntimeError(f"No player actors having name [{actor_name}]")
+        return observations[0]
+
+    def get_action(self, tick_data: Any, actor_name: str) -> Action:
         # For sample producers, tick_datas are samples
         sample = tick_data
 
