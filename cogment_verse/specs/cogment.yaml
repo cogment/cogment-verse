@@ -40,7 +40,7 @@ actor_classes:
       space: cogment_verse.Observation
     config_type: cogment_verse.AgentConfig
 
-  - name: mpe_good
+  - name: mpe_agent
     action:
       space: cogment_verse.PlayerAction
     observation:

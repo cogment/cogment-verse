@@ -1,4 +1,3 @@
-# -e ../cogment-py-sdk
 cogment[generate]==2.7.1
 grpcio==1.43.0
 hydra-core==1.3.2
@@ -11,10 +10,8 @@ uvicorn==0.17.6
 boto3==1.26.123
 
 # environments
-Gymnasium[box2d,classic_control,mujoco,atari]==0.28.1
-# PettingZoo[atari,classic,mpe]==1.23.1
-#Gymnasium[box2d,classic_control,mujoco]==0.28.1
-#PettingZoo[atari,mpe]==1.23.1  # Removed classic for now due to dependency issues
+Gymnasium[box2d,classic_control,mujoco,atari] @ git+https://github.com/Farama-Foundation/Gymnasium.git@v0.29
+PettingZoo[atari,classic,mpe]~=1.23.1
 tinyscaler~=1.2.4
 AutoROM~=0.4.2
 SuperSuit~=3.8.0

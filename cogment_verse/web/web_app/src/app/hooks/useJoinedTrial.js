@@ -53,6 +53,7 @@ export const useJoinedTrial = (cogSettings, cogmentOrchestratorWebEndpoint, tria
           className: actorSession.className,
         });
 
+
         setSendAction(() => (action) => {
           // use lock to ensure we send exactly one action per tick
           if (actionLock.current) {

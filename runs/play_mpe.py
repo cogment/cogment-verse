@@ -27,6 +27,7 @@ from cogment_verse.specs import (
     EnvironmentConfig,
     cog_settings,
 )
+from environments.petting_zoo.mpe_environment import AGENT_PREFIX
 
 log = logging.getLogger(__name__)
 
@@ -74,6 +75,18 @@ class PlayRun:
                 f"Expecting at least {self._environment_specs.num_players} configured actors, got {len(self._cfg.players)}. Verify the experiment and environment configuration files. Players registered: [{', '.join([player['name'] for player in self._cfg.players])}]"
             )
 
+        if "agents" in self._cfg:
+            agents_cfg = []
+            agent_count = 0
+            
+            for agent in self._cfg.players["agents"]:
+                num = agent.num if "num" in agent else 1
+                for _ in range(num):
+                    agent_cfg = {"name": f"{AGENT_PREFIX}_{agent_count}"}
+
+        if "adversaries" in self._cfg:
+            adversaries_cfg = self._cfg.players["adversaries"]
+
         players_cfg = self._cfg.players[: self._environment_specs.num_players]
 
         print(f"self._cfg.players: {self._cfg.players}")
@@ -110,7 +123,7 @@ class PlayRun:
                         cogment.ActorParameters(
                             cog_settings,
                             name=WEB_ACTOR_NAME,
-                            class_name=PLAYER_ACTOR_CLASS,
+                            class_name=spec_type,
                             implementation=HUMAN_ACTOR_IMPL,
                             config=extend_actor_config(
                                 actor_config_template=actor_params.get("agent_config", None),

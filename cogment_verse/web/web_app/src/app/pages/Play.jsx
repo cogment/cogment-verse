@@ -53,10 +53,7 @@ const Play = () => {
     );
   }
 
-
-
-
-  const specType = event.observation?.currentPlayer?.specType || DEFAULT_SPEC_TYPE
+  const specType = actorParams?.config?.specType;
 
   console.log("currentPlayer spec_type: " + specType)
   console.log("environmentSpecs: " + actorParams?.config?.environmentSpecs?.actorSpecs)

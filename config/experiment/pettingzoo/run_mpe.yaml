@@ -1,0 +1,31 @@
+# @package _global_
+defaults:
+  - override /services/actor:
+      - random
+  - override /services/environment: pettingzoo/mpe/simple_tag
+  - override /run/experiment_tracker: simple
+
+run:
+  class_name: runs.play_mpe.PlayRun
+  num_trials: 5
+  seed: 12
+  # observer: True
+  players:
+    agents:
+    - implementation: actors.random_actor.RandomActor
+      num: 2
+    - implementation: actors.random_actor.RandomActor
+      num: 1
+    adversaries:
+    - implementation: actors.random_actor.RandomActor
+      num: 2
+    - implementation: actors.random_actor.RandomActor
+      num: 2
+
+services:
+  environment:
+    num_good: 3
+    num_adversaries: 4
+    num_obstacles: 2
+    web_actor_spec: mpe_agent
+

@@ -8,13 +8,13 @@ defaults:
 run:
   # observer: True
   players:
-    - name: good_0
+    - name: agent_0
       implementation: actors.random_actor.RandomActor
-      spec_type: mpe_good
-    - name: good_1
+      spec_type: mpe_agent
+    - name: agent_1
       implementation: actors.random_actor.RandomActor
-      spec_type: mpe_good
-    - name: good_2
+      spec_type: mpe_agent
+    - name: agent_2
       implementation: client
     - name: adversary_0
       implementation: actors.random_actor.RandomActor
@@ -26,6 +26,7 @@ run:
       implementation: actors.random_actor.RandomActor
       spec_type: mpe_adversary
     - name: adversary_3
+      # implementation: client
       implementation: actors.random_actor.RandomActor
       spec_type: mpe_adversary
 
@@ -35,5 +36,5 @@ services:
     num_good: 3
     num_adversaries: 4
     num_obstacles: 2
-    web_actor_spec: mpe_good
+    web_actor_spec: mpe_agent
 
