@@ -1,0 +1,31 @@
+# @package _global_
+defaults:
+  - override /services/actor:
+      - random
+  - override /services/environment: pettingzoo/mpe/simple_tag
+  - override /run/experiment_tracker: simple
+
+run:
+  class_name: runs.play.PlayRun
+  observer: True
+  num_trials: 10
+  seed: 12
+  players:
+    - name: agent_0
+      implementation: actors.random_actor.RandomActor
+      spec_type: mpe_agent
+    - name: agent_1
+      implementation: actors.random_actor.RandomActor
+    - name: adversary_0
+      implementation: actors.random_actor.RandomActor
+      spec_type: mpe_adversary
+    - name: adversary_1
+      implementation: actors.random_actor.RandomActor
+      spec_type: mpe_adversary
+
+services:
+  environment:  # Update the counts after adding/removing actors in run.players.
+    num_good: 2
+    num_adversaries: 2
+    num_obstacles: 1
+

@@ -6,35 +6,26 @@ defaults:
   - override /run/experiment_tracker: simple
 
 run:
-  # observer: True
+  class_name: runs.play.PlayRun
+  num_trials: 10
+  seed: 12
   players:
     - name: agent_0
       implementation: actors.random_actor.RandomActor
       spec_type: mpe_agent
     - name: agent_1
-      implementation: actors.random_actor.RandomActor
-      spec_type: mpe_agent
-    - name: agent_2
-      implementation: client
+      implementation: client  # Human player. spec_type is ommitted because it must remain the default value.
     - name: adversary_0
       implementation: actors.random_actor.RandomActor
       spec_type: mpe_adversary
     - name: adversary_1
       implementation: actors.random_actor.RandomActor
       spec_type: mpe_adversary
-    - name: adversary_2
-      implementation: actors.random_actor.RandomActor
-      spec_type: mpe_adversary
-    - name: adversary_3
-      # implementation: client
-      implementation: actors.random_actor.RandomActor
-      spec_type: mpe_adversary
-
 
 services:
   environment:
-    num_good: 3
-    num_adversaries: 4
-    num_obstacles: 2
+    num_good: 2
+    num_adversaries: 2
+    num_obstacles: 1
     web_actor_spec: mpe_agent
 

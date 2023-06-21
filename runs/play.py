@@ -76,9 +76,6 @@ class PlayRun:
 
         players_cfg = self._cfg.players[: self._environment_specs.num_players]
 
-        print(f"self._cfg.players: {self._cfg.players}")
-        print(f"players_cfg: {players_cfg}")
-
         run_session.log_params(
             **{
                 f"actor_{actor_idx}_implementation": actor_params.implementation
