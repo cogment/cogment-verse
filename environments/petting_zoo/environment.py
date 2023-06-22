@@ -155,9 +155,7 @@ class ClassicEnvironment(Environment):
         session_cfg = environment_session.config
 
         pz_env = self.env_class.env(render_mode="rgb_array")
-
         pz_env.reset(seed=session_cfg.seed)
-
         pz_agent_iterator = iter(pz_env.agent_iter())
 
         def next_player():

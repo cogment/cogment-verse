@@ -19,7 +19,7 @@ import cogment
 import gym
 import numpy as np
 
-from cogment_verse.specs import EnvironmentSpecs
+from cogment_verse.specs import EnvironmentSessionHelper, EnvironmentSpecs
 
 log = logging.getLogger(__name__)
 
@@ -88,7 +88,7 @@ class Environment:
     def get_environment_specs(self):
         return self.env_specs
 
-    async def impl(self, environment_session):
+    async def impl(self, environment_session: EnvironmentSessionHelper):
         # Making sure we have the right assumptions
         assert len(environment_session.player_actors) == 1
         assert len(environment_session.teacher_actors) <= 1

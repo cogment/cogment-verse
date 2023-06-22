@@ -38,7 +38,7 @@ In this step, `_create`, `_save` and `_load` remains unimplemented.
 
 #### First actor implementation, doing random action
 
-In Cogment terminology, an **actor implementation** is a function that takes an actor session from a running trial and performs actions for each event in the actor's event loop for the trial, i.e. a function that performs an action for each observation received from the environment. In this first step the actor implementation does random actions.
+In Cogment terminology, an **actor implementation** is a function that takes an actor session from a running trial and performs actions for each event in the actor's event loop for the trial, i.e. a function that performs an action for each observation received from the environment. In this first step, the actor implementation does random actions.
 
 #### First run implementation, starting trials with a human teacher
 
