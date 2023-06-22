@@ -10,7 +10,7 @@ uvicorn==0.17.6
 boto3==1.26.123
 
 # environments
-Gymnasium[box2d,classic_control,mujoco,atari] @ git+https://github.com/Farama-Foundation/Gymnasium.git@v0.29
+Gymnasium[box2d,classic_control,mujoco,atari] @ git+https://github.com/Farama-Foundation/Gymnasium.git@main
 PettingZoo[atari,classic,mpe]~=1.23.1
 tinyscaler~=1.2.4
 AutoROM~=0.4.2
