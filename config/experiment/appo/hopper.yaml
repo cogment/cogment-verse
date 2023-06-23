@@ -8,12 +8,12 @@ run:
   class_name: actors.appo.APPOTraining
   seed: 1
   num_epochs: 10
-  num_iter: 100000
+  num_iter: 500000
   epoch_num_trials: 4
   num_parallel_trials: 4
   learning_rate: 3.5e-4
   batch_size: 64
-  buffer_size: 16384
+  buffer_size: 24576
   learning_starts: 1
   update_freq: 1
   num_rollout_steps: 2048
