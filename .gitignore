@@ -49,3 +49,6 @@ ngrok.yaml
 # Visualization
 case_study/
 
+# Zip file
+*.tar.gz
+

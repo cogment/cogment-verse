@@ -126,7 +126,7 @@ class NormalizationParams:
 
 class Normalization:
     """Normalize the states and rewards on the fly
-    Calulates the running mean and std of a data stream
+    Calculate the running mean and std of a data stream
     https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#Parallel_algorithm
     Source: https://github.com/DLR-RM/stable-baselines3
     """
