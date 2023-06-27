@@ -40,6 +40,7 @@ torch.multiprocessing.set_sharing_strategy("file_system")
 
 log = logging.getLogger(__name__)
 
+
 # pylint: disable=E1102
 # pylint: disable=W0212
 class PolicyNetwork(torch.nn.Module):
@@ -143,7 +144,6 @@ class Normalization:
         batch_var: torch.Tensor,
         batch_count: int,
     ) -> Tuple[torch.Tensor, int]:
-
         """Update the statistical mean and variance"""
         delta = batch_mean - mean
         tot_count = count + batch_count
@@ -199,7 +199,6 @@ class PPOModel(Model):
         iteration: int = 0,
         state_norm: bool = False,
     ) -> None:
-
         super().__init__(model_id, iteration)
         self._environment_implementation = environment_implementation
         self._num_input = num_input
@@ -509,7 +508,7 @@ class PPOTraining:
         dones = []
         episode_rewards = []
         for iter_idx in range(self._cfg.num_iter):
-            for (_, _, _, sample) in run_session.start_and_await_trials(
+            for _, _, _, sample in run_session.start_and_await_trials(
                 trials_id_and_params=[
                     (f"{run_session.run_id}_{iter_idx}_{trial_idx}", create_trial_params(trial_idx, iter_idx))
                     for trial_idx in range(self._cfg.epoch_num_trials)
