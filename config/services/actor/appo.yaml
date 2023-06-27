@@ -1,0 +1,3 @@
+appo:
+  class_name: actors.appo.APPOActor
+  port: ${generate_port:actors.appo.APPOActor}
