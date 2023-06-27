@@ -18,7 +18,6 @@ import { useDocumentKeypressListener, useRealTimeUpdate } from "../hooks";
 import { TEACHER_NOOP_ACTION } from "../utils/spaceSerialization";
 import { Button, FpsCounter, KeyboardControlList, SimplePlay } from "../components";
 
-
 const TURN_DURATION_SECS = 1;
 
 export const TurnBasedObserverControls = ({ sendAction, observation, actorParams, ...props }) => {
