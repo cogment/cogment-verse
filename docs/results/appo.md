@@ -60,7 +60,7 @@ run:
   state_norm: True
 ```
 
-Note here that due to potential variations caused by the Mujoco environment's random seed, exact result reproducibility may not be possible. However, using the above-specified parameters and algorithms can help achieve similar performance in subsequent runs.Figure 2 shows the average rewards of the APPO on `Hopper-v4` environement. These results were obtained using the above-specified hyperparameters.
+Note here that due to potential variations caused by the Mujoco environment's random seed, exact result reproducibility may not be possible. However, using the above-specified parameters and algorithms can help achieve similar performance in subsequent runs. Figure 2 shows the average rewards of the APPO on `Hopper-v4` environement. These results were obtained using the above-specified hyperparameters.
 
 <p align="center">
   <img src="./hopper_appo.png" alt="Figure" width="600" height="300">
