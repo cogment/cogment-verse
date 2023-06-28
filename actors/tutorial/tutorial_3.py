@@ -117,7 +117,6 @@ class SimpleBCModel(Model):
 
 class SimpleBCActor:
     def __init__(self, _cfg):
-        super().__init__()
         ############ TUTORIAL STEP 3 #############
         self._dtype = torch.float
         ##########################################

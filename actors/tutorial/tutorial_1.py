@@ -32,8 +32,8 @@ log = logging.getLogger(__name__)
 
 class SimpleBCActor:
     def __init__(self, _cfg):
-        super().__init__()
-
+        pass
+    
     def get_actor_classes(self):
         return [PLAYER_ACTOR_CLASS]
 

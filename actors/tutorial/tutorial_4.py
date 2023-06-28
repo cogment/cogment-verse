@@ -115,7 +115,6 @@ class SimpleBCModel(Model):
 
 class SimpleBCActor:
     def __init__(self, _cfg):
-        super().__init__()
         self._dtype = torch.float
 
     def get_actor_classes(self):
@@ -180,7 +179,7 @@ class SimpleBCTraining:
             observation_tensor = torch.tensor(player_observation.flat_value, dtype=self._dtype)
             action_tensor = torch.tensor(player_action.flat_value, dtype=self._dtype)
             sample_producer_session.produce_sample((player_action.is_overriden, observation_tensor, action_tensor))
-            
+
     async def impl(self, run_session):
         assert self._environment_specs.num_players == 1
 

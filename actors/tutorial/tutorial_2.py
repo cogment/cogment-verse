@@ -40,14 +40,14 @@ log = logging.getLogger(__name__)
 
 class SimpleBCActor:
     def __init__(self, _cfg):
-        super().__init__()
+        pass
 
     def get_actor_classes(self):
         return [PLAYER_ACTOR_CLASS]
 
     async def impl(self, actor_session):
         actor_session.start()
-        
+
         async for event in actor_session.all_events():
             observation = actor_session.get_observation(event)
             if observation and event.type == cogment.EventType.ACTIVE:
