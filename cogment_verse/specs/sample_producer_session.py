@@ -120,3 +120,9 @@ class SampleProducerSession(SessionHelper):
 
         action_space = self.get_action_space(actor_name)
         return action_space.deserialize(sample.actors_data[actor_name].action)
+
+    def get_reward(self, tick_data: Any, actor_name: str):
+        # For sample producers, tick_datas are samples
+        sample = tick_data
+
+        return sample.actors_data[actor_name].reward

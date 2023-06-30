@@ -21,7 +21,7 @@ from .cogment_verse_process import CogmentVerseProcess
 
 log = logging.getLogger(__name__)
 
-TERMINATION_TIMEOUT_SECONDS = 10
+TERMINATION_TIMEOUT_SECONDS = 2
 
 
 def main(name, args, cwd, env, on_ready, on_log, on_awaiting_ready):

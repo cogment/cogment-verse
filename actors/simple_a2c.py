@@ -134,31 +134,32 @@ class SimpleA2CActor:
     async def impl(self, actor_session):
         actor_session.start()
 
-        config = actor_session.config
-
-        environment_specs = EnvironmentSpecs.deserialize(config.environment_specs)
-        observation_space = environment_specs.get_observation_space()
-        action_space = environment_specs.get_action_space(seed=config.seed)
-
         # Get model
         model = await SimpleA2CModel.retrieve_model(
-            actor_session.model_registry, config.model_id, config.model_iteration
+            actor_session.model_registry,
+            actor_session.config.model_id,
+            actor_session.config.model_iteration
         )
         model.eval()
 
         async for event in actor_session.all_events():
-            if event.observation and event.type == cogment.EventType.ACTIVE:
-                observation = observation_space.deserialize(event.observation.observation)
+            observation = actor_session.get_observation(event)
+            if observation and event.type == cogment.EventType.ACTIVE:
+                if observation.current_player is not None and observation.current_player != actor_session.name:
+                    # Not the turn of the agent
+                    action = actor_session.get_action_space().create()
+                    actor_session.do_action(actor_session.get_action_space().serialize(action))
+                    continue
 
-                if isinstance(action_space.gym_space, Discrete):
+                if isinstance(actor_session.get_action_space().gym_space, Discrete):
                     observation_tensor = torch.tensor(observation.flat_value, dtype=self._dtype)
                     probs = torch.softmax(model.actor_network(observation_tensor), dim=-1)
                     discrete_action_tensor = torch.distributions.Categorical(probs).sample()
-                    action = action_space.create(value=discrete_action_tensor.numpy())
+                    action = actor_session.get_action_space().create(value=discrete_action_tensor.numpy())
                 else:
-                    action = action_space.sample()
+                    action = actor_session.get_action_space().sample()
 
-                actor_session.do_action(action_space.serialize(action))
+                actor_session.do_action(actor_session.get_action_space().serialize(action))
 
 
 class SimpleA2CTraining:
