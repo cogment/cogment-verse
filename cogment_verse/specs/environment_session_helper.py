@@ -58,9 +58,9 @@ class EnvironmentSessionHelper(SessionHelper):
             event.actions[actor_idx].action,
         )
 
-    def get_player_action(self, tick_data: Any, actor_name=None):
+    def get_player_actions(self, tick_data: Any, actor_name=None):
         event = tick_data
         if not event.actions:
             return None
 
-        return super().get_player_action(tick_data, actor_name)
+        return super().get_player_actions(tick_data, actor_name)

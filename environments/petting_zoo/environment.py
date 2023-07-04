@@ -191,7 +191,7 @@ class ClassicEnvironment(Environment):
         environment_session.start([("*", observation_space.serialize(observation))])
 
         async for event in environment_session.all_events():
-            current_player_action = environment_session.get_player_action(event, current_player_actor_name)
+            current_player_action = environment_session.get_player_actions(event, current_player_actor_name)
 
             if current_player_action:
                 pz_env.step(current_player_action.value)

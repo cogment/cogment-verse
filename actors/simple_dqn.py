@@ -217,7 +217,7 @@ class SimpleDQNTraining:
     async def sample_producer_impl(self, sample_producer_session):
 
         assert len(sample_producer_session.player_actors) == 1
-        player_actor_name = sample_producer_session.player_actors[0].name
+        player_actor_name = sample_producer_session.player_actors[0]
 
         observation_tensor = None
         action_tensor = None
@@ -250,7 +250,7 @@ class SimpleDQNTraining:
 
             observation_tensor = next_observation_tensor
             action_tensor = torch.tensor(
-                sample_producer_session.get_player_action(sample).value,
+                sample_producer_session.get_player_actions(sample).value,
                 dtype=torch.int64
             )
             reward = sample_producer_session.get_reward(sample, player_actor_name)
@@ -501,7 +501,7 @@ class SimpleDQNSelfPlayTraining:
 
             current_player_partial_sample["observation"] = next_observation
             current_player_partial_sample["action"] = torch.tensor(
-                sample_producer_session.get_player_action(sample, current_player_name).value,
+                sample_producer_session.get_player_actions(sample, current_player_name).value,
                 dtype=torch.int64,
             )
 

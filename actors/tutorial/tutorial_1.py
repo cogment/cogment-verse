@@ -65,7 +65,7 @@ class SimpleBCTraining:
 
         async for sample in sample_producer_session.all_trial_samples():
 
-            player_action = sample_producer_session.get_player_action(sample)
+            player_action = sample_producer_session.get_player_actions(sample)
 
             if player_action.flat_value is not None:
                 log.info(f"Got raw sample with action override from [{sample_producer_session.player_actors[0].name}]")

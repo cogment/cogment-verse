@@ -79,7 +79,7 @@ class SimpleBCTraining:
             player_observation = sample_producer_session.get_player_observations(sample)
             #########################################
 
-            player_action = sample_producer_session.get_player_action(sample)
+            player_action = sample_producer_session.get_player_actions(sample)
 
             if player_action.flat_value is None:
                 # TODO figure out why we get into this situation

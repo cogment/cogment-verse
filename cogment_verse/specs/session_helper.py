@@ -122,9 +122,13 @@ class SessionHelper(ABC):
 
     @abstractmethod
     def get_action(self, tick_data: Any, actor_name: str):
-        pass
+        raise NotImplementedError
 
-    def get_player_action(self, tick_data: Any, actor_name: str = None):
+    @abstractmethod
+    def get_observation(self, tick_data: Any, actor_name: str):
+        raise NotImplementedError
+
+    def get_player_actions(self, tick_data: Any, actor_name: str = None):
         if actor_name is None:
             actions = [PlayerAction(self, actor_name, tick_data) for actor_name in self.player_actors]
             if len(actions) == 0:
@@ -141,3 +145,21 @@ class SessionHelper(ABC):
         if len(actions) == 0:
             raise RuntimeError(f"No player actors having name [{actor_name}]")
         return actions[0]
+
+    def get_player_observations(self, tick_data: Any, actor_name: str = None):
+        if actor_name is None:
+            observations = [self.get_observation(tick_data, actor_name) for player_actor_name in self.player_actors]
+            if len(observations) == 0:
+                raise RuntimeError("No player actors")
+            if len(observations) > 1:
+                raise RuntimeError("More than 1 player actor, please provide an actor name")
+            return observations[0]
+
+        observations = [
+            self.get_observation(tick_data, actor_name)
+            for player_actor_name in self.player_actors
+            if player_actor_name == actor_name
+        ]
+        if len(observations) == 0:
+            raise RuntimeError(f"No player actors having name [{actor_name}]")
+        return observations[0]

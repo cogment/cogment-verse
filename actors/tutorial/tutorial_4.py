@@ -170,7 +170,7 @@ class SimpleBCTraining:
 
         async for sample in sample_producer_session.all_trial_samples():
             player_observation = sample_producer_session.get_player_observations(sample)
-            player_action = sample_producer_session.get_player_action(sample)
+            player_action = sample_producer_session.get_player_actions(sample)
 
             if player_action.flat_value is None:
                 # TODO figure out why we get into this situation
@@ -179,7 +179,7 @@ class SimpleBCTraining:
             observation_tensor = torch.tensor(player_observation.flat_value, dtype=self._dtype)
             action_tensor = torch.tensor(player_action.flat_value, dtype=self._dtype)
             sample_producer_session.produce_sample((player_action.is_overriden, observation_tensor, action_tensor))
- 
+
     async def impl(self, run_session):
         assert self._environment_specs.num_players == 1
 

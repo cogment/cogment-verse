@@ -184,38 +184,34 @@ class SimpleA2CTraining:
         self._cfg = cfg
 
     async def trial_sample_sequences_producer_impl(self, sample_producer_session):
-        observation = []
-        action = []
-        reward = []
-        done = []
+        player_actor_name = sample_producer_session.player_actors[0]
 
-        player_actor_params = sample_producer_session.trial_info.parameters.actors[0]
-
-        player_actor_name = player_actor_params.name
-        player_environment_specs = EnvironmentSpecs.deserialize(player_actor_params.config.environment_specs)
-        player_observation_space = player_environment_specs.get_observation_space()
-        player_action_space = player_environment_specs.get_action_space()
-
+        observations = []
+        actions = []
+        rewards = []
+        dones = []
+        
         async for sample in sample_producer_session.all_trial_samples():
             if sample.trial_state == cogment.TrialState.ENDED:
                 # This sample includes the last observation and no action
                 # The last sample was the last useful one
-                done[-1] = torch.ones(1, dtype=self._dtype)
+                dones[-1] = torch.ones(1, dtype=self._dtype)
                 break
 
-            actor_sample = sample.actors_data[player_actor_name]
-            observation.append(
-                torch.tensor(player_observation_space.deserialize(actor_sample.observation).value, dtype=self._dtype)
-            )
+            observation = sample_producer_session.get_player_observations(sample, player_actor_name)
 
-            action.append(torch.tensor(player_action_space.deserialize(actor_sample.action).value, dtype=self._dtype))
-            reward.append(
-                torch.tensor(actor_sample.reward if actor_sample.reward is not None else 0, dtype=self._dtype)
-            )
-            done.append(torch.zeros(1, dtype=self._dtype))
+            if observation.flat_value is None:
+                # This can happen when there is several "end-of-trial" samples
+                continue
+
+            observations.append(torch.tensor(observation.value, dtype=self._dtype))
+            actions.append(torch.tensor(sample_producer_session.get_player_actions(sample).value, dtype=self._dtype))
+            reward = sample_producer_session.get_reward(sample, player_actor_name)
+            rewards.append(torch.tensor(reward if reward is not None else 0, dtype=self._dtype))
+            dones.append(torch.zeros(1, dtype=self._dtype))
 
         # Keeping the samples grouped by trial by emitting only one grouped sample at the end of the trial
-        sample_producer_session.produce_sample((observation, action, reward, done))
+        sample_producer_session.produce_sample((observations, actions, rewards, dones))
 
     async def impl(self, run_session):
         # Initializing a model

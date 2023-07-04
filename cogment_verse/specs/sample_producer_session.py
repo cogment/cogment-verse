@@ -96,24 +96,6 @@ class SampleProducerSession(SessionHelper):
 
         return observation_space.deserialize(sample.actors_data[actor_name].observation)
 
-    def get_player_observations(self, tick_data: Any, actor_name: str = None):
-        if actor_name is None:
-            observations = [self.get_observation(tick_data, actor_name) for player_actor_name in self.player_actors]
-            if len(observations) == 0:
-                raise RuntimeError("No player actors")
-            if len(observations) > 1:
-                raise RuntimeError("More than 1 player actor, please provide an actor name")
-            return observations[0]
-
-        observations = [
-            self.get_observation(tick_data, actor_name)
-            for player_actor_name in self.player_actors
-            if player_actor_name == actor_name
-        ]
-        if len(observations) == 0:
-            raise RuntimeError(f"No player actors having name [{actor_name}]")
-        return observations[0]
-
     def get_action(self, tick_data: Any, actor_name: str):
         # For sample producers, tick_datas are samples
         sample = tick_data
