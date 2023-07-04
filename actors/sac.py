@@ -454,7 +454,12 @@ class SACTraining:
         assert isinstance(self._environment_specs.get_action_space().gym_space, Box)
 
         self.model.model_id = model_id
-        _, version_info = await run_session.model_registry.publish_initial_version(self.model)
+
+        serialized_model = SACModel.serialize_model(self.model)
+        iteration_info = await run_session.model_registry.publish_model(
+            name=model_id,
+            model=serialized_model,
+        )
 
         run_session.log_params(
             self._cfg, model_id=model_id, environment_implementation=self._environment_specs.implementation
@@ -474,7 +479,7 @@ class SACTraining:
                     run_id=run_session.run_id,
                     environment_specs=self._environment_specs.serialize(),
                     model_id=model_id,
-                    model_iteration=version_info["iteration"],
+                    model_iteration=iteration_info.iteration,
                     seed=self._cfg.seed + trial_idx,
                 ),
             )
@@ -530,19 +535,27 @@ class SACTraining:
                 )
 
                 # Publish model
-                version_info = await run_session.model_registry.publish_version(self.model)
+                serialized_model = SACModel.serialize_model(self.model)
+                iteration_info = await run_session.model_registry.publish_model(
+                    name=model_id,
+                    model=serialized_model,
+                )
                 if step_idx % self._cfg.logging_interval == 0:
                     end_time = time.time()
                     steps_per_seconds = 100 / (end_time - start_time)
                     start_time = end_time
                     run_session.log_metrics(
-                        model_iteration=version_info["iteration"],
+                        model_iteration=iteration_info.iteration,
                         value_loss=value_loss,
                         log_alpha=log_alpha,
                         policy_loss=policy_loss,
                         steps_per_seconds=steps_per_seconds,
                     )
-        version_info = await run_session.model_registry.publish_version(self.model, archived=True)
+        serialized_model = SACModel.serialize_model(self.model)
+        iteration_info = await run_session.model_registry.store_model(
+            name=model_id,
+            model=serialized_model,
+        )
 
     async def train_step(self, data: TorchReplayBufferSample, num_steps: int, trial_idx: int) -> Tuple[float, float]:
         """Train the model after collecting the data from the trial"""
