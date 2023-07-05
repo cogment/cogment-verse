@@ -472,7 +472,7 @@ class SimpleDQNSelfPlayTraining:
                 # This can happen when there is several "end-of-trial" samples
                 continue
 
-            current_player_name = observation.current_player  # name
+            current_player_name = observation.current_player
             current_player_partial_sample = players_partial_sample[current_player_name]
 
             next_observation = torch.tensor(

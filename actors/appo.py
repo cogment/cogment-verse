@@ -512,24 +512,14 @@ class APPOTraining:
             # Trail status
             trial_done = sample.trial_state == cogment.TrialState.ENDED
 
-            # Load model
-            if self.should_load_model(sample.tick_id, self._cfg.num_rollout_steps, trial_done):
-                model = await APPOModel.retrieve_model(sample_producer_session.model_registry, self.model_id, -1)
-                model.eval()
-
             # Collect data from environment
             observation_tensor = torch.tensor(
                 sample_producer_session.get_player_observations(sample, player_actor_name).value,
                 dtype=self._dtype,
             )
-
-            done = torch.ones(1, dtype=torch.float32) if trial_done else torch.zeros(1, dtype=torch.float32)
             reward = sample_producer_session.get_reward(sample, player_actor_name)
-            reward_tensor = (
-                torch.tensor(sample_producer_session.get_reward(sample, player_actor_name), dtype=self._dtype)
-                if reward is not None
-                else torch.tensor(0, dtype=self._dtype)
-            )
+            reward_tensor = torch.tensor(reward if reward is not None else 0, dtype=self._dtype)
+            done = torch.ones(1, dtype=torch.float32) if trial_done else torch.zeros(1, dtype=torch.float32)
 
             if not trial_done:
                 action_tensor = torch.tensor(
@@ -537,6 +527,12 @@ class APPOTraining:
                     dtype=self._dtype,
                 )
                 current_players.append(player_actor_name)
+
+            # Load model
+            if self.should_load_model(sample.tick_id, self._cfg.num_rollout_steps, trial_done):
+                model = await APPOModel.retrieve_model(sample_producer_session.model_registry, self.model_id, -1)
+                model.eval()
+
 
             # Compute values and log probs
             if step % self._cfg.num_rollout_steps < self._cfg.num_rollout_steps and not trial_done:
