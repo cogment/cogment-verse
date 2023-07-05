@@ -76,7 +76,7 @@ def get_experiment_configs():
     for root, _, files in os.walk(os.path.join(DEFAULT_CONFIG_DIR, "experiment")):
         for file in files:
             # Add the file name to the list
-            base_name, extension = os.path.splitext(file)
+            base_name, _extension = os.path.splitext(file)
             configs.append(
                 os.path.relpath(os.path.join(root, base_name), os.path.join(DEFAULT_CONFIG_DIR, "experiment"))
             )
