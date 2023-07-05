@@ -59,17 +59,8 @@ class Environment:
         return self.env_specs
 
     async def impl(self, environment_session):
-        actors = environment_session.get_active_actors()
-        player_actors = [
-            (actor_idx, actor.actor_name)
-            for (actor_idx, actor) in enumerate(actors)
-            if actor.actor_class_name == PLAYER_ACTOR_CLASS
-        ]
-        non_player_actors = [
-            (actor_idx, actor.actor_name)
-            for (actor_idx, actor) in enumerate(actors)
-            if actor.actor_class_name != PLAYER_ACTOR_CLASS
-        ]
+
+        non_player_actors = [actor for actor in environment_session.actors if actor not in environment_session.player_actors]
 
         session_cfg = environment_session.config
 
@@ -78,11 +69,9 @@ class Environment:
         gym_env = Overcooked(base_env=env, featurize_fn=env.featurize_state_mdp, baselines_reproducible=True)
         gym_observation = gym_env.reset()["both_agent_obs"]
 
-        observation_space = self.env_specs.get_observation_space(session_cfg.render_width)
-        action_space = self.env_specs.get_action_space()
-
         observations = []
-        for player_actor_idx, player_actor_name in player_actors:
+        for player_actor_idx, player_actor_name in enumerate(environment_session.player_actors):
+            observation_space = environment_session.get_observation_space(player_actor_name)
             observation = observation_space.create(
                 value=gym_observation[player_actor_idx],
                 rendered_frame=gym_env.render() if session_cfg.render else None,
@@ -90,7 +79,8 @@ class Environment:
             )
             observations.append((player_actor_name, observation_space.serialize(observation)))
 
-        for _, player_actor_name in non_player_actors:
+        for player_actor_name in non_player_actors:
+            observation_space = environment_session.get_observation_space(player_actor_name)
             observation = observation_space.create(
                 value=gym_observation[0],  # Dummy observation for non-player actors
                 rendered_frame=gym_env.render() if session_cfg.render else None,
@@ -100,13 +90,15 @@ class Environment:
 
         environment_session.start(observations)
         async for event in environment_session.all_events():
-            if event.actions:
 
-                joint_action = []
-                for player_actor_idx, player_actor_name in player_actors:
-                    player_action = action_space.deserialize(
-                        event.actions[player_actor_idx].action,
-                    )
+            if not event.actions:
+                continue
+
+            joint_action = []
+            for player_actor_name in environment_session.player_actors:
+                player_action = environment_session.get_player_actions(event, player_actor_name)
+
+                if player_action:
                     action_value = player_action.value
 
                     # Clipped action and send to gym environment
@@ -115,10 +107,12 @@ class Environment:
 
                     joint_action.append(action_value)
 
+            if len(joint_action) == len(environment_session.player_actors):
                 gym_observation, reward, done, _info = gym_env.step((joint_action))
 
                 observations = []
-                for player_actor_idx, player_actor_name in player_actors:
+                for player_actor_idx, player_actor_name in enumerate(environment_session.player_actors):
+                    observation_space = environment_session.get_observation_space(player_actor_name)
                     observation = observation_space.create(
                         value=gym_observation["both_agent_obs"][player_actor_idx],
                         rendered_frame=gym_env.render() if session_cfg.render else None,
@@ -127,6 +121,7 @@ class Environment:
                     observations.append((player_actor_name, observation_space.serialize(observation)))
 
                 for _, player_actor_name in non_player_actors:
+                    observation_space = environment_session.get_observation_space(player_actor_name)
                     observation = observation_space.create(
                         value=gym_observation["both_agent_obs"][0],  # Dummy observation for non-player actors
                         rendered_frame=gym_env.render() if session_cfg.render else None,

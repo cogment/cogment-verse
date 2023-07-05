@@ -73,6 +73,7 @@ class SessionHelper(ABC):
         self.actor_infos = actor_infos
         # Mapping actor_name to actor_idx
         self.actor_idxs = {actor_info.actor_name: actor_idx for (actor_idx, actor_info) in enumerate(self.actor_infos)}
+        self.actors = [actor_info.actor_name for actor_info in self.actor_infos]
 
         self.environment_specs = environment_specs
         self.observation_space = environment_specs.get_observation_space(render_width)

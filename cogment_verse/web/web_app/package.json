@@ -15,7 +15,7 @@
   },
   "devDependencies": {
     "esbuild-css-modules-plugin": "2.7.1",
-    "esbuild": "0.17.17",
+    "esbuild": "0.18.0",
     "minimist": "1.2.0",
     "prettier": "^2.4.1",
     "shx": "^0.3.4",
