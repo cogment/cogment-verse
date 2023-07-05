@@ -21,7 +21,6 @@ import numpy as np
 from overcooked_ai_py.mdp.overcooked_env import DEFAULT_ENV_PARAMS, Overcooked, OvercookedEnv
 from overcooked_ai_py.mdp.overcooked_mdp import OvercookedGridworld
 
-from cogment_verse.constants import PLAYER_ACTOR_CLASS
 from cogment_verse.specs import EnvironmentSpecs
 
 # configure pygame to use a dummy video server to be able to render headlessly
@@ -60,7 +59,9 @@ class Environment:
 
     async def impl(self, environment_session):
 
-        non_player_actors = [actor for actor in environment_session.actors if actor not in environment_session.player_actors]
+        non_player_actors = [
+            actor for actor in environment_session.actors if actor not in environment_session.player_actors
+        ]
 
         session_cfg = environment_session.config
 

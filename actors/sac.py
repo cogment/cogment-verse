@@ -288,9 +288,7 @@ class SACActor:
 
         # Get model
         model = await SACModel.retrieve_model(
-            actor_session.model_registry,
-            actor_session.config.model_id,
-            actor_session.config.model_iteration
+            actor_session.model_registry, actor_session.config.model_id, actor_session.config.model_iteration
         )
         model.eval()
 
@@ -438,10 +436,7 @@ class SACTraining:
                     break
 
             observation_tensor = next_observation_tensor
-            action_tensor = torch.tensor(
-                sample_producer_session.get_player_actions(sample).value,
-                dtype=torch.int64
-            )
+            action_tensor = torch.tensor(sample_producer_session.get_player_actions(sample).value, dtype=torch.int64)
             reward = sample_producer_session.get_reward(sample, player_actor_name)
             reward_tensor = torch.tensor(reward if reward is not None else 0, dtype=self._dtype)
             total_reward += reward_tensor.item()

@@ -29,7 +29,7 @@ from gym.spaces import Box, utils
 from torch import nn
 
 from cogment_verse import Model, TorchReplayBuffer
-from cogment_verse.specs import PLAYER_ACTOR_CLASS, AgentConfig, EnvironmentConfig, EnvironmentSpecs, cog_settings
+from cogment_verse.specs import PLAYER_ACTOR_CLASS, AgentConfig, EnvironmentConfig, cog_settings
 
 torch.multiprocessing.set_sharing_strategy("file_system")
 
@@ -203,9 +203,8 @@ class TD3Actor:
 
         # Get model
         model = await TD3Model.retrieve_model(
-            actor_session.model_registry,
-            actor_session.config.model_id,
-            actor_session.config.model_iteration)
+            actor_session.model_registry, actor_session.config.model_id, actor_session.config.model_iteration
+        )
 
         model.eval()
 
@@ -287,10 +286,7 @@ class TD3Training:
                     break
 
             observation_tensor = next_observation_tensor
-            action_tensor = torch.tensor(
-                sample_producer_session.get_player_actions(sample).value,
-                dtype=torch.int64
-            )
+            action_tensor = torch.tensor(sample_producer_session.get_player_actions(sample).value, dtype=torch.int64)
             reward = sample_producer_session.get_reward(sample, player_actor_name)
             reward_tensor = torch.tensor(reward if reward is not None else 0, dtype=self._dtype)
             total_reward += reward_tensor.item()

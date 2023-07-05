@@ -30,7 +30,7 @@ from gym.spaces import Discrete, utils
 
 from cogment_verse import Model, TorchReplayBuffer  # pylint: disable=abstract-class-instantiated
 from cogment_verse.constants import HUMAN_ACTOR_IMPL, PLAYER_ACTOR_CLASS, WEB_ACTOR_NAME
-from cogment_verse.specs import AgentConfig, EnvironmentConfig, EnvironmentSpecs, cog_settings
+from cogment_verse.specs import AgentConfig, EnvironmentConfig, cog_settings
 
 torch.multiprocessing.set_sharing_strategy("file_system")
 
@@ -142,9 +142,7 @@ class SimpleDQNActor:
 
         # Get model
         model = await SimpleDQNModel.retrieve_model(
-            actor_session.model_registry,
-            actor_session.config.model_id,
-            actor_session.config.model_iteration
+            actor_session.model_registry, actor_session.config.model_id, actor_session.config.model_iteration
         )
         model.network.eval()
 
@@ -166,7 +164,7 @@ class SimpleDQNActor:
                     model = await SimpleDQNModel.retrieve_model(
                         actor_session.model_registry,
                         actor_session.config.model_id,
-                        actor_session.config.model_iteration
+                        actor_session.config.model_iteration,
                     )
                     model.network.eval()
 
@@ -249,10 +247,7 @@ class SimpleDQNTraining:
                     break
 
             observation_tensor = next_observation_tensor
-            action_tensor = torch.tensor(
-                sample_producer_session.get_player_actions(sample).value,
-                dtype=torch.int64
-            )
+            action_tensor = torch.tensor(sample_producer_session.get_player_actions(sample).value, dtype=torch.int64)
             reward = sample_producer_session.get_reward(sample, player_actor_name)
             reward_tensor = torch.tensor(reward if reward is not None else 0, dtype=self._dtype)
             total_reward += reward_tensor.item()
@@ -509,8 +504,7 @@ class SimpleDQNSelfPlayTraining:
                 player_partial_sample = players_partial_sample[player_actor]
                 player_reward = sample_producer_session.get_reward(sample, player_actor)
                 player_partial_sample["reward"] = torch.tensor(
-                    player_reward if player_reward is not None else 0,
-                    dtype=self._dtype
+                    player_reward if player_reward is not None else 0, dtype=self._dtype
                 )
                 player_partial_sample["total_reward"] += player_partial_sample["reward"].item()
 

@@ -23,7 +23,7 @@ from gym.spaces import Discrete, utils
 
 from cogment_verse import Model
 from cogment_verse.constants import PLAYER_ACTOR_CLASS
-from cogment_verse.specs import AgentConfig, EnvironmentConfig, EnvironmentSpecs, cog_settings
+from cogment_verse.specs import AgentConfig, EnvironmentConfig, cog_settings
 
 torch.multiprocessing.set_sharing_strategy("file_system")
 
@@ -136,9 +136,7 @@ class SimpleA2CActor:
 
         # Get model
         model = await SimpleA2CModel.retrieve_model(
-            actor_session.model_registry,
-            actor_session.config.model_id,
-            actor_session.config.model_iteration
+            actor_session.model_registry, actor_session.config.model_id, actor_session.config.model_iteration
         )
         model.eval()
 
@@ -190,7 +188,7 @@ class SimpleA2CTraining:
         actions = []
         rewards = []
         dones = []
-        
+
         async for sample in sample_producer_session.all_trial_samples():
             if sample.trial_state == cogment.TrialState.ENDED:
                 # This sample includes the last observation and no action

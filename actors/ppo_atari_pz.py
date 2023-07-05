@@ -212,7 +212,9 @@ class PPOActor:
         # Start a session
         actor_session.start()
 
-        assert isinstance(actor_session.get_action_space().gym_space, Discrete)  # TODO: test with other action space types
+        assert isinstance(
+            actor_session.get_action_space().gym_space, Discrete
+        )  # TODO: test with other action space types
 
         # Setup random seed
         torch.manual_seed(actor_session.config.seed)
@@ -242,7 +244,9 @@ class PPOActor:
                     actor_session.config.model_update_frequency != 0
                     and (event.observation.tick_id + 1) % actor_session.config.model_update_frequency == 0
                 ):
-                    model = await PPOModel.retrieve_model(actor_session.model_registry, actor_session.config.model_id, -1)
+                    model = await PPOModel.retrieve_model(
+                        actor_session.model_registry, actor_session.config.model_id, -1
+                    )
                     model.network.eval()
 
                 observation_tensor = torch.tensor(observation.flat_value, dtype=self._dtype).reshape(obs_shape).clone()
@@ -350,10 +354,14 @@ class BasePPOTraining(ABC):
             current_player_actor = observation.current_player
 
             # Collect data from environment
-            observation_tensor = torch.tensor(
-                sample_producer_session.get_player_observations(sample, current_player_actor).flat_value,
-                dtype=self._dtype,
-            ).reshape(obs_shape).clone()
+            observation_tensor = (
+                torch.tensor(
+                    sample_producer_session.get_player_observations(sample, current_player_actor).flat_value,
+                    dtype=self._dtype,
+                )
+                .reshape(obs_shape)
+                .clone()
+            )
             observation_value = torch.unsqueeze(torch.permute(observation_tensor, (2, 0, 1)), dim=0)
             reward = sample_producer_session.get_reward(sample, current_player_actor)
             reward_tensor = torch.tensor(reward if reward is not None else 0, dtype=self._dtype)
@@ -982,10 +990,14 @@ class HumanFeedbackPPOTraining(BasePPOTraining):
 
             # Collect data
             if current_player_actor != WEB_ACTOR_NAME:
-                observation_tensor = torch.tensor(
-                    sample_producer_session.get_player_observations(sample, current_player_actor).flat_value,
-                    dtype=self._dtype,
-                ).reshape(obs_shape).clone()
+                observation_tensor = (
+                    torch.tensor(
+                        sample_producer_session.get_player_observations(sample, current_player_actor).flat_value,
+                        dtype=self._dtype,
+                    )
+                    .reshape(obs_shape)
+                    .clone()
+                )
                 observation_value = torch.unsqueeze(torch.permute(observation_tensor, (2, 0, 1)), dim=0)
                 reward = sample_producer_session.get_reward(sample, current_player_actor)
                 reward_tensor = torch.tensor(reward if reward is not None else 0, dtype=self._dtype)

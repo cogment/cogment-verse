@@ -14,7 +14,7 @@
 
 import cogment
 
-from cogment_verse.specs import PLAYER_ACTOR_CLASS, EnvironmentSpecs
+from cogment_verse.specs import PLAYER_ACTOR_CLASS
 
 
 class RandomActor:

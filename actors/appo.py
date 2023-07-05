@@ -337,9 +337,7 @@ class APPOActor:
 
         # Get model
         model = await APPOModel.retrieve_model(
-            actor_session.model_registry,
-            actor_session.config.model_id,
-            actor_session.config.model_iteration
+            actor_session.model_registry, actor_session.config.model_id, actor_session.config.model_iteration
         )
         model.eval()
 
@@ -495,7 +493,9 @@ class APPOTraining:
 
         rollout_buffer = RolloutBuffer(
             capacity=self._cfg.num_rollout_steps,
-            observation_shape=(utils.flatdim(sample_producer_session.get_observation_space(player_actor_name).gym_space),),
+            observation_shape=(
+                utils.flatdim(sample_producer_session.get_observation_space(player_actor_name).gym_space),
+            ),
             action_shape=(utils.flatdim(sample_producer_session.get_action_space(player_actor_name).gym_space),),
             action_dtype=torch.float32,
         )
@@ -533,7 +533,6 @@ class APPOTraining:
                 model = await APPOModel.retrieve_model(sample_producer_session.model_registry, self.model_id, -1)
                 model.eval()
 
-
             # Compute values and log probs
             if step % self._cfg.num_rollout_steps < self._cfg.num_rollout_steps and not trial_done:
                 with torch.no_grad():
@@ -544,7 +543,9 @@ class APPOTraining:
                     log_probs.append(log_prob.mean().cpu())
 
                 # Add sample to rollout replay buffer
-                rollout_buffer.add(observation=observation_tensor, action=action_tensor, reward=reward_tensor, done=done)
+                rollout_buffer.add(
+                    observation=observation_tensor, action=action_tensor, reward=reward_tensor, done=done
+                )
 
             # Save episode reward i.e., number of total steps for an episode
             step += 1

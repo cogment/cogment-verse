@@ -22,7 +22,6 @@ import isaacgymenvs
 import numpy as np
 import torch
 
-from cogment_verse.constants import PLAYER_ACTOR_CLASS, TEACHER_ACTOR_CLASS
 from cogment_verse.specs import EnvironmentSpecs
 
 # configure pygame to use a dummy video server to be able to render headlessly

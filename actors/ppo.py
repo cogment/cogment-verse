@@ -322,9 +322,7 @@ class PPOActor:
 
         # Get model
         model = await PPOModel.retrieve_model(
-            actor_session.model_registry,
-            actor_session.config.model_id,
-            actor_session.config.model_iteration
+            actor_session.model_registry, actor_session.config.model_id, actor_session.config.model_iteration
         )
         model.eval()
 
@@ -342,7 +340,8 @@ class PPOActor:
                 # Normalize the observation
                 if model.state_normalization is not None:
                     observation_tensor = torch.clamp(
-                        (observation_tensor - model.state_normalization.mean) / (model.state_normalization.var + 1e-8) ** 0.5,
+                        (observation_tensor - model.state_normalization.mean)
+                        / (model.state_normalization.var + 1e-8) ** 0.5,
                         min=-10,
                         max=10,
                     )

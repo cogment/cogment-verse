@@ -31,7 +31,6 @@ from cogment_verse.specs import (
     WEB_ACTOR_NAME,
     AgentConfig,
     EnvironmentConfig,
-    EnvironmentSpecs,
     cog_settings,
 )
 
@@ -131,9 +130,7 @@ class SimpleBCActor:
 
         # Get model
         model = await SimpleBCModel.retrieve_model(
-            actor_session.model_registry,
-            actor_session.config.model_id,
-            actor_session.config.model_iteration
+            actor_session.model_registry, actor_session.config.model_id, actor_session.config.model_iteration
         )
         model.policy_network.eval()
 

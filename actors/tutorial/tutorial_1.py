@@ -23,7 +23,6 @@ from cogment_verse.specs import (
     WEB_ACTOR_NAME,
     AgentConfig,
     EnvironmentConfig,
-    EnvironmentSpecs,
     cog_settings,
 )
 
