@@ -21,7 +21,7 @@ import { Button, FpsCounter, KeyboardControlList, SimplePlay } from "../componen
 const TURN_DURATION_SECS = 1;
 
 export const TurnBasedObserverControls = ({ sendAction, observation, actorParams, ...props }) => {
-  const currentPlayer = observation?.currentPlayer;
+  const currentPlayerName = observation?.currentPlayer?.name;
 
   const [paused, setPaused] = useState(false);
   const togglePause = useCallback(() => setPaused((paused) => !paused), [setPaused]);
@@ -41,7 +41,7 @@ export const TurnBasedObserverControls = ({ sendAction, observation, actorParams
   useEffect(() => {
     setTurnKey((turnKey) => turnKey + 1);
     setExpectingAction(true);
-  }, [currentPlayer]);
+  }, [currentPlayerName]);
 
   return (
     <div {...props}>
@@ -60,7 +60,7 @@ export const TurnBasedObserverControls = ({ sendAction, observation, actorParams
               onComplete={step}
             />
           </div>
-          <div className="flex-initial">{currentPlayer ? `Step to "${observation.currentPlayer}" turn` : "blop"}</div>
+          <div className="flex-initial">{currentPlayerName ? `Step to "${observation.currentPlayer.name}" turn` : "blop"}</div>
         </Button>
       </div>
       <KeyboardControlList

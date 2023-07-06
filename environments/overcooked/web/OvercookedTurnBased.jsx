@@ -34,7 +34,7 @@ const ACTION_SPACE = new Space({
 });
 
 export const OvercookedTurnBasedControls = ({ sendAction, fps = 1, actorClass, observation, ...props }) => {
-  const currentPlayer = observation?.currentPlayer;
+  const currentPlayerName = observation?.currentPlayer?.name;
   const [paused, setPaused] = useState(false);
 
   const togglePause = useCallback(() => setPaused((paused) => !paused), [setPaused]);
@@ -45,7 +45,7 @@ export const OvercookedTurnBasedControls = ({ sendAction, fps = 1, actorClass, o
   const [turnKey, setTurnKey] = useState(0);
   useEffect(() => {
     setTurnKey((turnKey) => turnKey + 1);
-  }, [currentPlayer]);
+  }, [currentPlayerName]);
 
   const up = useCallback(() => {
     if (!stepDisabled) {
@@ -113,7 +113,7 @@ export const OvercookedTurnBasedControls = ({ sendAction, fps = 1, actorClass, o
             />
           </div>
           <div className="flex-initial">
-            {currentPlayer ? `Step to "${observation.currentPlayer}" turn` : "turn timer"}
+            {currentPlayerName ? `Step to "${observation.currentPlayer.name}" turn` : "turn timer"}
           </div>
         </Button>
         <Button className="flex-1" onClick={togglePause}>

@@ -127,13 +127,13 @@ const ObservationInspector = ({ event, actorParams }) => {
   }
   const value = deserializeObservationValue(observationSpace, event.observation);
   const actionMask = deserializeObservationActionMask(actionMaskSpace, event.observation);
-  const currentPlayer = event.observation.currentPlayer;
+  const currentPlayer = event.observation.currentPlayer.name;
   return (
     <>
       {currentPlayer != null ? (
         <>
           <AttributeTitle>Current Player</AttributeTitle>
-          <AttributeValue>{event.observation.currentPlayer}</AttributeValue>
+          <AttributeValue>{event.observation.currentPlayer.name}</AttributeValue>
         </>
       ) : null}
       <AttributeTitle>Observation</AttributeTitle>

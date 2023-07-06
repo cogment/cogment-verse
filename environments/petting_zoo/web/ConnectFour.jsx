@@ -47,16 +47,16 @@ const ACTION_MASK_SPACE = new Space({
 });
 
 export const ConnectFourControls = ({ sendAction, observation, actorClass, ...props }) => {
-  const currentPlayer = observation?.currentPlayer;
+  const currentPlayerName = observation?.currentPlayer?.name;
   const [turnKey, setTurnKey] = useState(0);
   useEffect(() => {
     setTurnKey((turnKey) => turnKey + 1);
     setExpectingAction(true);
-  }, [currentPlayer]);
+  }, [currentPlayerName]);
 
   const [expectingAction, setExpectingAction] = useState(true);
 
-  const opponentStepDisabled = !expectingAction || currentPlayer === WEB_ACTOR_NAME;
+  const opponentStepDisabled = !expectingAction || currentPlayerName === WEB_ACTOR_NAME;
   const opponentStep = useCallback(() => {
     if (!opponentStepDisabled) {
       sendAction(TEACHER_NOOP_ACTION);
@@ -68,12 +68,12 @@ export const ConnectFourControls = ({ sendAction, observation, actorClass, ...pr
   const columns = useMemo(() => {
     const deserializedActionMask = deserializeObservationActionMask(ACTION_MASK_SPACE, observation);
     return COLUMNS.map((columnIndex) => ({
-      disabled: !expectingAction || currentPlayer !== WEB_ACTOR_NAME || deserializedActionMask[columnIndex] !== 1,
+      disabled: !expectingAction || currentPlayerName !== WEB_ACTOR_NAME || deserializedActionMask[columnIndex] !== 1,
       play: () => {
         sendAction(serializePlayerAction(ACTION_SPACE, columnIndex));
       },
     }));
-  }, [expectingAction, currentPlayer, sendAction, observation]);
+  }, [expectingAction, currentPlayerName, sendAction, observation]);
 
   return (
     <div {...props}>

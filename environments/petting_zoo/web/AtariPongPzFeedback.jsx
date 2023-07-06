@@ -47,7 +47,7 @@ export const AtariPongPzFeedback = ({ sendAction, fps = 30, actorClass, observat
   const [playerPos, setPlayerPos] = useState("");
   const [playerNameDisplay, setPlayerNameDisplay] = useState(false);
   const playerName = observation?.gamePlayerName;
-  const currentPlayer = observation?.currentPlayer;
+  const currentPlayerName = observation?.currentPlayer?.name;
   const gymAction = observation?.actionValue;
   const actionList = ["NONE", "FIRE", "UP", "DOWN", "FIRE UP", " FIRE DOWN"];
 
@@ -62,12 +62,12 @@ export const AtariPongPzFeedback = ({ sendAction, fps = 30, actorClass, observat
   }, [playerName]);
 
   useEffect(() => {
-    if (currentPlayer == WEB_ACTOR_NAME) {
+    if (currentPlayerName == WEB_ACTOR_NAME) {
       setHumanTurn(true);
     } else {
       setHumanTurn(false);
     }
-  }, [currentPlayer]);
+  }, [currentPlayerName]);
 
   useEffect(() => {
     if (!humanMode || !humanTurn || tickId % 3 != 0) {

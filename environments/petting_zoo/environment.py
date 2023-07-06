@@ -26,7 +26,7 @@ from cogment.environment import EnvironmentSession
 from data_pb2 import Player
 
 from cogment_verse.constants import EVALUATOR_ACTOR_CLASS, PLAYER_ACTOR_CLASS, WEB_ACTOR_NAME, ActorSpecType
-from cogment_verse.specs import ActorSpecs
+from cogment_verse.specs import EnvironmentSpecs
 from cogment_verse.specs.ndarray_serialization import SerializationFormat, deserialize_ndarray
 from cogment_verse.utils import import_class
 
@@ -123,7 +123,7 @@ class Environment(ABC):
             web_components_file = matching_web_components[0]
 
         assert num_players >= 1
-        self.env_specs = ActorSpecs.create_homogeneous(
+        self.env_specs = EnvironmentSpecs.create_homogeneous(
             num_players=num_players,
             observation_space=observation_space,
             action_space=action_space,
