@@ -2,12 +2,14 @@
 defaults:
   - override /services/actor:
       - simple_dqn
-      - random
   - override /services/environment: connect_four
   - override /run: play
 run:
   players:
     - name: player_1
-      implementation: actors.random_actor.RandomActor
+      implementation: actors.simple_dqn.SimpleDQNActor
+      agent_config:
+        model_id: ???
+        model_iteration: -1
     - name: player_2
       implementation: client
