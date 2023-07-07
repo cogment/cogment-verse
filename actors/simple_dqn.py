@@ -468,9 +468,9 @@ class SimpleDQNSelfPlayTraining:
             actor_params.name: {
                 "params": actor_params,
                 "observation_space": ActorSpecs.deserialize(
-                    actor_params.config.environment_specs
+                    actor_params.config.environment_specs.actor_specs[0]
                 ).get_observation_space(),
-                "action_space": ActorSpecs.deserialize(actor_params.config.environment_specs).get_action_space(),
+                "action_space": ActorSpecs.deserialize(actor_params.config.environment_specs.actor_specs[0]).get_action_space(),
             }
             for actor_params in sample_producer_session.trial_info.parameters.actors
             if actor_params.class_name == PLAYER_ACTOR_CLASS
