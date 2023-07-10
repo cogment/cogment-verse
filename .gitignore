@@ -1,10 +1,12 @@
 # Generated code
 CogSettings.*
 CogTypes.d.ts
+*_pb_service.d.ts
+*_pb_service.js
 *_pb.d.ts
 *_pb.js
-cogment_verse/web/cogment.yaml
-cogment_verse/web/*.proto
+cogment_verse/web/web_app/cogment.yaml
+cogment_verse/web/web_app/*.proto
 
 # Python stuffs
 __pycache__/
