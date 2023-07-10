@@ -25,13 +25,13 @@ from gym.spaces import utils
 
 from cogment_verse import Model
 from cogment_verse.specs import (
+    AgentConfig,
+    cog_settings,
+    EnvironmentConfig,
     HUMAN_ACTOR_IMPL,
     PLAYER_ACTOR_CLASS,
     TEACHER_ACTOR_CLASS,
     WEB_ACTOR_NAME,
-    AgentConfig,
-    EnvironmentConfig,
-    cog_settings,
 )
 
 #########################################
@@ -53,6 +53,7 @@ class SimpleBCModel(Model):
         iteration=0,
     ):
         super().__init__(model_id, iteration)
+
         self._dtype = torch.float
         self._environment_implementation = environment_implementation
         self._num_input = num_input
@@ -130,7 +131,9 @@ class SimpleBCActor:
 
         # Get model
         model = await SimpleBCModel.retrieve_model(
-            actor_session.model_registry, actor_session.config.model_id, actor_session.config.model_iteration
+            actor_session.model_registry,
+            actor_session.config.model_id,
+            actor_session.config.model_iteration,
         )
         model.policy_network.eval()
 
@@ -173,7 +176,7 @@ class SimpleBCTraining:
 
         async for sample in sample_producer_session.all_trial_samples():
             player_observation = sample_producer_session.get_player_observations(sample)
-            player_action = sample_producer_session.get_player_action(sample)
+            player_action = sample_producer_session.get_player_actions(sample)
 
             if player_action.flat_value is None:
                 # TODO figure out why we get into this situation
