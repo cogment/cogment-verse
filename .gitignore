@@ -6,7 +6,7 @@ CogTypes.d.ts
 *_pb.d.ts
 *_pb.js
 cogment_verse/web/web_app/cogment.yaml
-# cogment_verse/web/web_app/*.proto
+cogment_verse/web/web_app/*.proto
 
 # Python stuffs
 __pycache__/
