@@ -17,28 +17,24 @@ We train the agent online as trials are running and each trial uses the latest s
 
 > We don't provide (yet) a true step by step implementation guide but more a description of existing four implementation steps.
 
-### Step 1 - Create a basic agent adapter
+### Step 1 - Create a basic actor implementation
 
 > Implementation for this step is available at [`/actors/tutorial/tutorial_1.py`](/actors/tutorial/tutorial_1.py)
 
-In this step we create a dedicated **agent adapter** to implement behavior cloning. **Agent adapters** are a lightweight formalism to help implement agents and training algorithms together.
+In this step we create a dedicated **Actor implementation** to implement behavior cloning. **Actors** are a lightweight formalism to help implement agents and training algorithms together.
 
-In this case, it defines two Cogment implementations: an actor called `simple_bc` that is using the trained model, in this case a simple policy network, to take actions and a run called `simple_bc_training` that is orchestrating the training of the model.
+In this case, it defines two Cogment implementations: an actor called `simple_bc` that is using the trained model, in this case a simple policy network, to take actions and a **runner** called `simple_bc_training` that is orchestrating the training of the model.
 
-#### Implement the agent adapter
+#### Actor Implementation
 
-The `AgentAdapter` base class provides a simple way to implement new agents together with their corresponding training algorithms. A few methods must be implemented.
+The `SimpleBCActor` class provides a minimal example of an actor implementation together with their corresponding training algorithms. A few methods must be implemented.
 
-- `_create`: This instantiates the PyTorch model to be used by the actor implementation during trials and trained by the run implementation.
-- `_save` and `_load`: These are used by Cogment Verse to serialize and deserialize models to and from the model registry to enable the distribution and storage of trained models.
-- `_create_actor_implementations`: Returns the list of actor implementations to be registered, in our case only one named `simple_bc`.
-- `_create_run_implementations`: Returns the list of run implementations (e.g. training/evaluation regimens) to be registered, in our case only one named `simple_bc_training`.
-
-In this step, `_create`, `_save` and `_load` remains unimplemented.
+- `get_actor_classes`: Returns the list of actor classes supported to this actor. By default, the `PLAYER_ACTOR_CLASS` is returned.
+- `impl`: the actor implementation. See next section.
 
 #### First actor implementation, doing random action
 
-In Cogment terminology, an **actor implementation** is a function that takes an actor session from a running trial and performs actions for each event in the actor's event loop for the trial, i.e. a function that performs an action for each observation received from the environment. In this first step the actor implementation does random actions.
+In Cogment terminology, an **actor implementation** is a function that takes an `actor_session` from a running trial and performs actions for each event in the agent's event loop for the trial, i.e. a function that performs an action for each observation received from the environment. In this first step, the actor implementation does random actions.
 
 #### First run implementation, starting trials with a human teacher
 
@@ -50,7 +46,7 @@ In the first step, the run implementation is pretty minimal. It sets up an exper
 
 #### Running everything
 
-Make sure you are using step 1 version of the adapter by ensuring the following:
+Make sure you are using step 1 version of the actor implementation by ensuring the following:
 
 1. In `config/experiment/simple_bc/mountain_car.yaml` file, `class_name` is set to `actors.tutorial.tutorial_1.SimpleBCTraining`.
 2. In `config/services/actor/simple_bc.yaml` file, `class_name` is set to `actors.tutorial.tutorial_1.SimpleBCActor`.
@@ -71,7 +67,7 @@ python -m main +experiment=simple_bc/mountain_car
 Open Chrome (other web browser might work but haven't tested) and navigate to http://localhost:8080/. At this step the agent will take random actions, as a human you can take over to play the game. In the console, the run implementation will log every time a sample is retrieved.
 
 ### Step 2 - Producing samples
-
+C
 > Implementation for this step is available at [`/actors/tutorial/tutorial_2.py`](/actors/tutorial/tutorial_2.py)
 >
 > Changes from the previous step are surrounded by `############ TUTORIAL STEP 2 ############` comments
@@ -84,7 +80,7 @@ In the event loop of the **sample producer implementation** those helpers are us
 
 Samples are produced as tuples consisting: a flag identifying if the sample is a demonstration (coming from the teacher), the observation as a tensor, the action as a tensor.
 
-Make sure you are using step 2 version of the adapter by editing the "default" export in `config/experiment/simple_bc/mountain_car.yaml` and then launch a run as described in the previous step.
+Make sure you are using step 2 version of the actor implementation by editing the "default" export in `config/experiment/simple_bc/mountain_car.yaml` and then launch a run as described in the previous step.
 
 Nothing should change in the web browser but received samples should be logged. Notice that when the human takes over samples are logged with the demonstration flag to `True`.
 
@@ -94,19 +90,17 @@ Nothing should change in the web browser but received samples should be logged. 
 >
 > Changes from the previous step are surrounded by `############ TUTORIAL STEP 3 ############` comments
 
-In this third step, we introduce an actual model: it is initialized in the **run implementation** and used in the **actor implementation**. To achieve that, `_create`, `_save`, and `_load` are fully implemented.
+In this third step, we introduce an actual model: it is initialized in the **run implementation** and used in the **actor implementation**. To achieve that, the `SimpleBCModel` class is created. It extends the base Model class and the methods `get_model_user_data`, `serialize_model`, and `deserialize_model` are fully implemented.
 
-At the top of the file, we include the configuration structure for multi-layer perceptrons (MLPs) and we define a named tuple structure for the model.
+In `SimpleBCModel`, we include the configuration structure for multi-layer perceptrons (MLPs).
 
-`_save` and `_load` are implemented using PyTorch's load and save function.
+`serialize_model` and `deserialize_model` are implemented using PyTorch's load and save function. They are used to convert the pytorch model to a stream of bytes and vice versa. These methods will be used before publishing or storing a model to the Model Registry and afer retrieving a serialized model.
 
-Notice that we added named arguments to the `_create` functions. They are forwarded from the call to `self.store_initial_version` that is added at the top of the run implementation.
+The actor implementation uses `SimpleBCModel.retrieve_model` to retrieve the model having the configured `model_id` and `iteration`. These two model parameters are now specified as a part of the actor params in the runner's implementation. The iteration number is defined as `-1`, which means the latest available iteration. Also in the actor implementation, we fetch the agent's action space from the actor_session using the method `get_action_space` and use the helper function `create` to build an `Action` object from the output of the policy network.
 
-The agent implementation uses `self.retrieve_version` to retrieve the model having the configured name and version. These are now specified as a part of the actor params in the run implementation. The version number is defined as `-1`, which means the latest available version. Also in the agent implementation, we use the action conversion helpers to build an `ActorAction` from the output of the policy network.
+Make sure you are using step 3 version of the actor implementation by editing the "default" export in `config/experiment/simple_bc/mountain_car.yaml` and then launch a run as described in the previous step.
 
-Make sure you are using step 3 version of the adapter by editing the "default" export in `config/experiment/simple_bc/mountain_car.yaml` and then launch a run as described in the previous step.
-
-Nothing should change in the web browser - the agent is still doing random actions, but it's now random actions computed by a neural network.
+Nothing should change in the web browser - the agent is still performing random actions, but it's now random actions computed by a neural network.
 
 ### Step 4 - Training
 
@@ -114,11 +108,11 @@ Nothing should change in the web browser - the agent is still doing random actio
 >
 > Changes from the previous step are surrounded by `############ TUTORIAL STEP 4 ############` comments
 
-This fourth step is about actually training the policy, aside from some import at the top, the changes are located in the run implementation and should be pretty straightforward for someone familiar with supervised learning with PyTorch.
+This fourth step is about actually training the policy, aside from some import at the top, the changes are located in the runner's implementation and should be pretty straightforward for someone familiar with supervised learning with PyTorch.
 
-One thing to notice is the way we deal with publishing new version of the model. This part of the code is only executed every 100 training steps, this is a tradeoff between the reactivity of the training and limiting the amount of data exchanged over the network and the time spent serializing and deserializing models.
+One thing to notice is the way we deal with publishing new iteration of the model. This part of the code is only executed every 100 training steps, this is a tradeoff between the reactivity of the training and limiting the amount of data exchanged over the network and the time spent serializing and deserializing models.
 
-Make sure you are using step 4 version of the adapter by editing the "default" export in `config/experiment/simple_bc/mountain_car.yaml` and then launch a run as described in the previous step.
+Make sure you are using step 4 version of the actor implementation by editing the "default" export in `config/experiment/simple_bc/mountain_car.yaml` and then launch a run as described in the previous step.
 
 The agent is now learning, with a few demonstrations it should start to clone the behavior of the human player.
 

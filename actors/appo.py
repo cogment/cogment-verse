@@ -30,7 +30,6 @@ from torch.distributions.normal import Normal
 
 from cogment_verse import Model, PPOReplayBuffer
 from cogment_verse.run.run_session import RunSession
-from cogment_verse.run.sample_producer_worker import SampleProducerSession
 from cogment_verse.specs import PLAYER_ACTOR_CLASS, AgentConfig, EnvironmentConfig, EnvironmentSpecs, cog_settings
 
 torch.multiprocessing.set_sharing_strategy("file_system")
@@ -332,45 +331,45 @@ class APPOActor:
     async def impl(self, actor_session: ActorSession):
         # Start a session
         actor_session.start()
-        config = actor_session.config
 
         # Setup random seed
-        torch.manual_seed(config.seed)
-
-        # Get observation and action space
-        environment_specs = EnvironmentSpecs.deserialize(config.environment_specs)
-        observation_space = environment_specs.get_observation_space()
-        action_space = environment_specs.get_action_space(seed=config.seed)
+        torch.manual_seed(actor_session.config.seed)
 
         # Get model
-        model = await APPOModel.retrieve_model(actor_session.model_registry, config.model_id, config.model_iteration)
+        model = await APPOModel.retrieve_model(
+            actor_session.model_registry, actor_session.config.model_id, actor_session.config.model_iteration
+        )
         model.eval()
 
         async for event in actor_session.all_events():
-            if event.observation and event.type == cogment.EventType.ACTIVE:
+            observation = actor_session.get_observation(event)
+            if observation and event.type == cogment.EventType.ACTIVE:
                 # Retrieve the model every N rollout steps
                 if (
-                    config.model_update_frequency != 0
-                    and (event.observation.tick_id + 1) % config.model_update_frequency == 0
+                    actor_session.config.model_update_frequency != 0
+                    and (event.observation.tick_id + 1) % actor_session.config.model_update_frequency == 0
                 ):
-                    model = await APPOModel.retrieve_model(actor_session.model_registry, config.model_id, -1)
+                    model = await APPOModel.retrieve_model(
+                        actor_session.model_registry,
+                        actor_session.config.model_id,
+                        -1,
+                    )
                     model.eval()
 
-                observation = observation_space.deserialize(event.observation.observation)
-                obs_tensor = torch.tensor(observation.flat_value, dtype=self._dtype).view(1, -1)
+                observation_tensor = torch.tensor(observation.flat_value, dtype=self._dtype).view(1, -1)
 
                 # Normalize the observation
                 if model.state_normalizer is not None:
-                    obs_tensor = model.state_normalizer.normalize(obs_tensor)
+                    observation_tensor = model.state_normalizer.normalize(observation_tensor)
 
                 # Get action from policy network
                 with torch.no_grad():
-                    dist, _ = model.policy_network(obs_tensor)
+                    dist, _ = model.policy_network(observation_tensor)
                     action_value = dist.sample().cpu().numpy()[0]
 
                 # Send action to environment
-                action = action_space.create(value=action_value)
-                actor_session.do_action(action_space.serialize(action))
+                action = actor_session.get_action_space().create(value=action_value)
+                actor_session.do_action(actor_session.get_action_space().serialize(action))
 
 
 class RolloutBuffer:
@@ -483,17 +482,10 @@ class APPOTraining:
         is_loaded = is_multiple_of_rollout and not trial_done
         return is_loaded or is_first_step
 
-    async def sample_producer_impl(self, sample_producer_session: SampleProducerSession):
+    async def sample_producer_impl(self, sample_producer_session):
         """Collect sample from the trial"""
-        actor_params = {
-            actor_params.name: actor_params
-            for actor_params in sample_producer_session.trial_info.parameters.actors
-            if actor_params.class_name == PLAYER_ACTOR_CLASS
-        }
-        actor_names = list(actor_params.keys())
-        player_environment_specs = EnvironmentSpecs.deserialize(actor_params[actor_names[0]].config.environment_specs)
-        player_observation_space = player_environment_specs.get_observation_space()
-        player_action_space = player_environment_specs.get_action_space()
+
+        player_actor_name = sample_producer_session.player_actors[0]
 
         # Load the model
         model = await APPOModel.retrieve_model(sample_producer_session.model_registry, self.model_id, -1)
@@ -501,8 +493,10 @@ class APPOTraining:
 
         rollout_buffer = RolloutBuffer(
             capacity=self._cfg.num_rollout_steps,
-            observation_shape=(utils.flatdim(player_observation_space.gym_space),),
-            action_shape=(utils.flatdim(player_action_space.gym_space),),
+            observation_shape=(
+                utils.flatdim(sample_producer_session.get_observation_space(player_actor_name).gym_space),
+            ),
+            action_shape=(utils.flatdim(sample_producer_session.get_action_space(player_actor_name).gym_space),),
             action_dtype=torch.float32,
         )
 
@@ -511,47 +505,51 @@ class APPOTraining:
         current_players = []
         episode_rewards = []
         done = torch.zeros(1, dtype=torch.int8)
-        player_actor_name = actor_names[0]
+
         total_reward = 0
         step = 0
         async for sample in sample_producer_session.all_trial_samples():
             # Trail status
             trial_done = sample.trial_state == cogment.TrialState.ENDED
-            actor_sample = sample.actors_data[player_actor_name]
+
+            # Collect data from environment
+            observation_tensor = torch.tensor(
+                sample_producer_session.get_player_observations(sample, player_actor_name).value,
+                dtype=self._dtype,
+            )
+            reward = sample_producer_session.get_reward(sample, player_actor_name)
+            reward_tensor = torch.tensor(reward if reward is not None else 0, dtype=self._dtype)
+            done = torch.ones(1, dtype=torch.float32) if trial_done else torch.zeros(1, dtype=torch.float32)
+
+            if not trial_done:
+                action_tensor = torch.tensor(
+                    sample_producer_session.get_player_actions(sample, player_actor_name).value,
+                    dtype=self._dtype,
+                )
+                current_players.append(player_actor_name)
 
             # Load model
             if self.should_load_model(sample.tick_id, self._cfg.num_rollout_steps, trial_done):
                 model = await APPOModel.retrieve_model(sample_producer_session.model_registry, self.model_id, -1)
                 model.eval()
 
-            # Collect data from environment
-            obs = torch.tensor(player_observation_space.deserialize(actor_sample.observation).value, dtype=self._dtype)
-            done = torch.ones(1, dtype=torch.float32) if trial_done else torch.zeros(1, dtype=torch.float32)
-            reward = (
-                torch.tensor(actor_sample.reward, dtype=self._dtype)
-                if actor_sample.reward is not None
-                else torch.tensor(0, dtype=self._dtype)
-            )
-
-            if not trial_done:
-                action = torch.tensor(player_action_space.deserialize(actor_sample.action).value, dtype=self._dtype)
-                current_players.append(player_actor_name)
-
             # Compute values and log probs
             if step % self._cfg.num_rollout_steps < self._cfg.num_rollout_steps and not trial_done:
                 with torch.no_grad():
-                    value = model.value_network(obs)
-                    action_dist, _ = model.policy_network(obs)
-                    log_prob = action_dist.log_prob(action)
+                    value = model.value_network(observation_tensor)
+                    action_dist, _ = model.policy_network(observation_tensor)
+                    log_prob = action_dist.log_prob(action_tensor)
                     values.append(value.squeeze(0).cpu())
                     log_probs.append(log_prob.mean().cpu())
 
                 # Add sample to rollout replay buffer
-                rollout_buffer.add(observation=obs, action=action, reward=reward, done=done)
+                rollout_buffer.add(
+                    observation=observation_tensor, action=action_tensor, reward=reward_tensor, done=done
+                )
 
             # Save episode reward i.e., number of total steps for an episode
             step += 1
-            total_reward += reward
+            total_reward += reward_tensor
             if trial_done:
                 episode_rewards.append(total_reward)
                 total_reward = 0
@@ -560,7 +558,7 @@ class APPOTraining:
             if step % self._cfg.num_rollout_steps == 0 or trial_done:
                 if rollout_buffer.num_total > 1:
                     with torch.no_grad():
-                        next_value = model.value_network(obs)
+                        next_value = model.value_network(observation_tensor)
                         next_value = next_value.squeeze(0).cpu()
 
                     observations = rollout_buffer.observations[: rollout_buffer.num_total]

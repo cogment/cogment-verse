@@ -27,8 +27,14 @@ from torch.distributions.normal import Normal
 
 from cogment_verse import Model
 from cogment_verse.run.run_session import RunSession
-from cogment_verse.run.sample_producer_worker import SampleProducerSession
-from cogment_verse.specs import PLAYER_ACTOR_CLASS, AgentConfig, EnvironmentConfig, EnvironmentSpecs, cog_settings
+from cogment_verse.specs import (
+    PLAYER_ACTOR_CLASS,
+    AgentConfig,
+    EnvironmentConfig,
+    EnvironmentSpecs,
+    cog_settings,
+    SampleProducerSession,
+)
 
 torch.multiprocessing.set_sharing_strategy("file_system")
 
@@ -312,41 +318,42 @@ class PPOActor:
         # Start a session
         actor_session.start()
 
-        config = actor_session.config
-
-        environment_specs = EnvironmentSpecs.deserialize(config.environment_specs)
-        observation_space = environment_specs.get_observation_space()
-        action_space = environment_specs.get_action_space()
-
-        assert isinstance(action_space.gym_space, Box)
-        assert config.environment_specs.num_players == 1
+        assert isinstance(actor_session.get_action_space().gym_space, Box)
 
         # Get model
-        model = await PPOModel.retrieve_model(actor_session.model_registry, config.model_id, config.model_iteration)
+        model = await PPOModel.retrieve_model(
+            actor_session.model_registry, actor_session.config.model_id, actor_session.config.model_iteration
+        )
         model.eval()
 
         async for event in actor_session.all_events():
-            if event.observation and event.type == cogment.EventType.ACTIVE:
-                observation = observation_space.deserialize(event.observation.observation)
+            observation = actor_session.get_observation(event)
+            if observation and event.type == cogment.EventType.ACTIVE:
+                if observation.current_player is not None and observation.current_player != actor_session.name:
+                    # Not the turn of the agent
+                    action = actor_session.get_action_space().create()
+                    actor_session.do_action(actor_session.get_action_space().serialize(action))
+                    continue
 
-                obs_tensor = torch.tensor(observation.flat_value, dtype=self._dtype).view(1, -1)
+                observation_tensor = torch.tensor(observation.flat_value, dtype=self._dtype).view(1, -1)
 
                 # Normalize the observation
                 if model.state_normalization is not None:
-                    obs_tensor = torch.clamp(
-                        (obs_tensor - model.state_normalization.mean) / (model.state_normalization.var + 1e-8) ** 0.5,
+                    observation_tensor = torch.clamp(
+                        (observation_tensor - model.state_normalization.mean)
+                        / (model.state_normalization.var + 1e-8) ** 0.5,
                         min=-10,
                         max=10,
                     )
 
                 # Get action from policy network
                 with torch.no_grad():
-                    dist, _ = model.policy_network(obs_tensor)
+                    dist, _ = model.policy_network(observation_tensor)
                     action_value = dist.sample().cpu().numpy()[0]
 
                 # Send action to environment
-                action = action_space.create(value=action_value)
-                actor_session.do_action(action_space.serialize(action))
+                action = actor_session.get_action_space().create(value=action_value)
+                actor_session.do_action(actor_session.get_action_space().serialize(action))
 
 
 class PPOTraining:
@@ -407,41 +414,35 @@ class PPOTraining:
 
     async def trial_sample_sequences_producer_impl(self, sample_producer_session: SampleProducerSession):
         """Collect sample from the trial"""
-
         # Share with A2C
+        player_actor_name = sample_producer_session.player_actors[0]
 
-        observation = []
-        action = []
-        reward = []
-        done = []
-
-        player_actor_params = sample_producer_session.trial_info.parameters.actors[0]
-
-        player_actor_name = player_actor_params.name
-        player_environment_specs = EnvironmentSpecs.deserialize(player_actor_params.config.environment_specs)
-        player_observation_space = player_environment_specs.get_observation_space()
-        player_action_space = player_environment_specs.get_action_space()
+        observations = []
+        actions = []
+        rewards = []
+        dones = []
 
         async for sample in sample_producer_session.all_trial_samples():
             if sample.trial_state == cogment.TrialState.ENDED:
                 # This sample includes the last observation and no action
                 # The last sample was the last useful one
-                done[-1] = torch.ones(1, dtype=self._dtype)
+                dones[-1] = torch.ones(1, dtype=self._dtype)
                 break
 
-            actor_sample = sample.actors_data[player_actor_name]
-            observation.append(
-                torch.tensor(player_observation_space.deserialize(actor_sample.observation).value, dtype=self._dtype)
-            )
+            observation = sample_producer_session.get_player_observations(sample, player_actor_name)
 
-            action.append(torch.tensor(player_action_space.deserialize(actor_sample.action).value, dtype=self._dtype))
-            reward.append(
-                torch.tensor(actor_sample.reward if actor_sample.reward is not None else 0, dtype=self._dtype)
-            )
-            done.append(torch.zeros(1, dtype=self._dtype))
+            if observation.flat_value is None:
+                # This can happen when there is several "end-of-trial" samples
+                continue
+
+            observations.append(torch.tensor(observation.value, dtype=self._dtype))
+            actions.append(torch.tensor(sample_producer_session.get_player_actions(sample).value, dtype=self._dtype))
+            reward = sample_producer_session.get_reward(sample, player_actor_name)
+            rewards.append(torch.tensor(reward if reward is not None else 0, dtype=self._dtype))
+            dones.append(torch.zeros(1, dtype=self._dtype))
 
         # Keeping the samples grouped by trial by emitting only one grouped sample at the end of the trial
-        sample_producer_session.produce_sample((observation, action, reward, done))
+        sample_producer_session.produce_sample((observations, actions, rewards, dones))
 
     async def impl(self, run_session: RunSession) -> dict:
         """Train and publish model the model"""
