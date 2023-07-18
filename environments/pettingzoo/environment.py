@@ -33,7 +33,7 @@ log = logging.getLogger(__name__)
 
 
 def get_pz_player(observation: np.ndarray, actor_names: list) -> Tuple[str, int]:
-    """Get name and index for the petting zoo player. Note that it works specifically to Atari game"""
+    """Get name and index for the PettingZoo player. Note that it works specifically to Atari game"""
     num_agents = len(actor_names)
     indicators = observation[0, 0, -num_agents:]
     idx = int(np.where(indicators)[0])
@@ -90,7 +90,7 @@ class Environment(ABC):
         elif self.env_type == PzEnvType.CLASSIC:
             serialization_format = SerializationFormat.STRUCTURED
         else:
-            raise ValueError("Petting zoo environment type does not exist")
+            raise ValueError("PettingZoo environment type does not exist")
 
         num_players = 0
         observation_space = None
@@ -103,7 +103,7 @@ class Environment(ABC):
             else:
                 if observation_space != pz_env.observation_space(player) or action_space != pz_env.action_space(player):
                     raise RuntimeError(
-                        "Petting zoo environment with heterogeneous action/observation spaces are not supported yet"
+                        "PettingZoo environment with heterogeneous action/observation spaces are not supported yet"
                     )
 
         web_components_file = None
@@ -114,7 +114,7 @@ class Environment(ABC):
         ]
         if len(matching_web_components) > 1:
             log.warning(
-                f"While configuring petting zoo environment [{self.env_class_name}] found more that one matching web components [{matching_web_components}], picking the first one."
+                f"While configuring PettingZoo environment [{self.env_class_name}] found more that one matching web components [{matching_web_components}], picking the first one."
             )
         if len(matching_web_components) > 0:
             web_components_file = matching_web_components[0]
@@ -144,7 +144,7 @@ class Environment(ABC):
 
 
 class ClassicEnvironment(Environment):
-    """Classic petting zoo e.g., connect four, Hanabi etc."""
+    """Classic PettingZoo e.g., connect four, Hanabi etc."""
 
     async def impl(self, environment_session):
         # Making sure we have the right assumptions
@@ -174,7 +174,7 @@ class ClassicEnvironment(Environment):
         rendered_frame = None
         if session_cfg.render:
             if "rgb_array" not in pz_env.metadata["render_modes"]:
-                log.warning(f"Petting Zoo environment [{self.env_class_name}] doesn't support rendering to pixels")
+                log.warning(f"PettingZoo environment [{self.env_class_name}] doesn't support rendering to pixels")
                 return
             rendered_frame = pz_env.render()
 
@@ -274,7 +274,7 @@ class AtariEnvironment(Environment):
         rendered_frame = None
         if session_cfg.render:
             if "rgb_array" not in pz_env.metadata["render_modes"]:
-                log.warning(f"Petting Zoo environment [{self.env_class_name}] doesn't support rendering to pixels")
+                log.warning(f"PettingZoo environment [{self.env_class_name}] doesn't support rendering to pixels")
                 return
             rendered_frame = pz_env.render()
 
@@ -356,7 +356,7 @@ class HumanFeedbackAtariEnvironment(Environment):
         # Render the pixel for UI
         rendered_frame = None
         if session_cfg.render and "rgb_array" not in pz_env.metadata["render_modes"]:
-            log.warning(f"Petting Zoo environment [{self.env_class_name}] doesn't support rendering to pixels")
+            log.warning(f"PettingZoo environment [{self.env_class_name}] doesn't support rendering to pixels")
             return
         rendered_frame = pz_env.render()
 

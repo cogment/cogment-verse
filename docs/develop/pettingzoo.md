@@ -1,4 +1,4 @@
-## Petting Zoo
+## PettingZoo
 
 ### Atari Games
 

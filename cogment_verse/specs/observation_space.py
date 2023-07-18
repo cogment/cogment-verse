@@ -192,7 +192,7 @@ class ObservationSpace:
         Shouldn't be called directly, prefer the factory function of EnvironmentSpecs.
         """
         if isinstance(space, Dict) and ("action_mask" in space.spaces):
-            # Check the observation space defines an action_mask "component" (like petting zoo does)
+            # Check the observation space defines an action_mask "component" (like PettingZoo does)
             assert "observation" in space.spaces
             assert len(space.spaces) == 2
 

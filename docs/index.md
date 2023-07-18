@@ -6,7 +6,7 @@
 - Develop
   - [Development Setup](/docs/develop/development_setup.md)
   - [Docker](/docs/develop/docker.md)
-  - [Petting Zoo](/docs/develop/petting_zoo.md)
+  - [PettingZoo](/docs/develop/pettingzoo.md)
   - [Isaac Gym](/docs/develop/isaac_gym.md)
   - [Overcooked AI](/docs/develop/overcooked_ai.md)
 - Deploy
