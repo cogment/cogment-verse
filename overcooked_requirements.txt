@@ -1,2 +1,0 @@
-# For overcooked_ai
-git+https://github.com/wduguay-air/overcooked_ai.git

@@ -1,0 +1,15 @@
+# @package _global_
+defaults:
+  - override /services/actor:
+      - appo
+  - override /services/environment: hopper
+  - override /run: observe
+  - override /run/experiment_tracker: simple
+run:
+  players:
+    - name: player_1
+      implementation: actors.appo.APPOActor
+      agent_config:
+        model_id: cool_heyrovsky_0_model
+        model_iteration: -1
+        model_update_frequency: ~

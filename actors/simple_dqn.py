@@ -30,7 +30,7 @@ from gym.spaces import Discrete, utils
 
 from cogment_verse import Model, TorchReplayBuffer  # pylint: disable=abstract-class-instantiated
 from cogment_verse.constants import HUMAN_ACTOR_IMPL, PLAYER_ACTOR_CLASS, WEB_ACTOR_NAME
-from cogment_verse.specs import AgentConfig, EnvironmentConfig, EnvironmentSpecs, cog_settings
+from cogment_verse.specs import AgentConfig, EnvironmentConfig, cog_settings
 
 torch.multiprocessing.set_sharing_strategy("file_system")
 
@@ -136,43 +136,40 @@ class SimpleDQNActor:
     async def impl(self, actor_session):
         actor_session.start()
 
-        config = actor_session.config
+        rng = np.random.default_rng(actor_session.config.seed if actor_session.config.seed is not None else 0)
 
-        rng = np.random.default_rng(config.seed if config.seed is not None else 0)
-
-        environment_specs = EnvironmentSpecs.deserialize(config.environment_specs)
-        observation_space = environment_specs.get_observation_space()
-        action_space = environment_specs.get_action_space(seed=rng.integers(9999))
-
-        assert isinstance(action_space.gym_space, Discrete)
+        assert isinstance(actor_session.get_action_space().gym_space, Discrete)
 
         # Get model
         model = await SimpleDQNModel.retrieve_model(
-            actor_session.model_registry, config.model_id, config.model_iteration
+            actor_session.model_registry, actor_session.config.model_id, actor_session.config.model_iteration
         )
         model.network.eval()
 
         async for event in actor_session.all_events():
-            if event.observation and event.type == cogment.EventType.ACTIVE:
-                observation = observation_space.deserialize(event.observation.observation)
+            observation = actor_session.get_observation(event)
+            if observation and event.type == cogment.EventType.ACTIVE:
                 if observation.current_player is not None and observation.current_player != actor_session.name:
                     # Not the turn of the agent
-                    actor_session.do_action(action_space.serialize(action_space.create()))
+                    action = actor_session.get_action_space().create()
+                    actor_session.do_action(actor_session.get_action_space().serialize(action))
                     continue
 
                 if (
-                    config.model_iteration == -1
-                    and config.model_update_frequency > 0
-                    and actor_session.get_tick_id() % config.model_update_frequency == 0
+                    actor_session.config.model_iteration == -1
+                    and actor_session.config.model_update_frequency > 0
+                    and actor_session.get_tick_id() % actor_session.config.model_update_frequency == 0
                 ):
                     # Get model
                     model = await SimpleDQNModel.retrieve_model(
-                        actor_session.model_registry, config.model_id, config.model_iteration
+                        actor_session.model_registry,
+                        actor_session.config.model_id,
+                        actor_session.config.model_iteration,
                     )
                     model.network.eval()
 
                 if rng.random() < model.epsilon:
-                    action = action_space.sample(mask=observation.action_mask)
+                    action = actor_session.get_action_space().sample(mask=observation.action_mask)
                 else:
                     obs_tensor = torch.tensor(observation.flat_value, dtype=self._dtype)
                     action_probs = model.network(obs_tensor)
@@ -184,9 +181,9 @@ class SimpleDQNActor:
                             log.info("no moves are available, this shouldn't be possible")
                         action_probs = action_probs - large * (1 - action_mask_tensor)
                     discrete_action_tensor = torch.argmax(action_probs)
-                    action = action_space.create(value=discrete_action_tensor.item())
+                    action = actor_session.get_action_space().create(value=discrete_action_tensor.item())
 
-                actor_session.do_action(action_space.serialize(action))
+                actor_session.do_action(actor_session.get_action_space().serialize(action))
 
 
 class SimpleDQNTraining:
@@ -216,36 +213,32 @@ class SimpleDQNTraining:
         self._cfg = cfg
 
     async def sample_producer_impl(self, sample_producer_session):
-        player_actor_params = sample_producer_session.trial_info.parameters.actors[0]
 
-        player_actor_name = player_actor_params.name
-        player_environment_specs = EnvironmentSpecs.deserialize(player_actor_params.config.environment_specs)
-        player_observation_space = player_environment_specs.get_observation_space()
-        player_action_space = player_environment_specs.get_action_space()
+        assert len(sample_producer_session.player_actors) == 1
+        player_actor_name = sample_producer_session.player_actors[0]
 
-        observation = None
-        action = None
-        reward = None
+        observation_tensor = None
+        action_tensor = None
+        reward_tensor = None
         total_reward = 0
         async for sample in sample_producer_session.all_trial_samples():
-            actor_sample = sample.actors_data[player_actor_name]
-            if actor_sample.observation is None:
+            next_observation = sample_producer_session.get_player_observations(sample, player_actor_name)
+
+            if next_observation.flat_value is None:
                 # This can happen when there is several "end-of-trial" samples
                 continue
 
-            next_observation = torch.tensor(
-                player_observation_space.deserialize(actor_sample.observation).flat_value, dtype=self._dtype
-            )
+            next_observation_tensor = torch.tensor(next_observation.flat_value, dtype=self._dtype)
 
-            if observation is not None:
+            if observation_tensor is not None:
                 # It's not the first sample, let's check if it is the last
                 done = sample.trial_state == cogment.TrialState.ENDED
                 sample_producer_session.produce_sample(
                     (
-                        observation,
-                        next_observation,
-                        action,
-                        reward,
+                        observation_tensor,
+                        next_observation_tensor,
+                        action_tensor,
+                        reward_tensor,
                         torch.ones(1, dtype=torch.int8) if done else torch.zeros(1, dtype=torch.int8),
                         total_reward,
                     )
@@ -253,11 +246,11 @@ class SimpleDQNTraining:
                 if done:
                     break
 
-            observation = next_observation
-            action_value = player_action_space.deserialize(actor_sample.action).value
-            action = torch.tensor(action_value, dtype=torch.int64)
-            reward = torch.tensor(actor_sample.reward if actor_sample.reward is not None else 0, dtype=self._dtype)
-            total_reward += reward.item()
+            observation_tensor = next_observation_tensor
+            action_tensor = torch.tensor(sample_producer_session.get_player_actions(sample).value, dtype=torch.int64)
+            reward = sample_producer_session.get_reward(sample, player_actor_name)
+            reward_tensor = torch.tensor(reward if reward is not None else 0, dtype=self._dtype)
+            total_reward += reward_tensor.item()
 
     async def impl(self, run_session):
         # Initializing a model
@@ -459,39 +452,26 @@ class SimpleDQNSelfPlayTraining:
         self._rng = np.random.default_rng(self._cfg.seed)
 
     async def sample_producer_impl(self, sample_producer_session):
-        players_params = {
-            actor_params.name: {
-                "params": actor_params,
-                "observation_space": EnvironmentSpecs.deserialize(
-                    actor_params.config.environment_specs
-                ).get_observation_space(),
-                "action_space": EnvironmentSpecs.deserialize(actor_params.config.environment_specs).get_action_space(),
-            }
-            for actor_params in sample_producer_session.trial_info.parameters.actors
-            if actor_params.class_name == PLAYER_ACTOR_CLASS
-        }
 
         players_partial_sample = {
-            player_params["params"].name: {"observation": None, "action": None, "reward": None, "total_reward": 0}
-            for player_params in players_params.values()
+            player_name: {"observation": None, "action": None, "reward": None, "total_reward": 0}
+            for player_name in sample_producer_session.player_actors
         }
 
         # Let's start with any player actor
-        current_player_actor = next(iter(players_params.keys()))
+        current_player_actor = next(iter(sample_producer_session.player_actors))
         async for sample in sample_producer_session.all_trial_samples():
-            previous_player_actor_sample = sample.actors_data[current_player_actor]
-            if previous_player_actor_sample.observation is None:
+            observation = sample_producer_session.get_player_observations(sample, current_player_actor)
+
+            if observation.flat_value is None:
                 # This can happen when there is several "end-of-trial" samples
                 continue
 
-            current_player_actor = previous_player_actor_sample.observation.current_player
-            current_player_params = players_params[current_player_actor]
-            current_player_partial_sample = players_partial_sample[current_player_actor]
-
-            current_player_sample = sample.actors_data[current_player_actor]
+            current_player_name = observation.current_player
+            current_player_partial_sample = players_partial_sample[current_player_name]
 
             next_observation = torch.tensor(
-                current_player_params["observation_space"].deserialize(current_player_sample.observation).flat_value,
+                sample_producer_session.get_player_observations(sample, current_player_name).flat_value,
                 dtype=self._dtype,
             )
 
@@ -500,7 +480,6 @@ class SimpleDQNSelfPlayTraining:
                 done = sample.trial_state == cogment.TrialState.ENDED
                 sample_producer_session.produce_sample(
                     (
-                        current_player_actor,
                         current_player_partial_sample["observation"],
                         next_observation,
                         current_player_partial_sample["action"],
@@ -516,18 +495,16 @@ class SimpleDQNSelfPlayTraining:
                     break
 
             current_player_partial_sample["observation"] = next_observation
-            action_value = current_player_params["action_space"].deserialize(current_player_sample.action).value
             current_player_partial_sample["action"] = torch.tensor(
-                action_value,
+                sample_producer_session.get_player_actions(sample, current_player_name).value,
                 dtype=torch.int64,
             )
-            for player_actor in players_params.keys():
+
+            for player_actor in sample_producer_session.player_actors:
                 player_partial_sample = players_partial_sample[player_actor]
+                player_reward = sample_producer_session.get_reward(sample, player_actor)
                 player_partial_sample["reward"] = torch.tensor(
-                    sample.actors_data[player_actor].reward
-                    if sample.actors_data[player_actor].reward is not None
-                    else 0,
-                    dtype=self._dtype,
+                    player_reward if player_reward is not None else 0, dtype=self._dtype
                 )
                 player_partial_sample["total_reward"] += player_partial_sample["reward"].item()
 
@@ -666,7 +643,7 @@ class SimpleDQNSelfPlayTraining:
                 sample_producer_impl=self.sample_producer_impl,
                 num_parallel_trials=self._cfg.num_parallel_trials,
             ):
-                (_actor_name, observation, next_observation, action, reward, done, total_rewards) = sample
+                (observation, next_observation, action, reward, done, total_rewards) = sample
                 replay_buffer.add(
                     observation=observation, next_observation=next_observation, action=action, reward=reward, done=done
                 )
@@ -751,7 +728,7 @@ class SimpleDQNSelfPlayTraining:
                 sample_producer_impl=self.sample_producer_impl,
                 num_parallel_trials=self._cfg.num_parallel_trials,
             ):
-                (_actor_name, _observation, _next_observation, _action, _reward, done, total_rewards) = sample
+                (_observation, _next_observation, _action, _reward, done, total_rewards) = sample
 
                 trial_done = done.item() == 1
 

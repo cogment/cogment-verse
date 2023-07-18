@@ -1,0 +1,31 @@
+# @package _global_
+defaults:
+  - override /services/actor:
+      - appo
+  - override /services/environment: hopper
+
+run:
+  class_name: actors.appo.APPOTraining
+  seed: 1
+  num_epochs: 10
+  num_iter: 500000
+  epoch_num_trials: 4
+  num_parallel_trials: 4
+  learning_rate: 3.5e-4
+  batch_size: 64
+  buffer_size: 24576
+  learning_starts: 1
+  update_freq: 1
+  num_rollout_steps: 2048
+  max_training_steps: 3000000
+  discount_factor: 0.99
+  lambda_gae: 0.95
+  device: cpu
+  entropy_loss_coef: 0.00
+  value_loss_coef: 0.25
+  clipping_coef: 0.2
+  num_hidden_nodes: 64
+  grad_norm: 0.5
+  logging_interval: 1
+  is_vf_clipped: False
+  state_norm: True
