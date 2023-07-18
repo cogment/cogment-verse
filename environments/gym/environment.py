@@ -39,7 +39,7 @@ class Environment:
     def __init__(self, cfg):
         self.gym_env_name = cfg.env_name
 
-        gym_env = gym.make(self.gym_env_name, new_step_api=True)
+        gym_env = gym.make(self.gym_env_name)
 
         web_components_file = None
         matching_web_components = [
@@ -67,15 +67,13 @@ class Environment:
             self._make_gym_env = lambda render: gym.make(
                 self.gym_env_name,
                 render_mode="rgb_array" if render else None,
-                new_step_api=True,
                 full_action_space=True,
             )
             self._render_gym_env = lambda gym_env: gym_env.render(mode="rgb_array")
         else:
             self._make_gym_env = lambda render: gym.make(
                 self.gym_env_name,
-                render_mode="single_rgb_array" if render else None,
-                new_step_api=True,
+                render_mode="rgb_array" if render else None,
             )
             self._render_gym_env = lambda gym_env: gym_env.render()
 
@@ -98,7 +96,7 @@ class Environment:
 
         gym_env = self._make_gym_env(session_cfg.render)
 
-        gym_observation, _info = gym_env.reset(seed=session_cfg.seed, return_info=True)
+        gym_observation, _info = gym_env.reset(seed=session_cfg.seed)
 
         observation_space = environment_session.get_observation_space(player_actor_name)
         observation = observation_space.create(
