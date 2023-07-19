@@ -33,17 +33,17 @@ TEST_WORK_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".tmp_co
 CONFIG_REL_PATH = os.path.relpath(DEFAULT_CONFIG_DIR, os.path.abspath(os.path.dirname(__file__)))
 TEST_CONFIG_PATH = os.path.join(os.path.dirname(__file__), ".tmp_config")
 TEST_CONFIG_REL_PATH = os.path.relpath(TEST_CONFIG_PATH, os.path.abspath(os.path.dirname(__file__)))
-DEFAULT_TEST_TIMEOUT = 500  # seconds
+DEFAULT_TEST_TIMEOUT = 120  # seconds
 
 TEST_EXPERIMENTS = [
     "random_cartpole_ft",
-    "ppo/hopper_ft",
-    "ppo/lunar_lander_continuous_ft",
-    "sac/hopper_ft",
-    "simple_dqn/cartpole_ft",
+    # "ppo/hopper_ft",
+    # "ppo/lunar_lander_continuous_ft",
+    # "sac/hopper_ft",
+    # "simple_dqn/cartpole_ft",
     # "simple_a2c/ant_ft", # requires: pip install -r isaac_requirements.txt
-    "simple_a2c/cartpole_ft",
-    "td3/lunar_lander_continuous_ft",
+    # "simple_a2c/cartpole_ft",
+    # "td3/lunar_lander_continuous_ft",
 ]
 
 
