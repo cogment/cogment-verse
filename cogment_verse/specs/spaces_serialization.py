@@ -39,7 +39,7 @@ def serialize_gym_space(space, serialization_format=SerializationFormat.STRUCTUR
             box=Box(
                 low=serialize_ndarray(low, serialization_format=serialization_format),
                 high=serialize_ndarray(high, serialization_format=serialization_format),
-            )
+            ),
         )
 
     if isinstance(space, (gym.spaces.MultiBinary, gymnasium.spaces.MultiBinary)):
@@ -51,14 +51,14 @@ def serialize_gym_space(space, serialization_format=SerializationFormat.STRUCTUR
             size = np.array(space.n, dtype=np.dtype("int32"))
         return Space(
             type=space_type,
-            multi_binary=MultiBinary(n=serialize_ndarray(size, serialization_format=serialization_format))
+            multi_binary=MultiBinary(n=serialize_ndarray(size, serialization_format=serialization_format)),
         )
 
     if isinstance(space, (gym.spaces.MultiDiscrete, gymnasium.spaces.MultiDiscrete)):
         nvec = space.nvec
         return Space(
             type=space_type,
-            multi_discrete=MultiDiscrete(nvec=serialize_ndarray(nvec, serialization_format=serialization_format))
+            multi_discrete=MultiDiscrete(nvec=serialize_ndarray(nvec, serialization_format=serialization_format)),
         )
 
     if isinstance(space, (gym.spaces.Dict, gymnasium.spaces.Dict)):
@@ -73,10 +73,10 @@ def deserialize_space(pb_space):
     space_type = pb_space.type
     if space_type == Type.GYM:
         return deserialize_gym_space(pb_space)
-    elif space_type == Type.GYMNASIUM:
+    if space_type == Type.GYMNASIUM:
         return deserialize_gymnasium_space(pb_space)
-    else:
-        raise RuntimeError(f"[{space_type}] is not a supported space type")
+
+    raise RuntimeError(f"[{space_type}] is not a supported space type")
 
 
 def deserialize_gym_space(pb_space):
@@ -144,17 +144,14 @@ def deserialize_gymnasium_space(pb_space):
 def flatten(space, observation):
     if isinstance(space, gym.spaces.space.Space):
         return gym.spaces.flatten(space, observation)
-    elif isinstance(space, gymnasium.spaces.Space):
+    if isinstance(space, gymnasium.spaces.Space):
         return gymnasium.spaces.flatten(space, observation)
-    else:
-        raise ValueError("Unsupported space type")
+    raise ValueError("Unsupported space type")
 
 
 def unflatten(original_space, flat_observation):
     if isinstance(original_space, gym.spaces.space.Space):
         return gym.spaces.unflatten(original_space, flat_observation)
-    elif isinstance(original_space, gymnasium.spaces.Space):
+    if isinstance(original_space, gymnasium.spaces.Space):
         return gymnasium.spaces.unflatten(original_space, flat_observation)
-    else:
-        raise ValueError("Unsupported space type")
-
+    raise ValueError("Unsupported space type")
