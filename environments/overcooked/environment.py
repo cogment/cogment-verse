@@ -16,7 +16,7 @@ import logging
 import os
 
 import cogment
-import gym
+import gymnasium as gym
 import numpy as np
 from overcooked_ai_py.mdp.overcooked_env import DEFAULT_ENV_PARAMS, Overcooked, OvercookedEnv
 from overcooked_ai_py.mdp.overcooked_mdp import OvercookedGridworld

@@ -16,6 +16,7 @@ mujoco==2.3.3
 tinyscaler~=1.2.4
 SuperSuit~=3.8.0
 AutoROM~=0.4.2
+# gym>=0.26.2
 git+https://github.com/HumanCompatibleAI/overcooked_ai.git
 
 # actors

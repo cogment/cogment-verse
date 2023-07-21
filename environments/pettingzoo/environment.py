@@ -19,7 +19,7 @@ import logging
 import os
 
 import cogment
-import gymnasium as gymna
+import gymnasium as gym
 import numpy as np
 import supersuit as ss
 from cogment.environment import EnvironmentSession
@@ -50,7 +50,7 @@ def get_rl_agent(current_pz_agent_name: str, actor_names: list) -> Tuple[str, in
     return (actor_names[idx], idx)
 
 
-def atari_env_wrapper(env: gymna.Env) -> gymna.Env:
+def atari_env_wrapper(env: gym.Env) -> gym.Env:
     """Wrapper for atari env"""
     env = ss.max_observation_v0(env, 2)
     env = ss.frame_skip_v0(env, 4)

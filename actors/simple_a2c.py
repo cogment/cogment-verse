@@ -19,7 +19,7 @@ import logging
 
 import cogment
 import torch
-from gym.spaces import Discrete, utils
+from gymnasium.spaces import Discrete, utils
 
 from cogment_verse import Model
 from cogment_verse.constants import PLAYER_ACTOR_CLASS

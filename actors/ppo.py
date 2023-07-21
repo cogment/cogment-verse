@@ -22,7 +22,7 @@ from typing import List, Tuple, Union
 import cogment
 import numpy as np
 import torch
-from gym.spaces import Box, utils
+from gymnasium.spaces import Box, utils
 from torch.distributions.normal import Normal
 
 from cogment_verse import Model

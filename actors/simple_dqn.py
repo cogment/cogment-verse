@@ -26,7 +26,7 @@ import time
 import cogment
 import numpy as np
 import torch
-from gym.spaces import Discrete, utils
+from gymnasium.spaces import Discrete, utils
 
 from cogment_verse import Model, TorchReplayBuffer  # pylint: disable=abstract-class-instantiated
 from cogment_verse.constants import HUMAN_ACTOR_IMPL, PLAYER_ACTOR_CLASS, WEB_ACTOR_NAME

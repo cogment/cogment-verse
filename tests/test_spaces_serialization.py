@@ -12,16 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import gym
+import gymnasium
 import numpy as np
 import pytest
-from gym.spaces import Box, Dict, Discrete, MultiBinary, MultiDiscrete
+from gymnasium.spaces import Box, Dict, Discrete, MultiBinary, MultiDiscrete
 from overcooked_ai_py.mdp.overcooked_env import DEFAULT_ENV_PARAMS, Overcooked, OvercookedEnv
 from overcooked_ai_py.mdp.overcooked_mdp import OvercookedGridworld
 from pettingzoo.classic import connect_four_v3
 
 from cogment_verse.specs.ndarray_serialization import SerializationFormat
-from cogment_verse.specs.spaces_serialization import deserialize_gym_space, serialize_gym_space
+from cogment_verse.specs.spaces_serialization import deserialize_space, serialize_gym_space
 
 # pylint: disable=no-member
 
@@ -41,13 +41,13 @@ def test_serialize_connect4_observation_space():
     assert pb_space.dict.spaces[1].space.box.high.shape == [6, 7, 2]
     assert pb_space.dict.spaces[1].space.box.low.shape == [6, 7, 2]
 
-    deserialized_space = deserialize_gym_space(pb_space)
+    deserialized_space = deserialize_space(pb_space)
 
     assert gym_space.shape == deserialized_space.shape
 
 
 def test_serialize_cartpole_observation_space():
-    env = gym.make("CartPole-v1")
+    env = gymnasium.make("CartPole-v1")
 
     gym_space = env.observation_space
 
@@ -58,7 +58,7 @@ def test_serialize_cartpole_observation_space():
     assert pb_space.box.high.double_data[0] == pytest.approx(4.8)
     assert pb_space.box.high.double_data[1] == np.finfo(np.float32).max
 
-    deserialized_space = deserialize_gym_space(pb_space)
+    deserialized_space = deserialize_space(pb_space)
 
     assert gym_space.shape == deserialized_space.shape
     assert gym_space.low == pytest.approx(deserialized_space.low)
@@ -78,7 +78,7 @@ def test_serialize_overcooked_observation_space():
     assert pb_space.box.low.double_data[0] == pytest.approx(0)
     assert pb_space.box.high.double_data[0] == np.inf
 
-    deserialized_space = deserialize_gym_space(pb_space)
+    deserialized_space = deserialize_space(pb_space)
 
     assert gym_space.shape == deserialized_space.shape
     assert gym_space.low == pytest.approx(deserialized_space.low)

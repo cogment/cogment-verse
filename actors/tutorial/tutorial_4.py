@@ -22,7 +22,7 @@ import cogment
 ############ TUTORIAL STEP 4 ############
 import numpy as np
 import torch
-from gym.spaces import utils
+from gymnasium.spaces import utils
 
 from cogment_verse import Model
 from cogment_verse.specs import (

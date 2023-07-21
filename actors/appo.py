@@ -24,7 +24,7 @@ import cogment
 import numpy as np
 import torch
 from cogment.actor import ActorSession
-from gym.spaces import utils
+from gymnasium.spaces import utils
 from omegaconf import DictConfig, ListConfig
 from torch.distributions.normal import Normal
 

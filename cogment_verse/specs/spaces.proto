@@ -44,6 +44,11 @@ message Dict {
   repeated SubSpace spaces = 1;
 }
 
+enum Type {
+  GYM = 0;
+  GYMNASIUM = 1;
+}
+
 message Space {
   oneof kind {
     Discrete discrete = 1;
@@ -52,4 +57,5 @@ message Space {
     MultiBinary multi_binary = 4;
     MultiDiscrete multi_discrete = 5;
   }
+  Type type = 6;
 }
