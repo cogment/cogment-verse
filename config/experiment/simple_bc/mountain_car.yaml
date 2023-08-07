@@ -4,6 +4,6 @@ defaults:
       - simple_bc
   - override /services/environment: mountain_car
 run:
-  class_name: actors.tutorial.tutorial_4.SimpleBCTraining
+  class_name: actors.tutorial.tutorial_1.SimpleBCTraining
   seed: 618
   num_trials: 15

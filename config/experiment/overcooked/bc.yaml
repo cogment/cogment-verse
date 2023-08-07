@@ -1,0 +1,18 @@
+# @package _global_
+defaults:
+  - override /services/actor:
+      - random
+  - override /services/environment: overcooked/cramped_room
+  - _self_
+
+run:
+  class_name: runs.play.PlayRun
+  agent_class: SimpleBCActor
+  observer: False
+  num_trials: 3
+  seed: 12
+  players:
+    - name: player_1
+      implementation: client
+    - name: player_2
+      implementation: actors.overcooked_bc.SimpleBCActor

@@ -14,7 +14,7 @@ run:
   archive_frequency: 20000                  # Unit: steps
 
   # Training Params
-  num_epochs: 75
+  num_epochs: 10
   epoch_num_training_trials: 200            # Unit: trials
   epoch_num_validation_trials: 20           # Unit: trials
   num_parallel_trials: 10                   # Unit: trials

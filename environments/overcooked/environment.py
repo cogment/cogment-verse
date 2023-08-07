@@ -108,7 +108,7 @@ class Environment:
 
                     joint_action.append(action_value)
 
-            if len(joint_action) == len(environment_session.player_actors):
+            if len(joint_action) == len(environment_session.player_actors): # if all players have sent an action
                 gym_observation, reward, done, _info = gym_env.step((joint_action))
 
                 observations = []
@@ -121,7 +121,7 @@ class Environment:
                     )
                     observations.append((player_actor_name, observation_space.serialize(observation)))
 
-                for _, player_actor_name in non_player_actors:
+                for player_actor_name in non_player_actors:
                     observation_space = environment_session.get_observation_space(player_actor_name)
                     observation = observation_space.create(
                         value=gym_observation["both_agent_obs"][0],  # Dummy observation for non-player actors
@@ -133,8 +133,8 @@ class Environment:
                 if reward is not None:
                     environment_session.add_reward(
                         value=reward,
-                        confidence=1.0,
-                        to=[player_actor_name],
+                        confidence=1.0, 
+                        to=[player_actor_name], # apply rewards to all players
                     )
 
                 if done:

@@ -10,12 +10,12 @@ run:
     - name: first_0
       implementation: actors.ppo_atari_pz.PPOActor
       agent_config:
-        model_id: wonderful_elbakyan_0_model
+        model_id: stupefied_hellman_0_model
         model_iteration: -1
         model_update_frequency: ~
     - name: second_0
       implementation: actors.ppo_atari_pz.PPOActor
       agent_config:
-        model_id: wonderful_elbakyan_0_model
+        model_id: stupefied_hellman_0_model
         model_iteration: -1
         model_update_frequency: ~

@@ -22,7 +22,7 @@ run:
   max_training_steps: 20_000_000
   discount_factor: 0.99
   lambda_gae: 0.95
-  device: cpu
+  device: cuda
   entropy_loss_coef: 0.01
   value_loss_coef: 0.5
   clipping_coef: 0.2

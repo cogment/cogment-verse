@@ -27,6 +27,8 @@ def main():
     work_dir = os.environ.get("COGMENT_VERSE_WORK_DIR", DEFAULT_WORK_DIR)
 
     mlflow_data_dir = os.path.join(work_dir, "mlflow")
+    print(f"Using work dir {work_dir}")
+    print(f"Starting mlflow server on port {args.port} with data dir {mlflow_data_dir}")
     os.makedirs(mlflow_data_dir, exist_ok=True)
     check_call(
         args=[
