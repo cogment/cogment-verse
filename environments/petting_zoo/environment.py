@@ -24,7 +24,7 @@ import numpy as np
 import supersuit as ss
 from cogment.environment import EnvironmentSession
 
-from cogment_verse.constants import EVALUATOR_ACTOR_CLASS, PLAYER_ACTOR_CLASS, TEACHER_ACTOR_CLASS, WEB_ACTOR_NAME
+from cogment_verse.constants import EVALUATOR_ACTOR_CLASS, PLAYER_ACTOR_CLASS, WEB_ACTOR_NAME
 from cogment_verse.specs import EnvironmentSpecs
 from cogment_verse.specs.ndarray_serialization import SerializationFormat, deserialize_ndarray
 from cogment_verse.utils import import_class
@@ -147,43 +147,27 @@ class ClassicEnvironment(Environment):
     """Classic petting zoo e.g., connect four, Hanabi etc."""
 
     async def impl(self, environment_session):
-        actors = environment_session.get_active_actors()
-        player_actors = [
-            (actor_idx, actor.actor_name)
-            for (actor_idx, actor) in enumerate(actors)
-            if actor.actor_class_name == PLAYER_ACTOR_CLASS
-        ]
+        # Making sure we have the right assumptions
+        player_actors = environment_session.player_actors
         assert len(player_actors) == self.env_specs.num_players  # pylint: disable=no-member
-
-        # No support for teachers
-        teacher_actors = [
-            (actor_idx, actor.actor_name)
-            for (actor_idx, actor) in enumerate(actors)
-            if actor.actor_class_name == TEACHER_ACTOR_CLASS
-        ]
-        assert len(teacher_actors) == 0
+        assert len(environment_session.teacher_actors) <= 1
 
         session_cfg = environment_session.config
 
         pz_env = self.env_class.env(render_mode="rgb_array")
-        observation_space = self.env_specs.get_observation_space(session_cfg.render_width)
-        action_space = self.env_specs.get_action_space()
-
         pz_env.reset(seed=session_cfg.seed)
-
         pz_agent_iterator = iter(pz_env.agent_iter())
 
         def next_player():
             nonlocal pz_agent_iterator
             current_player_pz_agent = next(pz_agent_iterator)
-            current_player_actor_idx, current_player_actor_name = next(
-                (player_actor_idx, player_actor_name)
-                for (player_pz_agent, (player_actor_idx, player_actor_name)) in zip(pz_env.agents, player_actors)
+            return next(
+                player_actor_name
+                for player_pz_agent, player_actor_name in zip(pz_env.agents, player_actors)
                 if player_pz_agent == current_player_pz_agent
             )
-            return (current_player_pz_agent, current_player_actor_idx, current_player_actor_name)
 
-        _current_player_pz_agent, current_player_actor_idx, current_player_actor_name = next_player()
+        current_player_actor_name = next_player()
 
         pz_observation, _pz_reward, termination, truncation, _ = pz_env.last()
 
@@ -193,6 +177,9 @@ class ClassicEnvironment(Environment):
                 log.warning(f"Petting Zoo environment [{self.env_class_name}] doesn't support rendering to pixels")
                 return
             rendered_frame = pz_env.render()
+
+        # NOTE; this assumes every actor has the same observation space
+        observation_space = environment_session.get_observation_space(current_player_actor_name)
 
         observation = observation_space.create(
             value=pz_observation["observation"],  # TODO Should only be sent to the current player
@@ -204,14 +191,12 @@ class ClassicEnvironment(Environment):
         environment_session.start([("*", observation_space.serialize(observation))])
 
         async for event in environment_session.all_events():
-            if event.actions:
-                action = action_space.deserialize(
-                    event.actions[current_player_actor_idx].action,
-                )
+            current_player_action = environment_session.get_player_actions(event, current_player_actor_name)
 
-                pz_env.step(action.value)
+            if current_player_action:
+                pz_env.step(current_player_action.value)
 
-                _current_player_pz_agent, current_player_actor_idx, current_player_actor_name = next_player()
+                current_player_actor_name = next_player()
                 pz_observation, _pz_reward, termination, truncation, _ = pz_env.last()
 
                 observation = observation_space.create(
@@ -230,9 +215,7 @@ class ClassicEnvironment(Environment):
                         continue
                     rewarded_player_actor_name = next(
                         player_actor_name
-                        for (player_pz_agent, (player_actor_idx, player_actor_name)) in zip(
-                            pz_env.agents, player_actors
-                        )
+                        for (player_pz_agent, player_actor_name) in zip(pz_env.agents, player_actors)
                         if player_pz_agent == rewarded_player_pz_agent
                     )
                     environment_session.add_reward(

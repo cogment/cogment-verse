@@ -1,11 +1,7 @@
 # Overcooked Environment
 
-You can use the overcooked environment integration with cogment-verse by installing a fork of the repository [overcooked_ai](git+https://github.com/wduguay-air/overcooked_ai.git).
+You can use the overcooked environment integration with cogment-verse. By default, the requirements.txt file includes the repository [overcooked_ai](git+https://github.com/wduguay-air/overcooked_ai.git).
 
-To install the forked repository, in addition to the original installation instructions, run the following command:
-```console
-pip install -r overcooked_requirements.txt
-```
 
 The integration uses the `play` run implementation as defined in
 `runs/play.py`

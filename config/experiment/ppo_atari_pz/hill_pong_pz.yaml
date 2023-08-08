@@ -12,7 +12,7 @@ run:
   num_epochs: 4
   num_iter: 1000
   epoch_num_trials: 2
-  num_parallel_trials: 2
+  num_parallel_trials: 1
   learning_rate: 3e-4
   batch_size: 128
   buffer_size: 10000
