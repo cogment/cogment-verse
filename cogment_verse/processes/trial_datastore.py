@@ -43,7 +43,7 @@ def create_trial_datastore_service(work_dir, trial_datastore_cfg, services_direc
 
     if trial_datastore_cfg.local_file_storage:
         cli_args.append(f"--file_storage=.cogment_verse/{ServiceType.TRIAL_DATASTORE.value}/trial_datastore.db")
-        log.info(f"Trial Datastore local file storage enabled.")
+        log.info("Trial Datastore local file storage enabled.")
 
     log.info(f"Trial Datastore starting on port [{port}]...")
 

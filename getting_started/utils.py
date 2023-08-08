@@ -46,7 +46,7 @@ async def get_trial_ids(endpoint: str, user_id: str = "cogment_verse_client"):
     return trial_ids
 
 
-async def get_trial_data(endpoint: str, trial_ids: List[str] = [], user_id: str = "cogment_verse_client"):
+async def get_trial_data(endpoint: str, trial_ids: List[str], user_id: str = "cogment_verse_client"):
     """Extracts the trial data for the specified trial_ids.
 
     Returns a dictionary with keys as trial ids.
@@ -78,9 +78,7 @@ async def get_trial_data(endpoint: str, trial_ids: List[str] = [], user_id: str 
     return trial_data
 
 
-async def get_gym_trial_data(
-    endpoint: str, trial_ids: List[str] = [], actor_names=[], user_id: str = "cogment_verse_client"
-):
+async def get_gym_trial_data(endpoint: str, trial_ids: List[str], actor_names, user_id: str = "cogment_verse_client"):
     """Extracts the trial data for the specified trial_ids and actor names. In addition, the observations and actions will be
     deserialized in the proper gym space format.
 
@@ -93,7 +91,7 @@ async def get_gym_trial_data(
     trial_data = await get_trial_data(endpoint, trial_ids, user_id)
 
     gym_samples = []
-    for trial_id, data in trial_data.items():
+    for _, data in trial_data.items():
         trial_info = data["trial_info"]
         environment_specs = EnvironmentSpecs.deserialize(trial_info.parameters.actors[0].config.environment_specs)
         action_space = environment_specs.get_action_space()
@@ -129,7 +127,7 @@ def array_equal(array_1: np.ndarray, array_2: np.ndarray, tolerance=1e-05) -> bo
     return False
 
 
-def find_array_index(arr_list: List[np.ndarray], test_array: np.ndarray, tolerance=1e-05) -> int:
+def find_array_index(arr_list: List[np.ndarray], test_array: np.ndarray) -> int:
     """Find the index of a test array in a list of arrays, with a tolerance for equality."""
     for i, arr in enumerate(arr_list):
         if array_equal(arr, test_array):
