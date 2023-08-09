@@ -22,7 +22,7 @@ from ..constants import DEFAULT_RENDERED_WIDTH, PLAYER_ACTOR_CLASS
 from .action_space import ActionSpace
 from .ndarray_serialization import SerializationFormat
 from .observation_space import ObservationSpace
-from .spaces_serialization import deserialize_gym_space, serialize_gym_space
+from .spaces_serialization import deserialize_gym_space, serialize_space
 
 
 class EnvironmentSpecs:
@@ -103,8 +103,8 @@ class EnvironmentSpecs:
             PbEnvironmentSpecs(
                 num_players=num_players,
                 turn_based=turn_based,
-                observation_space=serialize_gym_space(observation_space, serialization_format),
-                action_space=serialize_gym_space(action_space, serialization_format),
+                observation_space=serialize_space(observation_space, serialization_format),
+                action_space=serialize_space(action_space, serialization_format),
                 web_components_file=web_components_file,
             )
         )

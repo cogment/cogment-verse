@@ -13,10 +13,9 @@
 # limitations under the License.
 
 import cogment
-from cogment_verse.constants import ActorSpecType
 
-from cogment_verse.specs import PLAYER_ACTOR_CLASS, EnvironmentSpecs
-from environments.petting_zoo.mpe_environment import MpeSpecType
+from cogment_verse.specs import PLAYER_ACTOR_CLASS
+from environments.pettingzoo.mpe_environment import MpeSpecType
 
 
 class RandomActor:

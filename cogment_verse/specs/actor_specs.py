@@ -12,17 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
-
-import yaml
 from data_pb2 import ActorSpecs as PbActorSpecs  # pylint: disable=import-error
-from google.protobuf.json_format import MessageToDict, ParseDict
 
 from ..constants import PLAYER_ACTOR_CLASS, ActorSpecType
 from .action_space import ActionSpace
 from .ndarray_serialization import SerializationFormat
 from .observation_space import ObservationSpace
-from .spaces_serialization import deserialize_gym_space, serialize_gym_space
+from .spaces_serialization import deserialize_space, serialize_space
 
 
 class ActorSpecs:
@@ -63,7 +59,7 @@ class ActorSpecs:
             render_width: optional
                 maximum width for the serialized rendered frame in observation
         """
-        return ObservationSpace(deserialize_gym_space(self._pb.observation_space), render_width)
+        return ObservationSpace(deserialize_space(self._pb.observation_space), render_width)
 
     def get_action_space(self, actor_class=PLAYER_ACTOR_CLASS, seed=None):
         """
@@ -75,7 +71,7 @@ class ActorSpecs:
             seed: optional
                 the seed used when generating random actions
         """
-        return ActionSpace(deserialize_gym_space(self._pb.action_space), actor_class, seed)
+        return ActionSpace(deserialize_space(self._pb.action_space), actor_class, seed)
 
     @classmethod
     def create(
@@ -92,8 +88,8 @@ class ActorSpecs:
         return cls.deserialize(
             PbActorSpecs(
                 spec_type=spec_type.value,
-                observation_space=serialize_gym_space(observation_space, serialization_format),
-                action_space=serialize_gym_space(action_space, serialization_format),
+                observation_space=serialize_space(observation_space, serialization_format),
+                action_space=serialize_space(action_space, serialization_format),
                 web_components_file=web_components_file,
             )
         )

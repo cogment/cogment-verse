@@ -25,7 +25,6 @@ RUN chmod +x /opt/ml/code
 
 WORKDIR /opt/ml/code
 RUN pip install --no-cache-dir -r requirements.txt --timeout 5000
-RUN pip install SuperSuit==3.7.0
 RUN chmod +x sagemaker_main.py
 
 # Activate license for atari game

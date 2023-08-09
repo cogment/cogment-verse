@@ -12,10 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import gym
+import gymnasium
 from data_pb2 import Observation as PbObservation  # pylint: disable=import-error
-from gymnasium.spaces import Dict, utils
 
 from cogment_verse.constants import DEFAULT_RENDERED_WIDTH
+from cogment_verse.specs.spaces_serialization import flatten, unflatten
 
 from .encode_rendered_frame import encode_rendered_frame
 from .ndarray_serialization import deserialize_ndarray, serialize_ndarray
@@ -88,7 +90,7 @@ class Observation:
 
     def _compute_flat_value(self):
         if hasattr(self, "_value"):
-            return utils.flatten(self._gym_space, self._value)
+            return flatten(self._gym_space, self._value)
 
         return deserialize_ndarray(self._pb_observation.value)
 
@@ -99,7 +101,7 @@ class Observation:
         return self._flat_value
 
     def _compute_value(self):
-        return utils.unflatten(self._gym_space, self.flat_value)
+        return unflatten(self._gym_space, self.flat_value)
 
     @property
     def value(self):
@@ -111,7 +113,7 @@ class Observation:
         if hasattr(self, "_action_mask"):
             if self._action_mask is None:
                 return None
-            return utils.flatten(self._action_mask_gym_space, self._action_mask)
+            return flatten(self._action_mask_gym_space, self._action_mask)
 
         if not self._pb_observation.HasField("action_mask"):
             return None
@@ -128,7 +130,7 @@ class Observation:
         flat_action_mask = self.flat_action_mask
         if flat_action_mask is None:
             return None
-        return utils.unflatten(self._action_mask_gym_space, self.flat_action_mask)
+        return unflatten(self._action_mask_gym_space, self.flat_action_mask)
 
     @property
     def action_mask(self):
@@ -191,8 +193,8 @@ class ObservationSpace:
         ObservationSpace constructor.
         Shouldn't be called directly, prefer the factory function of EnvironmentSpecs.
         """
-        if isinstance(space, Dict) and ("action_mask" in space.spaces):
-            # Check the observation space defines an action_mask "component" (like petting zoo does)
+        if isinstance(space, (gym.spaces.Dict, gymnasium.spaces.Dict)) and ("action_mask" in space.spaces):
+            # Check the observation space defines an action_mask "component" (like PettingZoo does)
             assert "observation" in space.spaces
             assert len(space.spaces) == 2
 
@@ -238,12 +240,12 @@ class ObservationSpace:
         """
         Serialize an Observation to an Observation protobuf message
         """
-        flat_value = utils.flatten(self.gym_space, observation.value)
+        flat_value = flatten(self.gym_space, observation.value)
         serialized_value = serialize_ndarray(flat_value)
 
         serialized_action_mask = None
         if self.action_mask_gym_space is not None:
-            flat_action_mask = utils.flatten(self.action_mask_gym_space, observation.action_mask)
+            flat_action_mask = flatten(self.action_mask_gym_space, observation.action_mask)
             serialized_action_mask = serialize_ndarray(flat_action_mask)
 
         serialized_rendered_frame = None

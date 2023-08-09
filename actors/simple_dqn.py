@@ -139,7 +139,7 @@ class SimpleDQNActor:
 
         rng = np.random.default_rng(actor_session.config.seed if actor_session.config.seed is not None else 0)
 
-        assert isinstance(actor_session.get_action_space().gym_space, Discrete)
+        assert isinstance(actor_session.get_action_space().gym_space, Discrete), f"Expected action space of type [{Discrete}] but received type [{type(actor_session.get_action_space())}]."
 
         # Get model
         model = await SimpleDQNModel.retrieve_model(
@@ -262,7 +262,7 @@ class SimpleDQNTraining:
         assert self._environment_specs.num_players == 1
         action_space = self._environment_specs[self._spec_type].get_action_space()
         observation_space = self._environment_specs[self._spec_type].get_observation_space()
-        assert isinstance(action_space.gym_space, Discrete)
+        assert isinstance(action_space.gym_space, Discrete), f"Expected action space of type [{Discrete}] but received type [{type(action_space.gym_space)}]."
 
         epsilon_schedule = create_linear_schedule(
             self._cfg.epsilon_schedule_start,

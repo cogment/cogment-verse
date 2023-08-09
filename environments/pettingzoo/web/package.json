@@ -1,5 +1,5 @@
 {
-  "name": "@cogment/cogment_verse_petting_zoo",
+  "name": "@cogment/cogment_verse_pettingzoo",
   "version": "0.1.0",
   "scripts": {
     "build": "node build.js"

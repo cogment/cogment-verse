@@ -13,7 +13,8 @@
 # limitations under the License.
 
 from data_pb2 import ObserverAction, PlayerAction, TeacherAction  # pylint: disable=import-error
-from gymnasium.spaces import utils
+
+from cogment_verse.specs.spaces_serialization import flatten, unflatten
 
 from ..constants import OBSERVER_ACTOR_CLASS, PLAYER_ACTOR_CLASS, TEACHER_ACTOR_CLASS
 from .ndarray_serialization import deserialize_ndarray, serialize_ndarray
@@ -55,7 +56,7 @@ class Action:
             value = self._value
             if value is None:
                 return None
-            return utils.flatten(self._gym_space, self._value)
+            return flatten(self._gym_space, self._value)
 
         if not self._pb_action.HasField("value"):
             # This happens whenever value is None
@@ -73,7 +74,7 @@ class Action:
         flat_value = self.flat_value
         if flat_value is None:
             return None
-        return utils.unflatten(self._gym_space, flat_value)
+        return unflatten(self._gym_space, flat_value)
 
     @property
     def value(self):

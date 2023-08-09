@@ -21,7 +21,7 @@ from typing import List, Optional, Union
 import yaml
 from cogment_verse.specs.actor_specs import ActorSpecs
 from cogment_verse.specs.ndarray_serialization import SerializationFormat
-from cogment_verse.specs.spaces_serialization import serialize_gym_space
+from cogment_verse.specs.spaces_serialization import serialize_space
 from data_pb2 import EnvironmentSpecs as PbEnvironmentSpecs  # pylint: disable=import-error
 from data_pb2 import ActorSpecs as PbActorSpecs  # pylint: disable=import-error
 from google.protobuf.json_format import MessageToDict, ParseDict
@@ -122,75 +122,23 @@ class EnvironmentSpecs:
         """
         Factory function building an homogenous EnvironmentSpecs, ie  with all actors having the same action and observation spaces.
         """
-
-        # return cls.deserialize(PbEnvironmentSpecs(
-        #     num_player=num_players,
-        #     turn_based=turn_based,
-        #     actor_specs=[ActorSpecs.create(
-        #         observation_space=observation_space,
-        #         action_space=action_space,
-        #         web_components_file=web_components_file,
-        #         spec_type=ActorSpecType.DEFAULT.value,
-        #         serialization_format=serialization_format,
-        #     )],
-        # ))
-
         return cls.deserialize(PbEnvironmentSpecs(
             num_players=num_players,
             turn_based=turn_based,
             actor_specs=[PbActorSpecs(
                 spec_type=ActorSpecType.DEFAULT.value,
-                observation_space=serialize_gym_space(observation_space, serialization_format),
-                action_space=serialize_gym_space(action_space, serialization_format),
+                observation_space=serialize_space(observation_space, serialization_format),
+                action_space=serialize_space(action_space, serialization_format),
                 web_components_file=web_components_file,
             )],
         ))
-
-        # actor_specs = [ActorSpecs.create(observation_space, action_space, actor_class, serialization_format)]
-        # return cls(num_players=num_players, turn_based=turn_based, actor_specs=actor_specs)
 
     @classmethod
     def deserialize(cls, environment_specs_pb: PbEnvironmentSpecs):
         """
         Factory function building a EnvironmentSpecs instance from an EnvironmentSpecs protobuf message.
         """
-        # actor_specs = []
-        # print(type(specs_pb))
-        # for spec_pb in specs_pb.actor_specs:
-        #     actor_specs.append(ActorSpecs.deserialize(spec_pb))
         return cls(environment_specs_pb)
-
-    # @classmethod
-    # def load(cls, work_dir, env_name):
-    #     """
-    #     Factory function building an EnvironmentSpecs from cogment_version work dir cache.
-    #     """
-    #     spec_list = []
-    #     specs_directory = os.path.join(work_dir, "environment_specs", f"{env_name}")
-
-    #     for file in os.listdir(specs_directory):
-    #         if file.endswith(".yaml"):
-    #             specs_filename = os.path.join(specs_directory, file)
-    #             with open(specs_filename, "r", encoding="utf-8") as f:
-    #                 spec = ActorSpecs.deserialize(ParseDict(yaml.safe_load(f), PbActorSpecs()))
-    #                 print(f".load spec: {spec}")
-    #                 spec_list.append(spec)
-
-    #     return cls(spec_list)
-
-    # def save(self, work_dir, env_name):
-    #     """
-    #     Saving to cogment_verse work dir cache
-    #     """
-    #     for spec_type, actor_specs in self._actor_specs.items():
-    #         print(f"actor_spec: {spec_type}")
-    #         specs_filename = os.path.join(work_dir, "environment_specs", f"{env_name}", f"{spec_type}.yaml")
-    #         print(f".save specs_filename: {specs_filename}")
-    #         os.makedirs(os.path.dirname(specs_filename), exist_ok=True)
-    #         self._pb.implementation = env_name
-
-    #         with open(specs_filename, "w", encoding="utf-8") as f:
-    #             yaml.safe_dump(MessageToDict(actor_specs._pb, preserving_proto_field_name=True), f)
 
     @classmethod
     def load(cls, work_dir, env_name):

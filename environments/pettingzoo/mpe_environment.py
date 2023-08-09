@@ -29,7 +29,7 @@ from cogment_verse.constants import EVALUATOR_ACTOR_CLASS, PLAYER_ACTOR_CLASS, W
 from cogment_verse.specs import ActorSpecs, EnvironmentSpecs
 from cogment_verse.specs.ndarray_serialization import SerializationFormat, deserialize_ndarray
 from cogment_verse.utils import import_class
-from environments.petting_zoo.utils import MpeSpecType, PettingZooEnvType, get_strings_with_prefix
+from environments.pettingzoo.utils import MpeSpecType, PettingZooEnvType, get_strings_with_prefix
 
 log = logging.getLogger(__name__)
 
@@ -135,7 +135,7 @@ class MpeEnvironment:
             for (actor_idx, actor) in enumerate(actors)
             if actor.actor_class_name in self._player_classes
         ]
-        
+
         # Web actor index in cogment actors
         web_actor_idx = [actor_idx for actor_idx, actor_name, _ in player_actors if actor_name == WEB_ACTOR_NAME]
         assert len(web_actor_idx) < 2, "Multiple web actors are currently not supported for this environment."

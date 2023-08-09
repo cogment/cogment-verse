@@ -117,7 +117,7 @@ class Environment(ABC):
         ]
         if len(matching_web_components) > 1:
             log.warning(
-                f"While configuring petting zoo environment [{self.env_class_name}] found more that one matching web components [{matching_web_components}], picking the first one."
+                f"While configuring PettingZoo environment [{self.env_class_name}] found more that one matching web components [{matching_web_components}], picking the first one."
             )
         if len(matching_web_components) > 0:
             web_components_file = matching_web_components[0]

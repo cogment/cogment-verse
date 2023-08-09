@@ -1,3 +1,3 @@
-class_name: environments.petting_zoo.environment.ClassicEnvironment
+class_name: environments.pettingzoo.environment.ClassicEnvironment
 env_class_name: pettingzoo.classic.connect_four_v3
-port: ${generate_port:environments.petting_zoo.environment.ClassicEnvironment}
+port: ${generate_port:environments.pettingzoo.environment.ClassicEnvironment}

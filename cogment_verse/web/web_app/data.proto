@@ -82,6 +82,7 @@ message PlayerAction {
 
 message TeacherAction {
   optional nd_array.Array value = 1;
+  optional string overridden_player = 2; // The player whose action is overriden by the teacher
 }
 
 message ObserverAction {

@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import gymnasium as gym
+import gymnasium
 import numpy as np
 import pytest
 from gymnasium.spaces import Box, Dict, Discrete, MultiBinary, MultiDiscrete
@@ -21,7 +21,7 @@ from overcooked_ai_py.mdp.overcooked_mdp import OvercookedGridworld
 from pettingzoo.classic import connect_four_v3
 
 from cogment_verse.specs.ndarray_serialization import SerializationFormat
-from cogment_verse.specs.spaces_serialization import deserialize_gym_space, serialize_gym_space
+from cogment_verse.specs.spaces_serialization import deserialize_space, serialize_space
 
 # pylint: disable=no-member
 
@@ -31,7 +31,7 @@ def test_serialize_connect4_observation_space():
     env.reset()
 
     gym_space = env.observation_space("player_0")
-    pb_space = serialize_gym_space(gym_space, serialization_format=SerializationFormat.STRUCTURED)
+    pb_space = serialize_space(gym_space, serialization_format=SerializationFormat.STRUCTURED)
 
     assert len(pb_space.dict.spaces) == 2
     assert pb_space.dict.spaces[0].key == "action_mask"
@@ -41,24 +41,24 @@ def test_serialize_connect4_observation_space():
     assert pb_space.dict.spaces[1].space.box.high.shape == [6, 7, 2]
     assert pb_space.dict.spaces[1].space.box.low.shape == [6, 7, 2]
 
-    deserialized_space = deserialize_gym_space(pb_space)
+    deserialized_space = deserialize_space(pb_space)
 
     assert gym_space.shape == deserialized_space.shape
 
 
 def test_serialize_cartpole_observation_space():
-    env = gym.make("CartPole-v1")
+    env = gymnasium.make("CartPole-v1")
 
     gym_space = env.observation_space
 
-    pb_space = serialize_gym_space(gym_space, serialization_format=SerializationFormat.STRUCTURED)
+    pb_space = serialize_space(gym_space, serialization_format=SerializationFormat.STRUCTURED)
 
     assert pb_space.box.high.shape == [4]
     assert pb_space.box.low.shape == [4]
     assert pb_space.box.high.double_data[0] == pytest.approx(4.8)
     assert pb_space.box.high.double_data[1] == np.finfo(np.float32).max
 
-    deserialized_space = deserialize_gym_space(pb_space)
+    deserialized_space = deserialize_space(pb_space)
 
     assert gym_space.shape == deserialized_space.shape
     assert gym_space.low == pytest.approx(deserialized_space.low)
@@ -71,14 +71,14 @@ def test_serialize_overcooked_observation_space():
     gym_env = Overcooked(base_env=env, featurize_fn=env.featurize_state_mdp)
     gym_space = gym_env.observation_space
 
-    pb_space = serialize_gym_space(gym_space, serialization_format=SerializationFormat.STRUCTURED)
+    pb_space = serialize_space(gym_space, serialization_format=SerializationFormat.STRUCTURED)
 
     assert pb_space.box.high.shape == [96]
     assert pb_space.box.low.shape == [96]
     assert pb_space.box.low.double_data[0] == pytest.approx(0)
     assert pb_space.box.high.double_data[0] == np.inf
 
-    deserialized_space = deserialize_gym_space(pb_space)
+    deserialized_space = deserialize_space(pb_space)
 
     assert gym_space.shape == deserialized_space.shape
     assert gym_space.low == pytest.approx(deserialized_space.low)
@@ -109,7 +109,7 @@ def test_serialize_custom_observation_space():
         }
     )
 
-    pb_space = serialize_gym_space(gym_space, serialization_format=SerializationFormat.STRUCTURED)
+    pb_space = serialize_space(gym_space, serialization_format=SerializationFormat.STRUCTURED)
 
     assert len(pb_space.dict.spaces) == 2
     assert pb_space.dict.spaces[0].key == "ext_controller"
