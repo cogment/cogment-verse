@@ -200,34 +200,35 @@ class TD3Actor:
     async def impl(self, actor_session):
         actor_session.start()
 
-        config = actor_session.config
-        spec_type = ActorSpecType.from_config(config.spec_type)
-        actor_specs = EnvironmentSpecs.deserialize(config.environment_specs)[spec_type]
-        observation_space = actor_specs.get_observation_space()
-        action_space = actor_specs.get_action_space(seed=config.seed)
-
-        assert isinstance(action_space.gym_space, Box)
+        assert isinstance(actor_session.get_action_space().gym_space, Box)
 
         # Get model
-        model = await TD3Model.retrieve_model(actor_session.model_registry, config.model_id, config.model_iteration)
+        model = await TD3Model.retrieve_model(
+            actor_session.model_registry, actor_session.config.model_id, actor_session.config.model_iteration
+        )
+
         model.eval()
 
         async for event in actor_session.all_events():
-            if event.observation and event.type == cogment.EventType.ACTIVE:
-                observation = observation_space.deserialize(event.observation.observation)
+            observation = actor_session.get_observation(event)
+            if observation and event.type == cogment.EventType.ACTIVE:
+                if observation.current_player is not None and observation.current_player.name != actor_session.name:
+                    # Not the turn of the agent
+                    action = actor_session.get_action_space().create()
+                    actor_session.do_action(actor_session.get_action_space().serialize(action))
+                    continue
 
                 if model.time_steps < model.random_steps:
-                    action = action_space.sample()
+                    action = actor_session.get_action_space().sample()
                 else:
                     observation = torch.tensor(observation.value, dtype=self._dtype)
                     action = model.actor(observation)
                     action = action.cpu().detach().numpy()
                     # adding exploration noise
                     action = action + np.random.normal(0, model.max_action * model.expl_noise, size=2)
+                    action = actor_session.get_action_space().create(value=action)
 
-                    action = action_space.create(value=action)
-
-                actor_session.do_action(action_space.serialize(action))
+                actor_session.do_action(actor_session.get_action_space().serialize(action))
 
 
 class TD3Training:
@@ -253,37 +254,32 @@ class TD3Training:
         self._spec_type = ActorSpecType.DEFAULT
 
     async def sample_producer_impl(self, sample_producer_session):
-        player_actor_params = sample_producer_session.trial_info.parameters.actors[0]
 
-        player_actor_name = player_actor_params.name
-        player_environment_specs = EnvironmentSpecs.deserialize(player_actor_params.config.environment_specs)
-        player_observation_space = player_environment_specs[self._spec_type].get_observation_space()
-        player_action_space = player_environment_specs[self._spec_type].get_action_space()
+        assert len(sample_producer_session.player_actors) == 1
+        player_actor_name = sample_producer_session.player_actors[0]
 
-        observation = None
-        action = None
-        reward = None
-
+        observation_tensor = None
+        action_tensor = None
+        reward_tensor = None
         total_reward = 0
         async for sample in sample_producer_session.all_trial_samples():
-            actor_sample = sample.actors_data[player_actor_name]
-            if actor_sample.observation is None:
+            next_observation = sample_producer_session.get_player_observations(sample, player_actor_name)
+
+            if next_observation.flat_value is None:
                 # This can happen when there is several "end-of-trial" samples
                 continue
 
-            next_observation = torch.tensor(
-                player_observation_space.deserialize(actor_sample.observation).flat_value, dtype=self._dtype
-            )
+            next_observation_tensor = torch.tensor(next_observation.flat_value, dtype=self._dtype)
 
-            if observation is not None:
+            if observation_tensor is not None:
                 # It's not the first sample, let's check if it is the last
                 done = sample.trial_state == cogment.TrialState.ENDED
                 sample_producer_session.produce_sample(
                     (
-                        observation,
-                        next_observation,
-                        action,
-                        reward,
+                        observation_tensor,
+                        next_observation_tensor,
+                        action_tensor,
+                        reward_tensor,
                         torch.ones(1, dtype=torch.int8) if done else torch.zeros(1, dtype=torch.int8),
                         total_reward,
                     )
@@ -291,10 +287,11 @@ class TD3Training:
                 if done:
                     break
 
-            observation = next_observation
-            action = torch.tensor(player_action_space.deserialize(actor_sample.action).value, dtype=self._dtype)
-            reward = torch.tensor(actor_sample.reward if actor_sample.reward is not None else 0, dtype=self._dtype)
-            total_reward += reward.item()
+            observation_tensor = next_observation_tensor
+            action_tensor = torch.tensor(sample_producer_session.get_player_actions(sample).value, dtype=torch.int64)
+            reward = sample_producer_session.get_reward(sample, player_actor_name)
+            reward_tensor = torch.tensor(reward if reward is not None else 0, dtype=self._dtype)
+            total_reward += reward_tensor.item()
 
     async def impl(self, run_session):
         # Initializing a model

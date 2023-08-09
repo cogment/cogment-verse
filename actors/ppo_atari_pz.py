@@ -31,16 +31,16 @@ from torch.distributions.distribution import Distribution
 from cogment_verse import HumanDataBuffer, Model, PPOReplayBuffer, RolloutBuffer
 from cogment_verse.constants import ActorSpecType
 from cogment_verse.run.run_session import RunSession
-from cogment_verse.run.sample_producer_worker import SampleProducerSession
 from cogment_verse.specs import (
+    AgentConfig,
+    cog_settings,
+    EnvironmentConfig,
+    EnvironmentSpecs,
     EVALUATOR_ACTOR_CLASS,
     HUMAN_ACTOR_IMPL,
     PLAYER_ACTOR_CLASS,
+    SampleProducerSession,
     WEB_ACTOR_NAME,
-    AgentConfig,
-    EnvironmentConfig,
-    EnvironmentSpecs,
-    cog_settings,
 )
 
 torch.multiprocessing.set_sharing_strategy("file_system")
@@ -212,56 +212,55 @@ class PPOActor:
     async def impl(self, actor_session: ActorSession):
         # Start a session
         actor_session.start()
-        config = actor_session.config
+
+        assert isinstance(
+            actor_session.get_action_space().gym_space, Discrete
+        )  # TODO: test with other action space types
 
         # Setup random seed
-        torch.manual_seed(config.seed)
-
-        # Get observation and action space
-        spec_type = ActorSpecType.from_config(config.spec_type)
-        actor_specs = EnvironmentSpecs.deserialize(config.environment_specs)[spec_type]
-        observation_space = actor_specs.get_observation_space()
-        action_space = actor_specs.get_action_space(seed=config.seed)
+        torch.manual_seed(actor_session.config.seed)
 
         # Get model
-        model = await PPOModel.retrieve_model(actor_session.model_registry, config.model_id, config.model_iteration)
+        model = await PPOModel.retrieve_model(
+            actor_session.model_registry,
+            actor_session.config.model_id,
+            actor_session.config.model_iteration,
+        )
         model.network.eval()
 
-        log.info(f"Actor - retrieved model number: {model.iteration}")
+        log.info(f"Actor - retrieved model iteration: {model.iteration}")
         obs_shape = model.input_shape[::-1]
 
         async for event in actor_session.all_events():
-            if event.observation and event.type == cogment.EventType.ACTIVE:
-                if (
-                    event.observation.observation.HasField("current_player")
-                    and event.observation.observation.current_player.name != actor_session.name
-                ):
+            observation = actor_session.get_observation(event)
+            if observation and event.type == cogment.EventType.ACTIVE:
+                if observation.current_player is not None and observation.current_player.name != actor_session.name:
                     # Not the turn of the agent
-                    actor_session.do_action(action_space.serialize(action_space.create()))
+                    action = actor_session.get_action_space().create()
+                    actor_session.do_action(actor_session.get_action_space().serialize(action))
                     continue
 
                 # Retrieve the model every N rollout steps
                 if (
-                    config.model_update_frequency != 0
-                    and (event.observation.tick_id + 1) % config.model_update_frequency == 0
+                    actor_session.config.model_update_frequency != 0
+                    and (event.observation.tick_id + 1) % actor_session.config.model_update_frequency == 0
                 ):
-                    model = await PPOModel.retrieve_model(actor_session.model_registry, config.model_id, -1)
+                    model = await PPOModel.retrieve_model(
+                        actor_session.model_registry, actor_session.config.model_id, -1
+                    )
                     model.network.eval()
-                    # model.network.to(torch.device(model.device))
 
-                obs = observation_space.deserialize(event.observation.observation)
-                obs_tensor = torch.tensor(obs.flat_value, dtype=self._dtype).reshape(obs_shape).clone()
-                obs_tensor = torch.unsqueeze(obs_tensor.permute((2, 0, 1)), dim=0)
+                observation_tensor = torch.tensor(observation.flat_value, dtype=self._dtype).reshape(obs_shape).clone()
+                observation_tensor = torch.unsqueeze(observation_tensor.permute((2, 0, 1)), dim=0)
 
                 # Get action from policy network
                 with torch.no_grad():
-                    dist = model.network.get_action(obs_tensor)
+                    dist = model.network.get_action(observation_tensor)
                     action = dist.sample().cpu().numpy()[0]
 
                 # Send action to environment
-                assert isinstance(action_space.gym_space, Discrete)  # TODO: test with other action space types
-                action_value = action_space.create(value=action)
-                actor_session.do_action(action_space.serialize(action_value))
+                action_value = actor_session.get_action_space().create(value=action)
+                actor_session.do_action(actor_session.get_action_space().serialize(action_value))
 
 
 class BasePPOTraining(ABC):
@@ -329,17 +328,19 @@ class BasePPOTraining(ABC):
 
     async def sample_producer_impl(self, sample_producer_session: SampleProducerSession):
         """Collect sample from the trial"""
-        actor_params = {
-            actor_params.name: actor_params
-            for actor_params in sample_producer_session.trial_info.parameters.actors
-            if actor_params.class_name == PLAYER_ACTOR_CLASS
-        }
-        actor_names = list(actor_params.keys())
-        player_environment_specs = EnvironmentSpecs.deserialize(actor_params[actor_names[0]].config.environment_specs)
-        player_observation_space = player_environment_specs[self._spec_type].get_observation_space()
-        player_action_space = player_environment_specs[self._spec_type].get_action_space()
-        num_players = player_environment_specs.num_players
-        obs_shape = tuple(self._cfg.image_size)[::-1]
+
+        # TODO: Remove after test
+        # actor_params = {
+        #     actor_params.name: actor_params
+        #     for actor_params in sample_producer_session.trial_info.parameters.actors
+        #     if actor_params.class_name == PLAYER_ACTOR_CLASS
+        # }
+        # actor_names = list(actor_params.keys())
+        # player_environment_specs = EnvironmentSpecs.deserialize(actor_params[actor_names[0]].config.environment_specs)
+        # player_observation_space = player_environment_specs[self._spec_type].get_observation_space()
+        # player_action_space = player_environment_specs[self._spec_type].get_action_space()
+        # num_players = player_environment_specs.num_players
+        # obs_shape = tuple(self._cfg.image_size)[::-1]
 
         rollout_buffer = RolloutBuffer(
             capacity=self._cfg.num_rollout_steps,
@@ -353,48 +354,60 @@ class BasePPOTraining(ABC):
         current_players = []
         episode_rewards = []
         done = torch.zeros(1, dtype=torch.int8)
-        player_actor_name = actor_names[0]
         total_reward = 0
         step = 0
+
+        current_player_actor = sample_producer_session.player_actors[0]
+        num_players = sample_producer_session.environment_specs.num_players
+        obs_shape = tuple(self._cfg.image_size)[::-1]
+
         async for sample in sample_producer_session.all_trial_samples():
             # Trail status
             trial_done = sample.trial_state == cogment.TrialState.ENDED
-            previous_actor_sample = sample.actors_data[player_actor_name]
-            player_actor_name = previous_actor_sample.observation.current_player.name
-            actor_sample = sample.actors_data[player_actor_name]
+            # TODO: Remove after test
+            # previous_actor_sample = sample.actors_data[player_actor_name]
+            # player_actor_name = previous_actor_sample.observation.current_player.name
+            # actor_sample = sample.actors_data[player_actor_name]
+
+            observation = sample_producer_session.get_player_observations(sample, current_player_actor)
+            current_player_actor = observation.current_player.name
+
+            # Collect data from environment
+            observation_tensor = (
+                torch.tensor(
+                    sample_producer_session.get_player_observations(sample, current_player_actor).flat_value,
+                    dtype=self._dtype,
+                )
+                .reshape(obs_shape)
+                .clone()
+            )
+            observation_value = torch.unsqueeze(torch.permute(observation_tensor, (2, 0, 1)), dim=0)
+            reward = sample_producer_session.get_reward(sample, current_player_actor)
+            reward_tensor = torch.tensor(reward if reward is not None else 0, dtype=self._dtype)
+            done = torch.ones(1, dtype=torch.float32) if trial_done else torch.zeros(1, dtype=torch.float32)
+
+            if not trial_done:
+                action_tensor = torch.tensor(
+                    sample_producer_session.get_player_actions(sample, current_player_actor).value,
+                    dtype=self._dtype,
+                )
+                current_players.append(current_player_actor)
 
             if self.should_load_model(sample.tick_id, self._cfg.num_rollout_steps, trial_done):
                 model = await PPOModel.retrieve_model(sample_producer_session.model_registry, self.model_id, -1)
                 model.network.eval()
 
-            # Collect data from environment
-            obs_flat = player_observation_space.deserialize(actor_sample.observation).flat_value
-            obs_tensor = torch.tensor(obs_flat, dtype=self._dtype).reshape(obs_shape).clone()
-            observation_value = torch.unsqueeze(torch.permute(obs_tensor, (2, 0, 1)), dim=0)
-            done = torch.ones(1, dtype=torch.float32) if trial_done else torch.zeros(1, dtype=torch.float32)
-            reward_value = (
-                torch.tensor(actor_sample.reward, dtype=self._dtype)
-                if actor_sample.reward is not None
-                else torch.tensor(0, dtype=self._dtype)
-            )
-
-            if not trial_done:
-                action_value = torch.tensor(
-                    player_action_space.deserialize(actor_sample.action).value, dtype=self._dtype
-                )
-                current_players.append(player_actor_name)
-
             # Compute values and log probs
             if step % self._cfg.num_rollout_steps > 0 and not trial_done:
                 with torch.no_grad():
                     value, log_prob, _ = model.network.get_action_value(
-                        observation=observation_value, action=action_value
+                        observation=observation_value, action=action_tensor
                     )
                     values.append(value.squeeze(0).cpu())
                     log_probs.append(log_prob.squeeze(0).cpu())
 
                 # Add sample to rollout replay buffer
-                rollout_buffer.add(observation=observation_value, action=action_value, reward=reward_value, done=done)
+                rollout_buffer.add(observation=observation_value, action=action_tensor, reward=reward_tensor, done=done)
 
             # Save episode reward i.e., number of total steps for an episode
             step += 1
@@ -969,18 +982,19 @@ class HumanFeedbackPPOTraining(BasePPOTraining):
         model = await PPOModel.retrieve_model(sample_producer_session.model_registry, self.model_id, -1)
         model.network.eval()
 
+        # TODO: Remove after test
         # Actor parameter
-        actor_params = {
-            actor_params.name: actor_params
-            for actor_params in sample_producer_session.trial_info.parameters.actors
-            if actor_params.class_name == PLAYER_ACTOR_CLASS
-        }
-        actor_names = list(actor_params.keys())
-        player_environment_specs = EnvironmentSpecs.deserialize(actor_params[actor_names[0]].config.environment_specs)
-        player_observation_space = player_environment_specs[self._spec_type].get_observation_space()
-        player_action_space = player_environment_specs[self._spec_type].get_action_space()
-        num_players = player_environment_specs.num_players
-        obs_shape = tuple(self._cfg.image_size)[::-1]
+        # actor_params = {
+        #     actor_params.name: actor_params
+        #     for actor_params in sample_producer_session.trial_info.parameters.actors
+        #     if actor_params.class_name == PLAYER_ACTOR_CLASS
+        # }
+        # actor_names = list(actor_params.keys())
+        # player_environment_specs = EnvironmentSpecs.deserialize(actor_params[actor_names[0]].config.environment_specs)
+        # player_observation_space = player_environment_specs[self._spec_type].get_observation_space()
+        # player_action_space = player_environment_specs[self._spec_type].get_action_space()
+        # num_players = player_environment_specs.num_players
+        # obs_shape = tuple(self._cfg.image_size)[::-1]
 
         # Rollout buffer
         rollout_buffer = RolloutBuffer(
@@ -995,47 +1009,83 @@ class HumanFeedbackPPOTraining(BasePPOTraining):
         human_eval_scores = []
         current_players = []
         episode_rewards = []
-        player_actor_name = actor_names[0]
         wait_for_feedback = False
         step = 0
         total_reward = 0
+
+        current_player_actor = sample_producer_session.player_actors[0]
+        num_players = sample_producer_session.environment_specs.num_players
+        obs_shape = tuple(self._cfg.image_size)[::-1]
+
         async for sample in sample_producer_session.all_trial_samples():
             # Trail status
             trial_done = sample.trial_state == cogment.TrialState.ENDED
+
+            observation = sample_producer_session.get_player_observations(sample, current_player_actor)
+            current_player_actor = observation.current_player.name
+
+            # Collect data
+            if current_player_actor != WEB_ACTOR_NAME:
+                observation_tensor = (
+                    torch.tensor(
+                        sample_producer_session.get_player_observations(sample, current_player_actor).flat_value,
+                        dtype=self._dtype,
+                    )
+                    .reshape(obs_shape)
+                    .clone()
+                )
+                observation_value = torch.unsqueeze(torch.permute(observation_tensor, (2, 0, 1)), dim=0)
+                reward = sample_producer_session.get_reward(sample, current_player_actor)
+                reward_tensor = torch.tensor(reward if reward is not None else 0, dtype=self._dtype)
+                done = torch.ones(1, dtype=torch.float32) if trial_done else torch.zeros(1, dtype=torch.float32)
+
+                if not trial_done:
+                    action_tensor = torch.tensor(
+                        sample_producer_session.get_player_actions(sample, current_player_actor).value,
+                        dtype=self._dtype,
+                    )
+                current_players.append(current_player_actor)
+                wait_for_feedback = True
+            else:
+                wait_for_feedback = False
+                reward = sample_producer_session.get_reward(sample, current_player_actor)
+                human_eval_score = torch.tensor(reward if reward is not None else 0, dtype=self._dtype)
+                human_eval_scores.append(human_eval_score)
 
             # Load model
             if self.should_load_model(sample.tick_id, self._cfg.num_rollout_steps, trial_done):
                 model = await PPOModel.retrieve_model(sample_producer_session.model_registry, self.model_id, -1)
                 model.network.eval()
 
-            # Actor names
-            previous_actor_sample = sample.actors_data[player_actor_name]
-            player_actor_name = previous_actor_sample.observation.current_player.name
-            actor_sample = sample.actors_data[player_actor_name]
+            # TODO: Remove after test
+            # # Actor names
+            # previous_actor_sample = sample.actors_data[player_actor_name]
+            # player_actor_name = previous_actor_sample.observation.current_player.name
+            # actor_sample = sample.actors_data[player_actor_name]
 
-            # Collect data
-            if player_actor_name != WEB_ACTOR_NAME:
-                obs_flat = player_observation_space.deserialize(actor_sample.observation).flat_value
-                obs_tensor = torch.tensor(obs_flat, dtype=self._dtype).reshape(obs_shape).clone()
-                observation_value = torch.unsqueeze(torch.permute(obs_tensor, (2, 0, 1)), dim=0)
-                done = torch.ones(1, dtype=torch.float32) if trial_done else torch.zeros(1, dtype=torch.float32)
-                reward_value = (
-                    torch.tensor(actor_sample.reward, dtype=self._dtype)
-                    if actor_sample.reward is not None
-                    else torch.tensor(0, dtype=self._dtype)
-                )
-                if not trial_done:
-                    action_value = torch.tensor(
-                        player_action_space.deserialize(actor_sample.action).value, dtype=self._dtype
-                    )
-                current_players.append(player_actor_name)
-                wait_for_feedback = True
-            else:
-                wait_for_feedback = False
-                human_eval_score = torch.tensor(
-                    actor_sample.reward if actor_sample.reward is not None else 0, dtype=self._dtype
-                )
-                human_eval_scores.append(human_eval_score)
+            # # Collect data
+            # if player_actor_name != WEB_ACTOR_NAME:
+            #     obs_flat = player_observation_space.deserialize(actor_sample.observation).flat_value
+            #     obs_tensor = torch.tensor(obs_flat, dtype=self._dtype).reshape(obs_shape).clone()
+            #     observation_value = torch.unsqueeze(torch.permute(obs_tensor, (2, 0, 1)), dim=0)
+            #     done = torch.ones(1, dtype=torch.float32) if trial_done else torch.zeros(1, dtype=torch.float32)
+            #     reward_value = (
+            #         torch.tensor(actor_sample.reward, dtype=self._dtype)
+            #         if actor_sample.reward is not None
+            #         else torch.tensor(0, dtype=self._dtype)
+            #     )
+            #     if not trial_done:
+            #         action_value = torch.tensor(
+            #             player_action_space.deserialize(actor_sample.action).value, dtype=self._dtype
+            #         )
+            #     current_players.append(player_actor_name)
+            #     wait_for_feedback = True
+            # else:
+            #     wait_for_feedback = False
+            #     human_eval_score = torch.tensor(
+            #         actor_sample.reward if actor_sample.reward is not None else 0, dtype=self._dtype
+            #     )
+            #     human_eval_scores.append(human_eval_score)
 
             # Compute values and log probs
             if (
@@ -1043,15 +1093,15 @@ class HumanFeedbackPPOTraining(BasePPOTraining):
             ) and not wait_for_feedback:
                 with torch.no_grad():
                     value, log_prob, _ = model.network.get_action_value(
-                        observation=observation_value, action=action_value
+                        observation=observation_value, action=action_tensor
                     )
                     values.append(value.squeeze(0).cpu())
                     log_probs.append(log_prob.squeeze(0).cpu())
 
                 # Add sample to rollout replay buffer
-                combined_reward = reward_value + human_eval_score
+                combined_reward = reward_tensor + human_eval_score
                 rollout_buffer.add(
-                    observation=observation_value, action=action_value, reward=combined_reward, done=done
+                    observation=observation_value, action=action_tensor, reward=combined_reward, done=done
                 )
 
             # Save episode reward i.e., number of total steps for an episode

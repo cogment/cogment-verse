@@ -15,6 +15,8 @@ PettingZoo[atari,classic,mpe]~=1.23.1
 tinyscaler~=1.2.4
 AutoROM~=0.4.2
 SuperSuit~=3.8.0
+git+https://github.com/HumanCompatibleAI/overcooked_ai.git
+
 
 # actors
 torch==1.11.0

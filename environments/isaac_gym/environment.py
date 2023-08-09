@@ -22,8 +22,12 @@ import isaacgymenvs
 import numpy as np
 import torch
 
+<<<<<<< HEAD
 from cogment_verse.constants import PLAYER_ACTOR_CLASS, TEACHER_ACTOR_CLASS
 from cogment_verse.specs import EnvironmentActorSpecs
+=======
+from cogment_verse.specs import EnvironmentSpecs
+>>>>>>> main
 
 # configure pygame to use a dummy video server to be able to render headlessly
 os.environ["SDL_VIDEODRIVER"] = "dummy"
@@ -54,56 +58,29 @@ class Environment:
         return self.env_specs
 
     async def impl(self, environment_session):
-        actors = environment_session.get_active_actors()
-        player_actors = [
-            (actor_idx, actor.actor_name)
-            for (actor_idx, actor) in enumerate(actors)
-            if actor.actor_class_name == PLAYER_ACTOR_CLASS
-        ]
-        assert len(player_actors) == 1
-        [(player_actor_idx, player_actor_name)] = player_actors
-
-        teacher_actors = [
-            (actor_idx, actor.actor_name)
-            for (actor_idx, actor) in enumerate(actors)
-            if actor.actor_class_name == TEACHER_ACTOR_CLASS
-        ]
-        assert len(teacher_actors) <= 1
-        has_teacher = len(teacher_actors) == 1
-        if has_teacher:
-            [(teacher_actor_idx, _teacher_actor_name)] = teacher_actors
+        # Making sure we have the right assumptions
+        assert len(environment_session.player_actors) == 1
+        assert len(environment_session.teacher_actors) <= 1
+        [player_actor_name] = environment_session.player_actors
 
         session_cfg = environment_session.config
-
-        observation_space = self.env_specs.get_observation_space(session_cfg.render_width)
-        action_space = self.env_specs.get_action_space()
 
         gym_observation = self.gym_env.reset()
         obs = np.asarray(gym_observation["obs"].cpu())
 
+        observation_space = environment_session.get_observation_space(player_actor_name)
         observation = observation_space.create(
             value=gym_observation,
             rendered_frame=self.gym_env.render(mode="rgb_array") if session_cfg.render else None,
         )
-
         environment_session.start([("*", observation_space.serialize(observation))])
 
         async for event in environment_session.all_events():
-            if event.actions:
-                player_action = action_space.deserialize(
-                    event.actions[player_actor_idx].action,
-                )
-                action = player_action
-                overridden_players = []
-                if has_teacher:
-                    teacher_action = action_space.deserialize(
-                        event.actions[teacher_actor_idx].action,
-                    )
-                    if teacher_action.value is not None:
-                        action = teacher_action
-                        overridden_players = [player_actor_name]
 
-                action_value = action.value
+            player_action = environment_session.get_player_actions(event)
+
+            if player_action:
+                action_value = player_action.value
 
                 gym_action_tensor = torch.tensor(action_value, device="cuda:0").view(-1, 8)
                 gym_observation, reward, done, _info = self.gym_env.step(gym_action_tensor)
@@ -112,7 +89,7 @@ class Environment:
                 observation = observation_space.create(
                     value=obs,
                     rendered_frame=self.gym_env.render(mode="rgb_array") if session_cfg.render else None,
-                    overridden_players=overridden_players,
+                    overridden_players=[player_action.actor_name] if player_action.is_overriden else [],
                 )
 
                 observations = [("*", observation_space.serialize(observation))]
@@ -121,7 +98,7 @@ class Environment:
                     environment_session.add_reward(
                         value=reward,
                         confidence=1.0,
-                        to=[player_actor_name],
+                        to=[player_action.actor_name],
                     )
 
                 if done:

@@ -21,14 +21,13 @@ import torch
 from cogment_verse.constants import ActorSpecType
 
 from cogment_verse.specs import (
+    AgentConfig,
+    cog_settings,
+    EnvironmentConfig,
     HUMAN_ACTOR_IMPL,
     PLAYER_ACTOR_CLASS,
     TEACHER_ACTOR_CLASS,
     WEB_ACTOR_NAME,
-    AgentConfig,
-    EnvironmentConfig,
-    EnvironmentSpecs,
-    cog_settings,
 )
 
 #########################################
@@ -41,7 +40,7 @@ log = logging.getLogger(__name__)
 
 class SimpleBCActor:
     def __init__(self, _cfg):
-        super().__init__()
+        pass
 
     def get_actor_classes(self):
         return [PLAYER_ACTOR_CLASS]
@@ -49,15 +48,11 @@ class SimpleBCActor:
     async def impl(self, actor_session):
         actor_session.start()
 
-        config = actor_session.config
-        spec_type = ActorSpecType.from_config(config.spec_type)
-        environment_specs = EnvironmentSpecs.deserialize(config.environment_specs)
-        action_space = environment_specs[spec_type].get_action_space(seed=config.seed)
-
         async for event in actor_session.all_events():
-            if event.observation and event.type == cogment.EventType.ACTIVE:
-                action = action_space.sample()
-                actor_session.do_action(action_space.serialize(action))
+            observation = actor_session.get_observation(event)
+            if observation and event.type == cogment.EventType.ACTIVE:
+                action = actor_session.get_action_space().sample()
+                actor_session.do_action(actor_session.get_action_space().serialize(action))
 
 
 class SimpleBCTraining:
@@ -75,54 +70,25 @@ class SimpleBCTraining:
         self._cfg = cfg
 
     async def sample_producer(self, sample_producer_session):
-        assert len(sample_producer_session.trial_info.parameters.actors) == 2
-
-        players_params = [
-            actor_params
-            for actor_params in sample_producer_session.trial_info.parameters.actors
-            if actor_params.class_name == PLAYER_ACTOR_CLASS
-        ]
-        teachers_params = [
-            actor_params
-            for actor_params in sample_producer_session.trial_info.parameters.actors
-            if actor_params.class_name == TEACHER_ACTOR_CLASS
-        ]
-        assert len(players_params) == 1
-        assert len(teachers_params) == 1
-        player_params = players_params[0]
-        teacher_params = teachers_params[0]
-
-        environment_specs = ActorSpecs.deserialize(player_params.config.environment_specs)
-        action_space = environment_specs.get_action_space()
-
-        ############ TUTORIAL STEP 2 ############
-        observation_space = environment_specs.get_observation_space()
-        #########################################
+        # Making sure we have the right assumptions
+        assert len(sample_producer_session.player_actors) == 1
+        assert len(sample_producer_session.teacher_actors) == 1
 
         async for sample in sample_producer_session.all_trial_samples():
             ############ TUTORIAL STEP 2 ############
-            observation_tensor = torch.tensor(
-                observation_space.deserialize(sample.actors_data[player_params.name].observation).flat_value,
-                dtype=self._dtype,
-            )
+            player_observation = sample_producer_session.get_player_observations(sample)
             #########################################
 
-            teacher_action = action_space.deserialize(sample.actors_data[teacher_params.name].action)
+            player_action = sample_producer_session.get_player_actions(sample)
 
-            if teacher_action.flat_value is not None:
-                ############ TUTORIAL STEP 2 ############
-                applied_action = teacher_action
-                demonstration = True
-            else:
-                applied_action = action_space.deserialize(sample.actors_data[player_params.name].action)
-                demonstration = False
-
-            if applied_action.flat_value is None:
+            if player_action.flat_value is None:
                 # TODO figure out why we get into this situation
                 continue
 
-            action_tensor = torch.tensor(applied_action.flat_value, dtype=self._dtype)
-            sample_producer_session.produce_sample((demonstration, observation_tensor, action_tensor))
+            ############ TUTORIAL STEP 2 ############
+            observation_tensor = torch.tensor(player_observation.flat_value, dtype=self._dtype)
+            action_tensor = torch.tensor(player_action.flat_value, dtype=self._dtype)
+            sample_producer_session.produce_sample((player_action.is_overriden, observation_tensor, action_tensor))
             #########################################
 
     async def impl(self, run_session):

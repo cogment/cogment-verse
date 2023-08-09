@@ -27,3 +27,6 @@ from cogment_verse.constants import (
 from .encode_rendered_frame import encode_rendered_frame
 from .environment_specs import EnvironmentSpecs
 from .actor_specs import ActorSpecs
+from .actor_session_wrapper import ActorSessionWrapper
+from .environment_session_wrapper import EnvironmentSessionWrapper
+from .sample_producer_session import SampleProducerSession, SampleQueueEvent

@@ -16,6 +16,7 @@ import logging
 import os
 
 import cogment
+from cogment_verse.specs.environment_session_wrapper import EnvironmentSessionWrapper
 import gymnasium as gym
 import numpy as np
 
@@ -87,58 +88,30 @@ class Environment:
     def get_environment_specs(self):
         return self.env_specs
 
-    async def impl(self, environment_session):
-        actors = environment_session.get_active_actors()
-        player_actors = [
-            (actor_idx, actor.actor_name, actor.actor_class_name)
-            for (actor_idx, actor) in enumerate(actors)
-            if actor.actor_class_name == PLAYER_ACTOR_CLASS
-        ]
-        assert len(player_actors) == 1
-        [(player_actor_idx, player_actor_name, player_actor_class)] = player_actors
-        player_spec_type = ActorSpecType.from_config(player_actor_class)
-
-        teacher_actors = [
-            (actor_idx, actor.actor_name)
-            for (actor_idx, actor) in enumerate(actors)
-            if actor.actor_class_name == TEACHER_ACTOR_CLASS
-        ]
-        assert len(teacher_actors) <= 1
-        has_teacher = len(teacher_actors) == 1
-
-        if has_teacher:
-            [(teacher_actor_idx, _teacher_actor_name)] = teacher_actors
+    async def impl(self, environment_session: EnvironmentSessionWrapper):
+        # Making sure we have the right assumptions
+        assert len(environment_session.player_actors) == 1
+        assert len(environment_session.teacher_actors) <= 1
+        [player_actor_name] = environment_session.player_actors
 
         session_cfg = environment_session.config
 
         gym_env = self._make_gym_env(session_cfg.render)
-        observation_space = self.env_specs[player_spec_type].get_observation_space(session_cfg.render_width)
-        action_space = self.env_specs[player_spec_type].get_action_space()
 
         gym_observation, _info = gym_env.reset(seed=session_cfg.seed)
 
+        observation_space = environment_session.get_observation_space(player_actor_name)
         observation = observation_space.create(
             value=gym_observation,
             rendered_frame=self._render_gym_env(gym_env) if session_cfg.render else None,
         )
-
         environment_session.start([("*", observation_space.serialize(observation))])
-        async for event in environment_session.all_events():
-            if event.actions:
-                player_action = action_space.deserialize(
-                    event.actions[player_actor_idx].action,
-                )
-                action = player_action
-                overridden_players = []
-                if has_teacher:
-                    teacher_action = action_space.deserialize(
-                        event.actions[teacher_actor_idx].action,
-                    )
-                    if teacher_action.value is not None:
-                        action = teacher_action
-                        overridden_players = [player_actor_name]
 
-                action_value = action.value
+        async for event in environment_session.all_events():
+            player_action = environment_session.get_player_actions(event)
+
+            if player_action:
+                action_value = player_action.value
 
                 # Clipped action and send to gym environment
                 if isinstance(gym_env.action_space, gym.spaces.Box):
@@ -146,10 +119,10 @@ class Environment:
 
                 gym_observation, reward, terminated, truncated, _info = gym_env.step(action_value)
 
-                observation = observation_space.create(
+                observation = environment_session.get_observation_space(player_action.actor_name).create(
                     value=gym_observation,
                     rendered_frame=self._render_gym_env(gym_env) if session_cfg.render else None,
-                    overridden_players=overridden_players,
+                    overridden_players=[player_action.actor_name] if player_action.is_overriden else [],
                 )
 
                 observations = [("*", observation_space.serialize(observation))]
@@ -158,7 +131,7 @@ class Environment:
                     environment_session.add_reward(
                         value=reward,
                         confidence=1.0,
-                        to=[player_actor_name],
+                        to=[player_action.actor_name],
                     )
 
                 if terminated or truncated:

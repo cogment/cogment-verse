@@ -27,14 +27,13 @@ from gymnasium.spaces import utils
 from cogment_verse import Model
 from cogment_verse.constants import ActorSpecType
 from cogment_verse.specs import (
+    AgentConfig,
+    cog_settings,
+    EnvironmentConfig,
     HUMAN_ACTOR_IMPL,
     PLAYER_ACTOR_CLASS,
     TEACHER_ACTOR_CLASS,
     WEB_ACTOR_NAME,
-    AgentConfig,
-    EnvironmentConfig,
-    EnvironmentSpecs,
-    cog_settings,
 )
 
 #########################################
@@ -117,7 +116,6 @@ class SimpleBCModel(Model):
 
 class SimpleBCActor:
     def __init__(self, _cfg):
-        super().__init__()
         self._dtype = torch.float
 
     def get_actor_classes(self):
@@ -126,30 +124,25 @@ class SimpleBCActor:
     async def impl(self, actor_session):
         actor_session.start()
 
-        config = actor_session.config
-
-        spec_type = ActorSpecType.from_config(config.spec_type)
-        environment_specs = EnvironmentSpecs.deserialize(config.environment_specs)
-        action_space = environment_specs[spec_type].get_action_space(seed=config.seed)
-        observation_space = environment_specs[spec_type].get_observation_space()
-
         # Get model
         model = await SimpleBCModel.retrieve_model(
-            actor_session.model_registry, config.model_id, config.model_iteration
+            actor_session.model_registry,
+            actor_session.config.model_id,
+            actor_session.config.model_iteration,
         )
         model.policy_network.eval()
 
         log.info(f"Starting trial with model v{model.iteration}")
 
         async for event in actor_session.all_events():
-            if event.observation and event.type == cogment.EventType.ACTIVE:
-                observation = observation_space.deserialize(event.observation.observation)
+            observation = actor_session.get_observation(event)
+            if observation and event.type == cogment.EventType.ACTIVE:
                 observation_tensor = torch.tensor(observation.flat_value, dtype=self._dtype)
                 scores = model.policy_network(observation_tensor.view(1, -1))
                 probs = torch.softmax(scores, dim=-1)
                 discrete_action_tensor = torch.distributions.Categorical(probs).sample()
-                action = action_space.create(value=discrete_action_tensor.item())
-                actor_session.do_action(action_space.serialize(action))
+                action = actor_session.get_action_space().create(value=discrete_action_tensor.item())
+                actor_session.do_action(actor_session.get_action_space().serialize(action))
 
 
 class SimpleBCTraining:
@@ -173,48 +166,21 @@ class SimpleBCTraining:
         self._spec_type = ActorSpecType.DEFAULT
 
     async def sample_producer(self, sample_producer_session):
-        assert len(sample_producer_session.trial_info.parameters.actors) == 2
-
-        players_params = [
-            actor_params
-            for actor_params in sample_producer_session.trial_info.parameters.actors
-            if actor_params.class_name == PLAYER_ACTOR_CLASS
-        ]
-        teachers_params = [
-            actor_params
-            for actor_params in sample_producer_session.trial_info.parameters.actors
-            if actor_params.class_name == TEACHER_ACTOR_CLASS
-        ]
-        assert len(players_params) == 1
-        assert len(teachers_params) == 1
-        player_params = players_params[0]
-        teacher_params = teachers_params[0]
-
-        environment_specs = EnvironmentSpecs.deserialize(player_params.config.environment_specs)
-        action_space = environment_specs[self._spec_type].get_action_space()
-        observation_space = environment_specs[self._spec_type].get_observation_space()
+        # Making sure we have the right assumptions
+        assert len(sample_producer_session.player_actors) == 1
+        assert len(sample_producer_session.teacher_actors) == 1
 
         async for sample in sample_producer_session.all_trial_samples():
-            observation_tensor = torch.tensor(
-                observation_space.deserialize(sample.actors_data[player_params.name].observation).flat_value,
-                dtype=self._dtype,
-            )
+            player_observation = sample_producer_session.get_player_observations(sample)
+            player_action = sample_producer_session.get_player_actions(sample)
 
-            teacher_action = action_space.deserialize(sample.actors_data[teacher_params.name].action)
-
-            if teacher_action.flat_value is not None:
-                applied_action = teacher_action
-                demonstration = True
-            else:
-                applied_action = action_space.deserialize(sample.actors_data[player_params.name].action)
-                demonstration = False
-
-            if applied_action.flat_value is None:
+            if player_action.flat_value is None:
                 # TODO figure out why we get into this situation
                 continue
 
-            action_tensor = torch.tensor(applied_action.flat_value, dtype=self._dtype)
-            sample_producer_session.produce_sample((demonstration, observation_tensor, action_tensor))
+            observation_tensor = torch.tensor(player_observation.flat_value, dtype=self._dtype)
+            action_tensor = torch.tensor(player_action.flat_value, dtype=self._dtype)
+            sample_producer_session.produce_sample((player_action.is_overriden, observation_tensor, action_tensor))
 
     async def impl(self, run_session):
         assert self._environment_specs.num_players == 1

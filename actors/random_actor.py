@@ -28,21 +28,14 @@ class RandomActor:
 
     async def impl(self, actor_session):
         actor_session.start()
-
-        config = actor_session.config
-        environment_specs = EnvironmentSpecs.deserialize(config.environment_specs)
-        observation_space = environment_specs[config.spec_type].get_observation_space()
-        action_space = environment_specs[config.spec_type].get_action_space()
-
-        action_space.gym_space.seed(config.seed if config.seed is not None else 0)
-
         async for event in actor_session.all_events():
-            if event.observation and event.type == cogment.EventType.ACTIVE:
-                observation = observation_space.deserialize(event.observation.observation)
+            observation = actor_session.get_observation(event)
+            if observation and event.type == cogment.EventType.ACTIVE:
                 if observation.current_player is not None and observation.current_player.name != actor_session.name:
                     # Not the turn of the agent
-                    actor_session.do_action(action_space.serialize(action_space.create()))
+                    action = actor_session.get_action_space().create()
+                    actor_session.do_action(actor_session.get_action_space().serialize(action))
                     continue
 
-                action = action_space.sample(mask=observation.action_mask)
-                actor_session.do_action(action_space.serialize(action))
+                action = actor_session.get_action_space().sample(mask=observation.action_mask)
+                actor_session.do_action(actor_session.get_action_space().serialize(action))

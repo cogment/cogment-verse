@@ -110,32 +110,3 @@ class ActorSpecs:
         Factory function building an ActorSpecs instance from a ActorSpecs protobuf message
         """
         return cls(actor_specs_pb)
-
-
-    # TODO: remove because handled by EnvironmentSpecs now.
-    # @classmethod
-    # def load(cls, work_dir, env_name):
-    #     """
-    #     Factory function building an EnvironmentSpecs from cogment_version work dir cache
-    #     """
-    #     pb_specs = []
-    #     specs_directory = os.path.join(work_dir, "environment_specs", f"{env_name}")
-
-    #     for file in os.listdir(specs_directory):
-    #         if file.endswith(".yaml"):
-    #             specs_filename = os.path.join(work_dir, "environment_specs", f"{env_name}", file)
-    #             with open(specs_filename, "r", encoding="utf-8") as f:
-    #                 pb_specs.append(ParseDict(yaml.safe_load(f), PbActorSpecs()))
-    #     return cls.deserialize(pb_specs)
-
-    # def save(self, work_dir, env_name):
-    #     """
-    #     Saving to cogment_version work dir cache
-    #     """
-    #     specs_filename = os.path.join(work_dir, "environment_specs", f"{env_name}", f"{self._pb.actor_spec}.yaml")
-    #     os.makedirs(os.path.dirname(specs_filename), exist_ok=True)
-
-    #     self._pb.implementation = env_name
-
-    #     with open(specs_filename, "w", encoding="utf-8") as f:
-    #         yaml.safe_dump(MessageToDict(self._pb, preserving_proto_field_name=True), f)

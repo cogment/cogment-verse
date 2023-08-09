@@ -18,14 +18,13 @@ import cogment
 from cogment_verse.constants import ActorSpecType
 
 from cogment_verse.specs import (
+    AgentConfig,
+    cog_settings,
+    EnvironmentConfig,
     HUMAN_ACTOR_IMPL,
     PLAYER_ACTOR_CLASS,
     TEACHER_ACTOR_CLASS,
     WEB_ACTOR_NAME,
-    AgentConfig,
-    EnvironmentConfig,
-    EnvironmentSpecs,
-    cog_settings,
 )
 
 log = logging.getLogger(__name__)
@@ -33,7 +32,7 @@ log = logging.getLogger(__name__)
 
 class SimpleBCActor:
     def __init__(self, _cfg):
-        super().__init__()
+        pass
 
     def get_actor_classes(self):
         return [PLAYER_ACTOR_CLASS]
@@ -41,15 +40,11 @@ class SimpleBCActor:
     async def impl(self, actor_session):
         actor_session.start()
 
-        config = actor_session.config
-        spec_type = ActorSpecType.from_config(config.spec_type)
-        environment_specs = EnvironmentSpecs.deserialize(config.environment_specs)
-        action_space = environment_specs[spec_type].get_action_space(seed=config.seed)
-
         async for event in actor_session.all_events():
-            if event.observation and event.type == cogment.EventType.ACTIVE:
-                action = action_space.sample()
-                actor_session.do_action(action_space.serialize(action))
+            observation = actor_session.get_observation(event)
+            if observation and event.type == cogment.EventType.ACTIVE:
+                action = actor_session.get_action_space().sample()
+                actor_session.do_action(actor_session.get_action_space().serialize(action))
 
 
 class SimpleBCTraining:
@@ -65,33 +60,18 @@ class SimpleBCTraining:
         self._spec_type = ActorSpecType.DEFAULT
 
     async def sample_producer(self, sample_producer_session):
-        assert len(sample_producer_session.trial_info.parameters.actors) == 2
-
-        players_params = [
-            actor_params
-            for actor_params in sample_producer_session.trial_info.parameters.actors
-            if actor_params.class_name == PLAYER_ACTOR_CLASS
-        ]
-        teachers_params = [
-            actor_params
-            for actor_params in sample_producer_session.trial_info.parameters.actors
-            if actor_params.class_name == TEACHER_ACTOR_CLASS
-        ]
-        assert len(players_params) == 1
-        assert len(teachers_params) == 1
-        player_params = players_params[0]
-        teacher_params = teachers_params[0]
-
-        environment_specs = EnvironmentSpecs.deserialize(player_params.config.environment_specs)
-        action_space = environment_specs[self._spec_type].get_action_space()
+        # Making sure we have the right assumptions
+        assert len(sample_producer_session.player_actors) == 1
+        assert len(sample_producer_session.teacher_actors) == 1
 
         async for sample in sample_producer_session.all_trial_samples():
-            teacher_action = action_space.deserialize(sample.actors_data[teacher_params.name].action)
 
-            if teacher_action.flat_value is not None:
-                log.info(f"Got raw sample with action override from [{teacher_params.name}]")
+            player_action = sample_producer_session.get_player_actions(sample)
+
+            if player_action.flat_value is not None:
+                log.info(f"Got raw sample with action override from [{sample_producer_session.player_actors[0].name}]")
             else:
-                log.info(f"Got raw sample with action from [{player_params.name}]")
+                log.info(f"Got raw sample with action from [{sample_producer_session.teacher_actors[0].name}]")
 
     async def impl(self, run_session):
         assert self._environment_specs.num_players == 1

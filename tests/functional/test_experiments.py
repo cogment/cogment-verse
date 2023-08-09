@@ -33,7 +33,7 @@ TEST_WORK_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".tmp_co
 CONFIG_REL_PATH = os.path.relpath(DEFAULT_CONFIG_DIR, os.path.abspath(os.path.dirname(__file__)))
 TEST_CONFIG_PATH = os.path.join(os.path.dirname(__file__), ".tmp_config")
 TEST_CONFIG_REL_PATH = os.path.relpath(TEST_CONFIG_PATH, os.path.abspath(os.path.dirname(__file__)))
-DEFAULT_TEST_TIMEOUT = 500  # seconds
+DEFAULT_TEST_TIMEOUT = 60  # seconds
 
 TEST_EXPERIMENTS = [
     "random_cartpole_ft",
@@ -67,6 +67,31 @@ def fixture_prepare_config():
     # clean tmp folders
     shutil.rmtree(TEST_CONFIG_PATH, ignore_errors=True)
     shutil.rmtree(TEST_WORK_DIR, ignore_errors=True)
+
+
+def get_experiment_configs():
+    """Retrieve the name of all experiment config files."""
+    configs = []
+    # Walk through the directory and its subdirectories
+    for root, _, files in os.walk(os.path.join(DEFAULT_CONFIG_DIR, "experiment")):
+        for file in files:
+            # Add the file name to the list
+            base_name, _extension = os.path.splitext(file)
+            configs.append(
+                os.path.relpath(os.path.join(root, base_name), os.path.join(DEFAULT_CONFIG_DIR, "experiment"))
+            )
+
+    return configs
+
+
+@pytest.mark.functional
+@pytest.mark.parametrize("config", get_experiment_configs())
+@pytest.mark.timeout(DEFAULT_TEST_TIMEOUT)
+def test_hydra_composition(config):
+    """Test that hydra configurations can be created for all experiments"""
+    proc = subprocess.Popen(args=[sys.executable, "-m", "main", f"+experiment={config}", "--info", "defaults-tree"])
+    proc.communicate()
+    assert proc.returncode == 0
 
 
 @pytest.mark.functional
