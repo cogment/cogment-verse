@@ -19,7 +19,7 @@ from collections.abc import Sequence
 from numpy import ndarray
 from cogment.session import ActorInfo
 
-from ..constants import PLAYER_ACTOR_CLASS, TEACHER_ACTOR_CLASS, OBSERVER_ACTOR_CLASS, EVALUATOR_ACTOR_CLASS, ActorSpecType
+from ..constants import PLAYER_ACTOR_CLASS, TEACHER_ACTOR_CLASS, OBSERVER_ACTOR_CLASS, EVALUATOR_ACTOR_CLASS
 from .action_space import Action
 from .action_space import ActionSpace
 from .environment_specs import EnvironmentSpecs
@@ -108,7 +108,8 @@ class SessionWrapper(ABC):
         self.actor_idxs = {actor_info.actor_name: actor_idx for (actor_idx, actor_info) in enumerate(self.actor_infos)}
         self
         self.actors = [actor_info.actor_name for actor_info in self.actor_infos]
-        self.actors_spec_type = {actor_info.actor_name: ActorSpecType.from_config(actor_info.actor_class_name) for actor_info in self.actor_infos}
+        # TODO: convert the class_name to a Enum with checks instead of class name string
+        self.actors_spec_type = {actor_info.actor_name: actor_info.actor_class_name for actor_info in self.actor_infos}
 
         self.environment_specs = environment_specs
         self.render_width = render_width

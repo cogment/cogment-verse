@@ -137,8 +137,8 @@ class MpeEnvironment:
         ]
 
         # Web actor index in cogment actors
-        web_actor_idx = [actor_idx for actor_idx, actor_name, _ in player_actors if actor_name == WEB_ACTOR_NAME]
-        assert len(web_actor_idx) < 2, "Multiple web actors are currently not supported for this environment."
+        web_actor_idx = environment_session._get_actor_idx(WEB_ACTOR_NAME)
+
 
         session_cfg = environment_session.config
 

@@ -40,7 +40,8 @@ class ActorSessionWrapper:
         actor_session.__class__ = type("Wrapped" + original_cls.__name__, (original_cls, cls), {})
 
         # Explicitely call `ActorSessionWrapper` constructor to initialze it
-        actor_session.spec_type = ActorSpecType.from_config(actor_session.config.spec_type)
+        # TODO: load spec_type from an Enum instead of class name string
+        actor_session.spec_type = actor_session.config.spec_type
         actor_session.environment_specs = EnvironmentSpecs.deserialize(actor_session.config.environment_specs)
         actor_session.actor_specs = actor_session.environment_specs[actor_session.spec_type]
         actor_session.action_space = actor_session.actor_specs.get_action_space(seed=actor_session.config.seed)
