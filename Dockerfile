@@ -22,7 +22,6 @@ WORKDIR /cogment-verse
 
 COPY requirements.txt .
 RUN pip install -r requirements.txt --timeout 5000
-RUN pip install SuperSuit==3.7.0
 
 COPY . .
 

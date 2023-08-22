@@ -16,7 +16,7 @@ import logging
 import os
 
 import cogment
-import gym
+import gymnasium
 import numpy as np
 
 from cogment_verse.specs import EnvironmentSessionWrapper, EnvironmentSpecs
@@ -39,7 +39,7 @@ class Environment:
     def __init__(self, cfg):
         self.gym_env_name = cfg.env_name
 
-        gym_env = gym.make(self.gym_env_name, new_step_api=True)
+        gym_env = gymnasium.make(self.gym_env_name)
 
         web_components_file = None
         matching_web_components = [
@@ -64,18 +64,16 @@ class Environment:
 
         if self.gym_env_name.startswith("ALE"):
             # Atari environment
-            self._make_gym_env = lambda render: gym.make(
+            self._make_gym_env = lambda render: gymnasium.make(
                 self.gym_env_name,
                 render_mode="rgb_array" if render else None,
-                new_step_api=True,
                 full_action_space=True,
             )
             self._render_gym_env = lambda gym_env: gym_env.render(mode="rgb_array")
         else:
-            self._make_gym_env = lambda render: gym.make(
+            self._make_gym_env = lambda render: gymnasium.make(
                 self.gym_env_name,
-                render_mode="single_rgb_array" if render else None,
-                new_step_api=True,
+                render_mode="rgb_array" if render else None,
             )
             self._render_gym_env = lambda gym_env: gym_env.render()
 
@@ -98,7 +96,7 @@ class Environment:
 
         gym_env = self._make_gym_env(session_cfg.render)
 
-        gym_observation, _info = gym_env.reset(seed=session_cfg.seed, return_info=True)
+        gym_observation, _info = gym_env.reset(seed=session_cfg.seed)
 
         observation_space = environment_session.get_observation_space(player_actor_name)
         observation = observation_space.create(
@@ -114,7 +112,7 @@ class Environment:
                 action_value = player_action.value
 
                 # Clipped action and send to gym environment
-                if isinstance(gym_env.action_space, gym.spaces.Box):
+                if isinstance(gym_env.action_space, gymnasium.spaces.Box):
                     action_value = np.clip(action_value, gym_env.action_space.low, gym_env.action_space.high)
 
                 gym_observation, reward, terminated, truncated, _info = gym_env.step(action_value)

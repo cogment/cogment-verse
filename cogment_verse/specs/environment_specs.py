@@ -22,7 +22,7 @@ from ..constants import DEFAULT_RENDERED_WIDTH, PLAYER_ACTOR_CLASS
 from .action_space import ActionSpace
 from .ndarray_serialization import SerializationFormat
 from .observation_space import ObservationSpace
-from .spaces_serialization import deserialize_gym_space, serialize_gym_space
+from .spaces_serialization import deserialize_space, serialize_gym_space
 
 
 class EnvironmentSpecs:
@@ -71,7 +71,7 @@ class EnvironmentSpecs:
 
         NOTE: In the future we'll want to support different observation space per agent role
         """
-        return ObservationSpace(deserialize_gym_space(self._pb.observation_space), render_width)
+        return ObservationSpace(deserialize_space(self._pb.observation_space), render_width)
 
     def get_action_space(self, actor_class=PLAYER_ACTOR_CLASS, seed=None):
         """
@@ -86,7 +86,7 @@ class EnvironmentSpecs:
 
         NOTE: In the future we'll want to support different action space per agent roles
         """
-        return ActionSpace(deserialize_gym_space(self._pb.action_space), actor_class, seed)
+        return ActionSpace(deserialize_space(self._pb.action_space), actor_class, seed)
 
     @classmethod
     def create_homogeneous(

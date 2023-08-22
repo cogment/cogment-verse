@@ -21,7 +21,7 @@ import cogment
 import torch
 
 ############ TUTORIAL STEP 3 ############
-from gym.spaces import utils
+from gymnasium.spaces import utils
 
 from cogment_verse import Model
 from cogment_verse.specs import (

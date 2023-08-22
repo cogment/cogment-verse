@@ -25,7 +25,7 @@ import cogment
 import numpy as np
 import torch
 import torch.nn.functional as F
-from gym.spaces import Box, utils
+from gymnasium.spaces import Box, utils
 from torch import nn
 
 from cogment_verse import Model, TorchReplayBuffer

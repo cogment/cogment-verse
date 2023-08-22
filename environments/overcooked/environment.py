@@ -16,7 +16,7 @@ import logging
 import os
 
 import cogment
-import gym
+import gymnasium as gym
 import numpy as np
 from overcooked_ai_py.mdp.overcooked_env import DEFAULT_ENV_PARAMS, Overcooked, OvercookedEnv
 from overcooked_ai_py.mdp.overcooked_mdp import OvercookedGridworld
@@ -121,7 +121,7 @@ class Environment:
                     )
                     observations.append((player_actor_name, observation_space.serialize(observation)))
 
-                for _, player_actor_name in non_player_actors:
+                for player_actor_name in non_player_actors:
                     observation_space = environment_session.get_observation_space(player_actor_name)
                     observation = observation_space.create(
                         value=gym_observation["both_agent_obs"][0],  # Dummy observation for non-player actors
