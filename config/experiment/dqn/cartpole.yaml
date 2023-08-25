@@ -1,11 +1,11 @@
 # @package _global_
 defaults:
   - override /services/actor:
-      - simple_dqn
+      - dqn
   - override /services/environment: cartpole
 
 run:
-  class_name: actors.simple_dqn.DQNTraining
+  class_name: actors.dqn.DQNTraining
   seed: 618
 
   # Training Params
