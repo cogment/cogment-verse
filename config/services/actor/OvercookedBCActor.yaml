@@ -1,0 +1,3 @@
+OvercookedBCActor:
+  class_name: actors.overcooked_bc.SimpleBCActor
+  port: ${generate_port:actors.overcooked_bc.SimpleBCActor}

@@ -8,7 +8,7 @@ defaults:
 run:
   class_name: runs.play.PlayRun
   observer: True
-  num_trials: 50
+  num_trials: 1
   seed: 12
   players:
     - name: player_1

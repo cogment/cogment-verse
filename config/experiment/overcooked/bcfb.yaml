@@ -1,0 +1,20 @@
+# @package _global_
+defaults:
+  - override /services/actor: 
+    - OvercookedBCActor
+  - override /services/environment: overcooked/counter_circuit
+  - override /run: play
+  - _self_
+
+run:
+  class_name: actors.overcooked_bc.SimpleBCTraining
+  num_trials: 50
+  players:
+    - name: player_1
+      implementation: client
+    - name: player_2
+      implementation: actors.overcooked_bc.SimpleBCActor
+      # agent_config:
+      #   model_id: silly_whitehat_0_model
+      #   model_iteration: -1
+      #   model_update_frequency: ~

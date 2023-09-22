@@ -1,3 +1,0 @@
-random:
-  class_name: actors.random_actor.RandomActor
-  port: ${generate_port:actors.random_actor.RandomActor}

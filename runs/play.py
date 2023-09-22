@@ -114,6 +114,7 @@ class PlayRun:
                         )
                     )
                     has_human_actor = True
+                    print("human actor created")
                 else:
                     actors_params.append(
                         cogment.ActorParameters(
@@ -129,6 +130,7 @@ class PlayRun:
                             ),
                         )
                     )
+                    print("non human actor created")
 
             if self._cfg.observer:
                 if has_human_actor:
@@ -148,6 +150,7 @@ class PlayRun:
                     )
                 )
                 has_human_actor = True
+                print("observer actor created")
 
             return cogment.TrialParameters(
                 cog_settings,

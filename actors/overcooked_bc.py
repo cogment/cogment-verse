@@ -15,29 +15,110 @@
 from __future__ import annotations
 
 import io
-import numpy as np
-import torch
-from torch import float32
 import logging
-
-from gym.spaces import utils
+import math
+from abc import ABC, abstractmethod
+from typing import List, Tuple, Union
 
 import cogment
-from cogment_verse import Model
+import numpy as np
+import torch
+from cogment.actor import ActorSession
+from gym.spaces import Discrete, utils
+from omegaconf import DictConfig, ListConfig
+from torch.distributions.distribution import Distribution
+
+from cogment_verse import HumanDataBuffer, Model, PPOReplayBuffer, RolloutBuffer
+from cogment_verse.run.run_session import RunSession
 from cogment_verse.specs import (
     AgentConfig,
     cog_settings,
     EnvironmentConfig,
+    EnvironmentSpecs,
+    EVALUATOR_ACTOR_CLASS,
     HUMAN_ACTOR_IMPL,
     PLAYER_ACTOR_CLASS,
     TEACHER_ACTOR_CLASS,
+    SampleProducerSession,
     WEB_ACTOR_NAME,
 )
-
-
 torch.multiprocessing.set_sharing_strategy("file_system")
 
+
 log = logging.getLogger(__name__)
+
+
+# pylint: disable=protected-access
+# pylint: disable=abstract-method
+# pylint: disable=unused-argument
+# pylint: disable=unused-variable
+# pylint: disable=too-many-lines
+def initialize_layer(layer: torch.nn.Module, std: float = np.sqrt(2), bias_const: float = 0.0):
+    """Layer initialization"""
+    torch.nn.init.orthogonal_(layer.weight, std)
+    torch.nn.init.constant_(layer.bias, bias_const)
+    return layer
+
+
+def get_device(device: str) -> str:
+    """Device setup"""
+    if device == "cuda" and torch.cuda.is_available():
+        return "cuda"
+
+    return "cpu"
+
+
+class PolicyValueNetwork(torch.nn.Module):
+    """Policy and Value networks for overcooked"""
+
+    def __init__(self, num_actions: int) -> None:
+        super().__init__()
+        # self.shared_network = torch.nn.Sequential(
+        #     # initialize_layer(torch.nn.Conv2d(6, 32, 8, stride=4)),
+        #     # torch.nn.ReLU(),
+        #     # initialize_layer(torch.nn.Conv2d(32, 64, 3, stride=2)),
+        #     # torch.nn.ReLU(),
+        #     # initialize_layer(torch.nn.Conv2d(64, 64, 3, stride=1)),
+        #     # torch.nn.ReLU(),
+        #     # torch.nn.Flatten(),
+        #     # initialize_layer(torch.nn.Linear(64 * 7 * 7, 512)),
+        #     # torch.nn.ReLU(),
+        # )
+        # self.actor = initialize_layer(torch.nn.Linear(512, num_actions), std=0.01)
+        # self.value = initialize_layer(torch.nn.Linear(512, 1), std=1)
+
+        # observation box = 96, output = 5
+        self.shared_network = torch.nn.Sequential(
+            initialize_layer(torch.nn.Linear(96, 64)),
+            torch.nn.ReLU(),
+            initialize_layer(torch.nn.Linear(64, 64)),
+            torch.nn.ReLU(),
+        )
+        self.actor = initialize_layer(torch.nn.Linear(64, num_actions), std=0.01)
+        self.value = initialize_layer(torch.nn.Linear(64, 1), std=1)
+
+    def get_value(self, observation: torch.Tensor) -> torch.Tensor:
+        """Compute the value of being in a state"""
+        observation_clone = observation.clone()
+        observation_clone = observation_clone / 255.0
+        return self.value(self.shared_network(observation_clone))
+
+    def get_action(self, observation: torch.Tensor) -> Distribution:
+        """Actions given observations"""
+        observation_clone = observation.clone()
+        observation_clone = observation_clone / 255.0
+        return torch.distributions.Categorical(logits=self.actor(self.shared_network(observation_clone)))
+
+    def get_action_value(self, observation: torch.Tensor, action: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+        """Get value and log prob"""
+        observation_clone = observation.clone()
+        observation_clone = observation_clone / 255.0
+        shared = self.shared_network(observation_clone)
+        action_logits = self.actor(shared)
+        value = self.value(shared)
+        action_dist = torch.distributions.Categorical(logits=action_logits)
+        action_log_probs = action_dist.log_prob(action)
+        return action_log_probs, value
 
 
 class SimpleBCModel(Model):
@@ -52,7 +133,7 @@ class SimpleBCModel(Model):
     ):
         super().__init__(model_id, iteration)
 
-        self._dtype = torch.float32
+        self._dtype = torch.float
         self._environment_implementation = environment_implementation
         self._num_input = num_input
         self._num_output = num_output
@@ -62,11 +143,9 @@ class SimpleBCModel(Model):
             torch.nn.Linear(num_input, policy_network_num_hidden_nodes, dtype=self._dtype),
             torch.nn.BatchNorm1d(policy_network_num_hidden_nodes, dtype=self._dtype),
             torch.nn.ReLU(),
-            
             torch.nn.Linear(policy_network_num_hidden_nodes, policy_network_num_hidden_nodes, dtype=self._dtype),
             torch.nn.BatchNorm1d(policy_network_num_hidden_nodes, dtype=self._dtype),
             torch.nn.ReLU(),
-            
             torch.nn.Linear(policy_network_num_hidden_nodes, num_output, dtype=self._dtype),
         )
 
@@ -111,17 +190,17 @@ class SimpleBCModel(Model):
 
         return model
 
-
 class SimpleBCActor:
     def __init__(self, _cfg):
-        self._dtype = torch.float32
+        self._dtype = torch.float
 
     def get_actor_classes(self):
         return [PLAYER_ACTOR_CLASS]
 
     async def impl(self, actor_session):
+        print("SIMPLE BC ACTOR SESSION STARTED")
         actor_session.start()
-
+        print(actor_session.model_registry , actor_session.config.model_id, actor_session.config.model_iteration)
         # Get model
         model = await SimpleBCModel.retrieve_model(
             actor_session.model_registry,
@@ -129,19 +208,18 @@ class SimpleBCActor:
             actor_session.config.model_iteration,
         )
         model.policy_network.eval()
-
+        print("model retrieved")
         log.info(f"Starting trial with model v{model.iteration}")
 
         async for event in actor_session.all_events():
             observation = actor_session.get_observation(event)
             if observation and event.type == cogment.EventType.ACTIVE:
-                observation_tensor = torch.tensor(data = observation.flat_value, dtype=self._dtype)
+                observation_tensor = torch.tensor(observation.flat_value, dtype=self._dtype)
                 scores = model.policy_network(observation_tensor.view(1, -1))
                 probs = torch.softmax(scores, dim=-1)
                 discrete_action_tensor = torch.distributions.Categorical(probs).sample()
                 action = actor_session.get_action_space().create(value=discrete_action_tensor.item())
                 actor_session.do_action(actor_session.get_action_space().serialize(action))
-
 
 class SimpleBCTraining:
     default_cfg = {
@@ -161,7 +239,6 @@ class SimpleBCTraining:
         self._cfg = cfg
 
     async def sample_producer(self, sample_producer_session):
-        # Making sure we have the right assumptions
         assert len(sample_producer_session.player_actors) == 1
         assert len(sample_producer_session.teacher_actors) == 1
 
@@ -178,7 +255,7 @@ class SimpleBCTraining:
             sample_producer_session.produce_sample((player_action.is_overriden, observation_tensor, action_tensor))
 
     async def impl(self, run_session):
-        assert self._environment_specs.num_players == 1
+        # assert self._environment_specs.num_players == 1
 
         model_id = f"{run_session.run_id}_model"
 
@@ -259,6 +336,7 @@ class SimpleBCTraining:
             sample_producer_impl=self.sample_producer,
             num_parallel_trials=1,
         ):
+
             (demonstration, observation, action) = sample
             if self._cfg.train_only_from_demonstration and not demonstration:
                 continue
@@ -273,7 +351,6 @@ class SimpleBCTraining:
             batch_indices = np.random.default_rng().integers(0, len(observations), self._cfg.batch_size)
             batch_obs = torch.vstack([observations[i] for i in batch_indices])
             batch_act = torch.vstack([actions[i] for i in batch_indices])
-
             model.policy_network.train()
             pred_policy = model.policy_network(batch_obs)
             loss = loss_fn(pred_policy, batch_act)
@@ -285,19 +362,6 @@ class SimpleBCTraining:
 
             # Publish the newly trained version every 100 steps
             if step_idx % 100 == 0:
-                serialized_model = SimpleBCModel.serialize_model(model)
-                iteration_info = await run_session.model_registry.store_model(
-                    name=model_id,
-                    model=serialized_model,
-                )
-                run_session.log_metrics(
-                    model_iteration=iteration_info.iteration,
-                    loss=loss.item(),
-                    total_samples=len(observations),
-                )
-
-            # publish the newly trained version if it's better than the previous one
-            if loss.item() < iteration_info.metrics["loss"]:
                 serialized_model = SimpleBCModel.serialize_model(model)
                 iteration_info = await run_session.model_registry.store_model(
                     name=model_id,

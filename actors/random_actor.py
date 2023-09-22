@@ -37,3 +37,4 @@ class RandomActor:
 
                 action = actor_session.get_action_space().sample(mask=observation.action_mask)
                 actor_session.do_action(actor_session.get_action_space().serialize(action))
+

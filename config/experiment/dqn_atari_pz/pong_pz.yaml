@@ -21,7 +21,7 @@ run:
   epsilon_schedule_duration_ratio: 0.75
   train_frequency: 10
   model_update_frequency: 10
-  device: cpu
+  device: cuda
   hill_training_trials_ratio: 0
   image_size: [6, 84, 84]
 

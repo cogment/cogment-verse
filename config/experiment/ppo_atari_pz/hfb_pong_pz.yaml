@@ -9,9 +9,9 @@ defaults:
 run:
   class_name: actors.ppo_atari_pz.HumanFeedbackPPOTraining
   seed: 3407
-  num_epochs: 4
-  num_iter: 1000
-  epoch_num_trials: 1
+  num_epochs: 100
+  num_iter: 3
+  epoch_num_trials: 3
   num_parallel_trials: 1
   learning_rate: 2.5e-4
   batch_size: 16
@@ -22,7 +22,7 @@ run:
   max_training_steps: 20_000_000
   discount_factor: 0.99
   lambda_gae: 0.95
-  device: cuda
+  device: cpu
   entropy_loss_coef: 0.01
   value_loss_coef: 0.5
   clipping_coef: 0.2

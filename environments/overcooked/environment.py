@@ -133,7 +133,7 @@ class Environment:
                 if reward is not None:
                     environment_session.add_reward(
                         value=reward,
-                        confidence=1.0, 
+                        confidence=1.0,
                         to=[player_actor_name], # apply rewards to all players
                     )
 
